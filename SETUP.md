@@ -16,11 +16,12 @@
 
 ## 1. 레포에 넣기 — PL, 10/05 (30분)
 1. 키트 내용을 레포 루트에 복사 (기존 README.md 는 키트 것으로 교체). 첫 커밋: `chore: project skeleton, interfaces, docs (#1)`
-2. `.github/CODEOWNERS` 는 4명 GitHub 아이디로 채워져 있음 (yujh5537 / EuiseokJeongNZ / ok778ts123 / rokeyhak). 3명을 레포 Collaborator 로 초대
-3. GitHub → Settings → Branches → `main` 보호 규칙
+2. `.github/CODEOWNERS` 는 4명 GitHub 아이디로 채워져 있음 (yujh5537 / EuiseokJeongNZ / ok778ts123 / rokeyhak). 경로마다 2명 (작성자는 자기 PR을 승인할 수 없으므로, #2). 3명을 레포 Collaborator 로 초대
+3. GitHub → Settings → Branches → `main` 보호 규칙 (CODEOWNERS 2인 구성이 main 에 들어간 뒤에 건다)
    - Require a pull request before merging (승인 1)
    - Require status checks: `build-test`
    - Require review from Code Owners
+   - Do not allow bypassing (관리자 포함)
 4. Labels 추가: `interface`, `task`, `decision`, `bug`, `hardware`
 5. Claude Code GitHub Actions 설치 (PR 에서 `@claude` 리뷰). 문서: https://docs.claude.com/en/docs/claude-code/overview
 6. BRD·SRD 를 Markdown 으로 내보내 `docs/requirements/` 에, `VOSS_개발일정.xlsx` 와 아키텍처 SVG 도 같은 폴더에
