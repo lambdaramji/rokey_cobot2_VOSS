@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>voss_robot</name>
+  <version>0.1.0</version>
+  <description>두산 단일 호출 큐·RG2·구역 이동</description>
+  <maintainer email="team@example.com">김학민</maintainer>
+  <license>MIT</license>
+  <depend>rclpy</depend>
+  <depend>voss_msgs</depend>
+  <test_depend>python3-pytest</test_depend>
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

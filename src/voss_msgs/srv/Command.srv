@@ -1,0 +1,5 @@
+string command           # start | stop | resume | priority | answer
+string arg
+---
+bool ok
+string message

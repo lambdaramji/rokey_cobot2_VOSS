@@ -1,0 +1,30 @@
+# Claude 개인 파일
+CLAUDE.local.md
+.claude/settings.local.json
+
+# ROS 2 / colcon
+build/
+install/
+log/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.ruff_cache/
+.pytest_cache/
+
+# 대용량·개인 데이터 (경로와 받는 법만 README에)
+models/
+*.pt
+*.onnx
+*.engine
+data/recordings/
+data/images/
+*.bag
+*.db
+*.sqlite
+
+# 비밀
+.env
+*.key

@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    container: ros:jazzy-ros-base
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: src/rokey_cobot2_VOSS
+
+      - name: 의존성
+        shell: bash
+        run: |
+          apt-get update && apt-get install -y python3-pip
+          pip3 install --break-system-packages ruff
+          rosdep update || true
+          rosdep install --from-paths src --ignore-src -r -y || true
+
+      - name: 린트 (ruff)
+        shell: bash
+        run: |
+          cd src/rokey_cobot2_VOSS
+          ruff check . && ruff format --check .
+
+      - name: 빌드
+        shell: bash
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          colcon build --symlink-install --event-handlers console_cohesion+
+
+      - name: 테스트
+        shell: bash
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          colcon test --event-handlers console_cohesion+ || true
+          colcon test-result --verbose
+
+      - name: 인터페이스 변경 시 docs/interfaces 갱신 확인
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          cd src/rokey_cobot2_VOSS
+          git config --global --add safe.directory "$PWD"
+          git fetch origin ${{ github.base_ref }} --depth=50
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD || true)
+          echo "$CHANGED"
+          if echo "$CHANGED" | grep -qE '^(src/voss_msgs/|config/voss_config.yaml)' && ! echo "$CHANGED" | grep -q '^docs/interfaces/'; then
+            echo "::error::voss_msgs 또는 voss_config.yaml 이 바뀌었는데 docs/interfaces/ 갱신이 없습니다. 인터페이스 문서를 먼저 고치세요."
+            exit 1
+          fi

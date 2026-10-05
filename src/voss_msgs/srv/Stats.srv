@@ -1,0 +1,6 @@
+---
+int32 total
+int32 placed
+int32 held
+int32 failed
+string json

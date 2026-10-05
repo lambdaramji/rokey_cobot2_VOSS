@@ -1,0 +1,30 @@
+# 개인 지침 (git 미추적). 이 파일을 CLAUDE.local.md 로 복사해 자기 것으로 채운다.
+# 아래 4개 블록 중 자기 것만 남기고 지운다.
+
+## 정의석 — 음성·웹·HMI
+- 담당 패키지: src/voss_voice (voice_listener, intent_parser, speech_out), src/voss_hmi (hmi_bridge, sort_logger), docker/db, docker/web
+- 내가 정하는 것: 호출어 엔진, Whisper 모델 크기, TTS 엔진, 웹 HMI 스택, MQTT JSON 스키마, DB 종류
+- 접점: sort_manager(남현지)와 /voss/voice/intent, /voss/sort/command, /voss/sort/state
+- 이번 주 이슈: #
+
+## 남현지 — 비전·OCR·통합 (PL)
+- 담당 패키지: src/voss_vision (box_tracker, label_reader), src/voss_manager (sort_manager), docker/vision, config/voss_config.yaml, 전체 통합·시연 대본
+- 리뷰 책임: docs/interfaces/*, src/voss_msgs/*, docs/adr/*
+- 접점: 모든 파트. 특히 belt_servo(박병후)와 /voss/vision/box, /voss/servo/track_and_grasp
+- 이번 주 이슈: #
+
+## 박병후 — 추종·파지
+- 담당 패키지: src/voss_servo (belt_servo)
+- 10/06 할 일: servol_stream 계열 토픽 유무 확인 → 결과를 docs/measurements-1006.md 에 기록
+- 접점: robot_gateway(김학민)의 /voss/robot/servo_cmd, /voss/robot/pose; box_tracker(남현지)의 /voss/vision/box
+- 게이트: 10/10 추종 파지 20회 중 14회 이상
+- 이번 주 이슈: #
+
+## 김학민 — 로봇 제어·환경 설정
+- 담당 패키지: src/voss_robot (robot_gateway), src/voss_bringup (launch, 툴/TCP 등록), 벨트·작업대·송장 실측
+- 10/06 할 일: 벨트 설정값-속도 표, 5구역 좌표, 컨트롤러·PC 사양 → docs/measurements-1006.md
+- 접점: belt_servo(박병후), sort_manager(남현지)의 /voss/robot/move_to_zone, /voss/robot/gripper
+- 이번 주 이슈: #
+
+## 개인 선호 (공통 예시)
+- 설명은 한국어, 코드 주석은 한국어, 커밋 메시지는 영어 type(scope): 형식.

@@ -1,0 +1,5 @@
+string zone              # A | B | C | recheck | hold
+int32 slot               # 격자 슬롯 번호 (0부터)
+---
+bool ok
+string message

@@ -1,0 +1,8 @@
+int32 track_id
+---
+bool grasped
+string reason
+---
+float32 err_u
+float32 err_v
+string phase             # approach | track | descend | grasp
