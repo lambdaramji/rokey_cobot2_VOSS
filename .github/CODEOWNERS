@@ -1,21 +1,37 @@
-# 폴더별 필수 리뷰어. 인터페이스·메시지·설계 결정은 PL(남현지)이 본다. 나머지는 담당자.
+# 폴더별 필수 리뷰어. 나열된 사람 중 한 명이 승인하면 된다.
 # 남현지 @yujh5537 · 정의석 @EuiseokJeongNZ · 박병후 @ok778ts123 · 김학민 @rokeyhak
+#
+# 모든 경로에 2명 이상을 둔다. PR 작성자는 자기 PR을 승인할 수 없어서, 오너가 한 명이면
+# 그 사람이 올린 PR은 머지가 막힌다. 두 번째 오너는 docs/interfaces/topics.md 에서
+# 인터페이스가 직접 맞물리는 사람이다. 아래로 갈수록 우선한다(마지막 일치 규칙).
 
-*                         @yujh5537
-/docs/interfaces/         @yujh5537
-/docs/adr/                @yujh5537
-/src/voss_msgs/           @yujh5537
+# 기본·환경(README, CLAUDE.md, docs/, .github/, pyproject): PL + 환경 설정 담당
+*                         @yujh5537 @rokeyhak
+
+# 계약·설계 결정: PL + 김학민. PL이 작성자가 아니면 PL이 승인한다(docs/conventions.md)
+/docs/interfaces/         @yujh5537 @rokeyhak
+/docs/adr/                @yujh5537 @rokeyhak
+/src/voss_msgs/           @yujh5537 @rokeyhak
 /config/                  @yujh5537 @rokeyhak
 
-/src/voss_voice/          @EuiseokJeongNZ
-/src/voss_hmi/            @EuiseokJeongNZ
-/docker/db/               @EuiseokJeongNZ
-/docker/web/              @EuiseokJeongNZ
+# 음성·HMI: 정의석 + 남현지 (intent → sort_manager, sort_manager → hmi_bridge·sort_logger)
+/src/voss_voice/          @EuiseokJeongNZ @yujh5537
+/src/voss_hmi/            @EuiseokJeongNZ @yujh5537
+/docker/db/               @EuiseokJeongNZ @yujh5537
+/docker/web/              @EuiseokJeongNZ @yujh5537
 
-/src/voss_vision/         @yujh5537
-/src/voss_manager/        @yujh5537
-/docker/vision/           @yujh5537
+# 비전: 남현지 + 박병후 (/voss/vision/box → belt_servo)
+/src/voss_vision/         @yujh5537 @ok778ts123
+/docker/vision/           @yujh5537 @ok778ts123
 
-/src/voss_servo/          @ok778ts123
-/src/voss_robot/          @rokeyhak
-/src/voss_bringup/        @rokeyhak
+# 분류 관리: 남현지 + 정의석 (/voss/voice/intent 입력, /voss/sort/* → hmi_bridge)
+/src/voss_manager/        @yujh5537 @EuiseokJeongNZ
+
+# 추종·파지: 박병후 + 김학민 (/voss/robot/servo_cmd ↔ /voss/robot/pose)
+/src/voss_servo/          @ok778ts123 @rokeyhak
+
+# 로봇 제어: 김학민 + 박병후 (servo_cmd 소비, pose 발행)
+/src/voss_robot/          @rokeyhak @ok778ts123
+
+# 브링업: 김학민 + 남현지 (전체 통합 launch)
+/src/voss_bringup/        @rokeyhak @yujh5537
