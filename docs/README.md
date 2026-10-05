@@ -10,7 +10,7 @@
 | measurements-1006.md | 10/06 실측 체크리스트와 결과 | 측정한 사람 |
 | adr/ | 설계 결정 기록 | 결정한 사람 |
 | setup/ | 개발 환경 구성 | 김학민·남현지 |
-| requirements/ | BRD·SRD (Claude Docs에서 Markdown으로 내보낸 사본) | PL |
+| requirements/ | BRD·SRD (Claude Docs에서 Markdown으로 내보낸 사본), 개발일정 xlsx, 시스템 아키텍처 그림 | BRD·개발일정: PL / SRD·`architecture/` 그림: 박병후 |
 
 규칙 두 가지.
 1. 코드와 문서가 다르면 **문서가 틀린 것**으로 보고 같은 PR에서 고친다.
