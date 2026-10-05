@@ -23,7 +23,10 @@
    - Require review from Code Owners
    - Do not allow bypassing (관리자 포함)
 4. Labels 추가: `interface`, `task`, `decision`, `bug`, `hardware`
-5. Claude Code GitHub Actions 설치 (PR 에서 `@claude` 리뷰). 문서: https://docs.claude.com/en/docs/claude-code/overview
+5. Claude Code GitHub Actions 설치 (PR 에서 `@claude` 리뷰, #8). 워크플로는 `.github/workflows/claude.yml`
+   - Claude GitHub App 을 이 레포에만 설치: https://github.com/apps/claude
+   - 인증은 PL 구독 OAuth 토큰: 로컬 터미널에서 `claude setup-token` → `gh secret set CLAUDE_CODE_OAUTH_TOKEN -R yujh5537/rokey_cobot2_VOSS` 에 붙여넣기. 토큰은 채팅·파일에 남기지 않는다
+   - 멘션할 때만 돈다(모든 PR 자동 리뷰 없음). 레포에 쓰기 권한이 있는 사람만 호출할 수 있다
 6. BRD 를 Markdown 으로 내보내 `docs/requirements/` 에, `VOSS_개발일정.xlsx` 도 같은 폴더에 (완료 #4). SRD 와 시스템 아키텍처 SVG 는 박병후 담당 (#6)
 
 ## 2. 팀원 온보딩 — 각자, 10/05 (15분)

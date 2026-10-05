@@ -1,0 +1,46 @@
+# PR·이슈에서 @claude 멘션 시 Claude Code 가 응답한다 (리뷰, 질문, 요청 시 커밋).
+# 기준: https://github.com/anthropics/claude-code-action/blob/main/examples/claude.yml
+# 인증: PL 의 Claude 구독 OAuth 토큰 (시크릿 CLAUDE_CODE_OAUTH_TOKEN). 팀 전체가 같은 한도를 쓴다.
+# 액션이 호출자의 쓰기 권한을 확인하고, 아래 if 의 author_association 으로 외부인 호출은 러너도 띄우지 않는다.
+# 레포의 CLAUDE.md 와 .claude/settings.json(실기 명령 deny)이 그대로 적용된다.
+name: Claude Code
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened]
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  claude:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude') &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.review.author_association)) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')) &&
+        contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read # PR 의 CI 결과를 읽는다
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Code
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
