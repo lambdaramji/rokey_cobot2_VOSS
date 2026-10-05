@@ -1,0 +1,25 @@
+# docs/interfaces/voss_config.md 가 스키마. 값은 10/06 실측 후 채운다.
+version: 1
+zone_map:
+  역삼동: A
+  대치동: B
+  청담동: C
+zones:
+  A:       {pose: [0, 0, 0, 0, 0, 0], grid: {cols: 2, rows: 2, pitch_mm: 60}}
+  B:       {pose: [0, 0, 0, 0, 0, 0], grid: {cols: 2, rows: 2, pitch_mm: 60}}
+  C:       {pose: [0, 0, 0, 0, 0, 0], grid: {cols: 2, rows: 2, pitch_mm: 60}}
+  recheck: {pose: [0, 0, 0, 0, 0, 0]}
+  hold:    {pose: [0, 0, 0, 0, 0, 0]}
+observe_pose: [0, 0, 0, 0, 0, 0]
+belt:
+  speed_cmps: 0.0
+  direction_axis: "x"
+gripper:
+  pre_open_mm: 90
+  grasp_width_mm: 40
+  force_n: 0.0
+ocr:
+  confidence_min: 0.6
+  codes: {"S07-01": "역삼동", "S07-02": "대치동", "S07-03": "청담동"}
+timing:
+  latency_offset_ms: 0

@@ -1,0 +1,21 @@
+# 폴더별 필수 리뷰어. 인터페이스·메시지·설계 결정은 PL(남현지)이 본다. 나머지는 담당자.
+# 남현지 @yujh5537 · 정의석 @EuiseokJeongNZ · 박병후 @ok778ts123 · 김학민 @rokeyhak
+
+*                         @yujh5537
+/docs/interfaces/         @yujh5537
+/docs/adr/                @yujh5537
+/src/voss_msgs/           @yujh5537
+/config/                  @yujh5537 @rokeyhak
+
+/src/voss_voice/          @EuiseokJeongNZ
+/src/voss_hmi/            @EuiseokJeongNZ
+/docker/db/               @EuiseokJeongNZ
+/docker/web/              @EuiseokJeongNZ
+
+/src/voss_vision/         @yujh5537
+/src/voss_manager/        @yujh5537
+/docker/vision/           @yujh5537
+
+/src/voss_servo/          @ok778ts123
+/src/voss_robot/          @rokeyhak
+/src/voss_bringup/        @rokeyhak

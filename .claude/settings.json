@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status*)", "Bash(git diff*)", "Bash(git log*)", "Bash(git fetch*)",
+      "Bash(colcon build*)", "Bash(colcon test*)", "Bash(ruff *)",
+      "Bash(ros2 topic list*)", "Bash(ros2 interface *)", "Bash(ros2 pkg *)"
+    ],
+    "deny": [
+      "Bash(git push --force*)", "Bash(git push origin main*)", "Bash(rm -rf*)",
+      "Bash(ros2 launch*)", "Bash(ros2 run*)", "Bash(ros2 service call*)", "Bash(ros2 action send_goal*)",
+      "Bash(docker compose up*)", "Bash(docker run*)"
+    ]
+  }
+}

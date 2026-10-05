@@ -1,0 +1,58 @@
+# VOSS 아키텍처
+
+원본 그림과 전체 설명은 BRD 4장·SRD 3장(docs/requirements/). 여기는 개발자가 매일 보는 요약.
+
+## 노드 구성 (논리)
+
+```mermaid
+flowchart LR
+  subgraph voice[음성 · 정의석]
+    VL[voice_listener] -->|/voss/voice/transcript| IP[intent_parser]
+    SO[speech_out]
+  end
+  subgraph vision[비전 · 남현지]
+    CAM[realsense2_camera] -->|/camera/color/image_raw| BT[box_tracker]
+    BT -->|/voss/vision/label_crop| LR[label_reader]
+  end
+  subgraph robot[로봇 · 박병후/김학민]
+    BS[belt_servo] -->|/voss/robot/servo_cmd| RG[robot_gateway]
+    RG -->|/voss/robot/pose| BS
+    RG --> DSR[(doosan-robot2 /dsr01)]
+    RG --> RG2[(RG2)]
+  end
+  IP -->|/voss/voice/intent| SM[sort_manager]
+  BT -->|/voss/vision/box 30Hz| SM
+  BT -->|/voss/vision/box| BS
+  LR -->|/voss/vision/label| SM
+  SM -->|action /voss/servo/track_and_grasp| BS
+  SM -->|srv /voss/robot/move_to_zone, /gripper| RG
+  SM -->|/voss/voice/say| SO
+  SM -->|/voss/sort/state, /result, /zone_map| HB[hmi_bridge]
+  SM -->|/voss/sort/result| SL[sort_logger]
+  HB <-->|MQTT voss/*| WEB[웹 HMI]
+  SL --> DB[(DB)]
+```
+
+## 배포 구성
+| 위치 | 구성요소 | 이유 |
+|---|---|---|
+| 호스트 (공용 MSI 노트북) | 두산 브링업, robot_gateway, belt_servo(30 Hz), sort_manager, voice_listener/intent_parser/speech_out, hmi_bridge, sort_logger, Mosquitto(1883) | 서보 루프 지연을 컨테이너와 분리 |
+| 비전 컨테이너 (GPU, `ros:jazzy` 계열) | box_tracker(YOLO), label_reader(PaddleOCR) | GPU 의존성 격리. `--network host`, 같은 ROS_DOMAIN_ID, `config/` 읽기 전용 마운트 |
+| DB 컨테이너 | 작업 로그 DB (종류 미정) | 데이터 볼륨 마운트 |
+| 웹 컨테이너/호스트 (미정) | 웹 HMI | 정의석 결정 |
+
+네트워크: 로봇 컨트롤러는 유선 전용 서브넷, 카메라 USB 3.0, 아두이노는 속도 설정용 시리얼, OpenAI API는 Wi-Fi NIC.
+
+## sort_manager 상태기계
+`IDLE → RUNNING(관측·판단) → PICKING(추종·파지·적재) → RECHECK(재확인 구역 정적 재판독) → ASKING(작업자 질문 대기) → PAUSED(재개 시 RUNNING)`
+전이 조건·타임아웃은 SDD 영역. 구현하며 결정한 값은 ADR 또는 src/voss_manager/CLAUDE.md 에 적는다.
+
+## 파지 방식
+- A안(기본): 폐루프 비주얼 서보 (픽셀 오차 → 속도 명령 + 벨트 속도 피드포워드), 30 Hz.
+- B안(폴백): 개루프 동기 추종 (벨트 속도 알고 그 속도로 이동하며 하강).
+- **10/10 게이트**: A안 추종 파지 20회 중 14회(70%) 미달이면 B안 전환. 결정은 ADR로 남긴다.
+- 그리퍼: 46 mm 면을 벨트 방향으로 잡는다. 사전 개방 90 mm → 양쪽 22 mm 여유.
+- 두산 제어: `servol_stream` 계열 스트리밍 토픽이 있으면 사용, 없으면 짧은 상대 `move_line` ASYNC 큐 (10/06 확인).
+
+## 핵심 수치 (SRD에서)
+파지 성공률 ≥ 70% · OCR 분류코드 ≥ 90%(흐린 송장 제외 ≥ 95%) · 지시 해석 ≥ 95% · 사이클 ≤ 30초 · 시연 10개 중 8개 이상 올바른 구역 · 벨트 ≤ 10 cm/s · 서보 루프 100 ms 지연 예산 · 핸드아이 오차 ≤ 5 mm(제안값).
