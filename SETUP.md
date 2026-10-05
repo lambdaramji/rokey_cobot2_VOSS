@@ -24,7 +24,7 @@
    - Do not allow bypassing (관리자 포함)
 4. Labels 추가: `interface`, `task`, `decision`, `bug`, `hardware`
 5. Claude Code GitHub Actions 설치 (PR 에서 `@claude` 리뷰). 문서: https://docs.claude.com/en/docs/claude-code/overview
-6. BRD·SRD 를 Markdown 으로 내보내 `docs/requirements/` 에, `VOSS_개발일정.xlsx` 와 아키텍처 SVG 도 같은 폴더에
+6. BRD 를 Markdown 으로 내보내 `docs/requirements/` 에, `VOSS_개발일정.xlsx` 도 같은 폴더에 (완료 #4). SRD 와 시스템 아키텍처 SVG 는 박병후 담당 (#6)
 
 ## 2. 팀원 온보딩 — 각자, 10/05 (15분)
 1. `git clone` → `cp CLAUDE.local.md.example CLAUDE.local.md` → 자기 블록만 남기고 이번 주 이슈 번호 기입
