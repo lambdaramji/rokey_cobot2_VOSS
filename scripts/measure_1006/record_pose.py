@@ -31,7 +31,7 @@ from pathlib import Path
 
 DATA_DIR = Path(os.environ.get("VOSS_MEASURE_DIR", Path.home() / "voss_ws" / "measure_1006_data"))
 CSV_PATH = DATA_DIR / "poses.csv"
-PREFIX = "/dsr01/dsr_controller2/"
+PREFIX = "/dsr01/dsr_controller2/"  # doosan-robot2 31750d6 소스 기준. 실기에서 다르면 --prefix
 FIELDS = (
     ["stamp", "label", "robot_system", "robot_mode", "tool", "tcp"]
     + [f"flange_{k}" for k in ("x", "y", "z", "rx", "ry", "rz")]
@@ -176,6 +176,7 @@ def analyze_rows(rows: list[dict], clearance_mm: float = 5.0) -> dict:
         # 박스를 쥐고 밑면이 작업대에 닿을 때 플랜지가 핑거끝-작업대 접촉보다 얼마나 높은지
         grasp = box[2] - table[2]
         out["grasp_offset_mm"] = grasp
+        # 참고값(폭 보정 안 됨): 닫힌 핑거와 벌린 핑거의 끝 높이가 같다고 가정한다
         out["finger_below_box_top_mm"] = BOX_H_MM - grasp
         if up and down:
             belt_flange_z = (up[2] + down[2]) / 2
@@ -223,7 +224,7 @@ def config_snippet(res: dict) -> str:
 
 # ---------------------------------------------------------------- ROS 조회
 class Reader:
-    def __init__(self, timeout: float = 2.0, retries: int = 2):
+    def __init__(self, timeout: float = 2.0, retries: int = 2, prefix: str = PREFIX):
         import rclpy
         from dsr_msgs2.srv import (
             GetCurrentPosj,
@@ -249,7 +250,7 @@ class Reader:
             "posj": (GetCurrentPosj, "aux_control/get_current_posj"),
         }
         self.types = {k: t for k, (t, _) in spec.items()}
-        self.cli = {k: self.node.create_client(t, PREFIX + n) for k, (t, n) in spec.items()}
+        self.cli = {k: self.node.create_client(t, prefix + n) for k, (t, n) in spec.items()}
         deadline = time.monotonic() + 10.0
         missing = [
             c.srv_name
@@ -323,6 +324,7 @@ def record(reader: Reader, label: str, note: str) -> None:
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--prefix", default=PREFIX, help=f"두산 서비스 접두 (기본 {PREFIX})")
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("snap", help="한 점 기록")
     s.add_argument("label")
@@ -350,7 +352,7 @@ def main(argv=None) -> int:
         print(config_snippet(res))
         return 0
 
-    reader = Reader()
+    reader = Reader(prefix=args.prefix)
     try:
         if args.cmd == "snap":
             record(reader, args.label, args.note)

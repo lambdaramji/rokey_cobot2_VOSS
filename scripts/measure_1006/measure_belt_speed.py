@@ -37,8 +37,12 @@ def parse_trial(text: str) -> tuple[float, str]:
     t = text.strip().lower()
     if t.startswith("f"):
         frames, fps = t[1:].split("@")
-        return float(frames) / float(fps), "frames"
-    return float(t), "stopwatch"
+        sec, method = float(frames) / float(fps), "frames"
+    else:
+        sec, method = float(t), "stopwatch"
+    if sec <= 0:
+        raise ValueError("0 이하")  # 0·음수는 형식 오류로 다시 입력받는다
+    return sec, method
 
 
 def speed_cmps(distance_mm: float, seconds: float) -> float:
@@ -142,12 +146,13 @@ def cmd_trial(a) -> int:
             break
         try:
             sec, method = parse_trial(t)
-        except ValueError:
-            print("  형식: 8.12  또는  f487@60")
+        except (ValueError, ZeroDivisionError):
+            print("  형식: 8.12  또는  f487@60 (0 보다 커야 한다)")
             continue
-        rows.append(make_row(a.setting, a.distance, sec, method, a.note))
-        print(f"    {rows[-1]['cmps']:.2f} cm/s")
-    append(rows)
+        row = make_row(a.setting, a.distance, sec, method, a.note)
+        append([row])  # 시도마다 바로 저장 (중간에 Ctrl+C 해도 남는다)
+        rows.append(row)
+        print(f"    {row['cmps']:.2f} cm/s")
     report(a.setting, rows)
     return 0
 
@@ -189,11 +194,11 @@ def cmd_video(a) -> int:
             mark_b = i
         elif k == ord("s") and mark_a is not None and mark_b is not None and mark_b > mark_a:
             sec = (mark_b - mark_a) / fps
-            rows.append(
-                make_row(
-                    a.setting, a.distance, sec, f"video{fps:.2f}", f"{a.file}:{mark_a}-{mark_b}"
-                )
+            row = make_row(
+                a.setting, a.distance, sec, f"video{fps:.2f}", f"{a.file}:{mark_a}-{mark_b}"
             )
+            append([row])  # 시도마다 바로 저장
+            rows.append(row)
             print(
                 f"  시도 {len(rows)}: {mark_b - mark_a} 프레임 = {sec:.3f} s → {rows[-1]['cmps']:.2f} cm/s"
             )
@@ -201,7 +206,6 @@ def cmd_video(a) -> int:
         elif k == ord("q"):
             break
     cv2.destroyAllWindows()
-    append(rows)
     report(a.setting, rows)
     return 0
 
@@ -268,7 +272,7 @@ def main(argv=None) -> int:
     tb.add_argument("--target", type=float, default=None, help="개발 기준 속도 cm/s (예: 5)")
     s = sub.add_parser("serial")
     s.add_argument("--port", default="/dev/ttyACM0")
-    s.add_argument("--baud", type=int, default=115200)
+    s.add_argument("--baud", type=int, default=9600, help="tools/arduino/conveyor_test 와 같게")
     s.add_argument("--eol", default="\n", help="줄 끝 문자 (아두이노 스케치에 맞춘다)")
     a = ap.parse_args(argv)
     return {"trial": cmd_trial, "video": cmd_video, "table": cmd_table, "serial": cmd_serial}[
