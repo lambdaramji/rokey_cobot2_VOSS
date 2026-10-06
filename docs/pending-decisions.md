@@ -12,7 +12,7 @@
 | 6 | Whisper 모델 크기 | 정의석 | 10/06 | SR-SW-11 | 미정 | |
 | 7 | 박스 검출 방식: YOLO 학습 vs 세그멘테이션, 라벨링 도구 | 남현지 | 10/06 | SR-SW-07 | 미정 | |
 | 8 | 두산 제어 경로: servol_stream vs move_line ASYNC | 박병후 | 10/06 | SR-SW-04, SR-IF-09 | 미정 | |
-| 9 | RG2 제어 경로: Modbus TCP 직접 vs onrobot ROS 2 드라이버 | 김학민 | 10/06 | SR-HW-02, SR-SW-05 | 미정 | |
+| 9 | RG2 제어 경로: Modbus TCP 직접 vs onrobot ROS 2 드라이버 | 김학민 | 10/06 | SR-HW-02, SR-SW-05 | 결정 | robot_gateway 안에서 Modbus TCP 직접. WebLogic DIO 는 펜던트 시험용 예비 (10/06) / ADR-0005 |
 | 10 | 흐린 송장 인쇄 농도 | 김학민 | 10/07 | SR-HW-07 | 미정 | |
 | 11 | 시연 송장 받는 사람 이름 목록 | 김학민 | 10/07 | SR-HW-07 | 미정 | |
 | 12 | TTS 엔진 (로컬 / OpenAI TTS) | 정의석 | 10/08 | SR-SW-13 | 미정 | |
