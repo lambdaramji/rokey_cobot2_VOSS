@@ -5,12 +5,12 @@
 |---|---|---|
 | Intent | `string type` (start/stop/resume/priority/answer/update_zone_map), `string dong`, `string zone`, `int32 count`, `string raw_text` | intent_parser → sort_manager |
 | SortState | `string state` (IDLE/RUNNING/PICKING/RECHECK/ASKING/PAUSED), `string box_id`, `string pending_question`, `int32 track_id`, `bool ready`, `string[] not_ready` | `track_id` = 현재 처리 중인 박스의 BoxTrack.track_id (없으면 -1). box_tracker 가 LabelCrop stage 를 정하는 데 쓴다. `ready`·`not_ready` = sort_manager 의 준비 판단(ROBOT/SERVO/VISION/OCR/LOG). ROBOT 은 RobotState 가 생기기 전까지 "`/voss/robot/pose` 가 0.5 s 안에 들어오고 `/voss/robot/move_to_zone` 서비스가 있음"으로 임시 판정. LOG 는 `/voss/log/status` 가 `STARTING` 이거나 3 s 동안 안 오면 not_ready(start 거부, G0 는 DB 필수). 운전 중 `DB_ERROR`·`SPOOL_FULL` 은 경고만 — PAUSED 로 가지 않고 not_ready 에도 넣지 않는다(MC-027 비차단) |
-| SortResult | `string box_id`, `string code`, `string dong`, `float32 confidence`, `string decided_by` (OCR/RECHECK/OPERATOR/NONE), `string zone` (A/B/C/RECHECK/HOLD/""), `string outcome` (PLACED/HELD/FAILED/PASSED), `builtin_interfaces/Time stamp`, `string session_id`, `int32 track_id`, `builtin_interfaces/Time started_at`, `string raw_text`, `string dong_alt`, `string rule_version`, `string reason`, `int32 attempts` | box_id 당 1건. sort_logger 가 DB `sort_log` 1행으로(유일키 box_id). 빈 값은 ""·0, 추정값으로 채우지 않음. 무응답 보류 = decided_by NONE + reason NO_ANSWER |
+| SortResult | `string box_id`, `string code`, `string dong`, `float32 confidence`, `string decided_by` (OCR/RECHECK/OPERATOR/NONE), `string zone` (A/B/C/RECHECK/HOLD/""), `string outcome` (PLACED/HELD/FAILED/PASSED), `builtin_interfaces/Time stamp`, `string session_id` (`YYYYMMDDTHHMMSS-xxxx`, 랜덤 4자리 hex), `int32 track_id`, `builtin_interfaces/Time started_at`, `string raw_text`, `string dong_alt`, `string rule_version`, `string reason`, `int32 attempts` | box_id 당 1건. sort_logger 가 DB `sort_log` 1행으로(유일키 box_id). 빈 값은 ""·0, 추정값으로 채우지 않음. 무응답 보류 = decided_by NONE + reason NO_ANSWER |
 | ZoneMapEntry | `string dong`, `string zone`, `string code`, `string[] aliases` | `code` = 분류코드(예 `S07-01`), `aliases` = 자연어 별칭(예 `[역삼, 역삼동]`). 둘 다 voss_config.yaml 에서 sort_manager 가 채운다. UpdateZoneMap 요청에서는 `dong`·`zone` 만 쓰고 나머지는 비워도 된다 — **빈 `code`·`aliases` = 기존 값 유지**. `dong`(정식 이름)은 항상 허용되고 `aliases` 는 추가 별칭만 담는다(빈 목록이어도 안전) |
 | ZoneMap | `ZoneMapEntry[] entries`, `string version` | transient_local |
-| BoxTrack | `int32 track_id`, `float32 u`, `float32 v`, `int32[4] bbox` (x,y,w,h), `builtin_interfaces/Time stamp` | 30 Hz, 픽셀 좌표 |
+| BoxTrack | `int32 track_id`, `float32 u`, `float32 v`, `int32[4] bbox` (x,y,w,h), `builtin_interfaces/Time stamp`, `geometry_msgs/Point position_base`, `bool position_valid`, `uint8 position_source`, `string calib_version` | 30 Hz 목표. 픽셀 필드 유지. `position_base` = 박스 윗면 중앙 = **TCP(핑거 끝)가 갈 점**, m, 두산 베이스 축. 관측 자세 정지 중 `OBSERVE_HOMOGRAPHY`, **이동 중에도 `HAND_EYE`(촬영 시각 pose 보간)로 갱신 — G0 필수**(#50 MC-002). 동적 변환 검증 전·pose 정합 불가 시 `position_valid=false`. `/voss/robot/pose` stamp 는 조회 응답 수신 시각이므로 시점 오차를 보장값으로 쓰지 않는다. stamp 나이(100 ms 초과)만으로 정지·폐기하지 않는다(MC-031) |
 | LabelRead | `int32 track_id`, `string code`, `string dong`, `float32 confidence`, `uint8 stage` (1 입구 / 2 추종 중 / 3 재확인) | |
-| LabelCrop | `std_msgs/Header header`, `int32 track_id`, `uint8 stage`, `float32 sharpness`, `sensor_msgs/Image image` | box_tracker → label_reader. `header.stamp` = 원본 카메라 프레임 시각(보존). `stage` 는 box_tracker 가 `/voss/sort/state` 로 정한다: **`track_id == SortState.track_id`** 인 트랙만 PICKING→2·RECHECK→3, 그 밖의 트랙과 상태 수신 전에는 1. `sharpness` = 선명도 점수(클수록 선명), 2단계 프레임 선택·다수결 가중에 쓴다. `image` = 송장 영역 크롭(전처리 전 원본 색) |
+| LabelCrop | `std_msgs/Header header`, `int32 track_id`, `uint8 stage`, `float32 sharpness`, `sensor_msgs/Image image` | box_tracker → label_reader. `header.stamp` = 원본 카메라 프레임 시각(보존). `stage` 는 box_tracker 가 `/voss/sort/state` 로 정한다: **`track_id == SortState.track_id`** 인 트랙만 PICKING→2·RECHECK→3, 그 밖의 트랙과 상태 수신 전에는 1. `sharpness` = 선명도 점수(클수록 선명), 2단계 프레임 선택·다수결 가중에 쓴다. 2단계 프레임은 PICKING 동안 액션 result 가 올 때까지(GRASP 중 추종 포함) **영상 품질(선명도·가림·송장 크기)로만** 고른다 — phase 문자열에 의존하지 않는다(#50 MC-007). `image` = 송장 영역 크롭(전처리 전 원본 색) |
 
 ## srv
 | 타입 | 요청 | 응답 |
@@ -25,7 +25,7 @@
 ## action
 | 타입 | goal | feedback | result |
 |---|---|---|---|
-| TrackAndGrasp | `int32 track_id` | `float32 err_u`, `float32 err_v`, `string phase` (approach/track/descend/grasp) | `bool grasped`, `string reason` |
+| TrackAndGrasp | `int32 track_id` | `float32 err_u`, `float32 err_v` (px), `string phase` (PREPARE/TRACK/DESCEND/GRASP/LIFT/VERIFY) | `bool grasped` (LIFT·VERIFY 완료 = 인계), `string reason` (OK/GRASP_FAILED/LOST/STALE_INPUT/DEVICE_ERROR/CANCELED/STOP_UNCONFIRMED — 최종 목록·action status 대응은 박병후), `int32 attempts` (goal 안 총 시도, 최대 3, servo 단독 카운터). goal 1개당 result 1건. STOP_UNCONFIRMED 는 정상 취소가 아니다 |
 
 ## 변경 이력
 - 2026-10-05: 초안. 필드명은 제안이며 10/05 확정.
@@ -40,5 +40,9 @@
   - `MoveToZone`: 요청 끝에 `mode`(PLACE/VIEW/PICK), 응답 끝에 `placed_stamp` 추가 (MC-016·017).
   - `Command`: canonical 명령 표 명시 (MC-023).
   - `Stats` srv 삭제: 집계는 DB 하나가 원천이고 정의석 측 REST `GET /api/stats` 로 제공 (MC-022, `docs/interfaces/web_api.md` 예정).
-  - 보류 중(병후 확인 대기, #50): BoxTrack 위치 필드, TrackAndGrasp phase·reason·attempts.
   - 리뷰 반영(#63 김학민·정의석): zone 대문자·대소문자 무시 조회, MoveToZone slot·PLACE 응답 시점·실패 코드, TeachZone 값 목록, Command.srv 주석을 canonical 표와 일치, SortState ROBOT 임시 판정·LOG 비차단 규칙.
+- 2026-10-06: #50(박병후) 합의 반영.
+  - `BoxTrack` 끝에 `position_base`·`position_valid`·`position_source`·`calib_version` 추가 — 픽셀→베이스 변환은 비전 단일 책임, 이동 중 갱신은 G0 필수 (MC-001·002). voss_msgs 가 geometry_msgs 에 의존.
+  - `TrackAndGrasp`: phase·reason 대문자, result 끝에 `attempts` 추가, `grasped` = LIFT·VERIFY 완료 (MC-005·006).
+  - `SortResult.session_id` 에 랜덤 4자리 붙임 — 같은 초 재시작 충돌 방지 (MC-003). DB 컬럼 길이는 정의석.
+  - LabelCrop 2단계 프레임 선택 기준 (MC-007).
