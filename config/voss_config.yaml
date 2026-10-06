@@ -17,6 +17,7 @@ belt:
 gripper:   # 폭은 RG2 보고값 (실제 간격 ≈ 보고값 − 10 mm)
   pre_open_mm: 90
   grasp_width_mm: 39
+  release_open_mm: 45      # 트레이에 놓을 때. 쥔 폭 + 약 5 mm
   force_n: 14.0
 ocr:
   confidence_min: 0.6
