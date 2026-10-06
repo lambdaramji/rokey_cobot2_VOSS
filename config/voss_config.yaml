@@ -15,6 +15,8 @@ zones:   # 플랜지 기준 posx (TCP 미적용), 트레이 안쪽 바닥 중심
   recheck: {pose: [446.17, -69.04, 260.65, 169.44, -180.0, 79.38], grid: {cols: 2, rows: 1, pitch_mm: 60}}
   hold:    {pose: [674.12, -71.37, 262.65, 168.88, -180.0, 78.38], grid: {cols: 2, rows: 1, pitch_mm: 60}}
 observe_pose: [-11.51, -271.11, 450.16, 85.25, -179.07, -6.03]   # 플랜지 기준. 홈과 같음
+robot:
+  tcp_offset_mm: [1.382, 2.684, 246.642]   # 플랜지 → 핑거 끝 TCP (툴 좌표). 펜던트 등록값 (measurements #6)
 belt:
   speed_cmps: 4.8          # 아두이노 h250
   direction_axis: "x"
