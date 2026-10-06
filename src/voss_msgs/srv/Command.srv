@@ -1,5 +1,5 @@
-string command           # start | stop | resume | priority | answer
-string arg
+string command           # start | priority | stop | resume | answer | reset_zone (응답 = 접수, 완료는 SortState·SortResult)
+string arg               # start: "" 또는 ALL · priority: 동 이름 · answer: <box_id>|<동 또는 HOLD> · reset_zone: 구역
 ---
 bool ok
 string message

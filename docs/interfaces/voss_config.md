@@ -3,6 +3,8 @@
 위치: 호스트 `~/voss_ws/config/voss_config.yaml` (레포의 `config/voss_config.yaml` 을 복사). 비전 컨테이너에는 읽기 전용 마운트.
 **쓰는 노드는 sort_manager 뿐.** 다른 노드는 `/voss/sort/zone_map` 토픽을 구독한다.
 
+구역 이름: MoveToZone·TeachZone·SortResult 의 zone 문자열은 대문자(A/B/C/RECHECK/HOLD/OBSERVE). robot_gateway 는 아래 `zones` 키를 대소문자 무시로 찾고, OBSERVE 는 `observe_pose` 를 쓴다.
+
 ```yaml
 version: 1
 zone_map:            # 동 → 구역. 자연어로 변경 가능
