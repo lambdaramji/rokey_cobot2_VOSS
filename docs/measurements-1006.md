@@ -61,6 +61,12 @@
 6. **RealSense는 D435i를 연결한 뒤 확인한다.** 깊이는 쓰지 않으므로 DKMS 미빌드의 영향은 작다. 남은 확인은 `rs-enumerate-devices`, `realsense-viewer`로 RGB 30 Hz와 수동 노출 5~8 ms(#9)가 되는지다.
 7. **VRAM 8 GB는 미결정 #6(Whisper 모델 크기)의 판단 근거다.** YOLO, PaddleOCR, Whisper를 함께 올려야 하니, 통합 전에 각 모델의 VRAM 사용량을 `nvidia-smi`로 잰다.
 8. **GPU 컨테이너 실행 테스트는 아직 안 했다.** 로컬에 이미 있는 이미지로 확인한다 (새로 받을 필요 없음): `docker run --rm --gpus all ros:jazzy-ros-base-noble nvidia-smi`
+
+### 10/06 오후 갱신 (김학민, 실측 중 확인)
+- 2번 `dialout`: **해결.** 팀 승인 후 `usermod -aG dialout ms-03`, 다시 로그인. `/dev/ttyACM0`(Arduino Uno `2341:0043`) 열림 확인.
+- 5·6번 D435i: **해결.** 첫 포트에서는 `Bus 001` 480M(USB 2)로 잡혀 포트를 바꿨다. `Bus 002` Port 2 에 5000M 으로 연결. RGB 1920×1080 30 Hz, 수동 노출 6 ms 확인 (#9).
+- 1번 CycloneDDS `lo`: 그대로 둠. 10/06 실측은 브링업·스크립트·카메라를 공용 PC 한 대에서 돌려 문제없었다.
+- 3번 유선 게이트웨이: 그대로 둠.
 9. 기타
    - `nvidia-driver-595`, `docker-ce`, `docker-ce-cli`, `containerd.io`가 apt hold 상태다. 일부러 고정한 것으로 보이니 그대로 둔다.
    - `nvidia-smi` 전력 값이 `590W / 80W`로 비정상 표시된다. 센서 값 오류로 보이며 동작에는 영향이 없다.
