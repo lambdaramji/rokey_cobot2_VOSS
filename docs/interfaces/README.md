@@ -9,6 +9,7 @@
 | intent_json.md | intent_parser 가 만드는 JSON 과 허용 목록 | 제안 |
 | mqtt.md | hmi_bridge ↔ 웹 HMI MQTT 토픽·JSON | 미정 (정의석, 10/08) |
 | voss_config.md | voss_config.yaml 스키마 (zone_map, 구역 좌표, 벨트 속도 등) | 제안 |
+| web_api.md | 웹·AI HTTP API (Spring Boot `/api` 이력·집계·명령·SSE, FastAPI `/ai` STT·intent) — ADR-0006 | 제안 (정의석, 10/06) |
 
 ## 변경 절차
 1. 이 폴더의 문서를 고치는 PR을 먼저 올린다 (`interface` 라벨). 영향받는 파트 담당자를 리뷰어로.
