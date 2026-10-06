@@ -3,6 +3,7 @@
 // 배선: D2 → DIR-, D3 → DIR+, D4 → PUL+, PUL- → GND(POWER 영역)
 // 업로드하거나 RESET 하면 바로 계속 회전한다. 시리얼 9600 baud: 's' 정지, 'r' 회전.
 //
+// ⚠ 시리얼 포트를 열면 Uno 가 리셋되어 벨트가 바로 돈다. 포트를 열기 전에 벨트 위를 비운다.
 // 속도는 HALF_PERIOD_US(펄스 반주기)로 정한다. 실측표는 docs/measurements-1006.md #1.
 //   500 → 2.47 cm/s (원래 스케치 값) · 330 → 3.69 · 250 → 4.89 (개발 설정) · 170 → 6.98 · 110 → 11.01
 // 바꾸면 config/voss_config.yaml 의 belt.speed_cmps 도 같이 바꾼다.
