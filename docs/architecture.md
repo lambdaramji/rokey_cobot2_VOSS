@@ -37,7 +37,7 @@ flowchart LR
   VL -.->|HTTP /stt| AI[FastAPI: Whisper·OpenAI]
   IP -.->|HTTP /intent| AI
 ```
-웹·AI·DB 스택과 경계: ADR-0006 (제안). 브라우저·Spring Boot 는 ROS 에 직접 붙지 않고 MQTT 로만 연결한다.
+웹·AI·DB 스택과 경계: ADR-0006. 브라우저·Spring Boot 는 ROS 에 직접 붙지 않고 MQTT 로만 연결한다.
 
 ## 배포 구성
 | 위치 | 구성요소 | 이유 |
