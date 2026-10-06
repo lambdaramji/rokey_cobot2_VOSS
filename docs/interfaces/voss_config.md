@@ -9,6 +9,10 @@ zone_map:            # 동 → 구역. 자연어로 변경 가능
   역삼동: A
   대치동: B
   청담동: C
+aliases:             # 동 → 자연어 별칭 (BRD 2.4). zone_map 토픽의 aliases 로 전파
+  역삼동: [역삼, 역삼동]
+  대치동: [대치, 대치동]
+  청담동: [청담, 청담동]
 zones:               # 10/06 실측 후 입력 (두산 posx: x y z rx ry rz, mm/deg)
   A:       {pose: [0, 0, 0, 0, 0, 0], grid: {cols: 2, rows: 2, pitch_mm: 60}}
   B:       {pose: [0, 0, 0, 0, 0, 0], grid: {cols: 2, rows: 2, pitch_mm: 60}}
@@ -32,3 +36,4 @@ timing:
 
 ## 변경 이력
 - 2026-10-05: 초안. codes 매핑 확정 (01 역삼 / 02 대치 / 03 청담).
+- 2026-10-06: `aliases` 추가 (#10, pending #1 승인 PR). sort_manager 는 zone_map 발행 때 각 ZoneMapEntry 에 `code`(ocr.codes 역참조)와 `aliases` 를 채운다. 별칭이 없는 동은 빈 목록.
