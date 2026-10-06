@@ -18,7 +18,6 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/LabelCrop.msg"
   "srv/Command.srv"
   "srv/UpdateZoneMap.srv"
-  "srv/Stats.srv"
   "srv/MoveToZone.srv"
   "srv/Gripper.srv"
   "srv/TeachZone.srv"

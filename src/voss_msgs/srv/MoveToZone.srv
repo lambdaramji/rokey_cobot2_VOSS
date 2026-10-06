@@ -1,5 +1,7 @@
-string zone              # A | B | C | recheck | hold
+string zone              # A | B | C | RECHECK | HOLD | OBSERVE
 int32 slot               # 격자 슬롯 번호 (0부터)
+string mode              # "" = PLACE (놓기 + OBSERVE 복귀) | VIEW (카메라로 구역을 보는 자세로만 이동) | PICK (slot 에서 집어 안전 높이로)
 ---
 bool ok
 string message
+builtin_interfaces/Time placed_stamp   # PLACE: RG2 개방 완료 확인 시각 (호스트 시계). 그 밖의 mode 는 0
