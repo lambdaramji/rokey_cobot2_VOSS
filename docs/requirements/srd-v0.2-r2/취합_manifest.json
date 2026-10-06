@@ -1,0 +1,1620 @@
+{
+  "agreements": [
+    {
+      "id": "AC-001",
+      "title": "A/B/C 범위·G0",
+      "parties": "전원",
+      "content": "A는 실제 박스1개 인식→이동중픽업→기본구역적재→DB commit·조회→복귀/다음관측 준비. 시작 입력만 모의 가능. 음성/HMI/예외/이력/성능은 B 필수, 매핑변경/교시는 C 선택.",
+      "location": "§2.2·8.2",
+      "refs": "전원 §0; B B-04/VT-BH-03; E E-04"
+    },
+    {
+      "id": "AC-002",
+      "title": "기본 매핑·장비 가정",
+      "parties": "남현지·김학민·박병후",
+      "content": "S07-01 역삼동→A, S07-02 대치동→B, S07-03 청담동→C. M0609/RG2/손목D435i, 박스46×31×27mm·송장40×25mm는 운영 규격. 실제 치수/배치/좌표는 측정 전.",
+      "location": "§2.4·3.1",
+      "refs": "V V-01; R R-01; B VT-BH-02"
+    },
+    {
+      "id": "AC-003",
+      "title": "1개 투입·벨트 수동",
+      "parties": "김학민·박병후",
+      "content": "한 번에 박스1개, VOSS는 벨트 운전/속도를 자동 제어하지 않는다. 로봇 작업 stop과 벨트 정지는 별개.",
+      "location": "§2.4·SYS-CT-004",
+      "refs": "R SYS-CT-004/R-01; B §0/B-03"
+    },
+    {
+      "id": "AC-004",
+      "title": "RGB+알려진 높이",
+      "parties": "남현지·박병후·기존 요구",
+      "content": "깊이 미사용, RGB와 알려진 박스 높이27mm 및 캘리브레이션 사용. 이동 카메라 변환 방식·위치 단위는 MC-001·002·010에서 확인.",
+      "location": "§3.1·SYS-CT-002",
+      "refs": "V V-02; B IC-BH-VISION"
+    },
+    {
+      "id": "AC-005",
+      "title": "업무 식별 역할·결과 수",
+      "parties": "남현지·정의석·박병후",
+      "content": "track_id는 영상 추적, box_id는 업무 처리 식별이다. 파지 재시도와 물리 재투입을 구분하며, 한 업무 처리의 최종 결과는1건, 중복 수신은 이중 저장·집계 금지. 정확한 키/발급 규칙은 MC-003.",
+      "location": "§3.2·SYS-FR-004/DT-001",
+      "refs": "V V-03/V-07; E E-04; B B-04"
+    },
+    {
+      "id": "AC-006",
+      "title": "manager/servo/gateway 기본 책임",
+      "parties": "남현지·박병후·김학민",
+      "content": "manager 대상/목적구역/전체 FSM/최종 업무결과, servo 추종/픽업 단계/닫힘 요청 타이밍·파지 판정, gateway 실제 장비 접근·단위 변환·제한·적재/복귀. retry·안전높이 인계·stop 상세는 미합의.",
+      "location": "§3.3",
+      "refs": "V IC-V-05; R R-03/R-04; B B-01"
+    },
+    {
+      "id": "AC-007",
+      "title": "공통 ROS 골격과 제어 단위",
+      "parties": "김학민·박병후·저장소",
+      "content": "servo_cmd는 TwistStamped 후보 유지, linear m/s·angular rad/s. pose는 PoseStamped m·quaternion 후보 유지. native mm/deg 변환은 gateway. base 이름·TCP기준·stamp 의미는 MC-004·010.",
+      "location": "§5.2",
+      "refs": "R R-02/IC-R-01; B IC-BH-ROBOT01/02; main voss_msgs"
+    },
+    {
+      "id": "AC-008",
+      "title": "그리퍼 응답≠물체 확보",
+      "parties": "김학민·박병후",
+      "content": "gateway는 그리퍼 개폐/피드백 제공, servo는 픽업 중 닫힘 요청·파지 성공 판정. 단순 ok/접수만을 grasped로 간주하지 않는다. 판정 경로/힘/폭/IDL은 실험 후 확인.",
+      "location": "§3.3·SYS-FR-010",
+      "refs": "R R-03; B SYS-FR-010/IC-BH-GRIP"
+    },
+    {
+      "id": "AC-009",
+      "title": "단일 장비 접근·제한·정지 의미",
+      "parties": "김학민·박병후·남현지",
+      "content": "두산 장비 접근은 gateway, 서비스 호출은 직렬화. gateway는 속도/영역 제한과 유효 제어 입력 상실 감시를 담당. cancel 접수와 실제 정지를 구분. 소프트웨어 정지는 안전등급 비상정지를 대체하지 않음.",
+      "location": "§6.3·SYS-CT-003",
+      "refs": "R R-02/R-05; B B-02; V IC-V-05"
+    },
+    {
+      "id": "AC-010",
+      "title": "DB commit·조회·업무/저장 상태 분리",
+      "parties": "정의석·박병후·남현지",
+      "content": "manager 최종 결과→sort_logger→DB. 저장 성공은 commit 후 판정, G0는 같은 식별자 DB행 조회까지 확인. 물리 placed와 DB_OK/DB_ERROR는 분리한다. 비차단 여부/장애운전은 MC-016·027.",
+      "location": "SYS-FR-014·§7.1·8.2",
+      "refs": "E E-04; B VT-BH-03; V V-07"
+    },
+    {
+      "id": "AC-011",
+      "title": "이력·화면의 DB 기준",
+      "parties": "정의석·남현지·기존 요구",
+      "content": "음성 이력과 HMI 공식 집계는 저장된 작업 로그를 기준으로 일치해야 한다. provider/키/계산식/DB장애시 메모리 백업은 미확정.",
+      "location": "SYS-FR-029·§5.2",
+      "refs": "E E-05; V IC-STATS-01 coverage"
+    },
+    {
+      "id": "AC-012",
+      "title": "설정 단일 원본·writer",
+      "parties": "남현지·김학민·박병후",
+      "content": "config/voss_config.yaml 단일 원본, 런타임 writer는 sort_manager. 초기 실측은 담당자가 기록·입력. 미측정 placeholder를 유효 구동값으로 쓰지 않는다. 정적 launch snapshot과 필드별 null검증은 합의대기.",
+      "location": "SYS-FR-033·§7.2",
+      "refs": "V V-06; R R-06; B IC-BH-CONFIG"
+    },
+    {
+      "id": "AC-013",
+      "title": "음성/HMI·TTS 기본 경로",
+      "parties": "남현지·정의석",
+      "content": "음성 Intent와 HMI command가 같은 업무동작을 표현, 무효/허용외 입력 실행 금지. Command응답은 접수/거부, 실제 완료는 state/result. manager가 완성 문장을 say(String)로 전달. 세부 enum·query·중복억제는 미확정.",
+      "location": "§5.2·SYS-IF-005",
+      "refs": "V V-05/IC-V-06; E E-01/IC-EUS-VOICE-01"
+    },
+    {
+      "id": "AC-014",
+      "title": "정상/예외/작업자 대기",
+      "parties": "사용자 결정·남현지·박병후·정의석",
+      "content": "정상 자동≤30초 목표. 예외 전체 시간과 작업자 대기 별도 기록, 대기를 뺀 예외를 정상으로 재분류하지 않는다. 감지/placed 종료·retry 분류는 MC-030.",
+      "location": "§6.2·SYS-PF-004",
+      "refs": "사용자 결정; V 사이클; B B-05; E §0"
+    },
+    {
+      "id": "AC-015",
+      "title": "성능 목표와 실측 구분",
+      "parties": "각 성능 주담당",
+      "content": "픽업70%(20사례≥14), OCR90/95%, intent4종×5문장≥19/20, 음성≤3초, 서보30Hz, 관측지연≤100ms, 최종10물리박스≥8 올바른 적재. HMI≤1초도 정의석 수용목표이며 전체측정/승인확인 남음. 구현/실기 통과 의미 아님.",
+      "location": "§6.1·8.2",
+      "refs": "전원 SYS-PF 검토/검증 카드"
+    },
+    {
+      "id": "AC-016",
+      "title": "재시도 횟수의 기능 요구",
+      "parties": "남현지·박병후",
+      "content": "최초+최대2회 추가 파지 시도, 최대3회. 대상이 유효하고 안전 정상인 경우에만 시도하며 최종 실패는 manager가 업무 결과 확정. 재시도 실행 소유자는 MC-005.",
+      "location": "SYS-FR-011",
+      "refs": "V IC-V-05; B SYS-FR-011/B-01"
+    }
+  ],
+  "issues": [
+    {
+      "id": "MC-001",
+      "title": "픽셀→베이스 위치의 제공 책임·출력 단위",
+      "kind": "명시적 충돌",
+      "phase": "A",
+      "pairs": [
+        "VB"
+      ],
+      "ids": "SYS-FR-007, IC-VISION-02, TBD-002·003; NEW-B-01",
+      "a": "남현지: BoxTrack 픽셀만 발행, servo/manager가 공용 함수로 변환. 출력 mm.",
+      "b": "박병후: 현지의 변환 단계에서 base position·frame·valid를 공급받아 사용. ROS 입력 m.",
+      "question": "변환 담당 노드와 공급 경로를 하나로 정할 것. 기존 픽셀 필드 유지 여부, base 위치 별도 출력 또는 명시적 추가 필드, mm→m 경계를 결정할 것.",
+      "deliverable": "생산자/소비자·최종 메시지 또는 함수 API·상단 중심 기준·단위 변환·캘리브레이션 버전·실제 수신 예시.",
+      "lead": "남현지 주작성, 박병후 수용 확인",
+      "refs": "V V-02·IC-V-02(L73–83,199–214); B IC-BH-VISION·NEW-B-01(L158–175,361–371)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-002",
+      "title": "고정 관측 자세 호모그래피와 이동 카메라 추종",
+      "kind": "전제 충돌",
+      "phase": "A",
+      "pairs": [
+        "VB",
+        "VR",
+        "RB"
+      ],
+      "ids": "SYS-FR-007·008, SYS-CT-002, TBD-002·014·020",
+      "a": "남현지: 현재 호모그래피는 observe_pose에서만 유효. 카메라 이동 시 정식 핸드아이로 보완 예정.",
+      "b": "박병후: 손목 카메라가 움직이는 동안 촬영 시점 pose로 계속 base 위치를 산출하는 폐루프.",
+      "question": "고정 자세 캘리브레이션만으로 이동 추종이 되는 것으로 가정하지 말 것. 핸드아이/촬영 시점 pose 이력/평면 교점 방식과 담당·완료 조건을 결정할 것.",
+      "deliverable": "observe_pose·카메라 내부/외부 파라미터·툴 기준·이동 중 변환 식/담당·정적/동적 검증 로그. ≤5mm는 승인 전 제안.",
+      "lead": "남현지 변환 설계, 김학민 기준 자세/실측, 박병후 소비 검증",
+      "refs": "V V-02(L73–83); R R-04·IC-R-01(L79–89,139–162); B B-02·IC-BH-VISION(L71–87,158–175)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-003",
+      "title": "track/box/session/task/attempt 유일성과 재투입",
+      "kind": "계약 공백·충돌 가능",
+      "phase": "A/B",
+      "pairs": [
+        "VE",
+        "VB",
+        "BE"
+      ],
+      "ids": "SYS-FR-004·014, SYS-DT-001, TBD-003·007·008·012·022",
+      "a": "남현지: 투입 회차별 box_id, 재시도는 같은 box_id의 attempt 1~3, 재투입은 새 box_id. 접두 MMDDTHHMM-순번.",
+      "b": "정의석: attempt_id 또는 처리 시도별 box_id 유일키 제안. 박병후: task/session/attempt와 물리 박스 대응 필요.",
+      "question": "처리 시도라는 말이 투입 회차인지 파지 재시도인지 통일할 것. 같은 분 재시작·노드 재기동·해가 바뀌어도 DB 키 충돌이 없는지, track 만료 후 같은 박스와 재투입을 구분하는지 확인할 것.",
+      "deliverable": "ID 대응표·유일키·생성/만료 주체·재시작 규약·물리 박스 시험대장. retry/reinsert/중복 수신 각 예시와 DB 행 수.",
+      "lead": "남현지 업무 ID, 정의석 DB키, 박병후 시험 ID 취합",
+      "refs": "V V-03·V-07·IC-V-07(L85–96,138–149,333–359); E E-04·IC-EUS-DB-01(L148–187,297–315); B B-04(L106–122)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-004",
+      "title": "촬영·pose·제어 시각과 시계 이력",
+      "kind": "명시적 충돌·계약 공백",
+      "phase": "A/B",
+      "pairs": [
+        "VB",
+        "RB",
+        "VR"
+      ],
+      "ids": "SYS-PF-007, IC-VISION-01·02, IC-ROBOT-02, TBD-003·014·020·026",
+      "a": "남현지: camera header.stamp를 호스트 촬영 시각으로 보존. 김학민: pose stamp는 조회 응답 수신 시각.",
+      "b": "박병후: pose stamp는 실제 측정 시각, 촬영 시점의 pose/TF 이력 사용. 카메라 하드웨어 시계 매핑 확인 요구.",
+      "question": "응답 수신 시각을 실제 장비 측정 시각으로 표기할 수 있는지 확인할 것. 불가하면 응답 시각·측정 불확실성·보간/예측 한계를 명시. 카메라 stamp domain, ROS/system/monotonic, 다중 PC 동기를 정할 것.",
+      "deliverable": "시각 필드 정의표·시계 변환·pose 이력 보존/보간 범위·age/stale/future 기준·capture→consume 로그.",
+      "lead": "김학민 pose 원천, 남현지 camera/변환, 박병후 제어 age",
+      "refs": "R IC-R-01(L139–162); V V-03·IC-V-01(L85–96,183–197); B IC-BH-ROBOT02·B-02(L215–232,71–87)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-005",
+      "title": "재시도 담당과 액션/attempt 경계",
+      "kind": "명시적 충돌",
+      "phase": "B",
+      "pairs": [
+        "VB"
+      ],
+      "ids": "SYS-FR-011, IC-PICK-01, TBD-019; NEW-B-04",
+      "a": "남현지: manager가 실패 result를 받아 같은 box_id로 새 attempt/goal, 최대 2회 추가.",
+      "b": "박병후: servo가 국소 재시도, manager는 최종 실패를 확정.",
+      "question": "최대3회 카운터의 유일 소유자와 재시도 위치를 정할 것. 양쪽에서 재시도해 총횟수가 늘지 않도록 goal UUID·attempt·종료 result 관계를 확인.",
+      "deliverable": "한 번 실패→재시도 성공/3회 실패/시야상실/안전오류의 호출 시퀀스·카운터·최종 result 수.",
+      "lead": "박병후 픽업안 작성, 남현지 FSM 연결",
+      "refs": "V IC-V-05(L269–282); B B-01·IC-BH-PICK(L53–69,177–194)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-006",
+      "title": "픽업 phase·성공 인계·reason enum",
+      "kind": "명시적 충돌·상세 미정",
+      "phase": "A/B",
+      "pairs": [
+        "VB",
+        "RB"
+      ],
+      "ids": "SYS-FR-009·010, SYS-IF-002, IC-PICK-01, TBD-019; NEW-B-04",
+      "a": "남현지: approach/track/descend/grasp, 소문자 ok/lost/grasp_fail/canceled/robot_error.",
+      "b": "박병후: prepare/track/descend/grasp/lift/verify, 대문자 OK/GRASP_FAILED/STALE_INPUT/DEVICE_ERROR 등 예시. 안전 높이까지 인계.",
+      "question": "phase와 reason의 최종 허용값·대소문자·ROS action status를 일치시킬 것. grasped=true의 물체 확보 및 lift 완료 경계와 인계 높이/자세를 명시할 것.",
+      "deliverable": "goal/feedback/result 정의·상태/사유 매핑표·인계 조건·timeout/BUSY 정책. err_u/v는 px 유지, m 오차는 별도 필드 후보.",
+      "lead": "박병후 액션 의미, 남현지 소비, 김학민 모션 완료 확인",
+      "refs": "V IC-V-05(L269–282); B IC-BH-PICK(L177–194); R R-03·R-04(L67–89)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-007",
+      "title": "2차 OCR 실현가능성과 수렴 프레임",
+      "kind": "전제 차이·요구사항 변경 제안",
+      "phase": "B",
+      "pairs": [
+        "VB"
+      ],
+      "ids": "SYS-FR-023, VT-023, IC-VISION-03·04, TBD-003·004·019; NEW-B-06",
+      "a": "남현지: tracker가 PICKING 상태·화면 목표점·선명도로 3~5장 선택, 서보 추가 신호 불필요. 약0.3초 시야 유지 추정.",
+      "b": "박병후: 손목 시야/가림/거리상 불가능할 수 있어 B에서 실험 후 판단, 필요 시 수렴 신호 협의.",
+      "question": "PICKING만으로 내려가기/가림/목표 수렴을 구분할 수 있는지 실제 프레임으로 확인할 것. 가능/불가 조건과 신호·종료 시점을 정하고, 불가하면 대안 및 SYS/VT 변경 승인을 별도로 기록.",
+      "deliverable": "실기 프레임·box/stage/stamp 대응·선택 기준·OCR 부하 영향·가능성 판정 및 변경 카드. 현 B 필수 요구를 자동 삭제하지 않음.",
+      "lead": "남현지 OCR/PL, 박병후 추종 실험",
+      "refs": "V V-03·V-04(L85–111); B B-01·NEW-B-06(L53–69,421–431)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-008",
+      "title": "10/10 게이트와 개루프 검토 조건",
+      "kind": "회신↔기존 문서 충돌",
+      "phase": "A/B",
+      "pairs": [
+        "VB",
+        "RB"
+      ],
+      "ids": "TBD-021, SYS-FR-008, SYS-PF-001; NEW-B-05; ADR-0002",
+      "a": "저장소 ADR-0002: B 개루프 베이스라인부터, 10/10 14/20 미달이면 B로 전환. 남현지: 같은 ADR을 기준으로 A/B 전환 가능 기재.",
+      "b": "박병후: 폐루프 FF+P 우선. 실측 성능이 상당히 부족하다고 팀 판단할 때만 개루프 대안을 검토. 날짜/목표 미달로 자동 전환하지 않음.",
+      "question": "현재 담당 방향과 팀 기준선을 동기화할 것. 70% 목표와 성능 점검은 유지하며 대안 검토 조건·결정자·증거·ADR 갱신을 확인.",
+      "deliverable": "팀 검토 기록·ADR-0002 정정안·현재 채택 방식·전환 미결정/결정 여부. speedl 미지원과 폐루프 포기를 구분.",
+      "lead": "박병후 방향 제시, 남현지 PL·김학민 실행 경로 확인",
+      "refs": "B B-03·NEW-B-05(L89–104,409–419); V IC-V-05(L269–282); repo docs/adr/0002-grasp-method-gate.md",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-009",
+      "title": "단일 설정 snapshot·스키마·단위·유효값",
+      "kind": "대체로 합치·상세 공백",
+      "phase": "A",
+      "pairs": [
+        "VR",
+        "VB",
+        "RB"
+      ],
+      "ids": "SYS-FR-033, SYS-IF-007, IC-CONFIG-01, TBD-006·013·017·018·020",
+      "a": "남현지: 정적 값 launch→parameters, runtime writer=manager, belt direction_axis, 미정 null 제안.",
+      "b": "김학민: 방향은 base 단위벡터, zones/limits 필요. 박병후: Kp/height/offset/age/watchdog/TCP/calibration/version/valid를 함께 검증.",
+      "question": "launch 전달 원칙을 수용하는지, 전체 schema와 소비자 목록·단위를 정할 것. 좌표 mm/deg와 제어 SI 변환, 부호 있는 벨트 단위벡터·속도, 0/null의 유효성을 필드별로 구분할 것.",
+      "deliverable": "버전/해시 있는 초기 설정 예시·노드별 parameter 표·검증/READY 조건·누락 거부 사례. angular=0 같은 정상 0까지 일괄 금지하지 않음.",
+      "lead": "남현지 schema/bringup, 김학민 실측/limits, 박병후 제어 값",
+      "refs": "V V-06·IC-V-08(L126–136,361–379); R IC coverage·R-02(L128–137,54–65); B IC-BH-CONFIG(L253–270)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-010",
+      "title": "플랜지/TCP·orientation·좌표 원점",
+      "kind": "명시적 충돌·미정",
+      "phase": "A",
+      "pairs": [
+        "VR",
+        "RB"
+      ],
+      "ids": "SYS-FR-007·012, SYS-IF-003, IC-ROBOT-02·03, TBD-002·014·016",
+      "a": "김학민: zones는 플랜지 기준(TCP 미적용), pose 기준점은 미정. 남현지: 캘리브레이션 TCP 터치.",
+      "b": "박병후: 실제 TCP pose·파지 offset·상단 중심의 대응을 전제로 함.",
+      "question": "장비 API가 반환하는 기준점과 설정/pose/캘리브레이션 기준점을 통일하거나 변환을 명시할 것. base_link가 실제 두산 베이스와 일치하는지, ZYZ↔quaternion과 각속도 의미도 확인.",
+      "deliverable": "TCP/tool 명칭·오프셋·frame 관계·단위·변환 예시·재기동 재등록 절차·측정 조건.",
+      "lead": "김학민 장비 기준, 남현지 캘리브레이션, 박병후 파지 기준",
+      "refs": "R R-04·R-07·IC-R-01(L79–89,117–126,139–162); V V-02(L73–83); B IC-BH-ROBOT02(L215–232)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-011",
+      "title": "speedl/servol/move_line 실제 API·큐·주기",
+      "kind": "후보 차이·실기 공백",
+      "phase": "A/B",
+      "pairs": [
+        "RB"
+      ],
+      "ids": "SYS-CT-003, IC-ROBOT-01·DEVICE-01, TBD-014·020; NEW-B-02",
+      "a": "김학민: 소스상 speedl_stream이 Twist와 의미 대응, M2.40 이상 조건·실장비 미확인. 서비스 단일 큐, stop 우회 후보.",
+      "b": "박병후: latest base 속도 목표를 speedl 우선 실행, 옛 속도 목표 누적 금지. actual 적용과 publish를 구분 요구.",
+      "question": "실제 설치 namespace/type/DRCF 지원·vel/acc/time/ref 단위·stream/서비스 동시성·pose 조회 경쟁을 확인할 것. 위치 명령으로 바꾸면 속도→목표 변환 의미를 별도 합의.",
+      "deliverable": "ros2 실제 타입/경로·설치 커밋·버전·유효명령/실제 적용 또는 관측 가능한 proxy 로그·주기/지터·고정자세 시험. 경로는 /dsr01/dsr_controller2/* 후보.",
+      "lead": "김학민 장비/API, 박병후 제어 출력",
+      "refs": "R R-02·IC-R-03(L54–65,189–206); B IC-BH-ROBOT01·DEVICE(L196–213,272–289)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-012",
+      "title": "RG2 파지 성공 피드백과 판정 방법",
+      "kind": "방향 합치·실측/타입 공백",
+      "phase": "A",
+      "pairs": [
+        "RB"
+      ],
+      "ids": "SYS-FR-010, IC-ROBOT-03·DEVICE-01, TBD-015·019; NEW-R-02·NEW-B-03",
+      "a": "김학민: Modbus grip_detected+busy+width 가용 후보, grip_detected AND 폭46±3mm 제안. 서비스 응답 필드 확장 제안.",
+      "b": "박병후: 직접 물체 확보 피드백을 먼저 실험, 없다면 닫힘 완료+실측 폭+lift 유지. 판정 방법 유보.",
+      "question": "raw bit가 물체 확보를 의미하는지 빈 파지/정상/미끄러짐으로 검증할 것. width/힘/시간/valid/오류·최종 판정 방식을 선택하고 Gripper 응답을 결정.",
+      "deliverable": "빈 파지·정상 파지 raw 로그/영상·stamp·busy 완료·폭 범위·최저 무손상 힘·최종 IDL/판정 표. 90mm/40mm/46±3mm는 실측 전 후보.",
+      "lead": "김학민 센서/경로, 박병후 성공 판정",
+      "refs": "R R-03·NEW-R-02(L67–77,286–296); B IC-BH-GRIP·NEW-B-03(L234–251,385–395)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-013",
+      "title": "닫힘 중 추종과 비차단 실행·busy 의미",
+      "kind": "계약 공백",
+      "phase": "A",
+      "pairs": [
+        "RB"
+      ],
+      "ids": "SYS-FR-009·010, IC-ROBOT-01·03, TBD-014·015·019",
+      "a": "김학민: gripper 실제 완료 후 서비스 응답, 동시에 한 동작만/busy 거부, Modbus는 별도 연결.",
+      "b": "박병후: async close 요청 중에도 추종을 계속하고, stop/watchdog은 우선 처리.",
+      "question": "한 동작만이 로봇 모션과 RG2 병행까지 금지하는지 확인할 것. 콜백/큐 블로킹 없이 추종·pose·close·stop이 가능한지 실행 모델과 busy 기준을 결정.",
+      "deliverable": "모션/그리퍼 소유 상태·허용 동시성 표·async 호출 시퀀스·timeout/중복 close/stop 시험.",
+      "lead": "김학민 gateway 실행 모델, 박병후 비차단 호출",
+      "refs": "R R-02·IC-R-02(L54–65,164–187); B IC-BH-GRIP(L234–251)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-014",
+      "title": "cancel·watchdog·실제 정지 확인",
+      "kind": "명시적 충돌·안전 계약 공백",
+      "phase": "A/B",
+      "pairs": [
+        "VB",
+        "RB",
+        "VR"
+      ],
+      "ids": "SYS-SF-001·002, IC-PICK-01·ROBOT-03, TBD-005·017·019·020; NEW-R-04",
+      "a": "남현지: cancel 후 servo가 0속도 발행 후 canceled 반환 제안. 김학민: stop 서비스·pose 변화 없음 확인, 감시시간 미정.",
+      "b": "박병후: 단발 0속도 의존 금지, 실제 정지 확인 후 cancel 완료. pose만으로 actualstop 판단하지 않음. 불확실하면 STOP_UNCONFIRMED/PAUSED/새goal금지.",
+      "question": "정지 요청 담당·우선순위·독립 watchdog·command expiry·실제 정지 확인 근거/연속 확인 조건을 정할 것. gateway 프로세스 종료 시 장비 동작도 시험하고 물체 보유 중 자동 개방 금지 여부를 결정.",
+      "deliverable": "단계별 stop/cancel/노드 종료 시퀀스·/voss/robot/stop 최종 타입·정지 모드·timeout/최대 지연·거리·confirmed/unconfirmed 표시와 재개 조건.",
+      "lead": "김학민 실제 중단, 박병후 액션, 남현지 전체 PAUSED",
+      "refs": "V IC-V-05·06(L269–331); R R-05·NEW-R-04(L91–102,310–320); B B-02·IC-BH-PICK(L71–87,177–194)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-015",
+      "title": "정지 후 보유 박스와 재개",
+      "kind": "명시적 충돌",
+      "phase": "B",
+      "pairs": [
+        "VR",
+        "VB"
+      ],
+      "ids": "SYS-FR-019, TBD-005·017·019",
+      "a": "남현지: 파지 후 정지면 확정 구역으로 이동 계속/재확인 이동, ASKING 질문 재발화·30초 재시작.",
+      "b": "김학민: 정지 후 보유 박스는 사람이 확인·제거. 박병후: 실제 정지/보유 상태 확인 후 새goal, 자동 개방 금지 방향.",
+      "question": "재개 때 물체를 유지한 채 이어갈지 수동 제거할지 단계별 하나의 정책을 정할 것. start와 resume 차이, 노드 재기동과 단순 일시정지를 구분하고 이미 기록된 박스 중복 동작을 막을 것.",
+      "deliverable": "정지 단계×물체 보유×기록 여부의 resume 전이표·인적 확인 지점·질문 타이머 정책.",
+      "lead": "남현지 FSM, 김학민 보유/재기동, 박병후 픽업 중단",
+      "refs": "V IC-V-06(L284–331); R R-05(L91–102); B B-02(L71–87)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-016",
+      "title": "적재 완료·결과 발행·복귀·DB 순서",
+      "kind": "명시적 충돌·전달 경로 공백",
+      "phase": "A/B",
+      "pairs": [
+        "VR",
+        "VE",
+        "BE",
+        "RB"
+      ],
+      "ids": "SYS-FR-012·013·014, SYS-PF-004, IC-ROBOT-03·RESULT-01·DB-01, TBD-007·012·016·025",
+      "a": "남현지: 최종 그리퍼 개방 성공 직후, 복귀 전 SortResult 발행, DB commit 기다리지 않음. 사이클 detected→result.",
+      "b": "김학민: MoveToZone 내부에서 개방+observe 복귀까지 하고 응답. 박병후: 실제placed/observe_ready/db_committed를 분리, 정상 사이클detect→placed. 정의석: commit/조회가 A 완료 조건.",
+      "question": "현재 서비스 응답만으로 복귀 전 개방/placed를 manager가 어떻게 아는지 결정할 것. 서비스 의미 변경/중간 이벤트/응답 시각 필드 등 대안을 비교. manager의 DB 비차단과 G0 검증의 commit 필수를 구분.",
+      "deliverable": "placed/result/observe_ready/db_committed/query 시퀀스·이벤트 생산자/타입/시각·실패 시 결과 규칙. 개방 ack만으로 올바른 물리 적재가 확인되는지도 명시.",
+      "lead": "김학민 모션 이벤트, 남현지 result, 정의석 commit, 박병후 측정",
+      "refs": "V V-07·사이클(L138–149,394); R R-04·IC-R-02(L79–89,164–187); B B-05(L124–140); E E-04(L148–187)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-017",
+      "title": "재확인 자세·정지 OCR·재픽업",
+      "kind": "기능 경로 누락",
+      "phase": "B",
+      "pairs": [
+        "VR"
+      ],
+      "ids": "SYS-FR-025·027, IC-ROBOT-03·VISION-04, TBD-004·016",
+      "a": "남현지: recheck에 놓은 뒤 read_label 호출, 확정 후 다시 집어 목적 구역 이동. MoveToZone pick 모드 필요.",
+      "b": "김학민: 현 MoveToZone은 놓기+observe 복귀만 제공, 재확인에서 집기 요청 없음.",
+      "question": "recheck에 놓은 후 카메라가 송장을 볼 자세/track 연결을 어떻게 유지하는지 정할 것. 정지 재판독 및 동일 박스 재픽업의 호출 경로·높이·실패 처리를 추가할 것.",
+      "deliverable": "recheck place→촬영 자세→read_label→응답/질문→repick→final place 시퀀스 및 타입·실제 영상.",
+      "lead": "김학민 정적 repick, 남현지 OCR/FSM",
+      "refs": "V V-03·IC-ROBOT-03 coverage·미정(L85–96,162–181,427–440); R R-04·IC-R-02(L79–89,164–187)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-018",
+      "title": "구역 slot·hold 격자·용량 초과",
+      "kind": "대체로 합치·상세 공백",
+      "phase": "A/B",
+      "pairs": [
+        "VR"
+      ],
+      "ids": "SYS-FR-012, IC-CONFIG-01·ROBOT-03, TBD-005·016",
+      "a": "김학민: A/B/C 2×2 pitch60mm, 중심 원점/행우선 slot, 카운터 manager. recheck1칸, hold 격자 없음.",
+      "b": "남현지: 구역 좌표/설정 공급, hold 용량·가득 참 후속 처리 미제시.",
+      "question": "slot 소유/증가 시점·실패 시 재사용·reset·격자 원점·hold 크기를 확인할 것. 전체/우선 재투입 시 capacity 소진과 수동 비우기 정책을 정할 것.",
+      "deliverable": "5구역 pose/grid 표·slot→좌표 예시·적재/실패/가득 참 시험·수동 비우기 확인 규약.",
+      "lead": "김학민 물리 grid, 남현지 카운터/가득 참 FSM",
+      "refs": "R R-04(L79–89); V IC-V-08·미정(L361–379,427–440)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-019",
+      "title": "준비 판단 주담당·상태 원천·기동",
+      "kind": "할당 변경 제안·전달 공백",
+      "phase": "A/B",
+      "pairs": [
+        "VR",
+        "VB",
+        "RE",
+        "VE"
+      ],
+      "ids": "SYS-FR-001·031, IC-STATE-01, TBD-011·018; NEW-R-01·05·06",
+      "a": "김학민: FR-001 주담당은 manager 남현지로 변경, gateway는 READY/로봇 상태 제공. stop/observe/state 신설 제안.",
+      "b": "박병후: 설정/유효 입력/gateway READY 필수. 정의석: HMI 로봇 상태 데이터 원천 없음. 남현지: 통합 상태는6개 후보.",
+      "question": "FR-001의 주담당 변경·각 파트 ready/error/heartbeat와 통합 판단·로봇 상태 필드를 확인할 것. 관측 자세 이동 요청(zone=observe 또는 별도)을 정하고 launch/툴 등록/설정 적용 순서를 정할 것.",
+      "deliverable": "ready matrix·발행 주체/타입/주기·미준비 차단·stale/UNKNOWN 표시·기동/복구 체크. 상태 신설과 FR 담당 변경은 승인 후 반영.",
+      "lead": "남현지 통합, 김학민 장비, 정의석 화면/저장, 박병후 servo",
+      "refs": "R NEW-R-01·05·06/R-06(L274–284,322–344,104–115); E E-03(L129–146); B IC-BH-CONFIG(L253–270)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-020",
+      "title": "SortResult→DB 필드·enum·누락 데이터",
+      "kind": "명시적 충돌·계약 공백",
+      "phase": "A/B",
+      "pairs": [
+        "VE"
+      ],
+      "ids": "SYS-IF-004, IC-RESULT-01·DB-01, TBD-007·012; NEW-V-01·02",
+      "a": "남현지: decided_by=ocr/recheck/operator, outcome=placed/held/failed/passed(추가 후보), raw_text/reason/attempts 추가.",
+      "b": "정의석: DB decided_by=AUTO/OPERATOR/TIMEOUT, result=PLACED/HELD/FAILED, track_id/started_at/second_region/rule_version/retries 등.",
+      "question": "대소문자·enum 및 의미 매핑을 정할 것. TIMEOUT은 판정 주체인지 reason인지, passed 저장/집계, attempts 총횟수↔retries 추가횟수(attempts-1) 경계를 확인. 현 메시지에 없는 DB 필드 전달 경로를 정할 것.",
+      "deliverable": "ROS→DB 컬럼 매핑·nullable/필수/실제 타입·OCR 원문/2위 후보·start/finish/rule_version 원천·4결과 실제 JSON/행 예시. 누락값을 추정으로 채우지 않음.",
+      "lead": "남현지 result 원천, 정의석 schema/변환",
+      "refs": "V IC-V-04·07/NEW-V-01·02(L244–267,333–359,398–419); E E-04·IC-EUS-DB-01(L148–187,297–315)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-021",
+      "title": "남은 수에서 FAILED 포함·재투입 집계",
+      "kind": "명시적 충돌",
+      "phase": "B",
+      "pairs": [
+        "VE",
+        "BE"
+      ],
+      "ids": "SYS-FR-029·032, IC-STATS-01, TBD-007·008",
+      "a": "남현지: remaining=planned−(placed+held+failed), passed 제외.",
+      "b": "정의석: remaining=max(planned−(PLACED+HELD),0), FAILED 제외하여 재투입 가능.",
+      "question": "예정 수량이 물리 박스 수인지 투입 회차 수인지 먼저 결정할 것. failed/held/passed/재투입의 완료·누적 처리·남은 수를 각각 정의하고 음성/HMI/DB 동일값으로 맞출 것.",
+      "deliverable": "failed→재투입→placed, passed→재투입→placed, held와 planned변경을 포함한 입력/예상 집계 표·음수 clamp·session 범위.",
+      "lead": "남현지 업무 의미, 정의석 SQL, 박병후 물리 분모 확인",
+      "refs": "V V-07(L138–149); E E-05(L57–74); B B-04(L106–122)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-022",
+      "title": "Stats 제공자·API와 메모리 백업",
+      "kind": "명시적 차이·계약 공백",
+      "phase": "B",
+      "pairs": [
+        "VE"
+      ],
+      "ids": "SYS-FR-029, IC-STATS-01, TBD-008·009",
+      "a": "남현지: DB기준 조회는 정의석 측 담당, manager Stats는 세션 메모리 백업 후보.",
+      "b": "정의석: DB만 source of truth, provider 미정. query_kind/dong/session 요청·count/as_of 응답 제안.",
+      "question": "서비스 이름 중복을 피하도록 단일 owner와 호출 경로를 정할 것. DB장애 시 메모리값을 공식 이력으로 내보낼지 금지/명시할지 결정. 기존 Stats는 빈 요청→total/placed/held/failed/json으로 새안과 다름.",
+      "deliverable": "Stats 최종 srv·owner·음성/HMI query 경로·DB unavailable 응답·commit snapshot/as_of 기준·동일 SQL.",
+      "lead": "정의석 조회안, 남현지 소비/현재 service 인계",
+      "refs": "V IC-STATS coverage(L162–181); E IC-EUS-STATS-01(L261–277); repo src/voss_msgs/srv/Stats.srv",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-023",
+      "title": "전체 분류·이력 질의·HOLD·명령 인자",
+      "kind": "명시적 충돌·양식 공백",
+      "phase": "B",
+      "pairs": [
+        "VE"
+      ],
+      "ids": "SYS-FR-017·018·020·027·029, IC-CMD-01, TBD-005·009·011; CHG-EUS-01",
+      "a": "남현지: 전체=priority(dong=\"\"), 이력은 Stats 경로. V-05/FR018에는 start IDLE·PAUSED, 상세 전이표에는 start IDLE만/resume PAUSED.",
+      "b": "정의석: priority는 dong필수, 전체=start(mode=all), query_history/query_kind 추가, 보류 zone=HOLD 후보. MQTT type/args.",
+      "question": "canonical command와 Command(command,arg) 직렬화 문법을 결정. 전체 전환과 시작/재개를 분리할지, query_history 라우터, HOLD↔hold↔보류, 동 allow-list/default값을 확인. 현지 회신 내부 start 불일치도 정정.",
+      "deliverable": "운전/우선/전체/이력/답변 정답 JSON·Intent→service/MQTT 대응·상태별 유효표·접수/완료·command_id/TTL.",
+      "lead": "정의석 명령 schema, 남현지 FSM/서비스",
+      "refs": "V IC-V-06·CMD coverage(L284–331,162–181), FR018(L20–51); E E-01·CHG-EUS-01(L76–109,417–427); repo srv/Command.srv",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-024",
+      "title": "질문 ID·답변 유효성·30초·TTS 실패",
+      "kind": "대체로 합치·계약 공백",
+      "phase": "B",
+      "pairs": [
+        "VE",
+        "BE"
+      ],
+      "ids": "SYS-FR-026·027·028, IC-VOICE-01·CMD-01·STATE-01, TBD-005·009·010·025",
+      "a": "남현지: question_id=box_id, 후보는 pending_question 문자열, say 발행 시각부터30초. 무효 답1회 재안내·timer유지·만료답무시.",
+      "b": "정의석: 현재 Intent/say는 question_id가 없음, TTS 중 동시 입력 정책 미정. 박병후: 질문 시작/유효답/timeout 대기구간 측정 필요.",
+      "question": "질문 ID를 명령에 실어야 할지, 늦은 답을 다음 질문에 적용하지 않는 상관 규약을 정할 것. 타이머 publication/재생시작/재생완료 기준과 TTS실패/stop/resume/API지연에서의 처리 및 human_wait 경계를 확인.",
+      "deliverable": "질문/답 event schema·box/question 연결·무효/late/무응답/TTS실패 사례·30초 기준·측정 타임라인. 타이머 시작 차이는 미합의이며 상대가 다른 값을 확정한 것으로 쓰지 않음.",
+      "lead": "남현지 질문 FSM, 정의석 음성, 박병후 시간 집계",
+      "refs": "V IC-V-06(L284–331); E E-02·IC-EUS-VOICE-01(L111–127,243–259); B B-05(L124–140)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-025",
+      "title": "TTS 우선순위·중복 억제의 소유자",
+      "kind": "명시적 충돌",
+      "phase": "B",
+      "pairs": [
+        "VE"
+      ],
+      "ids": "SYS-FR-022, IC-VOICE-01, TBD-010",
+      "a": "남현지: 발화 우선순위/중복억제는 speech_out 결정.",
+      "b": "정의석: 동일문구 중복은 upstream manager 책임 제안, speech_out dedupe 미정.",
+      "question": "동일 box 이벤트 재전달과 서로 다른 box의 같은 문장을 구분할 것. stop/장비오류/질문/집계의 발화 우선순위·기존 발화 중단·dedupe key/window·half-duplex를 정할 것.",
+      "deliverable": "발화 큐 정책·주담당·String 유지/메타데이터 필요성·반복/긴급발화 시험.",
+      "lead": "정의석 speech_out, 남현지 발행 이벤트",
+      "refs": "V IC-VOICE coverage(L162–181); E IC-EUS-VOICE-01(L243–259)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-026",
+      "title": "MQTT JSON·ack·중복·QoS·timestamp",
+      "kind": "회신↔기존 계약 차이·미정",
+      "phase": "B",
+      "pairs": [
+        "VE",
+        "RE"
+      ],
+      "ids": "SYS-IF-006, IC-MQTT-01, TBD-011·026; CHG-EUS-01",
+      "a": "기존 mqtt.md: command/arg JSON. 정의석: command_id/type/args/sent_at JSON, ack topic 또는 HTTP 대안·QoS1 제안.",
+      "b": "남현지: ROS Command는 command/arg, state reliable volatile 제안 vs conventions state transient_local. JSON변환 및 최종QoS 미확인.",
+      "question": "JSON→service 변환·ack경로·error/timeout·중복/TTL·retained 정책을 확정. 서로 다른 시계 ISO/epoch/ROS값 변환과 reconnect snapshot·broker 포트/도달성을 확인.",
+      "deliverable": "4topic schema+command ack·QoS/retained표·중복미실행·재접속/연결상실 로그·port/NIC 조건. publish 성공과 manager 접수 구분.",
+      "lead": "정의석 bridge/web, 남현지 ROS endpoint, 김학민 network",
+      "refs": "E E-03·IC-EUS-MQTT-01(L129–146,279–295); V V-06(L126–136); repo docs/interfaces/mqtt.md·conventions.md",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-027",
+      "title": "DB 장애·다음 박스 허용·durable 보존",
+      "kind": "정책 미합의",
+      "phase": "A/B",
+      "pairs": [
+        "VE",
+        "BE"
+      ],
+      "ids": "SYS-DT-002·003, IC-DB-01, TBD-012·018",
+      "a": "남현지: manager는 저장 완료를 기다리지 않음.",
+      "b": "정의석: commit 실패 집계 제외, 다음 박스 허용/queue/retry/보존/초기화는 미정. 박병후: A는 commit+query필수.",
+      "question": "정상 운전 비차단과 DB 장애 정책을 별도 결정할 것. 영속 재전달·중복키·실패 알림/ack·buffer/backoff·유실 방지·next-box pause·세션/reset/보존 기간을 정할 것.",
+      "deliverable": "DB_ERROR event/표시·manager 상태·buffer한도/재기동 복원·writer/read 접속·volume/backup/retention/reset 표·장애 시험.",
+      "lead": "정의석 저장 정책, 남현지 운전 상태, 박병후 G0 수락",
+      "refs": "V V-07(L138–149); E E-04·DB card(L148–187,297–315); B B-04(L106–122)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-028",
+      "title": "공용 PC 사양·GPU 동거·음성/비전 선택",
+      "kind": "증거 수준 차이·자원 공백",
+      "phase": "A/B",
+      "pairs": [
+        "VE",
+        "RE"
+      ],
+      "ids": "SYS-CT-001·005, TBD-001·010·026",
+      "a": "정의석: MSI/i7/RAM32GB/4060Laptop8GB/드라이버595.91/CUDA13.2 등 문서상 #5 완료, 원본 로그 없음.",
+      "b": "남현지: 사양은 회신 전달 내용, #5 미기록. 로컬 repo #5는 빈 칸. 음성/비전 동시 VRAM·CPU·주기 실측 없음.",
+      "question": "기본 사양은 담당자 보고와 실측 증거를 구분할 것. #5 로그/측정일·실제컨테이너/driver/USB inventory를 보완하고 Whisper/YOLO/PaddleOCR 동시부하 조건을 정할 것.",
+      "deliverable": "env_report/nvidia-smi/USB/NIC 원본·실행 버전·동시 CPU/RAM/VRAM/latency/servo 로그·모델 선택 근거. Docker/CUDA 버전을 검증 완료로 쓰지 않음.",
+      "lead": "정의석 PC/음성, 남현지 비전, 김학민 장비/NIC",
+      "refs": "E E-06(L189–207); V §0/V-01(L10–18,55–71); R R-01·R-06(L41–52,104–115); repo measurements #5",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-029",
+      "title": "호스트/컨테이너·DDS NIC·CT005 할당",
+      "kind": "상세 미정·담당 변경 제안",
+      "phase": "A/B",
+      "pairs": [
+        "RE",
+        "VR",
+        "VE"
+      ],
+      "ids": "SYS-CT-005, VT-064, TBD-011·012·018·026; NEW-R-03",
+      "a": "김학민: Mosquitto host1883, vision/DB owner 분리, DDS lo-only 수정 예정·유선 gateway 제거·host-network.",
+      "b": "정의석: Web React+Spring Boot, DBPostgreSQL, broker host/container 모두 제안. 최종 위치/포트/볼륨 미정. 남현지 vision container.",
+      "question": "실행 위치/이미지/포트/host-network/domain/NIC/읽기전용 설정/DBvolume를 정할 것. CT005 주담당 변경은 비전·DB 담당과 확인. DDS와 인터넷/MQTT 접근을 함께 검증.",
+      "deliverable": "배포표·책임자·compose/launch 버전·포트/라우팅/DDS시험·API접속·기동/복구·volume. React/Spring/PostgreSQL은 현재 확정하지 않음.",
+      "lead": "김학민 network/host, 남현지 vision, 정의석 web/DB",
+      "refs": "R R-06·NEW-R-03(L104–115,298–308); E E-03·E-06(L129–146,189–207); V IC-V-01·V-06(L183–197,126–136)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-030",
+      "title": "정상 사이클의 감지/적재 경계·재시도 분류",
+      "kind": "명시적 충돌·세부 공백",
+      "phase": "B",
+      "pairs": [
+        "VB",
+        "BE",
+        "VR"
+      ],
+      "ids": "SYS-PF-004, VT-048, TBD-025",
+      "a": "남현지: detected→SortResult(placed, decided_by=ocr), 재시도 포함 여부 명시 없음.",
+      "b": "박병후: t_detect→실제t_placed, result/return/commit 별도. retry도 예외로 제안. 정상/예외/작업자대기 분리는 공통.",
+      "question": "t_detect는 최초 유효 capture/검출 처리/수신 중 무엇인지, placed는 물리 완료의 어떤 이벤트인지 결정. retry 포함/제외와 최대값/분포 합격 기준·종료실패/skip 측정을 확정.",
+      "deliverable": "이벤트명·생산자·공통ID·clock·정상/예외 분류표·측정 계산식·CSV예시. human wait 구간은 MC024와 동일 결정.",
+      "lead": "박병후 측정, 남현지 detect/result, 김학민 placed, 정의석 evidence",
+      "refs": "V 사이클 측정(L394); B B-05(L124–140); E E-04(L148–187); R R-04(L79–89)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-031",
+      "title": "시험 분모·판정·카드와 성능 측정 범위",
+      "kind": "목표 합치·검증 상세 미정",
+      "phase": "A/B",
+      "pairs": [
+        "VB",
+        "BE",
+        "RB"
+      ],
+      "ids": "SYS-PF-001~009, SYS-MT-001, TBD-020·022·025",
+      "a": "공통: 70%(20사례≥14)/OCR90·95/intent19of20/30초/3초/30Hz/100ms, 최종10물리박스≥8 목표. 전원실기 미수행.",
+      "b": "정의석: API 실패는 intent 분모 별도, HMI 시작=bridge수신(전체 상태발행지연을 포함하지 않음). 반복횟수 제안 다수. 박병후: 사례사후제외금지, capture→consume 및 실제적용 구분.",
+      "question": "실패/timeout/API오류/skip/재투입 분모·재시험 기준을 사전 고정할 것. HMI 상태 변경→DOM 목표와 bridge수신→DOM 부분구간을 구분하고 공용/브라우저 시계동기 방법을 정할 것. max/p95/평균 허용·부하·횟수/수행일을 승인.",
+      "deliverable": "전체 VT계획표·case정답세트/환경·하위판정·수행일/확인자·rawlogs. 1차OCR≤300ms/검출30Hz BRD목표, 20ms·100ms crop 내부예산, ≤5mm제안 분리.",
+      "lead": "박병후 검증 취합, 각 기능 담당·남현지 PL",
+      "refs": "B B-04/VT-BH04(L106–122,340–353); E VC-EUS-INTENT/TTS/HMI(L336–394); V §4(L381–394); R VC-R02/03(L225–268)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-032",
+      "title": "카메라 실행 설정·노출·작업대 실측",
+      "kind": "설정 합치·설치/증거 공백",
+      "phase": "A",
+      "pairs": [
+        "VR"
+      ],
+      "ids": "SYS-FR-002·003, SYS-EN-001~003, TBD-001·002·013·016·017",
+      "a": "남현지: 목표/설정1920×1080 rgb8 30fps, 수동5~8ms고정 화이트밸런스, 상류왼쪽/진행오른쪽.",
+      "b": "김학민: 실제브링업1280×720인 차이 지적, 노출/pose/벨트속도/투입위치/간섭 미측정.",
+      "question": "실제 launch가1080p·rgb8·30fps인지 확인하고 단위/driver 노출 속성/카메라info를 기록. 해상도/observepose/벨트높이 바뀌면 캘리브레이션 갱신. 오른쪽을base방향으로 명시.",
+      "deliverable": "카메라/노출/화이트밸런스 설정·실제FPS·벨트설정별3회/편차·투입/관측분리사진·5구역좌표·케이블/가이드/회수함. 미측정 좌표를0으로 확정하지 않음.",
+      "lead": "김학민 실장비·배치, 남현지 영상/캘리브레이션",
+      "refs": "V V-01·02/IC-V-01(L55–83,183–197); R R-01·R-04·미정(L41–52,79–89,346–360)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-033",
+      "title": "선택 매핑/교시의 채택·원자 갱신",
+      "kind": "선택 채택 미합의",
+      "phase": "C",
+      "pairs": [
+        "VE",
+        "VR"
+      ],
+      "ids": "SYS-OP-001·002, IC-OPTION-01, TBD-023·024",
+      "a": "남현지: 매핑변경10/11이후 채택 제안, 이미PICKING 목적구역 유지·원자swap/실패원복.",
+      "b": "정의석/박병후: 후속검토, 현재선택미채택. 김학민: teach좌표 반환필드 없음/저장=manager원칙, TCP/플랜지차이.",
+      "question": "G0이후에만 채택 여부를 정할 것. 채택 시 동일box의 최종목적구역결정 시점·rule_version·confirm/rollback·teachpose반환/등록취소 경로를 확정.",
+      "deliverable": "선택 채택/미채택 기록·영향·원자변경·TeachZone 응답·writer권한·별도시험. C미확정을A완료 차단조건으로 쓰지 않음.",
+      "lead": "남현지 PL, 정의석 intent/HMI, 김학민 teach",
+      "refs": "V V-08(L151–160); R R-07(L117–126); E §0/E-01(L10–25,76–109)",
+      "status": "상호확인 전"
+    },
+    {
+      "id": "MC-034",
+      "title": "참조 BRD 판·브랜치·승인 증거",
+      "kind": "문서 기준선 차이",
+      "phase": "A/B",
+      "pairs": [
+        "VR"
+      ],
+      "ids": "SRD §1.3/§9, SYS-IF-008, TBD-003·006·022",
+      "a": "김학민: BRD v1.2(10/06) 참조. 남현지/박병후 및 기존SRD: v1.1. 남현지: LabelCrop/ReadLabel/ZoneMap code·aliases 팀승인 주장·branch386d632.",
+      "b": "현재 제공된 BRD는 v1.1, 로컬main668703e에 새 타입/필드 없음. 다른회신은 직접확인없음, 승인기록/새브랜치 미첨부.",
+      "question": "최종 적용BRD 판과 diff를 제공/확인할 것. 팀승인3건은 승인자/일시/최종schema/PR·commit으로 확인. 정의 변경은필드추가만으로wire호환이보장되지 않으므로동시rebuild/배포.",
+      "deliverable": "BRD v1.2 또는v1.1유지 결정·변경대비표·3건 승인증거/PR·타입diff·consumer목록/rebuild 계획. 이번SRD는owner보고 후보로만 수록.",
+      "lead": "남현지 문서/PL, 김학민 참조판 확인, 박병후 기준선 취합",
+      "refs": "R §0(L10–18); V §0/NEW-V-03(L10–18,421–425); B §0(L12–29); repo src/voss_msgs·HEAD668703e",
+      "status": "상호확인 전"
+    }
+  ],
+  "tbd": [
+    [
+      "TBD-001",
+      "영상·검출",
+      "설정/방법 일부 수록",
+      "1080p/rgb8/30fps 설정 후보·분할 우선→YOLO 평가 담당 결정; 노출/FPS/검출 실측·최종 모델 미정",
+      "MC-028·031·032",
+      "V-01"
+    ],
+    [
+      "TBD-002",
+      "좌표·캘리브레이션",
+      "공통 가정 반영/계약 충돌",
+      "RGB/27mm 가정 반영. 변환 담당·단위·이동중 핸드아이·실측 오차·TCP 미정",
+      "MC-001·002·004·010·032",
+      "V-02"
+    ],
+    [
+      "TBD-003",
+      "식별·시각·OCR연결",
+      "역할 반영/상세 미정",
+      "track↔box 역할·원본capture 보존 원칙. LabelCrop/ReadLabel은 승인 보고 후보; clock/IDL/stage/과거데이터 미정",
+      "MC-003·004·007·020·034",
+      "V-03"
+    ],
+    [
+      "TBD-004",
+      "OCR판정·후보",
+      "담당 설계 수록",
+      "코드우선·confidence[0,1]·불일치감점·PaddleOCR 우선 담당 설계;0.6 미튜닝. 2위/원문/stamp/2·3차 계약 미정",
+      "MC-007·017·020·024",
+      "V-04"
+    ],
+    [
+      "TBD-005",
+      "FSM·정지·예외",
+      "6상태 수록/계약 충돌",
+      "기본 대상/관리 책임 반영, start/resume·전체·retry·resumeheld·질문타이머 미합의",
+      "MC-005·014·015·019·023·024·027",
+      "V-05"
+    ],
+    [
+      "TBD-006",
+      "설정 전달",
+      "원본/writer 반영",
+      "단일YAML/runtime managerwriter·placeholder검증원칙. launch params/schema·vector·버전·READY 미합의",
+      "MC-009·019·034",
+      "V-06"
+    ],
+    [
+      "TBD-007",
+      "결과·업무ID",
+      "final1건 반영/계약 충돌",
+      "처리1건final/중복방지. PK/재기동/재투입·outcome·decided_by·events·fields 미정",
+      "MC-003·016·020·021",
+      "V-07"
+    ],
+    [
+      "TBD-008",
+      "이력·남은수",
+      "DB원칙 반영/계산 충돌",
+      "DB기준·음성/HMI 동일값;FAILED 포함·session·Statsowner/schema·메모리fallback 미정",
+      "MC-021·022",
+      "E-05"
+    ],
+    [
+      "TBD-009",
+      "명령schema",
+      "공통 경로 반영/계약 충돌",
+      "접수/완료·allow-list원칙; all/priority/query_history/HOLD·arg/ID/TTL 미정",
+      "MC-023·024·026",
+      "E-01"
+    ],
+    [
+      "TBD-010",
+      "음성",
+      "담당 방향 수록/선택 미정",
+      "로컬Whisper+OpenAI 구조화+TTS 방향; wake/model/TTS·timeout/dedupe/duplex·3초판정 미정",
+      "MC-024·025·028·031",
+      "E-02"
+    ],
+    [
+      "TBD-011",
+      "HMI/MQTT",
+      "기능/이름 수록/상세 미정",
+      "최종필수화면·MQTT4경로·HMI≤1초목표;stack/JSON/QoS/ack/robotstate/배포 미정",
+      "MC-019·026·029·031",
+      "E-03"
+    ],
+    [
+      "TBD-012",
+      "DB",
+      "commit/query 원칙 반영",
+      "DB종류/버전·DDL/unique·fieldsource/장애/retention/backup/sessionreset 미정;PostgreSQL 제안",
+      "MC-003·016·020·027·029",
+      "E-04"
+    ],
+    [
+      "TBD-013",
+      "장비/벨트/환경",
+      "규격 반영/실측 대기",
+      "장비후보/네트워크 보고. 드라이버/DRCF·belt3회표/치수/배치/투입분리/노출/방향 미정",
+      "MC-009·028·032·034",
+      "R-01"
+    ],
+    [
+      "TBD-014",
+      "robot API/큐",
+      "단위/역할 반영",
+      "ROS SI·gateway변환·서비스직렬원칙. nativeAPI/stream조건·동시성/pose시각/주기/stop 경로 미정",
+      "MC-004·010·011·013·014",
+      "R-02"
+    ],
+    [
+      "TBD-015",
+      "gripper",
+      "단순ok≠grasp 원칙 반영",
+      "Modbus 직접 제안·힘/폭/latency/feedback실측/판정/완료IDL 미정",
+      "MC-012·013",
+      "R-03"
+    ],
+    [
+      "TBD-016",
+      "pose/grid/적재",
+      "책임 반영/실측 미정",
+      "manager목적구역→gateway적재/복귀. flange/TCP·slot·hold capacity·recheck/observe·events 미정",
+      "MC-010·016·017·018·019·032",
+      "R-04"
+    ],
+    [
+      "TBD-017",
+      "stop/limits/recovery",
+      "책임 반영/상세 충돌",
+      "gateway제한/watchdog·cancel접수≠정지·물리E-stop 원칙. 값·정지확인·resumeheld 미정",
+      "MC-009·014·015·032",
+      "R-05"
+    ],
+    [
+      "TBD-018",
+      "배포/READY",
+      "대체로합치/상세 미정",
+      "기본host/vision/DB 배치후보·tool재등록 필요보고. 통합READYowner·정지/관측/state·launch 미정",
+      "MC-009·019·029",
+      "R-06"
+    ],
+    [
+      "TBD-019",
+      "픽업action",
+      "기본책임 반영/충돌",
+      "managerclient↔servoserver, gateway실행. phase/reason/retry/lift/stop/grasp판정 미정",
+      "MC-005·006·012·013·014",
+      "B-01"
+    ],
+    [
+      "TBD-020",
+      "주기/age/상실",
+      "측정원칙 반영/설정 미정",
+      "publish/consume/actualapply 분리·capture→consume age·목표 유지;watchdog/age/지터/clock 판정 미정",
+      "MC-004·009·011·014·031",
+      "B-02"
+    ],
+    [
+      "TBD-021",
+      "추종/게이트",
+      "담당 방향 수록/팀동기화대기",
+      "병후폐루프FF+P 우선 보고·자동개루프전환 충돌명시. 팀검토/ADR갱신 미완료",
+      "MC-002·008·011·031",
+      "B-03"
+    ],
+    [
+      "TBD-022",
+      "시험세트/증거",
+      "카드 연결반영/미수행",
+      "70SYS/VT카드매핑 수록;모의/실기 분리. 분모/조건/예정일/G0확인자/정답/전체승인 미정",
+      "MC-003·031·034",
+      "B-04"
+    ],
+    [
+      "TBD-023",
+      "선택매핑",
+      "C후속검토 유지",
+      "남현지 채택제안만,팀미확정. G0이후채택·원자swap/적용/ruleversion/rollback확인",
+      "MC-033",
+      "V-08"
+    ],
+    [
+      "TBD-024",
+      "선택teach",
+      "C후속검토 유지",
+      "G0이후채택·TCP/flange/pose반환/설정writer/등록취소 미정",
+      "MC-033",
+      "R-07"
+    ],
+    [
+      "TBD-025",
+      "사이클",
+      "사용자정책 반영/경계 충돌",
+      "정상30초/예외전체/작업자대기 분리확정. detect/placed/result·retry분류·max집계·question구간 미정",
+      "MC-016·024·030·031",
+      "B-05"
+    ],
+    [
+      "TBD-026",
+      "PC/GPU/resources",
+      "담당 보고 수록/증거 대기",
+      "MSI/i7/RAM32/4060Laptop8 보고;#5원본·USB/NIC수정·GPU동시부하/versions/배치·credentials 미검증",
+      "MC-028·029",
+      "E-06"
+    ]
+  ],
+  "pairs": {
+    "VB": "03_남현지_박병후_상호확인.md",
+    "VR": "04_남현지_김학민_상호확인.md",
+    "VE": "05_남현지_정의석_상호확인.md",
+    "RB": "06_김학민_박병후_상호확인.md",
+    "BE": "07_박병후_정의석_상호확인.md",
+    "RE": "08_김학민_정의석_상호확인.md"
+  },
+  "sources": {
+    "V": {
+      "file": "VOSS_SRD_v0.2_남현지_회신_20261006_r1.md",
+      "sha256": "0650c7f2407782ea26d5cc1de356977701b738b02d394c42ead9675b84e2955f"
+    },
+    "R": {
+      "file": "VOSS_SRD_v0.2_김학민_회신_20261006_r1.md",
+      "sha256": "369fcabd6272de75f245c5365b9daa235ad7dbade420c0ca160047f7b3ecf4a3"
+    },
+    "E": {
+      "file": "VOSS_SRD_v0.2_정의석_회신_20261006_r1_작성본.md",
+      "sha256": "a5dd2b0bb4291c26b61b1345aba85326f4ee0ffc64e9cf34b0ea32432d1194ae"
+    },
+    "B": {
+      "file": "VOSS_SRD_v0.2_박병후_회신_20261006_r2_제출안.md",
+      "sha256": "ccade959357b2435dc5caeb0a22d98b506458de6fa9124a6c2a6f267afb7afc1"
+    }
+  },
+  "base_srd_sha256": "675f715be1ca28d3a2bb2b5d43af153801ddf54746a13c35ce14915ecb72deda",
+  "repository_head": "668703e229dfcd222f394e0b408e0b8de4cd6eb0",
+  "verification_mapping": [
+    [
+      "VT-001",
+      "SYS-FR-001",
+      "A/김학민",
+      "VC-R-02(로봇/그리퍼 부분)",
+      "미수행",
+      "10/08;통합준비 검증카드 미지정",
+      "로봇/그리퍼 부분만; camera/config/log 통합판정카드·주담당 MC-019 확인"
+    ],
+    [
+      "VT-002",
+      "SYS-FR-002",
+      "A/남현지",
+      "VC-V-01",
+      "미수행",
+      "10/08",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-003",
+      "SYS-FR-003",
+      "A/남현지",
+      "VC-V-01",
+      "미수행",
+      "10/08",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-004",
+      "SYS-FR-004",
+      "A/남현지",
+      "VC-V-03",
+      "미수행",
+      "10/10",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-005",
+      "SYS-FR-005",
+      "A/남현지",
+      "VC-V-03",
+      "미수행",
+      "10/10",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-006",
+      "SYS-FR-006",
+      "A/남현지",
+      "VC-V-04",
+      "미수행",
+      "정지10/07·추종10/10",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-007",
+      "SYS-FR-007",
+      "A/남현지",
+      "VC-V-02",
+      "실측 진행 보고/원본미확인",
+      "10/06측정 진행 보고·원본없음",
+      "모의 최대1.72mm·pytest6개 보고는 실측과 별개, 이동카메라/TCP MC-002·010"
+    ],
+    [
+      "VT-008",
+      "SYS-FR-008",
+      "A/박병후",
+      "VT-BH-01/02",
+      "미수행",
+      "첫G0전",
+      "담당 회신: 모의/실기0회; 상대IC/안전값 확인 및 G0/G2일 별도"
+    ],
+    [
+      "VT-009",
+      "SYS-FR-009",
+      "A/박병후",
+      "VT-BH-01/02",
+      "미수행",
+      "첫G0전",
+      "담당 회신: 모의/실기0회; 상대IC/안전값 확인 및 G0/G2일 별도"
+    ],
+    [
+      "VT-010",
+      "SYS-FR-010",
+      "A/박병후",
+      "VT-BH-02",
+      "미수행",
+      "실험10/06오후~10/07안 목표/미수행",
+      "담당 회신: 모의/실기0회; 상대IC/안전값 확인 및 G0/G2일 별도"
+    ],
+    [
+      "VT-011",
+      "SYS-FR-011",
+      "B/박병후",
+      "VT-BH-04",
+      "미수행",
+      "G2전",
+      "담당 회신: 모의/실기0회; 상대IC/안전값 확인 및 G0/G2일 별도"
+    ],
+    [
+      "VT-012",
+      "SYS-FR-012",
+      "A/김학민",
+      "VC-R-03",
+      "미수행",
+      "10/08~10",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-013",
+      "SYS-FR-013",
+      "A/김학민",
+      "VC-R-03",
+      "미수행",
+      "10/08~10",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-014",
+      "SYS-FR-014",
+      "A/정의석",
+      "VC-EUS-DB-01",
+      "미수행",
+      "10/09~11",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-015",
+      "SYS-FR-015",
+      "B/정의석",
+      "VC-EUS-VOICE-01",
+      "미수행",
+      "10/06~07",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-016",
+      "SYS-FR-016",
+      "B/정의석",
+      "VC-EUS-VOICE-01",
+      "미수행",
+      "10/06~07",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-017",
+      "SYS-FR-017",
+      "B/정의석",
+      "VC-EUS-INTENT-01",
+      "미수행",
+      "10/06~08",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-018",
+      "SYS-FR-018",
+      "B/남현지",
+      "VC-V-05",
+      "미수행",
+      "모의10/10·실기10/14",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-019",
+      "SYS-FR-019",
+      "B/남현지",
+      "VC-V-05",
+      "미수행",
+      "모의10/10·실기10/14",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-020",
+      "SYS-FR-020",
+      "B/남현지",
+      "VC-V-05",
+      "미수행",
+      "모의10/10·실기10/14",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-021",
+      "SYS-FR-021",
+      "B/남현지",
+      "VC-V-05",
+      "미수행",
+      "모의10/10·실기10/14",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-022",
+      "SYS-FR-022",
+      "B/정의석",
+      "VC-EUS-TTS-01",
+      "미수행",
+      "10/08",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-023",
+      "SYS-FR-023",
+      "B/남현지",
+      "VC-V-04(1~4) + VC-V-01 + VT-BH-04(서보영향)",
+      "미수행",
+      "10/10·B가능성 실험일 별도",
+      "1차/2차/식별/독립실행 모두 필요, MC-007 보류를 기능면제로 간주하지 않음"
+    ],
+    [
+      "VT-024",
+      "SYS-FR-024",
+      "B/남현지",
+      "VC-V-04",
+      "미수행",
+      "10/07·10/10",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-025",
+      "SYS-FR-025",
+      "B/남현지",
+      "VC-V-05 + VC-V-04",
+      "미수행",
+      "요구행10/12·카드실기10/14→MC-031일정확인",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-026",
+      "SYS-FR-026",
+      "B/남현지",
+      "VC-V-05",
+      "미수행",
+      "요구행10/12·카드실기10/14→MC-031일정확인",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-027",
+      "SYS-FR-027",
+      "B/남현지",
+      "VC-V-05",
+      "미수행",
+      "모의10/10·실기10/14",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-028",
+      "SYS-FR-028",
+      "B/남현지",
+      "VC-V-05",
+      "미수행",
+      "모의10/10·실기10/14",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-029",
+      "SYS-FR-029",
+      "B/정의석",
+      "VC-EUS-HMI-01",
+      "미수행",
+      "10/08~10·10/10~13",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-030",
+      "SYS-FR-030",
+      "B/정의석",
+      "VC-EUS-HMI-01",
+      "미수행",
+      "10/08~10·10/10~13",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-031",
+      "SYS-FR-031",
+      "B/정의석",
+      "VC-EUS-HMI-01",
+      "미수행",
+      "10/08~10·10/10~13",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-032",
+      "SYS-FR-032",
+      "B/정의석",
+      "VC-EUS-HMI-01",
+      "미수행",
+      "10/08~10·10/10~13",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-033",
+      "SYS-FR-033",
+      "A/남현지",
+      "VC-V-06",
+      "미수행",
+      "10/09",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-034",
+      "SYS-FR-034",
+      "B/남현지",
+      "VC-V-05; VC-EUS-DB-01(저장오류)",
+      "미수행",
+      "10/10·10/14,DB10/09~11",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-035",
+      "SYS-OP-001",
+      "C/남현지",
+      "VC-V-08",
+      "채택 제안/미수행",
+      "선택채택시10/13제안",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-036",
+      "SYS-OP-002",
+      "C/김학민",
+      "회신 R-07, 검증카드 미지정",
+      "후속검토/미수행",
+      "선택채택후·미정",
+      "채택시pose반환/영역검증/확인/저장/취소 시험카드 MC-033 보완"
+    ],
+    [
+      "VT-037",
+      "SYS-IF-001",
+      "A/남현지",
+      "VC-V-03",
+      "미수행",
+      "10/10",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-038",
+      "SYS-IF-002",
+      "A/박병후",
+      "VT-BH-01/02",
+      "미수행",
+      "첫G0전",
+      "담당 회신: 모의/실기0회; 상대IC/안전값 확인 및 G0/G2일 별도"
+    ],
+    [
+      "VT-039",
+      "SYS-IF-003",
+      "A/김학민",
+      "VC-R-02 + VT-BH-02(단위/feedback하위조건)",
+      "미수행",
+      "10/08;BH실험10/06~07목표",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-040",
+      "SYS-IF-004",
+      "A/정의석",
+      "VC-EUS-DB-01",
+      "미수행",
+      "10/09~11",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-041",
+      "SYS-IF-005",
+      "B/정의석",
+      "VC-EUS-INTENT-01",
+      "미수행",
+      "10/06~08",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-042",
+      "SYS-IF-006",
+      "B/정의석",
+      "VC-EUS-HMI-01",
+      "미수행",
+      "10/08~10·10/10~13",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-043",
+      "SYS-IF-007",
+      "A/남현지",
+      "VC-V-06",
+      "미수행",
+      "10/09",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-044",
+      "SYS-IF-008",
+      "A/박병후",
+      "VT-BH-01",
+      "미수행",
+      "합의후첫G0전",
+      "담당 회신: 모의/실기0회; 상대IC/안전값 확인 및 G0/G2일 별도"
+    ],
+    [
+      "VT-045",
+      "SYS-PF-001",
+      "B/박병후",
+      "VT-BH-04",
+      "미수행",
+      "기존10/10점검·G2전",
+      "담당 회신: 모의/실기0회; 상대IC/안전값 확인 및 G0/G2일 별도"
+    ],
+    [
+      "VT-046",
+      "SYS-PF-002",
+      "B/남현지",
+      "VC-V-04",
+      "미수행",
+      "10/07·10/10·10/14",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-047",
+      "SYS-PF-003",
+      "B/정의석",
+      "VC-EUS-INTENT-01",
+      "미수행",
+      "10/06~08",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-048",
+      "SYS-PF-004",
+      "B/박병후",
+      "VT-BH-03/04",
+      "미수행",
+      "G2전",
+      "담당 회신: 모의/실기0회; 상대IC/안전값 확인 및 G0/G2일 별도"
+    ],
+    [
+      "VT-049",
+      "SYS-PF-005",
+      "B/정의석",
+      "VC-EUS-TTS-01",
+      "미수행",
+      "10/08",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-050",
+      "SYS-PF-006",
+      "B/박병후",
+      "VT-BH-04",
+      "미수행",
+      "G2전",
+      "담당 회신: 모의/실기0회; 상대IC/안전값 확인 및 G0/G2일 별도"
+    ],
+    [
+      "VT-051",
+      "SYS-PF-007",
+      "B/박병후",
+      "VT-BH-04",
+      "미수행",
+      "G2전",
+      "담당 회신: 모의/실기0회; 상대IC/안전값 확인 및 G0/G2일 별도"
+    ],
+    [
+      "VT-052",
+      "SYS-PF-008",
+      "B/정의석",
+      "VC-EUS-HMI-01",
+      "미수행",
+      "10/08~10·10/10~13",
+      "회신은 bridge수신→DOM 부분구간; 요구의 state변경→DOM 전체/시계는 MC-031 보완"
+    ],
+    [
+      "VT-053",
+      "SYS-SF-001",
+      "A/김학민",
+      "VC-R-04 + VT-BH-02(취소/중단하위조건)",
+      "미수행",
+      "10/08;BH실험10/06~07목표",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-054",
+      "SYS-SF-002",
+      "A/김학민",
+      "VC-R-02",
+      "미수행",
+      "10/08",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-055",
+      "SYS-SF-003",
+      "A/김학민",
+      "VC-R-01",
+      "미수행",
+      "10/06·재점검10/14~15",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-056",
+      "SYS-SF-004",
+      "B/남현지",
+      "VC-V-05",
+      "미수행",
+      "10/10·10/14",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-057",
+      "SYS-DT-001",
+      "A/정의석",
+      "VC-EUS-DB-01",
+      "미수행",
+      "10/09~11",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-058",
+      "SYS-DT-002",
+      "B/정의석",
+      "VC-EUS-DB-01",
+      "미수행",
+      "10/09~11",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-059",
+      "SYS-DT-003",
+      "B/정의석",
+      "VC-EUS-DB-01",
+      "미수행",
+      "10/09~11",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-060",
+      "SYS-CT-001",
+      "A/김학민",
+      "VC-R-01",
+      "미수행",
+      "10/06실측목표/원본미확인",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-061",
+      "SYS-CT-002",
+      "A/남현지",
+      "VC-V-02",
+      "실측 진행 보고/원본미확인",
+      "10/06측정진행보고·동적변환미수행",
+      "모의 최대1.72mm·pytest6개 보고는 실측과 별개, 이동카메라/TCP MC-002·010"
+    ],
+    [
+      "VT-062",
+      "SYS-CT-003",
+      "A/김학민",
+      "VC-R-02",
+      "미수행",
+      "10/08",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-063",
+      "SYS-CT-004",
+      "A/김학민",
+      "VC-R-01",
+      "미수행",
+      "10/06검사예정",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-064",
+      "SYS-CT-005",
+      "B/김학민",
+      "회신 요구행: 미수행/10/13, 통합카드 미지정",
+      "미수행",
+      "10/13통합제안",
+      "비전/DB/host 담당·연결/volume/복구 조건별 카드 MC-029 보완"
+    ],
+    [
+      "VT-065",
+      "SYS-CT-006",
+      "B/정의석",
+      "VC-EUS-SEC-01",
+      "미수행",
+      "T11~13 PR 검사 예정",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-066",
+      "SYS-MT-001",
+      "B/박병후",
+      "VT-BH-01/03/04",
+      "미수행",
+      "기본논리G0전·전체재생G2전",
+      "담당 회신: 모의/실기0회; 상대IC/안전값 확인 및 G0/G2일 별도"
+    ],
+    [
+      "VT-067",
+      "SYS-PF-009",
+      "B/남현지",
+      "VC-V-07",
+      "미수행",
+      "10/15,리허설10/13~14",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-068",
+      "SYS-EN-001",
+      "A/남현지",
+      "VC-V-01 + VC-R-01(설정/환경지원)",
+      "미수행",
+      "노출10/07·영상10/08",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-069",
+      "SYS-EN-002",
+      "A/김학민",
+      "VC-R-01",
+      "미수행",
+      "10/06실측목표/원본미확인",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ],
+    [
+      "VT-070",
+      "SYS-EN-003",
+      "A/김학민",
+      "VC-R-01(배치)+VC-R-03(실제동작)",
+      "미수행",
+      "10/06·10/08~10",
+      "회신 요구사항 검토의 연결을 계승; 전체 통과 아님"
+    ]
+  ],
+  "user_schedule_decision": {
+    "mutual_review_deadline": "2026-10-06T18:30:00+09:00",
+    "first_hardware_experiment_target": "2026-10-07 Asia/Seoul end of day",
+    "g0_full_flow_acceptance_target": "2026-10-10 Asia/Seoul end of day",
+    "interpretation": "실제 인식→이동중픽업→적재→DBcommit/조회→복귀를 G0수락으로 구분, 첫실기실험·실측은 별도10/07까지"
+  }
+}

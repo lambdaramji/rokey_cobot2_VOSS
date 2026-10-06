@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "passed_check_count": 2415,
+  "errors": [],
+  "coverage": {
+    "SYS": 70,
+    "VT": 70,
+    "IC": 18,
+    "TBD": 26,
+    "AC": 16,
+    "MC": 34,
+    "pairs": 6,
+    "markdown": 11,
+    "word": 11
+  },
+  "limits": "문서 구조/참조/출처해시/DOCX재열기 검사. 실기/공용PC성능을 시험한 결과가 아님. Word 페이지 렌더러 검증은 수행하지 않음."
+}
