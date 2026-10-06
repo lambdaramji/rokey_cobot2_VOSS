@@ -1,4 +1,4 @@
-# ADR-0005: 웹·AI·DB 스택 — React + Spring Boot + FastAPI + PostgreSQL
+# ADR-0006: 웹·AI·DB 스택 — React + Spring Boot + FastAPI + PostgreSQL
 
 - 날짜: 2026-10-06
 - 상태: 제안됨 (정의석 제안. PL·관련 담당 승인 전. 승인 후 "승인됨"으로 바꾸고 pending #13·#14 갱신)
@@ -39,6 +39,8 @@ SRD v0.2 회신과 상호확인(#52·#55)에서 웹 스택·DB·Mosquitto 위치
 | Spring Boot | `docker/web/` 컨테이너 | 8080 | `--network host` 로 Mosquitto·PostgreSQL 접근 |
 | React (빌드 산출물) + Nginx | `docker/web/` 컨테이너 | 80 | 단일 진입점 |
 | PostgreSQL | `docker/db/` 컨테이너 + 호스트 볼륨 | 5432 | 버전은 #21 에서 기록 |
+
+웹은 ROS DDS 가 아니라 MQTT(1883)·HTTP 로만 붙으므로, 공용 PC 의 CycloneDDS 가 `lo` 전용이어도(measurements #5, PR #60) 개인 PC 브라우저·개발 환경에서 HMI 를 쓸 수 있다.
 
 비밀값(`OPENAI_API_KEY`, DB 비밀번호)은 `.env`(gitignore) 로만 주입한다. `OPENAI_API_KEY` 는 FastAPI 컨테이너에만 둔다.
 

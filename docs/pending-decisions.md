@@ -16,6 +16,6 @@
 | 10 | 흐린 송장 인쇄 농도 | 김학민 | 10/07 | SR-HW-07 | 미정 | |
 | 11 | 시연 송장 받는 사람 이름 목록 | 김학민 | 10/07 | SR-HW-07 | 미정 | |
 | 12 | TTS 엔진 (로컬 / OpenAI TTS) | 정의석 | 10/08 | SR-SW-13 | 미정 | |
-| 13 | 웹 HMI 스택·실행 위치, MQTT JSON 스키마 | 정의석 | 10/08 | SR-SW-17, SR-IF-10 | 제안 | 스택·위치: React+Spring Boot+FastAPI, 컨테이너 (ADR-0005 제안, 승인 대기). MQTT JSON 은 10/08 mqtt.md |
-| 14 | 작업 로그 DB 종류 | 정의석 | 10/09 | SR-SW-18 | 제안 | PostgreSQL 컨테이너, writer=sort_logger (ADR-0005 제안, 승인 대기) |
+| 13 | 웹 HMI 스택·실행 위치, MQTT JSON 스키마 | 정의석 | 10/08 | SR-SW-17, SR-IF-10 | 제안 | 스택·위치: React+Spring Boot+FastAPI, 컨테이너 (ADR-0006 제안, 승인 대기). MQTT JSON 은 10/08 mqtt.md |
+| 14 | 작업 로그 DB 종류 | 정의석 | 10/09 | SR-SW-18 | 제안 | PostgreSQL 컨테이너, writer=sort_logger (ADR-0006 제안, 승인 대기) |
 | 15 | 분류코드 끝 두 자리 ↔ 동 매핑 | 김학민·남현지 | 10/07 | SR-HW-07 | 결정 | S07-01 역삼동 / S07-02 대치동 / S07-03 청담동 (10/05) |
