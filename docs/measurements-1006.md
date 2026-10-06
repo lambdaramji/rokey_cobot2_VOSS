@@ -36,7 +36,7 @@
 | Docker GPU | GPU 컨테이너 실행 가능 | Docker 29.8.2, 런타임 `nvidia` 등록, nvidia-container-toolkit 1.20.1, `ms-03`이 `docker` 그룹 소속 | 충족 (실행 테스트 전) |
 | 디스크 | (참고) | NVMe 512 GB, `/` 401 GB 남음 | 충족 |
 | USB 3.0 | D435i 전용 1 + 아두이노·마이크용 여유 | USB 3 포트 3개 + USB 2.0 1개로 추정 (ACPI `hotplug` 포트 수와 MSI 공식 사양이 같음) | 충족 (추정). **육안 확인 필요** |
-| NIC | 유선 1 + Wi-Fi 1 | 유선 Realtek RTL8111 `enp4s0`, Wi-Fi Intel CNVi `wlo1` (Rokey_A) | 충족 |
+| NIC | 유선 1 + Wi-Fi 1 | 유선 Realtek RTL8111 `enp4s0`, Wi-Fi Intel CNVi `wlo1` (교육장 Wi-Fi) | 충족 |
 | 로봇망 | 192.168.1.0/24, 로봇 192.168.1.100 | `enp4s0` = 192.168.1.10/24 (수동), 로봇 192.168.1.100 ping 0.3 ms, 192.168.1.1 ping 0.7 ms. 링크 속도 **100 Mb/s** | 충족 |
 | 인터넷 경로 | OpenAI API는 Wi-Fi로 | 기본 경로가 `wlo1`(metric 600)로 나감. 유선 프로필에도 게이트웨이 192.168.1.1이 있음 (metric 20100) | 충족 (주의, 아래 3번) |
 | 오디오 (SR-HW-11) | 내장 마이크·스피커 | 내장 DMIC, 아날로그 입출력 (sof-hda-dsp), HDMI 출력. USB 마이크 미연결 | 충족 (1 m 인식률은 #10에서 확인) |
@@ -74,7 +74,7 @@
    - BRD 6.1 장비 표에는 "USB 마이크", 배포 구성에는 "내장 마이크"로 적혀 있어 서로 다르다. #10 결과를 보고 하나로 맞춘다.
 
 <details>
-<summary>원본 출력 (MAC 주소는 가림)</summary>
+<summary>원본 출력 (MAC 주소·Wi-Fi 이름·Wi-Fi 주소는 가림)</summary>
 
 ```
 == 기기 / OS
@@ -111,10 +111,10 @@ connect_type: usb2-port1~3 hotplug, usb2-port4 not used / usb1-port1,4,5,8 hotpl
 04:00.0 Ethernet: Realtek RTL8111/8168/8211/8411 PCIe Gigabit
 00:14.3 Network: Intel Raptor Lake PCH CNVi WiFi
 enp4s0  UP  192.168.1.10/24   speed 100   (08:55 확인 시 NO-CARRIER, 09:15 재확인 시 연결)
-wlo1    UP  172.24.3.240/22   Rokey_A
+wlo1    UP  172.24.x.x/22   (교육장 Wi-Fi)
 nmcli connection: Wired connection 1 (enp4s0) manual 192.168.1.10/24 gw 192.168.1.1
                   Wired connection 2 (enx…, USB 랜) manual 192.168.1.10/24 gw 192.168.1.1
-ip route: default via 172.24.0.1 dev wlo1 metric 600
+ip route: default via 172.24.x.1 dev wlo1 metric 600
           default via 192.168.1.1 dev enp4s0 metric 20100
           192.168.1.0/24 dev enp4s0 src 192.168.1.10 metric 100
 ping 192.168.1.100: 2/2, avg 0.33 ms ; ping 192.168.1.1: 2/2, avg 0.65 ms
