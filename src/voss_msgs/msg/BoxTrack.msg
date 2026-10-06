@@ -1,4 +1,4 @@
-int32 track_id
+int32 track_id           # 새 박스마다 +1, 재사용 안 함. 15프레임 미검출 시 폐기 (voss_msgs.md BoxTrack 규칙)
 float32 u                # 픽셀 x
 float32 v                # 픽셀 y
 int32[4] bbox            # x, y, w, h (픽셀)
