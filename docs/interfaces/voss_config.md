@@ -22,7 +22,6 @@ belt:
 gripper:                 # 폭은 RG2 보고값 (실제 핑거 간격 ≈ 보고값 − 10 mm, measurements #8)
   pre_open_mm: 90
   grasp_width_mm: 40     # 파지 목표 폭. 박스보다 작아야 grip_detected 가 켜진다
-  release_open_mm: 45    # 구역(트레이)에 놓을 때 벌리는 폭. pre_open 으로 벌리면 트레이 벽에 닿는다
   force_n: 0.0           # 10/06 실측 (종이 박스 안 찌그러지는 값)
 ocr:
   confidence_min: 0.6    # 미만이면 재확인 구역
@@ -33,4 +32,4 @@ timing:
 
 ## 변경 이력
 - 2026-10-05: 초안. codes 매핑 확정 (01 역삼 / 02 대치 / 03 청담).
-- 2026-10-06: 실측값 입력(zones, observe_pose, belt.speed_cmps 4.8, gripper.force_n 14, grasp_width_mm 39). pose 기준점(플랜지·구역 중심)과 gripper 폭 단위(RG2 보고값)를 주석으로 명시. 값 출처 measurements-1006.md #1 #6 #8. 같은 날 구역마다 트레이를 놓아 zones 를 트레이 안쪽 바닥 중심으로 다시 잼. **키 추가: `gripper.release_open_mm`** (놓을 때 벌림, 읽는 쪽: robot_gateway).
+- 2026-10-06: 실측값 입력(zones, observe_pose, belt.speed_cmps 4.8, gripper.force_n 14, grasp_width_mm 39). pose 기준점(플랜지·구역 중심)과 gripper 폭 단위(RG2 보고값)를 주석으로 명시. 값 출처 measurements-1006.md #1 #6 #8. 같은 날 구역마다 트레이를 놓아 zones 를 트레이 안쪽 바닥 중심으로 다시 잼. 키 변경 없음. 구역에 놓을 때도 pre_open_mm(90)으로 벌린다.
