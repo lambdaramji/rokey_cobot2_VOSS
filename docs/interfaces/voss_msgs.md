@@ -9,7 +9,7 @@
 | ZoneMapEntry | `string dong`, `string zone`, `string code`, `string[] aliases` | `code` = 분류코드(예 `S07-01`), `aliases` = 자연어 별칭(예 `[역삼, 역삼동]`). 둘 다 voss_config.yaml 에서 sort_manager 가 채운다. UpdateZoneMap 요청에서는 `dong`·`zone` 만 쓰고 나머지는 비워도 된다 — **빈 `code`·`aliases` = 기존 값 유지**. `dong`(정식 이름)은 항상 허용되고 `aliases` 는 추가 별칭만 담는다(빈 목록이어도 안전) |
 | ZoneMap | `ZoneMapEntry[] entries`, `string version` | transient_local |
 | BoxTrack | `int32 track_id`, `float32 u`, `float32 v`, `int32[4] bbox` (x,y,w,h), `builtin_interfaces/Time stamp`, `geometry_msgs/Point position_base`, `bool position_valid`, `uint8 position_source`, `string calib_version` | 30 Hz 목표. 픽셀 필드 유지. `position_base` = 박스 윗면 중앙 = **TCP(핑거 끝)가 갈 점**, m, 두산 베이스 축. 관측 자세 정지 중 `OBSERVE_HOMOGRAPHY`, **이동 중에도 `HAND_EYE`(촬영 시각 pose 보간)로 갱신 — G0 필수**(#50 MC-002). 동적 변환 검증 전·pose 정합 불가 시 `position_valid=false`. `/voss/robot/pose` stamp 는 조회 응답 수신 시각이므로 시점 오차를 보장값으로 쓰지 않는다. stamp 나이(100 ms 초과)만으로 정지·폐기하지 않는다(MC-031) |
-| LabelRead | `int32 track_id`, `string code`, `string dong`, `float32 confidence`, `uint8 stage` (1 입구 / 2 추종 중 / 3 재확인) | |
+| LabelRead | `int32 track_id`, `string code`, `string dong`, `float32 confidence`, `uint8 stage` (1 입구 / 2 추종 중 / 3 재확인), `builtin_interfaces/Time stamp`, `string raw_text`, `string dong_alt`, `float32 confidence_alt` | `stamp` = 판정에 쓴 원본 프레임의 촬영 시각 — sort_manager 는 `track_id` 가 현재 박스이고 `stamp ≥ 단계 시작` 인 결과만 채택. `dong_alt`·`confidence_alt` = 2위 후보(재확인 질문 SYS-FR-026). code 는 정규화(`S07-0x`), dong 은 등록 이름 |
 | LabelCrop | `std_msgs/Header header`, `int32 track_id`, `uint8 stage`, `float32 sharpness`, `sensor_msgs/Image image` | box_tracker → label_reader. `header.stamp` = 원본 카메라 프레임 시각(보존). `stage` 는 box_tracker 가 `/voss/sort/state` 로 정한다: **`track_id == SortState.track_id`** 인 트랙만 PICKING→2·RECHECK→3, 그 밖의 트랙과 상태 수신 전에는 1. `sharpness` = 선명도 점수(클수록 선명), 2단계 프레임 선택·다수결 가중에 쓴다. 2단계 프레임은 PICKING 동안 액션 result 가 올 때까지(GRASP 중 추종 포함) **영상 품질(선명도·가림·송장 크기)로만** 고른다 — phase 문자열에 의존하지 않는다(#50 MC-007). `image` = 송장 영역 크롭(전처리 전 원본 색) |
 
 ## srv
@@ -46,3 +46,4 @@
   - `TrackAndGrasp`: phase·reason 대문자, result 끝에 `attempts` 추가, `grasped` = LIFT·VERIFY 완료 (MC-005·006).
   - `SortResult.session_id` 에 랜덤 4자리 붙임 — 같은 초 재시작 충돌 방지 (MC-003). DB 컬럼 길이는 정의석.
   - LabelCrop 2단계 프레임 선택 기준 (MC-007).
+  - `LabelRead` 끝에 `stamp`·`raw_text`·`dong_alt`·`confidence_alt` 추가 (SRD 회신 NEW-V-01: 오래된 결과 판정, OCR 원문, 1·2위 후보 질문).
