@@ -1,7 +1,7 @@
 # ADR-0001: 인터페이스 명명 규칙과 voss_msgs 단일 패키지
 
 - 날짜: 2026-10-05
-- 상태: 제안됨 (10/05 팀 확정)
+- 상태: 승인됨 (2026-10-06, Slack 투표 👍 4/4 완료. 승인 PR에서 LabelCrop·ReadLabel·ZoneMapEntry 확장 반영 → docs/interfaces 변경 이력)
 - 결정자: 전원
 - 관련: SR-IF-01~12, pending-decisions #1
 
