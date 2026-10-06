@@ -13,8 +13,8 @@
 | realsense2_camera | (외부, voss_bringup 이 `camera_namespace:=''` 로 기동) | `/camera/color/image_raw` (sensor_msgs/Image), `/camera/color/camera_info` | — |
 | box_tracker | voss_vision / 남현지 | `/voss/vision/box` (voss_msgs/BoxTrack, 픽셀 + 베이스 좌표 m) 30 Hz, `/voss/vision/label_crop` (voss_msgs/LabelCrop, 선명 프레임만) | `/camera/color/image_raw`, `/voss/sort/state` (크롭의 stage 를 정하는 데만 씀), `/voss/robot/pose` (이동 중 좌표: 촬영 시각 pose 보간) |
 | label_reader | voss_vision / 남현지 | `/voss/vision/label` (voss_msgs/LabelRead). 서비스: `/voss/vision/read_label` (srv/ReadLabel, 3단계 재판독. 결과는 응답으로 주고 `/voss/vision/label` 에도 stage 3 으로 발행) | `/voss/vision/label_crop`, `/voss/sort/zone_map` (분류코드·동·별칭 = 퍼지 매칭 후보) |
-| belt_servo | voss_servo / 박병후 | `/voss/robot/servo_cmd` (geometry_msgs/TwistStamped). 액션 제공 `/voss/servo/track_and_grasp` (voss_msgs/action/TrackAndGrasp) | `/voss/vision/box`, `/voss/robot/pose` |
-| robot_gateway | voss_robot / 김학민 | `/voss/robot/pose` (geometry_msgs/PoseStamped, ~50 Hz), `/voss/robot/state` (voss_msgs/RobotState, 정의 예정 — 김학민 10/07). 서비스: `/voss/robot/move_to_zone` (srv/MoveToZone), `/voss/robot/gripper` (srv/Gripper), `/voss/robot/teach_zone` (srv/TeachZone) | `/voss/robot/servo_cmd`. 두산: `/dsr01/dsr_controller2/motion/move_line` (ASYNC), `/dsr01/servol_stream` (10/06 확인), `aux_control/get_current_posx`. RG2: Modbus TCP 또는 onrobot 드라이버 (미정) |
+| belt_servo | voss_servo / 박병후 | `/voss/robot/servo_cmd` (geometry_msgs/TwistStamped). 액션 제공 `/voss/servo/track_and_grasp` (voss_msgs/action/TrackAndGrasp) | `/voss/vision/box` (`position_base` 관측값 → TCP 목표는 belt_servo 가 계산), `/voss/robot/pose`. 서비스 호출 `/voss/robot/gripper` (GRASP 닫기, VERIFY 쥔 폭 — **박병후 확인 대기**) |
+| robot_gateway | voss_robot / 김학민 | `/voss/robot/pose` (geometry_msgs/PoseStamped, ~50 Hz: **플랜지** pose, frame_id `base_link`, 위치 m·자세 쿼터니언(두산 posx ZYZ 에서 변환). stamp = `get_current_posx` 요청 송신·응답 수신 시각의 중간값, 오차 보장값으로 쓰지 않음 — MC-004), `/voss/robot/state` (voss_msgs/RobotState, 정의 예정 — 김학민 10/07). 서비스: `/voss/robot/move_to_zone` (srv/MoveToZone), `/voss/robot/gripper` (srv/Gripper), `/voss/robot/teach_zone` (srv/TeachZone) | `/voss/robot/servo_cmd`. 두산: `/dsr01/dsr_controller2/motion/move_line` (ASYNC), `/dsr01/servol_stream` (10/06 확인), `aux_control/get_current_posx`. RG2: Modbus TCP 또는 onrobot 드라이버 (미정) |
 
 ## QoS 제안
 | 토픽 | reliability | durability | depth |
@@ -33,3 +33,4 @@
 - 2026-10-06: SRD 상호확인 합의 (#51·#52). `/voss/sort/stats` 삭제(집계는 REST `GET /api/stats`, 정의석), sort_logger `/voss/log/status` 신설(영역 `log`, ADR-0001), intent_parser 의 say 발행·`/voss/sort/state` 구독 추가, hmi_bridge `/voss/robot/state` 구독. `/voss/robot/state`(RobotState) 정의는 김학민이 추가.
 - 2026-10-06: #63 리뷰 반영. robot_gateway 가 `/voss/robot/state` 발행(타입은 김학민 PR), `/voss/log/status` 에 `SPOOL_FULL` 추가(#54 합의).
 - 2026-10-06: box_tracker 가 `/voss/robot/pose` 구독(이동 중 베이스 좌표, #50 MC-001·002).
+- 2026-10-06: #65 리뷰 반영. `/voss/robot/pose` = 플랜지 pose·stamp 정의(김학민), belt_servo 는 `position_base` 를 관측값으로 받아 TCP 목표를 계산(#50 MC-001), belt_servo 의 `/voss/robot/gripper` 호출 추가(박병후 확인 대기).
