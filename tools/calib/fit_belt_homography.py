@@ -22,7 +22,7 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src" / "voss_vision"))
 from voss_vision.belt_plane import apply_homography, fit_homography, point_errors_mm  # noqa: E402
 
-SCALE = 1.0  # 1280×720 은 그대로 표시 (더 큰 해상도면 줄이고, 클릭 좌표는 원본으로 환산)
+SCALE = 0.5  # 1920×1080 을 화면에 맞게 줄여 보여 준다 (클릭 좌표는 원본으로 환산)
 
 
 def click_pixels(folder: Path, names: list[str]) -> dict[str, tuple[float, float]]:
@@ -78,6 +78,19 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dir", type=Path, default=Path.home() / "voss_calib")
     ap.add_argument("--out", type=Path, default=Path("config/belt_homography.yaml"))
+    ap.add_argument(
+        "--pose-frame",
+        choices=["tcp", "flange"],
+        default="tcp",
+        help="points.csv posx 의 기준점 (10/06 측정은 TCP, 김학민)",
+    )
+    ap.add_argument(
+        "--tcp-offset-mm",
+        type=float,
+        nargs=3,
+        default=[1.382, 2.684, 246.642],
+        help="터치 때 펜던트에 등록된 TCP 오프셋 (10/06 실측)",
+    )
     args = ap.parse_args()
 
     rows = {r["name"]: r for r in csv.DictReader((args.dir / "points.csv").open())}
@@ -112,12 +125,20 @@ def main() -> None:
     print(f"터치 z 평균 {z.mean():.1f} mm, 범위 {np.ptp(z):.1f} mm (3 mm 넘으면 평면·터치 재확인)")
 
     obs = rows.get("OBS")
+    # 터치 자세가 관측 자세와 0.5° 넘게 다르면 경고 (1° 기울면 약 3.5 mm, #48 리뷰 ②)
+    if obs:
+        for n in cal + val:
+            tilt = max(abs(float(rows[n][k]) - float(obs[k])) for k in ("rx", "ry"))
+            if tilt > 0.5:
+                print(f"  ! {n} 터치 자세가 관측 자세와 {tilt:.1f}° 다름 — 다시 터치")
     result = {
         "version": 1,
         "method": "belt_plane_homography",
         "created": datetime.now().isoformat(timespec="minutes"),
         "image_size": image_size,
         "observe_pose": [float(obs[k]) for k in ("x", "y", "z", "rx", "ry", "rz")] if obs else None,
+        "pose_frame": args.pose_frame,
+        "tcp_offset_mm": args.tcp_offset_mm if args.pose_frame == "tcp" else None,
         "plane_z_mm": round(float(z.mean()), 1),
         "undistort": {"k": cam[0].ravel().tolist(), "d": cam[1].tolist()} if cam else None,
         "H_px_to_base_xy": np.round(h, 9).tolist(),
