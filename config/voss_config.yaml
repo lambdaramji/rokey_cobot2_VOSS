@@ -13,7 +13,7 @@ zones:   # 플랜지 기준 posx (TCP 미적용), 트레이 안쪽 바닥 중심
 observe_pose: [-11.51, -271.11, 450.16, 85.25, -179.07, -6.03]   # 플랜지 기준. 홈과 같음
 belt:
   speed_cmps: 4.8          # 아두이노 h250
-  direction_axis: "x"
+  direction_base: [0.99992, -0.01292, 0.0]   # 진행 방향 단위벡터(베이스 기준), +x 에서 −0.74° (measurements #1, 김학민)
 gripper:   # 폭은 RG2 보고값 (실제 간격 ≈ 보고값 − 10 mm)
   pre_open_mm: 90
   grasp_width_mm: 39
