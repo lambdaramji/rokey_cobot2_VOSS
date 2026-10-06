@@ -22,7 +22,7 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src" / "voss_vision"))
 from voss_vision.belt_plane import apply_homography, fit_homography, point_errors_mm  # noqa: E402
 
-SCALE = 0.5  # 1920×1080 을 화면에 맞게 줄여 보여 준다 (클릭 좌표는 원본으로 환산)
+SCALE = 1.0  # 1280×720 은 그대로 표시 (더 큰 해상도면 줄이고, 클릭 좌표는 원본으로 환산)
 
 
 def click_pixels(folder: Path, names: list[str]) -> dict[str, tuple[float, float]]:
@@ -94,6 +94,8 @@ def main() -> None:
             w.writerow(["name", "u", "v"])
             w.writerows([n, f"{u:.1f}", f"{v:.1f}"] for n, (u, v) in pix.items())
 
+    first = cv2.imread(str(args.dir / f"{cal[0]}.png"))
+    image_size = [int(first.shape[1]), int(first.shape[0])] if first is not None else None
     cam = load_undistort(args.dir)
     px = {n: undistort(np.array([pix[n]]), cam)[0] for n in cal + val}
     xy = {n: np.array([float(rows[n]["x"]), float(rows[n]["y"])]) for n in cal + val}
@@ -114,7 +116,7 @@ def main() -> None:
         "version": 1,
         "method": "belt_plane_homography",
         "created": datetime.now().isoformat(timespec="minutes"),
-        "image_size": [1920, 1080],
+        "image_size": image_size,
         "observe_pose": [float(obs[k]) for k in ("x", "y", "z", "rx", "ry", "rz")] if obs else None,
         "plane_z_mm": round(float(z.mean()), 1),
         "undistort": {"k": cam[0].ravel().tolist(), "d": cam[1].tolist()} if cam else None,

@@ -7,7 +7,7 @@
 | version | int | 1 |
 | method | str | `belt_plane_homography` (정식 핸드아이로 바뀌면 `hand_eye`) |
 | created | str | 계산 시각 |
-| image_size | [w, h] | 1920, 1080. 카메라 해상도가 다르면 무효 |
+| image_size | [w, h] | 사진에서 읽은 실제 크기. 운용 해상도 1280, 720 (MC-032). 카메라 해상도가 다르면 무효 |
 | observe_pose | [x, y, z, rx, ry, rz] | 사진을 찍은 관측 자세 posx. **이 자세에서만 유효** — voss_config `observe_pose` 와 같아야 한다 |
 | plane_z_mm | float | 박스 윗면(벨트 + 27 mm) 높이, 터치 z 평균 |
 | undistort | {k[9], d[]} 또는 null | 왜곡 보정 파라미터. 픽셀을 먼저 이걸로 보정한 뒤 H 적용 |
@@ -22,3 +22,4 @@
 
 ## 변경 이력
 - 2026-10-06: 신설 (#25).
+- 2026-10-06: 운용 해상도 1280×720 확정(SRD 상호확인 MC-032) — image_size 를 사진에서 읽도록 변경.

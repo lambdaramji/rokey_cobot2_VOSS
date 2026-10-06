@@ -38,6 +38,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", type=Path, default=Path.home() / "voss_calib")
     ap.add_argument("--topic", default="/camera/color/image_raw")
+    ap.add_argument("--width", type=int, default=1280, help="운용 해상도 폭 (MC-032: 1280x720)")
     ap.add_argument(
         "--names", nargs="+", default=[f"C{i}" for i in range(1, 7)] + ["V1", "V2", "V3"]
     )
@@ -58,8 +59,10 @@ def main() -> None:
             path = args.out / f"{name}.png"
             cv2.imwrite(str(path), img)
             print(f"  저장 {path} ({img.shape[1]}x{img.shape[0]})")
-            if img.shape[1] != 1920:
-                print("  ! 해상도가 1920x1080 이 아니다 — 실제 운용 설정과 같게 다시 띄울 것")
+            if img.shape[1] != args.width:
+                print(
+                    f"  ! 폭이 {args.width} 이 아니다 — 운용 해상도(1280x720)와 같게 다시 띄울 것"
+                )
     finally:
         node.destroy_node()
         rclpy.shutdown()
