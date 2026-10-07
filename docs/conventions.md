@@ -8,6 +8,7 @@
 - PR 하나 = 이슈 하나. 300줄 이내 권장. 브랜치 수명 2일 이내 (일정이 2주라 더 짧게).
 - 머지: squash merge. 조건: CI(`build-test`) 통과 + CODEOWNERS 승인 1. `main` 보호 규칙은 관리자(PL)에게도 적용된다.
 - 리뷰 순서: ① Claude 자동 리뷰(PR에 `@claude` 멘션) → ② 동료 1명 → ③ 인터페이스·voss_msgs·ADR 변경 시 PL.
+- `@claude` 는 PL 의 Claude 구독으로 돈다. 네 명의 호출이 같은 사용 한도를 쓰므로 PR 하나에 몰아서 요청한다. 설정: `.github/workflows/claude.yml` (#8)
 - CODEOWNERS는 경로마다 2명이다(작성자는 자기 PR을 승인할 수 없다). 두 번째 오너는 인터페이스가 맞물리는 사람이다. 표는 `.github/CODEOWNERS`.
 - docs/interfaces·voss_msgs·config·docs/adr 는 PL과 김학민이 오너지만, 작성자가 PL이 아니면 PL이 승인한다. PL이 작성한 PR만 김학민이 승인한다. (CODEOWNERS로는 강제되지 않는 약속)
 - 매일 작업 끝에 자기 브랜치를 PR로 올린다. 미완성이면 Draft PR. "나중에 한 번에"는 없다.
@@ -16,7 +17,7 @@
 - 패키지는 `voss_<영역>`, 노드 이름은 docs/interfaces/topics.md 의 이름 그대로.
 - 토픽 `/voss/<영역>/<이름>`, 서비스·액션 `/voss/<영역>/<동사>`. 네임스페이스 없이 절대 경로.
 - 커스텀 msg/srv/action은 `voss_msgs` 에만. 표준 메시지로 되면 표준을 쓴다.
-- QoS: 센서·서보 스트림은 best_effort depth 1~5, 상태·zone_map은 reliable + transient_local.
+- QoS: 센서·서보 스트림은 best_effort depth 1~5. zone_map 은 reliable + transient_local. `/voss/sort/state` 는 reliable·volatile 로 ≥2 Hz 주기 발행(늦게 뜬 노드는 0.5 s 안에 받음). 표는 docs/interfaces/topics.md.
 - 파라미터는 launch 파일에서 넘긴다. 하드코딩된 좌표·속도 금지 → `config/voss_config.yaml` (sort_manager) 또는 패키지 파라미터 YAML.
 - 두산 서비스는 robot_gateway 단일 큐로만. 좌표계·단위는 두산 posx 기준 (mm, deg).
 

@@ -1,4 +1,4 @@
-string zone
+string zone              # A | B | C | RECHECK | HOLD | OBSERVE (MoveToZone 과 같은 값)
 ---
 bool ok
 string message
