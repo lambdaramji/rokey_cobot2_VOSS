@@ -1,7 +1,7 @@
 # VOSS 추종·파지 설계 노트 (박병후)
 
 - 문서 ID: VOSS-BH-DECISION-001 · 버전 r5 · 2026-10-07 (KST) · 결정자: 박병후
-- 기준 커밋: main `e8dd5e5` (#63 · #65 · #57 · #70 반영본). r4 는 `668703e` 기준이라 낡았다.
+- 기준 커밋: main `e8dd5e5` (#63 · #65 · #57 · #70 반영본). r4 는 `668703e` 기준이라 낡았다. r5.1: 그 뒤 머지된 #64(`6302204`, belt.direction_base·값 규칙)·#79(`671c67f`, BRD v1.3)만 반영(김학민 리뷰).
 - 성격: 박병후 개인 설계 노트. **팀 계약은 docs/interfaces 가 우선**이고, 이 문서는 "왜 이렇게 골랐나 · 무엇을 유보했나"를 남긴다. 팀 결정이 필요한 항목은 pending-decisions / ADR 로 올리고 여기서는 가리키기만 한다.
 - 읽는 법 (초급 개발자 기준): §2 대조표에서 r4 와 레포의 차이를 먼저 보고, §5 카드에서 이유를 읽는다. 처음 나오는 용어는 그 자리에서 한 줄로 풀었다. 수치는 모두 레포 문서에서 가져왔고, 레포에서 못 찾은 것은 "확인 필요"로 적었다.
 - 출처 약어: topics.md = docs/interfaces/topics.md, voss_msgs.md = docs/interfaces/voss_msgs.md, measurements #n = docs/measurements-1006.md 의 n 번 항목, pending #n = docs/pending-decisions.md 의 n 번, MC-nnn = SRD 상호확인 합의 번호(#50 · #51 · #52 · #53), PR #n = GitHub PR.
@@ -15,20 +15,20 @@ r4 에서 "미확인 · 후보"였다가 레포에서 확정된 것, r4 와 반�
 | DEC-01 좌표 | 베이스 좌표 채택. 기준점 · frame · offset 은 계약 후보 | `BoxTrack.position_base` = stamp 시각에 관측한 **박스 윗면 중심**, m, base_link. `position_valid` · `position_source`(SOURCE_*) · `calib_version` 추가. TCP 목표는 belt_servo 계산. 벨트 위 파지 높이 TCP z = `position_base.z − 19 mm` 를 belt_servo 파라미터 YAML 에 (topics.md belt_servo 행, voss_msgs.md BoxTrack, MC-001 · 009) | 확정. 19 mm 는 31 mm 면 기준으로 pending #16 결정(10/07)과 함께 확정 |
 | DEC-02 속도 목표 | 속도 목표 + speedl 계열 우선, 장비 지원 확인 전 | `servo_cmd` = TwistStamped, TCP 기준 선속도 m/s · 각속도 rad/s, frame_id base_link, G0 각속도 0 (topics.md, MC-010). gateway 두산 경로는 `/dsr01/servol_stream`(10/06 확인 표기) 또는 move_line ASYNC. measurements #3 ☐, pending #8 미정 | 출력 확정 / 두산 경로 **미정** |
 | DEC-03 시각 · 예측 | 촬영 시각 + 일정 속도 예측. 시계 매핑 · pose 이력 미정 | `/voss/robot/pose` = TCP, ~50 Hz, stamp = `get_current_posx` 응답 수신 시각, RTT/2 사용 금지 (MC-004). 촬영 시각 pose 보간은 box_tracker 책임 (MC-001 · 002). 벨트 4.8 cm/s (measurements #1). stamp 나이만으로 폐기 금지 (MC-031) | 확정 |
-| DEC-04 FF+P | FF 는 실측 벨트 속도, 수치는 실기에서 | `belt.speed_cmps 4.8`, `direction_axis "x"` (config/voss_config.yaml). PR #64 가 `belt.direction_base [0.99992, −0.01292, 0.0]` 단위벡터로 바꾸는 중, 박병후 리뷰 대기 | 확정 / 방향 표현 수정 중 |
+| DEC-04 FF+P | FF 는 실측 벨트 속도, 수치는 실기에서 | `belt.speed_cmps 4.8`, `belt.direction_base [0.99992, −0.01292, 0.0]`(베이스 기준 진행 단위벡터, +x 에서 −0.74°, measurements #6. #64 머지 `6302204`) — 소비 노드는 기동 때 ‖v‖ = 1 ± 0.01 검사 (voss_config.md 값 규칙) | 확정 |
 | DEC-05 FSM | prepare→…→verify, 높이 · 전환 대기 | feedback.phase = PREPARE/TRACK/DESCEND/GRASP/LIFT/VERIFY 대문자 6종. `grasped` = LIFT · VERIFY 완료 (TrackAndGrasp.action, voss_msgs.md) | 확정 |
 | DEC-06 파지 판정 | 유보. 직접 확보 피드백 실험 우선 | Gripper.srv 응답은 `ok` · `width_actual` 뿐. GRASP→LIFT 조건 = 닫힘 완료 응답 + `grip_detected` + 검증된 보고폭 범위 (voss_msgs.md). `grip_detected` 는 srv 에 **아직 없음**. measurements #8: 14 N, 31 mm 면, 쥔 폭 40.1~40.3 · 빈손 38.7. 늦은 응답 폐기 (MC-012 · 013) | 조건 확정 / srv 필드 미정 |
 | DEC-07 action · 정지 | 정지 확인 불가 = `STOP_UNCONFIRMED` 오류 표시 | `STOP_UNCONFIRMED` **삭제** (#53 박병후 최소안). 정지 요청 실패 = ABORTED + `DEVICE_ERROR` + 로그, sort_manager PAUSED, 수동 재개 (voss_msgs.md) | **r4 와 반대 → 정정** |
 | DEC-08 재시도 · 게이트 | 재시도 채택, 자동 개루프 전환 없음 | `attempts` ≤ 3 servo 단독 카운터, goal 1개당 result 1건, 바쁘면 reject. 게이트 14/20 미달이어도 자동 전환 없음, ①B안 ②범위 축소 ③A안 10/12 연장 (ADR-0002, plan.md, pending #3) | 확정 |
 | DEC-09 2차 OCR | servo 수렴 신호를 비차단 전달하는 후보 | 2단계 프레임은 **영상 품질로만** 고르고 phase 에 의존하지 않음 (MC-007). `LabelCrop.stage` 는 box_tracker 가 `SortState.track_id` 로 정함 (voss_msgs.md) | 수정 (수렴 신호 불필요) |
-| DEC-10 설정 | 시작 전 설정 스냅샷, 공급 경로 미정 | CLAUDE.md 규칙 5: voss_config.yaml 을 읽는 노드는 sort_manager 뿐. PR #64 값 규칙(정적 값은 launch 파라미터, version · sha256 로그, 미측정 null → READY 불가) 승인 전 | 미정 (PR #64 승인 전) |
+| DEC-10 설정 | 시작 전 설정 스냅샷, 공급 경로 미정 | CLAUDE.md 규칙 5: voss_config.yaml 을 읽는 노드는 sort_manager 뿐. #64 값 규칙(머지 `6302204`): 정적 값은 bringup launch 가 파라미터로 넘김(null 키는 넘기지 않음 → 그 값을 쓰는 노드는 READY 거부), 각 노드가 `config_version`·`config_sha256` 로그 | 규칙 확정 / belt_servo 파라미터 구현 대기 |
 | DEC-11 증거 | G0 정의, 로그 항목 | 로그 = 시도 번호 · 벨트 속도 · 결과 · 실패 원인 (ADR-0002). 시도별 로그 `data/`, 집계만 ADR (src/voss_servo/CLAUDE.md) | 확정 (형식) |
 | DEC-12 칼만 | 초기 미도입 | 레포에 추정기 관련 계약 없음. 변화 없음 | 유보 |
 | DEC-13 스택 | rclpy · NumPy · 명시적 FSM | voss_servo 는 rclpy 골격(belt_servo.py)만 있고 package.xml 의존은 rclpy · voss_msgs 뿐. NumPy 의존 미선언 | 확정 (골격) / NumPy 확인 필요 |
 | DEC-14 비동기 · 장비 | 실행 구조 미정 | goal 실행 중 gripper 는 belt_servo 만 호출, 비동기, 응답 = RG2 동작 완료 또는 timeout (topics.md). 두산 서비스는 gateway 단일 큐만 (CLAUDE.md 규칙 3) | 확정 (원칙) |
 | DEC-15 QoS | best_effort · depth 1 은 후보 | box · pose · servo_cmd = best_effort · volatile · depth 1 (topics.md QoS 표, pending #1 수용) | 확정 |
 | DEC-16 watchdog | 수치 · 정지 수단 미정 | topics.md 에 watchdog · cmd 유효기간 · stop 수단 명세 없음. voss_msgs.md 는 "servo_cmd 만료 워치독(값은 실측 후)"만 언급. RobotState 는 김학민 10/07 정의 예정 | 미정 |
-| DEC-17 파지 면 · 자세 | 고정 자세, 27 mm 높이 가정 | pending #16 **결정(10/07)**: 31 mm 면 파지(46 mm 변 = 벨트 방향, 닫힘축이 벨트를 가로지름), 목표 폭 39 mm(보고값) · 14 N, 파지 높이 TCP z = position_base.z − 19 mm. 고정 자세 · 각속도 0 (MC-010). 박스 27 mm. 남은 일: ADR(김학민), BRD TR-PICK-06 정정(남현지) | 확정 |
+| DEC-17 파지 면 · 자세 | 고정 자세, 27 mm 높이 가정 | pending #16 **결정(10/07)**: 31 mm 면 파지(46 mm 변 = 벨트 방향, 닫힘축이 벨트를 가로지름), 목표 폭 39 mm(보고값) · 14 N, 파지 높이 TCP z = position_base.z − 19 mm. 고정 자세 · 각속도 0 (MC-010). 박스 27 mm. 남은 일: ADR(김학민). BRD TR-PICK-06 은 v1.3 으로 정정됨(#79) | 확정 |
 | DEC-18 배포 | host 실행 | architecture.md 호스트 배포 유지. 공용 PC 사양 measurements #5 (CycloneDDS lo 전용 → 개인 PC 에서 토픽 안 보임) | 확정 (방향) |
 
 ## 3. 공부 · 논의 순서 (r4 §2 요약)
@@ -92,14 +92,14 @@ r4 에서 "미확인 · 후보"였다가 레포에서 확정된 것, r4 와 반�
 - **연결:** DEC-01 · 11 · 12 · 15. 남현지(보간), 김학민(pose stamp, #41). (IC-VISION-02 / ROBOT-02 / CONFIG, TBD-003 / 020 / 022, VT-BH-01 / 02 / 04)
 
 ### BH-DEC-04 — 피드포워드+P와 전체 PID 제어
-- **상태:** 채택 → 레포 확정(입력 값). 방향 표현은 PR #64 로 수정 중.
+- **상태:** 채택 → 레포 확정(입력 값). 방향 표현도 #64 머지(`6302204`)로 확정.
 - **문제:** 일정하게 움직이는 박스를 따라가며 시작 오차 · 외란 · 관측 오차를 줄여야 한다. 벨트 운동까지 오차 보정에 맡기면 늘 뒤처진다.
 - **선택과 이유:** 속도 명령 = 피드포워드(FF = "벨트가 이만큼 움직일 걸 아니까 미리 그만큼 따라가는 몫") + P(= "남은 오차에 비례해 더 밀어 주는 몫", v = v_belt + Kp × e). 두 항의 역할이 분명하고 초기 튜닝 요소가 Kp 와 한계값뿐이다.
 - **대안과 미채택 이유:** I 항(오차 누적 보정)은 포화 · 시야 상실 · 단계 전환에서 누적 초기화와 anti-windup 이 필요하고, D 항(오차 변화율 보정)은 영상 잡음과 불규칙한 dt 를 증폭한다. 필요하다는 실측 근거가 없어 전체 PID 는 초기 미도입(영구 배제 아님). FF 만 쓰면 관측 오차가 안 줄고, P 만 쓰면 주 이동도 오차에 의존한다.
 - **한계 · 성립 조건:** FF 속도 불일치 · 지연 · 포화로 잔여 오차나 진동이 남을 수 있다. 캘리브레이션 · 오프셋 오류는 I 로 덮지 말고 먼저 고친다. Kp 가 크면 지연 · 잡음에 민감하고 작으면 느리다.
-- **레포 확정 사항:** FF 입력 = voss_config `belt.speed_cmps 4.8` + 방향. 현재 `belt.direction_axis: "x"`(config/voss_config.yaml). PR #64(김학민, OPEN, 리뷰어 박병후)가 `belt.direction_base: [0.99992, −0.01292, 0.0]`(베이스 기준 진행 단위벡터, +x 에서 −0.74°, measurements #6)로 바꾸는 중. 아직 이 키를 쓰는 코드는 없다.
-- **남은 결정 · 실측:** PR #64 리뷰 · 승인. Kp · 속도 한계 · `timing.latency_offset_ms`(현재 0) 는 실기 튜닝. 추종 오차 · 목표/실제 속도 · 포화 · dt 를 기록해 조정한다.
-- **연결:** DEC-02 · 03 · 10 · 12 · 16 · 17. 김학민(PR #64, #40). 내 이슈 T27 #36. (SYS-FR-008, IC-CONFIG / ROBOT-01, TBD-019 / 020 / 021, VT-BH-01 / 02 / 04)
+- **레포 확정 사항:** FF 입력 = voss_config `belt.speed_cmps 4.8` + 방향. 방향 = `belt.direction_base: [0.99992, −0.01292, 0.0]`(베이스 기준 진행 단위벡터, +x 에서 −0.74°, z = 0 수평 성분만, measurements #6). #64(작성 남현지, 리뷰 김학민·박병후) 머지 `6302204`. 소비 노드는 기동 때 크기 1 ± 0.01 검사. 아직 이 키를 쓰는 코드는 없다.
+- **남은 결정 · 실측:** Kp · 속도 한계 · `timing.latency_offset_ms`(현재 0) 는 실기 튜닝. 추종 오차 · 목표/실제 속도 · 포화 · dt 를 기록해 조정한다.
+- **연결:** DEC-02 · 03 · 10 · 12 · 16 · 17. 남현지·김학민(#64, #40). 내 이슈 T27 #36. (SYS-FR-008, IC-CONFIG / ROBOT-01, TBD-019 / 020 / 021, VT-BH-01 / 02 / 04)
 
 ### BH-DEC-05 — 국소 FSM·단계 전환·인계
 - **상태:** 채택 → 레포 확정(phase 이름 · 인계 의미). 전환 조건 값은 미정.
@@ -152,14 +152,14 @@ r4 에서 "미확인 · 후보"였다가 레포에서 확정된 것, r4 와 반�
 - **연결:** DEC-05 · 11. 남현지 label_reader · box_tracker. 내 이슈 T28 #37. (SYS-FR-023 / VT-023, IC-VISION-03 / 04, TBD-003 / 004 / 019, NEW-B-06)
 
 ### BH-DEC-10 — 설정·버전·기동 준비
-- **상태:** 채택 → 미정(공급 경로는 PR #64 승인 전).
+- **상태:** 채택 → 규칙 확정(#64 머지 `6302204`) / belt_servo 파라미터 구현 대기.
 - **문제:** 노드마다 다른 속도 · frame · 오프셋 · 한계를 쓰거나 placeholder(자리만 채운 값)를 실제 값으로 쓰면 잘못된 움직임이 난다.
 - **선택과 이유:** 시작 전 단일 버전 설정을 읽고 준비 검사를 통과해야 goal 을 받는다. 미측정 값이면 시작 금지, 운전 중 자동 설정 변경 없음.
 - **대안과 미채택 이유:** belt_servo 가 voss_config.yaml 을 직접 읽는 안은 CLAUDE.md 규칙 5 로 **배제**. runtime 설정 토픽은 초기 미도입.
 - **한계 · 성립 조건:** 설정이 있어도 정확성 · 안전을 보장하지 않는다. 늦게 뜨거나 재시작한 노드도 같은 version 을 써야 한다. 내부 Kp 같은 튜닝값은 설정 계약과 구분한다.
-- **레포 확정 사항:** voss_config.yaml 을 읽는 노드는 sort_manager 뿐(CLAUDE.md 규칙 5, voss_config.md). belt_servo 가 belt · gripper · timing 값을 받는 경로는 PR #64 의 값 규칙(정적 값은 launch 에서 파라미터로, 각 노드가 version · sha256 로그, 미측정 null → 그 값을 쓰는 노드는 READY 불가, 키에 단위 접미사)으로 정리될 예정 — **승인 전**. sort_manager 의 SERVO 준비 판단은 `SortState.ready / not_ready`(voss_msgs.md).
-- **남은 결정 · 실측:** PR #64 리뷰. belt_servo 가 launch 파라미터로 받을 키 목록(belt.*, gripper.*, timing.*, 파지 높이 19 mm)과 READY 조건을 src/voss_servo/launch · config 에 반영. SERVO not_ready 를 어떻게 알릴지(RobotState 처럼 상태 토픽이 필요한지) 남현지와 확인 필요.
-- **연결:** DEC-04 · 06 · 16 · 17. 김학민(PR #64), 남현지(sort_manager 준비 판단). (IC-CONFIG-01, TBD-006 / 018 / 019 / 020, VT-BH-01 / 02)
+- **레포 확정 사항:** voss_config.yaml 을 읽는 노드는 sort_manager 뿐(CLAUDE.md 규칙 5, voss_config.md). belt_servo 가 belt · gripper · timing 값을 받는 경로는 #64 값 규칙으로 정해졌다(머지 `6302204`): 정적 값은 voss_bringup launch 가 파라미터로 넘기고(구현 김학민), null(미측정) 키는 넘기지 않으며 노드는 값이 안 온 파라미터를 미측정으로 보고 READY 를 거부한다. 각 노드는 `config_version`·`config_sha256` 를 로그에 남긴다. 키에 단위 접미사. sort_manager 의 SERVO 준비 판단은 `SortState.ready / not_ready`(voss_msgs.md).
+- **남은 결정 · 실측:** belt_servo 가 launch 파라미터로 받을 키 목록(belt.*, gripper.*, timing.*, 파지 높이 19 mm)과 READY 조건을 src/voss_servo/launch · config 에 반영. SERVO not_ready 를 어떻게 알릴지(RobotState 처럼 상태 토픽이 필요한지) 남현지와 확인 필요.
+- **연결:** DEC-04 · 06 · 16 · 17. 김학민(#64 bringup 구현), 남현지(sort_manager 준비 판단). (IC-CONFIG-01, TBD-006 / 018 / 019 / 020, VT-BH-01 / 02)
 
 ### BH-DEC-11 — 기본 전체 흐름·모의/실기·측정과 증거
 - **상태:** 채택 → 레포 확정(로그 형식 · 보관 위치).
@@ -227,7 +227,7 @@ r4 에서 "미확인 · 후보"였다가 레포에서 확정된 것, r4 와 반�
 - **선택과 이유:** XY 는 FF+P 추종, Z 는 단계별 높이 · 속도 제한, 자세는 고정(각속도 0). 박스 윗면 중심(관측) → TCP 목표 = 관측 + 파지 높이 오프셋. 실측 관측 평면과 일정한 박스 조건을 활용해 기본 추종 · 타이밍을 먼저 검증한다.
 - **대안과 미채택 이유:** 깊이 영상(CLAUDE.md 규칙 4 로 배제), 완전 6D 자세 추정, 새 경로 프레임워크는 초기 미도입. 박스 회전 추종은 G0 에서 제외.
 - **한계 · 성립 조건:** 벨트면 · 박스 높이 · 카메라 장착 · TCP 설정이 틀리면 가정이 무너진다. 하강은 픽셀 스케일과 가림을 바꾸고, LIFT 중 벨트 분리 시점도 확인해야 한다. 벨트 윗면은 745 mm 동안 2.4 mm 기울기(measurements #6).
-- **레포 확정 사항:** 박스 46 × 31 × 27 mm(BRD); BRD TR-PICK-06 = RG2 닫힘 축을 벨트 진행 방향과 나란히(46 mm 면), 사전 개방 90 mm. 10/06 실측은 **31 mm 면**(46 mm 변 = 벨트 방향, measurements #8). pending #16 **결정(10/07, #70)**: 31 mm 면 파지. 사전 개방 여유(실제 약 ±24.5 mm)는 벨트 가로 방향이라 벨트 방향 타이밍 여유는 추종(피드포워드 · 서보)이 맡는다. 값: 목표 폭 39 mm(보고값) · 14 N, 파지 높이 TCP z = position_base.z − 19 mm. 남은 일: ADR(김학민), BRD TR-PICK-06 정정(남현지). G0 는 고정 파지 자세 · 각속도 0(MC-010); 구역 놓기는 그리퍼 방향 −90°(measurements #6 트레이).
+- **레포 확정 사항:** 박스 46 × 31 × 27 mm(BRD); BRD **v1.3**(#79 머지 `671c67f`) TR-PICK-06 = 박스의 31 mm 폭을 잡는다(핑거가 46 × 27 mm 긴 옆면, 닫힘축 벨트 가로), 사전 개방 90 mm. v1.2 의 "46 mm 면" 은 정정됐다. 10/06 실측은 **31 mm 면**(46 mm 변 = 벨트 방향, measurements #8). pending #16 **결정(10/07, #70)**: 31 mm 면 파지. 사전 개방 여유(실제 약 ±24.5 mm)는 벨트 가로 방향이라 벨트 방향 타이밍 여유는 추종(피드포워드 · 서보)이 맡는다. 값: 목표 폭 39 mm(보고값) · 14 N, 파지 높이 TCP z = position_base.z − 19 mm. 남은 일: ADR(김학민). G0 는 고정 파지 자세 · 각속도 0(MC-010); 구역 놓기는 그리퍼 방향 −90°(measurements #6 트레이).
 - **남은 결정 · 실측:** 벨트 방향 여유가 없으므로(닫힘축이 벨트를 가로지름) 추종 오차 허용치가 그대로 파지 성공률을 정한다 — 실측으로 허용 오차를 잡는다. 핑거 끝이 박스 밑면 +8 mm 인 상태에서 벨트 기울기 2.4 mm 가 문제인지 실측.
 - **연결:** DEC-01 · 04 · 05 · 06. 김학민 · 박병후 · PL(pending #16). (SYS-FR-007~010, IC-VISION / ROBOT / CONFIG, TBD-002 / 015 / 019, VT-BH-02 / 03)
 
@@ -262,7 +262,7 @@ OCR 은 독립 (DEC-09) · 설정은 launch 파라미터 예정 (DEC-10) · 증�
 
 | 단계 | 목적 · 할 일 | 결과로 남길 것 | 환경 |
 |---|---|---|---|
-| 계약 · 기초 확인 | servol_stream 유무 · 주기(measurements #3) → pending #8, grip_detected 유무, PR #64 리뷰 | measurements · pending · ADR 갱신 | 공용 PC (T25 #34) |
+| 계약 · 기초 확인 | servol_stream 유무 · 주기(measurements #3) → pending #8, grip_detected 유무 | measurements · pending · ADR 갱신 | 공용 PC (T25 #34) |
 | 논리 시험 | 오차 → 속도 · clamp · 상태 전이 순수 함수 + pytest, fake_box · fake_pose 로 액션 서버 | 테스트 통과, 로그 포맷 | 개인 PC |
 | 고정 자세 · 높이 추종 | 벨트 축부터 FF+P, 횡 오차 보정, Kp · 한계 · 나이 계측 | 관측 / 목표 / 실제 · 오차 · 주기 · 지연 | 공용 PC + 로봇 (T26 #35) |
 | 단일 픽업 | 하강 · 닫힘 · LIFT, 가림 · timeout · 확보, 단계별 중단 | 전환 · 높이 · 시간 · 폭 · 힘 원본 | 현장 (T26 · T27) |
@@ -276,8 +276,8 @@ OCR 은 독립 (DEC-09) · 설정은 launch 파라미터 예정 (DEC-10) · 증�
 ## 8. 일정 · 상태
 
 - **T25 #34(servol_stream 확인 · 제어 방식 결정, 10/06 오후 예정)는 10/06 에 끝나지 않았다.** measurements #3 ☐, pending #8 미정. 10/07 중간 점검 발표가 있어 로봇 점유는 스탠드업에서 다시 잡는다.
-- pending #16(파지 면)은 **10/07 결정(#70)**: 31 mm 면, 폭 39 mm · 14 N, 높이 19 mm. DEC-01 · 06 · 17 에 반영했다. 남은 일은 ADR(김학민)과 BRD 정정(남현지).
-- PR #64(belt.direction_base · 값 규칙)는 박병후 리뷰 대기. 승인되면 DEC-04 · 10 상태를 "레포 확정"으로 올린다.
+- pending #16(파지 면)은 **10/07 결정(#70)**: 31 mm 면, 폭 39 mm · 14 N, 높이 19 mm. DEC-01 · 06 · 17 에 반영했다. 남은 일은 ADR(김학민). BRD 는 v1.3 으로 정정됨(#79).
+- #64(belt.direction_base · 값 규칙)는 머지됨(`6302204`) → DEC-04 확정, DEC-10 규칙 확정(r5.1).
 - 게이트 1차 측정 10/08 저녁, 본 게이트 10/10 (plan.md).
 
 | 버전 | 변경 |
@@ -287,6 +287,7 @@ OCR 은 독립 (DEC-09) · 설정은 launch 파라미터 예정 (DEC-10) · 증�
 | r3 / 10/07 | 후속 변환 담당 · 추정기 / 스택 / ROS 근거와 고도화 계획 보완 |
 | r4 / 10/07 | 칼만을 예시로 한 공통 기록 요구 반영. PID · speedl 등 18개 항목을 같은 8항목 결정 카드로 재정리 |
 | r5 / 10/07 | 레포 main e8dd5e5(#63 · #65 · #57 · #70) 대조 반영, DEC-07 정정, pending #16 결정(31 mm 면) 반영, 가독성 재구성, 레포 번호 병기, src/voss_servo/DESIGN.md 로 이동 |
+| r5.1 / 10/07 | #64(`6302204`)·#79(`671c67f`) 머지 반영: DEC-04 방향 단위벡터 확정, DEC-10 값 규칙 확정, DEC-17 BRD v1.3. #64 작성자 표기 정정(남현지). 결정 내용은 그대로 (김학민 리뷰) |
 
 ## 9. 미확정 경계
 
@@ -299,7 +300,7 @@ OCR 은 독립 (DEC-09) · 설정은 launch 파라미터 예정 (DEC-10) · 증�
 | 픽업 작업 | 단계 전환 · 인계, 파지 피드백 · 폭 대안, 재시도 | 05 / 06 / 08 | phase · reason · attempts 확정, grip_detected 필드 · 전환 값 미정 |
 | ROS · 실행 | topic / service / action, QoS, 비동기 · 큐, watchdog | 07 / 14 / 15 / 16 | 계약 확정, executor · watchdog 값 미정 |
 | 개발 · 배포 | Python / rclpy / NumPy / FSM, host / container | 13 / 18 | 방향 확정, NumPy 의존 · 부하 성능 미확인 |
-| 통합 · 설정 · 증거 | OCR 독립, 설정 공급 경로 · READY, 전체 흐름 · 로그 | 09 / 10 / 11 | OCR 연동 방식 확정, 설정 경로는 PR #64 승인 전 |
+| 통합 · 설정 · 증거 | OCR 독립, 설정 공급 경로 · READY, 전체 흐름 · 로그 | 09 / 10 / 11 | OCR 연동 방식 확정, 설정 규칙 확정(#64), belt_servo 파라미터 구현 대기 |
 
 **미확정 사항(레포에서 확인 안 됨):** servol_stream 의 실제 지원 · 주기(measurements #3), gateway 정지 수단 · cmd 유효기간 · RobotState 필드, `grip_detected` 의 srv 반영, 구체 Kp · 안전 한계 · 단계 전환 값 · timeout, NumPy 의존, 수치 목표 승인(pending #4). 이들은 확인 정보를 받아야 채울 수 있으며 문서 완성도를 위해 임의로 확정하지 않는다.
 
