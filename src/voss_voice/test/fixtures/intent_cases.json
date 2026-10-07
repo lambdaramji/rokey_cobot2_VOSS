@@ -1,0 +1,25 @@
+{
+  "_doc": "VC-EUS-INTENT-01 정답 세트 (필수 지시 4유형 x 5 = 20). 판정: 전체 20건 중 정답 >= 19, API 오류도 분모에 포함 (#54 MC-031). state/box_id 는 발화 시점 SortState.",
+  "cases": [
+    {"id": "run-1", "group": "운전", "text": "작업 시작해", "state": "IDLE", "expect": {"kind": "publish", "type": "start", "dong": "", "zone": ""}},
+    {"id": "run-2", "group": "운전", "text": "전부 분류해 줘", "state": "IDLE", "expect": {"kind": "publish", "type": "start", "dong": "", "zone": ""}},
+    {"id": "run-3", "group": "운전", "text": "멈춰", "state": "RUNNING", "expect": {"kind": "publish", "type": "stop", "dong": "", "zone": ""}},
+    {"id": "run-4", "group": "운전", "text": "잠깐 정지", "state": "PICKING", "expect": {"kind": "publish", "type": "stop", "dong": "", "zone": ""}},
+    {"id": "run-5", "group": "운전", "text": "다시 시작해", "state": "PAUSED", "expect": {"kind": "publish", "type": "resume", "dong": "", "zone": ""}},
+    {"id": "pri-1", "group": "우선", "text": "역삼동부터 분류해", "state": "RUNNING", "expect": {"kind": "publish", "type": "priority", "dong": "역삼동", "zone": ""}},
+    {"id": "pri-2", "group": "우선", "text": "대치 먼저 해 줘", "state": "RUNNING", "expect": {"kind": "publish", "type": "priority", "dong": "대치동", "zone": ""}},
+    {"id": "pri-3", "group": "우선", "text": "청담동 거 먼저 골라", "state": "IDLE", "expect": {"kind": "publish", "type": "priority", "dong": "청담동", "zone": ""}},
+    {"id": "pri-4", "group": "우선", "text": "역삼 거부터 해", "state": "RUNNING", "expect": {"kind": "publish", "type": "priority", "dong": "역삼동", "zone": ""}},
+    {"id": "pri-5", "group": "우선", "text": "이번엔 대치동만 먼저 분류해", "state": "RUNNING", "expect": {"kind": "publish", "type": "priority", "dong": "대치동", "zone": ""}},
+    {"id": "ans-1", "group": "답변", "text": "청담동이야", "state": "ASKING", "box_id": "20261010T143012-a3f9-009", "expect": {"kind": "publish", "type": "answer", "dong": "청담동", "zone": "", "box_id": "20261010T143012-a3f9-009"}},
+    {"id": "ans-2", "group": "답변", "text": "역삼으로 보내", "state": "ASKING", "box_id": "20261010T143012-a3f9-010", "expect": {"kind": "publish", "type": "answer", "dong": "역삼동", "zone": "", "box_id": "20261010T143012-a3f9-010"}},
+    {"id": "ans-3", "group": "답변", "text": "그건 보류해", "state": "ASKING", "box_id": "20261010T143012-a3f9-011", "expect": {"kind": "publish", "type": "answer", "dong": "", "zone": "HOLD", "box_id": "20261010T143012-a3f9-011"}},
+    {"id": "ans-4", "group": "답변", "text": "대치동", "state": "ASKING", "box_id": "20261010T143012-a3f9-012", "expect": {"kind": "publish", "type": "answer", "dong": "대치동", "zone": "", "box_id": "20261010T143012-a3f9-012"}},
+    {"id": "ans-5", "group": "답변", "text": "모르겠으니까 보류", "state": "ASKING", "box_id": "20261010T143012-a3f9-013", "expect": {"kind": "publish", "type": "answer", "dong": "", "zone": "HOLD", "box_id": "20261010T143012-a3f9-013"}},
+    {"id": "his-1", "group": "이력", "text": "역삼동 지금까지 몇 개야", "state": "RUNNING", "expect": {"kind": "query", "query_kind": "count_by_dong", "dong": "역삼동"}},
+    {"id": "his-2", "group": "이력", "text": "대치 몇 개 처리했어", "state": "IDLE", "expect": {"kind": "query", "query_kind": "count_by_dong", "dong": "대치동"}},
+    {"id": "his-3", "group": "이력", "text": "보류 몇 개야", "state": "RUNNING", "expect": {"kind": "query", "query_kind": "held_count", "dong": ""}},
+    {"id": "his-4", "group": "이력", "text": "몇 개 남았어", "state": "RUNNING", "expect": {"kind": "query", "query_kind": "remaining_count", "dong": ""}},
+    {"id": "his-5", "group": "이력", "text": "남은 수량 알려 줘", "state": "PAUSED", "expect": {"kind": "query", "query_kind": "remaining_count", "dong": ""}}
+  ]
+}
