@@ -50,7 +50,7 @@ LLM(FastAPI `/intent`, OpenAI structured output — ADR-0006)의 출력은 반�
 
 ## 발화·중복
 - intent_parser 가 `/voss/voice/say` 로 내는 문장(되묻기·준비 중·이력 응답)의 중복 억제는 intent_parser 가 맡는다(MC-025). manager 가 내는 문장은 manager 가 맡는다.
-- `box_id` 에는 원래 투입 box_id 만 싣는다(회차 없음, PL 결정 #67·#54). 재개 후 같은 박스 재질문에 앞 질문의 늦은 답이 와도 같은 박스의 답이라 해가 없고, 다른 박스면 box_id 가 달라 manager 가 거른다.
+- `box_id` 에는 원래 투입 box_id 만 싣는다(회차 없음, PL 결정 #67·#54). 다른 박스의 늦은 답은 box_id 가 달라 manager 가 거른다. 같은 박스의 **이미 끝난 질문**(stop/resume 뒤 재질문, 무효 답 재안내 등)에 늦게 온 답을 받을지 거를지(수락 창)는 아직 정하지 않았다 — B 후속(SRD v0.4 F-09, 남현지·정의석). 그 전까지 "같은 박스라 해가 없다"고 가정하지 않는다(#54 최종 정정, 정의석 10/07 01:10 UTC).
 
 ## 시험 (VC-EUS-INTENT-01, #54 MC-031)
 - 정답 세트 20문장(필수 지시 4유형 × 5)은 시험 전에 `src/voss_voice/test/fixtures/` 에 커밋한다.
@@ -65,3 +65,4 @@ LLM(FastAPI `/intent`, OpenAI structured output — ADR-0006)의 출력은 반�
   - 별칭 → 정식 동 이름 변환, 허용 목록은 zone_map 토픽, zone_map 미수신 시 발행 안 함.
   - `update_zone_map` 은 C 선택 범위로 표시.
   - 리뷰 반영(#67): stop 은 로컬 키워드로 즉시 발행(LLM·zone_map 대기 없음), box_id 회차 없음(PL 결정), `count` 현재 미사용.
+- 2026-10-07: SRD v0.4 정합 (#6). "늦은 답이 와도 같은 박스라 해가 없다" 문장을 #54 최종 정정에 맞게 고침 — 같은 박스의 끝난 질문에 대한 수락 창은 F-09 미정.
