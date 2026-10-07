@@ -64,4 +64,4 @@ timing:
 - 2026-10-06: `belt.direction_axis`(문자) → `belt.direction_base`(베이스 기준 단위벡터, 부호 포함). 값 규칙 절 추가 (SRD 상호확인 MC-009, 김학민 합의).
 - 2026-10-06: #64 리뷰 반영. 단위 규칙 범위(pose 배열 = 두산 mm·deg, 표준 geometry_msgs = SI, 커스텀 필드 = 주석 단위), 스키마 예시를 null 로, bringup 의 `config_version`·`config_sha256` 전달.
 - 2026-10-07: #64 를 main 위로 다시 쌓으며 #57 최종본과 합침. 박병후 리뷰 반영 — latency_offset_ms 0 = 보정 없음·양수 = 앞당김, null 키는 launch 로 넘기지 않음, pose·servo_cmd 기준점 TCP·base_link, direction_base 크기 검사·z = 0 의미.
-- 2026-10-07: SRD v0.4 정합 (#6). `zones.recheck.view_pose`(null, MC-017) 추가, 정지 상태에서만 공유 설정 변경(MC-009)·서보 전용 값 위치·gateway watchdog 위치를 값 규칙에 추가.
+- 2026-10-07: SRD v1.0 정합 (#6). `zones.recheck.view_pose`(null, MC-017) 추가, 정지 상태에서만 공유 설정 변경(MC-009)·서보 전용 값 위치·gateway watchdog 위치를 값 규칙에 추가.

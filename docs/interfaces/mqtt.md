@@ -18,7 +18,7 @@
 
 - 시각은 모두 ISO-8601 `+09:00` 문자열(공용 PC 시스템 시계). ROS Time 은 hmi_bridge 가 바꾼다.
 - `type` 은 Command canonical 명령(voss_msgs.md): `start`·`stop`·`resume`·`priority`·`answer`·`reset_zone`. `args` 객체 → `Command.arg` 문자열 변환표는 #20 에서 확정한다. 변환 결과는 Command.srv 형식을 따른다 — start `""`/`ALL`, priority 동 이름, answer `<box_id>|<동 또는 HOLD>`, reset_zone 구역.
-- 로그 상태(`/voss/log/status`)를 웹으로 넘기는 토픽 이름은 #20 에서 정한다(web_api.md SSE `log_status`, SRD v0.4 F-11).
+- 로그 상태(`/voss/log/status`)를 웹으로 넘기는 토픽 이름은 #20 에서 정한다(web_api.md SSE `log_status`, SRD v1.0 F-11).
 
 ## 명령 처리 규칙 (hmi_bridge)
 - 같은 `command_id` 는 10분 동안 기억하고 다시 실행하지 않는다(ack 는 다시 보낸다).
@@ -31,4 +31,4 @@
 
 ## 변경 이력
 - 2026-10-05: 초안.
-- 2026-10-07: SRD v0.4 정합 (#6). #52 MC-026 합의(정의석 결정)를 옮김 — 6개 토픽·QoS·retained, command/ack JSON, 10분 중복 억제·30초 EXPIRED, ISO 시각, Spring Boot 가 클라이언트. `voss/robot` 필드(#55). 브로커 위치·args 변환표·로그 상태 토픽은 #20.
+- 2026-10-07: SRD v1.0 정합 (#6). #52 MC-026 합의(정의석 결정)를 옮김 — 6개 토픽·QoS·retained, command/ack JSON, 10분 중복 억제·30초 EXPIRED, ISO 시각, Spring Boot 가 클라이언트. `voss/robot` 필드(#55). 브로커 위치·args 변환표·로그 상태 토픽은 #20.
