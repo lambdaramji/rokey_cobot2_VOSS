@@ -141,7 +141,7 @@ python3 rg2_check.py summary             # 마크다운 표 → measurements #8 
    ```bash
    python3 measure_belt_speed.py serial --port /dev/ttyACM0 --baud 9600   # 받은 줄·보낸 줄이 로그로 남는다. ⚠ 포트를 여는 순간 벨트가 돈다
    ```
-   ⚠ 포트를 열면 보드가 리셋될 수 있다(벨트가 멈추거나 기본값으로 돌아감). 프로토콜을 모르면 판매처 자료·스케치를 먼저 본다.
+   ⚠ Uno 는 포트를 열면 리셋되고, 스케치(`tools/arduino/conveyor_test`)는 리셋되면 바로 회전한다. 포트를 열기 전에 벨트 위를 비운다. 명령은 `s` 정지 / `r` 회전.
 3. 설정값마다: 5초 돌려 안정 → 박스를 A 앞 상류에 올림 → **휴대폰 60 fps 로 A·B 를 한 화면에** 찍거나 스톱워치로 앞 모서리 A→B 시간. **3회.**
    ```bash
    python3 measure_belt_speed.py trial --setting <설정값> --distance 800   # 8.12 또는 f487@60 입력
