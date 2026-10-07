@@ -19,6 +19,7 @@
 /src/voss_hmi/            @EuiseokJeongNZ @yujh5537
 /docker/db/               @EuiseokJeongNZ @yujh5537
 /docker/web/              @EuiseokJeongNZ @yujh5537
+/docker/ai/               @EuiseokJeongNZ @yujh5537
 
 # 비전: 남현지 + 박병후 (/voss/vision/box → belt_servo)
 /src/voss_vision/         @yujh5537 @ok778ts123
