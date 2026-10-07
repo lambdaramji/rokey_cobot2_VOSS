@@ -17,7 +17,7 @@ SRD v0.2 회신과 상호확인(#52·#55)에서 웹 스택·DB·Mosquitto 위치
 | AI / Voice | Python 3.12 + FastAPI + Whisper + OpenAI API | STT·LLM intent 추출 전용 서비스. 일반 CRUD·업무 로직은 하지 않는다 |
 | Database | PostgreSQL | `sort_log` (결과 1건 = 1행), 이력·집계 |
 | Messaging | Mosquitto (호스트 1883) | ROS ↔ 웹의 유일한 경계 |
-| Infra | Docker Compose + Nginx + GitHub Actions | 컨테이너 실행, `/` React, `/api` → Spring Boot, `/ai` → FastAPI(필요 시) |
+| Infra | Docker Compose + Nginx + GitHub Actions | 컨테이너 실행, `/` React, `/api` → Spring Boot. FastAPI 는 Nginx 로 노출하지 않음(음성 노드가 127.0.0.1:8000 직접 호출, web_api.md) |
 
 ### 경계 (VOSS 계약과 맞춘 부분)
 1. **브라우저·Spring Boot 는 ROS 에 직접 붙지 않는다.** ROS ↔ 웹은 `hmi_bridge` ↔ Mosquitto ↔ Spring Boot 만. MQTT JSON 은 `docs/interfaces/mqtt.md` (10/08 확정, #20).
