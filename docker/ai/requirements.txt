@@ -1,5 +1,7 @@
 fastapi==0.115.*
 uvicorn[standard]==0.32.*
 python-multipart==0.0.*
-openai>=1.40,<2
+# LangChain + OpenAI (BRD TR-VOICE-03). langchain-openai 0.3 은 openai>=1.104.2 를 요구한다
+langchain-openai==0.3.*
+openai>=1.104.2,<2
 faster-whisper==1.1.*

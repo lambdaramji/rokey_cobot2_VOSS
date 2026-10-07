@@ -5,7 +5,7 @@
 | 파일 | 내용 | 상태 |
 |---|---|---|
 | topics.md | 노드별 발행·구독·서비스·액션 전체 표 | 10/05 확정 + 상호확인(#50~#55) 반영, SRD v1.0 정합 |
-| voss_msgs.md | 커스텀 메시지 필드 정의 (src/voss_msgs 와 1:1, "합의·IDL 반영 대기" 절만 예외) | 상호확인 반영 |
+| voss_msgs.md | 커스텀 메시지 필드 정의 (src/voss_msgs 와 1:1) | 상호확인 반영 |
 | intent_json.md | intent_parser 가 만드는 JSON 과 허용 목록 | 제안 |
 | mqtt.md | hmi_bridge ↔ Spring Boot MQTT 토픽·QoS·JSON | MC-026 합의 반영, 최종 확정 정의석 #20 (10/08) |
 | voss_config.md | voss_config.yaml 스키마 (zone_map, 구역 좌표, 벨트 속도 등) | 제안 |
