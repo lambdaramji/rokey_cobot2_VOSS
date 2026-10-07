@@ -1,0 +1,33 @@
+digraph VOSS {
+graph [rankdir=TB, bgcolor="white", fontname="Noto Sans CJK KR", labelloc=t, label="VOSS SRD v0.2 r2 | 공통 기능 구조 · 상세 계약 상호확인 전", nodesep=0.45, ranksep=0.9, dpi=145];
+node [shape=box, style="rounded,filled", fillcolor="#edf4fa", color="#617b91", fontname="Noto Sans CJK KR", fontsize=13, margin="0.17,0.13"];
+edge [fontname="Noto Sans CJK KR", fontsize=10, color="#456984", arrowsize=0.7];
+camera [label="손목 D435i\nRGB / 촬영 시각"];
+vision [label="box_tracker / label_reader\n남현지 · 비전 컨테이너"];
+manager [label="sort_manager\n대상·목적구역·전체 FSM\n남현지"];
+servo [label="belt_servo\n추종·픽업 단계·파지 판정\n박병후"];
+gateway [label="robot_gateway\n장비 접근·제한·적재·복귀\n김학민"];
+robot [label="M0609 / RG2"];
+logger [label="sort_logger → DB\ncommit · 중복방지 · 조회\n정의석", fillcolor="#e7f4eb"];
+query [label="이력/집계 제공\nowner/API 미정 MC-022",fillcolor="#fff4d6"];
+voice [label="음성 / HMI / MQTT\n정의석 · B 최종 필수",fillcolor="#f1ecfa"];
+config [label="단일 설정 YAML\nruntime writer: manager\n전달 상세 MC-009",fillcolor="#fff4d6"];
+transform [label="픽셀 → base 위치\n담당/단위/이동 중 변환\nMC-001·002·004·010",fillcolor="#fff4d6"];
+camera -> vision [label="영상"];
+{rank=same; voice; manager; config;}
+{rank=same; transform; servo;}
+{rank=same; gateway; logger;}
+vision -> manager [label="판독/식별"];
+vision -> transform [style=dashed]; transform -> servo [style=dashed,label="위치·촬영 시각"];
+manager -> servo [label="TrackAndGrasp\n상세 MC-005·006·014"];
+servo -> gateway [label="Twist/그리퍼 요청\n상세 MC-011~014"];
+gateway -> servo [label="pose/feedback\n상세 MC-004·010·012"];
+manager -> gateway [label="적재/복귀 요청\n상세 MC-016~019"];
+gateway -> robot [label="모션 / 개폐"];
+manager -> logger [label="최종 결과1건\n필드/시점 MC-003·016·020"];
+logger -> query [style=dashed]; query -> voice [style=dashed,label="DB기준 이력"];
+voice -> manager [label="운전/분류/예외 답변\nschema MC-023·024·026"];
+manager -> voice [label="상태·완성 질문/응답"];
+config -> manager [style=dashed]; config -> servo [style=dashed]; config -> gateway [style=dashed];
+legend [shape=note,label="실선: 공통 기능 연결\n점선/노란색: 공급·담당/계약 상세 미정\n그림은 구현·실기 완료 증거가 아님\n벨트는 작업자 수동, VOSS 자동제어 없음", fillcolor="#ffffff"];
+}

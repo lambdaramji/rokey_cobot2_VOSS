@@ -21,7 +21,9 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 - **Mosquitto ACL:** `voss/command` 쓰기는 Spring Boot 계정(`web`)만. 개인 PC 디버그 계정(`debug`)은 `voss/#` 읽기만. hmi_bridge 계정(`bridge`)은 `voss/command` 읽기, 나머지 `voss/#` 쓰기. 비밀번호는 `.env`(gitignore). 상세 설정은 #20 mqtt.md.
 - 그 밖의 인증은 없다(교육장 LAN, 시연 2주). 원격 HMI 시작이 필요해지면 `.env` 공유 토큰 헤더로 바꾼다.
 - **집계의 유일한 원천은 PostgreSQL `sort_log`**(#52 MC-022). Spring Boot 는 읽기 전용 계정으로만 조회한다. 쓰기는 sort_logger(ROS) 하나.
-- 현재 세션 = **`SortState.session_id`**(남현지 수용, 추가 예정). 그 필드가 main 에 들어오기 전까지는 `sort_log` 에서 가장 최근 `finished_at` 의 `session_id`.
+- 현재 세션 = **`SortState.session_id`**(#78). sort_manager 가 `start` 때 만들고 다음 `start` 까지 유지한다(IDLE·PAUSED 에서도 유지). Spring Boot 는 hmi_bridge 가 MQTT 로 넘기는 SortState 에서 이 값을 받는다(#20 mqtt.md).
+  - **`session_id == ""`(첫 `start` 전) 이면 현재 세션이 없는 것**으로 본다. `session_id` 를 생략한 조회(`/api/stats`·`/api/results`·`/api/export.csv`)는 `404 NO_SESSION` 을 돌려주고(음성은 "기록을 조회할 수 없습니다"), HMI 는 빈 문자열로 조회하지 않는다. `/api/sessions/current` 만 예외로 `200` + `session_id: ""`·`planned`(다음 세션 예정 수량)·나머지 0 을 돌려준다(시작 전 HMI 가 투입 수량을 보여 주도록). `session_id=all` 과 명시한 session_id 조회는 그대로 된다.
+  - `sort_log` 의 최근 행으로 현재 세션을 추정하지 않는다(PAUSED 중이거나 첫 결과 전인 세션을 놓친다).
 
 ## Spring Boot `/api`
 
@@ -55,7 +57,7 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 
 ### `PUT /api/sessions/current/plan` — 투입 예정 수량 (SYS-FR-032)
 - 요청 `{"planned": 10}` (1 ~ 100 정수, 기본 10). 응답은 위 `/api/sessions/current` 와 같은 형식.
-- Spring Boot 자체 테이블 `session_plan(session_id varchar(24) PK, planned int NOT NULL, updated_at timestamptz)` 에 저장. 세션이 아직 없으면 `next` 로 저장했다가 첫 결과의 session_id 에 붙인다.
+- Spring Boot 자체 테이블 `session_plan(session_id varchar(24) PK, planned int NOT NULL, updated_at timestamptz)` 에 저장. 세션이 아직 없으면(`SortState.session_id == ""`) `next` 로 저장했다가, 새 `SortState.session_id` 를 처음 받을 때(`start` 시점) 그 session_id 에 붙인다.
 
 ### `GET /api/results` — 이력·보류 목록
 | 파라미터 | 값 |
@@ -105,9 +107,7 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 - 실패: `{"ok": false, "message": "LLM_TIMEOUT|LLM_ERROR|PARSE_ERROR"}`, timeout 기본 3초.
 - **intent_parser 가 응답을 다시 검증**한다(허용 목록·필수 필드). FastAPI 응답을 그대로 믿지 않는다.
 
-## 의존
-- **SortState 끝에 `string session_id`** — 남현지 수용(#68 리뷰), 남현지 인터페이스 PR 에서 추가. 들어오면 "현재 세션" 은 이 값을 쓴다.
-
 ## 변경 이력
+- 2026-10-07: `SortState.session_id`(#78) 머지에 맞춰 "현재 세션" 확정 — 임시 규칙(최근 `sort_log` 행) 삭제, `session_id == ""` 이면 `NO_SESSION`(#78 김학민 🟢, `/api/sessions/current` 는 예정 수량만), `next` 예정 수량은 첫 결과가 아니라 `start` 때 붙임. "의존" 절 삭제.
 - 2026-10-07: 리뷰 반영(#68 남현지·김학민) — 움직이는 명령은 공용 PC 로컬만·`stop` 은 어디서든, 원격 판정은 Nginx `X-Real-IP`, 포트 바인드 표, Mosquitto ACL, Nginx `/ai` 제거, SortState.session_id 수용.
 - 2026-10-06: 초안 (#22, ADR-0006, SRD 상호확인 #52 MC-020·021·022·026·027, #54 MC-030·031). 제안 상태 — mqtt.md(10/08, #20) 확정 때 SSE `data` 형식을 함께 맞춘다.
