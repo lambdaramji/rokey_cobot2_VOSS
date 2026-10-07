@@ -1,10 +1,11 @@
 """VOSS AI 서비스 (FastAPI) — 음성 ROS 노드 전용, 127.0.0.1:8000 (ADR-0006, web_api.md).
 
 POST /ai/stt     Whisper 전사 (faster-whisper)
-POST /ai/intent  자연어 → intent JSON (OpenAI structured output)
+POST /ai/intent  자연어 → intent JSON (LangChain + OpenAI structured output, BRD TR-VOICE-03)
 GET  /ai/health  상태
 
-환경 변수(.env, gitignore): OPENAI_API_KEY, OPENAI_MODEL, WHISPER_MODEL, WHISPER_DEVICE, WHISPER_COMPUTE
+환경 변수(.env, gitignore): OPENAI_API_KEY, OPENAI_MODEL, WHISPER_MODEL, WHISPER_DEVICE, WHISPER_COMPUTE,
+LLM_TIMEOUT_S
 """
 
 from __future__ import annotations
@@ -27,8 +28,11 @@ STT_PROMPT = os.getenv(
     "WHISPER_PROMPT",
     "헬로 로키. 역삼동, 대치동, 청담동. 분류, 보류, 멈춰, 다시 시작, 몇 개 남았어.",
 )
+# LLM 출력 형식. OpenAI strict JSON Schema 로 보내 스키마 밖의 키·값을 처음부터 막는다.
+INTENT_RESPONSE_FORMAT = {"name": "intent", "schema": INTENT_SCHEMA, "strict": True}
+
 _whisper = None
-_openai = None
+_intent_chain = None
 
 
 def _err(code: int, message: str, detail: str = "") -> JSONResponse:
@@ -51,13 +55,41 @@ def _get_whisper():
     return _whisper
 
 
-def _get_openai():
-    global _openai
-    if _openai is None:
-        from openai import OpenAI
+def build_intent_chain(http_client=None):
+    """LangChain 체인을 만든다: 메시지 목록 → {"raw", "parsed", "parsing_error"}.
 
-        _openai = OpenAI()  # OPENAI_API_KEY 는 환경 변수에서만 읽는다
-    return _openai
+    http_client 는 시험에서 가짜 OpenAI 서버를 끼울 때만 쓴다(평소에는 None).
+    OPENAI_API_KEY 는 ChatOpenAI 가 환경 변수에서 읽는다.
+    """
+    from langchain_openai import ChatOpenAI  # 무거워서 첫 호출 때 올린다
+
+    llm = ChatOpenAI(
+        model=os.environ["OPENAI_MODEL"],
+        temperature=0,
+        timeout=float(os.getenv("LLM_TIMEOUT_S", "3")),
+        # 재시도하지 않는다: 3 s 안에 답이 없으면 intent_parser 가 사용자에게 다시 말해 달라고 한다
+        max_retries=0,
+        http_client=http_client,
+    )
+    # include_raw=True: 파싱 실패를 예외 대신 parsing_error 로 받아 PARSE_ERROR 로 돌려준다
+    return llm.with_structured_output(
+        INTENT_RESPONSE_FORMAT, method="json_schema", include_raw=True
+    )
+
+
+def _get_intent_chain():
+    """체인은 한 번만 만들어 두고 다시 쓴다."""
+    global _intent_chain
+    if _intent_chain is None:
+        _intent_chain = build_intent_chain()
+    return _intent_chain
+
+
+def _llm_error_code(error: Exception) -> tuple[int, str]:
+    """LLM 호출 예외 → (HTTP 상태, web_api.md 오류 코드)."""
+    if "Timeout" in type(error).__name__:  # openai.APITimeoutError, httpx 시간 초과
+        return 504, "LLM_TIMEOUT"
+    return 502, "LLM_ERROR"
 
 
 @app.get("/ai/health")
@@ -106,22 +138,17 @@ def intent(req: IntentRequest):
         return _err(503, "LLM_ERROR", "OPENAI_MODEL/OPENAI_API_KEY not set")
     t0 = time.monotonic()
     try:
-        r = _get_openai().chat.completions.create(
-            model=model,
-            messages=build_messages(req.text, req.allowed),
-            response_format={
-                "type": "json_schema",
-                "json_schema": {"name": "intent", "schema": INTENT_SCHEMA, "strict": True},
-            },
-            temperature=0,
-            timeout=float(os.getenv("LLM_TIMEOUT_S", "3")),
-        )
-        raw = r.choices[0].message.content
-    except Exception as e:  # noqa: BLE001
-        name = type(e).__name__
-        if "Timeout" in name:
-            return _err(504, "LLM_TIMEOUT", name)
-        return _err(502, "LLM_ERROR", name)
+        result = _get_intent_chain().invoke(build_messages(req.text, req.allowed))
+    except Exception as e:  # noqa: BLE001 — 네트워크·API 오류를 계약 코드로 바꾼다
+        status, code = _llm_error_code(e)
+        return _err(status, code, type(e).__name__)
+
+    raw = result["parsed"]
+    if raw is None:  # 모델이 스키마에 맞는 JSON 을 내지 못했다 (거절 응답 포함)
+        error = result.get("parsing_error")
+        detail = type(error).__name__ if error else "no structured output"
+        return _err(422, "PARSE_ERROR", detail)
+    # normalize: 허용 type·대문자 zone 정리. 허용 목록(동·구역) 최종 검증은 intent_parser 가 한다
     out = normalize(raw, req.text)
     if out is None:
         return _err(422, "PARSE_ERROR", "LLM output is not a valid intent")

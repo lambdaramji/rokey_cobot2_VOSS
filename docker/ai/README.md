@@ -1,7 +1,15 @@
-# VOSS AI 서비스 (FastAPI · Whisper · OpenAI)
+# VOSS AI 서비스 (FastAPI · Whisper · LangChain + OpenAI)
 
 ADR-0006 · 계약: `docs/interfaces/web_api.md` (`/ai/stt`, `/ai/intent`), `intent_json.md`.
 **음성 ROS 노드 전용**이라 `127.0.0.1:8000` 에만 바인드하고 Nginx 로 노출하지 않는다.
+
+| 구성 | 값 | 근거 |
+|---|---|---|
+| 이미지 | `nvidia/cuda:12.6.3-cudnn-runtime-ubuntu24.04`, Python 3.12 (venv `/opt/venv`) | ADR-0006 |
+| STT | faster-whisper 1.1 (CTranslate2, CUDA 12·cuDNN 9), 모델 크기는 pending #6 | ADR-0006 |
+| intent | LangChain `ChatOpenAI.with_structured_output(..., method="json_schema")` + strict JSON Schema, 재시도 없음, timeout `LLM_TIMEOUT_S`(기본 3 s) | BRD TR-VOICE-03, ADR-0006 |
+| LLM 모델 | `.env` 의 `OPENAI_MODEL` — pending #18 (structured output 지원 모델) | |
+
 
 ## 실행 (공용 PC, 사람이 실행)
 ```bash
@@ -23,6 +31,8 @@ arecord -f S16_LE -r 16000 -c 1 -d 3 /tmp/t.wav && \
 
 ## 시험
 ```bash
-pip install -r requirements.txt httpx pytest && PYTHONPATH=. pytest -q tests   # Whisper·OpenAI 는 가짜로 대체
+python3 -m venv .venv && . .venv/bin/activate
+pip install -r requirements.txt pytest && PYTHONPATH=. pytest -q tests
+# Whisper 는 가짜, OpenAI 는 httpx 가짜 서버로 대체한다 — 네트워크·GPU·API 키 없이 돈다
 ```
 CI(colcon)는 ROS 패키지만 돌리므로 이 시험은 PR 전에 로컬에서 돌린다.
