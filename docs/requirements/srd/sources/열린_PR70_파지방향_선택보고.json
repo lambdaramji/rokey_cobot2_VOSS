@@ -1,0 +1,8 @@
+{
+  "number": 70,
+  "title": "docs: record invoice decisions and 31 mm face grasp (#42, #43)",
+  "state": "open",
+  "merged": false,
+  "head_sha": "4beac0de3066f67db7a2133d7749b71d551f52e0",
+  "body": "## 관련 이슈\nRefs #42 (T33 — 송장 세트는 10/06 부착 완료, 닫음) · Refs #43 (T34 — 파지 방향 결정 기록)\n\n## 변경 내용\n- `docs/pending-decisions.md` #10·#11 → 결정\n  - #10 흐린 송장: 인쇄 농도가 아니라 **번짐(blur) 처리**. S07-01 역삼동 1종, 인쇄 시트 2장 중 1장을 시연 박스에 부착(BRD 2.4 \"흐린 송장 1\"). 10/06 촬영본에서 번짐이 약하게 나와 판독될 수 있어, T18(#27) OCR 결과로 정도를 다시 본다.\n  - #11 받는 사람: 팀원 4명 이름(남현지·김학민·정의석·박병후)을 돌려 쓴다.\n- 근거: 인쇄 원본 `VOSS_송장_인쇄.docx`(14장: S07-01·02·03 각 4 + 흐린 S07-01 2, 레포 밖), 10/06 인수인계 Slack(시연 박스 10개 = 각 3 + 흐린 1, T17 bag `A_MIX_01`)\n\n- `docs/pending-decisions.md` #16 → 결정: **31 mm 면 파지**(10/07). 닫힘축이 벨트를 가로지르므로 벨트 방향 타이밍 여유는 추종이 맡는다. 값은 목표 폭 39 mm·14 N, 파지 높이 TCP z = `position_base.z − 19 mm`\n- `docs/architecture.md` 그리퍼 줄 정정(\"46 mm 면, 양쪽 22 mm\" → 31 mm 면, 벨트 가로 방향 약 ±24.5 mm)\n\n## 인터페이스 변경 (다른 파트 영향)\n- [x] 없음\n\n## 문서\n- [x] 미결정 항목 해소: docs/pending-decisions.md #10 #11 #16\n- [x] docs/ 갱신: architecture.md\n\n## 검증\n- [x] colcon build / test / ruff: 코드 변경 없음\n- [x] 실물 확인 — 김학민 / 2026-10-06 / 송장 부착된 박스 10개로 T17 촬영(A_MIX_01·C_MIX_01)\n\n## 관련 요구사항\nSR-HW-07, BRD 2.4\n\n## 리뷰어 참고\n- #16 남은 일: 결정 근거 ADR(김학민), BRD TR-PICK-06 정정(남현지). `topics.md` belt_servo 행의 \"19 mm … 31 mm 면 기준 **후보**\" 문구는 interface 문서라 제 RobotState PR에서 \"결정\"으로 고칩니다.\n- 흐린 송장이 너무 잘 읽히면(T18에서 정상 판독) \"재확인 → 질문\" 시연 단계가 안 나옵니다. 그때는 번짐을 키운 송장을 다시 뽑겠습니다.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n"
+}
