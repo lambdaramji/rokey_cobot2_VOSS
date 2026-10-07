@@ -44,10 +44,16 @@ belt_servo 출력(TwistStamped)과 TrackAndGrasp 액션은 바뀌지 않는다(D
 
 robot_gateway 적용 조건 (speedl):
 1. 두산 스트림 퍼블리셔는 **reliable** 로 만든다. 컨트롤러 구독이 reliable(speedl depth 10) 이라 best_effort 퍼블리셔는 연결되지 않는다.
-2. **정지 책임은 gateway 에 있다.** 컨트롤러는 끊김을 감지하지 않는다. `servo_cmd` 만료 watchdog 이 끊김을 감지하면 즉시 속도 0 speedl 을 보내고, 정지가 확인되지 않으면 `motion/move_stop`(별도 콜백 그룹)을 부른다. belt_servo 가 의도적으로 멈출 때도 마지막 명령은 속도 0 이어야 한다.
+2. **정지 책임은 gateway 에 있다.** 컨트롤러는 끊김을 감지하지 않는다. `servo_cmd` 만료 watchdog 이 끊김을 감지하면 ① 즉시 속도 0 speedl ② 이어서 **항상** `motion/move_stop`(Quick stop, `/voss/robot/stop` 과 같은 수단, 별도 콜백 그룹)을 부른다. 정지 판별은 하지 않는다(#53 MC-014). belt_servo 가 의도적으로 멈출 때도 마지막 명령은 속도 0 이어야 한다.
 3. watchdog 값(PR #84: 200 ms 제안)은 F-04 에서 정한다. 근거: 48 mm/s 추종 중 200 ms 이면 감지까지 약 9.6 mm, acc 100 감속(v²/2a ≈ 11.5 mm)까지 합쳐 20 mm 넘게 더 갈 수 있다.
 4. `acc` 는 `time` 보다 우선한다(`time` 은 0 으로 둔다). 5 mm/s 에서 acc 100 mm/s² 가 시작 지연을 114 → 62 ms 로 줄였다. 추종 속도(48 mm/s)에서의 acc 값은 T26 #35 · T27 #36 실기에서 정한다(제안값, pending #4 전).
 5. 스트리밍 중에는 `get_current_posx` 를 부르지 않거나 주기를 낮춘다(스트림 콜백과 직렬). `/voss/robot/pose` 는 TF·joint_states(100 Hz) 기반으로 낼 수 있는지 학민과 검토한다.
 6. 에뮬레이터(`GF03020000`)는 끊김 처리가 실로봇과 달랐다(0.1 s 타임아웃 1215). 정지·안전 동작은 에뮬레이터 결과를 근거로 쓰지 않는다.
+7. **gateway 가 TCP z 하한을 강제한다.** speedl 은 위치 오차가 적분돼 쌓이므로, TCP z 가 하한(벨트 파지 높이 − 여유) 근처에 오면 gateway 가 `servo_cmd` 의 −z 성분을 0 으로 자른다. 작업 영역 리밋은 gateway 가 강제한다는 팀 규칙 그대로이고, 하한·여유 값과 구현은 김학민(#41).
 
-리스크: 2·3 이 구현되기 전에는 belt_servo 가 죽거나 DDS 가 끊기면 로봇이 마지막 속도로 계속 간다. 10/08 개루프 베이스라인(T26 #35) 실기는 gateway watchdog(0 속도 전송)이 들어간 뒤에 한다. ADR-0002 의 "실행 경로 문제와 폐루프 성능 판단은 구분해 기록한다"를 따른다.
+미측정: **움직이는 중의 speedl 에 `move_stop` 을 부르면 실제로 끊기는지, 그 뒤 새 speedl 을 다시 받는지**는 2부에서 재지 않았다(4회 모두 `move_stop` 은 0 속도 hold 뒤에만 불림). → F-04(10/08, 김학민)에서 같은 스크립트 조건(5 mm/s)으로 잰다.
+
+리스크:
+- (belt_servo·DDS 끊김) 2·3 이 구현되기 전에는 belt_servo 가 죽거나 DDS 가 끊기면 로봇이 마지막 속도로 계속 간다. 10/08 개루프 베이스라인(T26 #35) 실기는 gateway watchdog(0 속도 + move_stop)이 들어간 뒤에 한다.
+- (gateway 정지) robot_gateway 프로세스가 죽거나 멈추면 0 속도를 보낼 주체가 없어 컨트롤러는 마지막 speedl 속도를 유지한다. DESCEND(−z) 중이면 벨트 쪽으로 내려간다. servol 이었다면 마지막 목표점에서 멈췄을 경우로, speedl 을 고른 대가다. 대책 ① 실로봇 운전은 사람이 비상정지 옆에서(CLAUDE.md 규칙 6) ② 컨트롤러 안전 설정의 공간 제한(펜던트, ROS 와 무관하게 동작)을 벨트 위 TCP z 하한·추종 구간 x 로 건다 — 김학민 확인 ③ 10/08 gateway 종료 시험(#53 MC-014)에서 실제 거동을 재고 이 절을 갱신한다.
+- ADR-0002 의 "실행 경로 문제와 폐루프 성능 판단은 구분해 기록한다"를 따른다.
