@@ -10,6 +10,7 @@
 """
 
 import argparse
+import csv
 import random
 import statistics
 import sys
@@ -66,11 +67,16 @@ def main() -> None:
     ap.add_argument(
         "--frames", default=":", help="내보내기·시트 프레임 범위 a:b (추적은 처음부터 돈다)"
     )
+    ap.add_argument(
+        "--frames-csv",
+        type=Path,
+        help="프레임마다 확정 트랙 id·bbox 를 CSV 로 (정답 확인 시트 고르기용, make_check_sheets.py)",
+    )
     args = ap.parse_args()
     lo, hi = (int(x) if x else None for x in args.frames.split(":"))
 
     tr = Tracker(min_hits=args.min_hits)
-    per_frame, raw_dets, lat, keep = [], [], [], {}
+    per_frame, raw_dets, lat, keep, track_rows = [], [], [], {}, []
     rng = random.Random(0)
     for i, img in frames(args.bag):
         t0 = time.perf_counter()
@@ -79,10 +85,17 @@ def main() -> None:
         lat.append(time.perf_counter() - t0)
         per_frame.append([t.id for t in tracks])
         raw_dets.append(dets)
+        track_rows.extend((i, t.id, *t.bbox) for t in tracks)
         if (lo is not None and i < lo) or (hi is not None and i >= hi):
             continue
         if args.sheet and (dets and rng.random() < 0.01 or i in keep):
             keep[i] = overlay(img, dets, tracks, f"{args.bag.name}[{i}]")
+
+    if args.frames_csv:
+        with args.frames_csv.open("w", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["frame", "track_id", "x", "y", "w", "h"])
+            w.writerows(track_rows)
 
     if args.export_yolo:
         # 2차 순회: 양성 = 확정 트랙이 있는 프레임, 음성 = 앞뒤 60 프레임(2 s) 안에 검출이 전혀 없는

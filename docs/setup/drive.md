@@ -13,7 +13,7 @@ rokey_cobot2_VOSS/
 │  ├─ 1006/            voss_1006_calib_ocr.tar.gz, voss_1006_t17.tar
 │  └─ 1007/ …          날짜(MMDD)마다 폴더
 ├─ datasets/            raw 에서 만든 학습·평가 세트 (버전 접미사 _v1, _v2)
-│  └─ t17_yolo_v1/     t17_yolo.zip, holdout_check/ (사람 확인 check.csv)
+│  └─ t17_yolo_v1/     t17_yolo_v1.zip (train·holdout·holdout_check), holdout_check/ 시트
 ├─ models/              배포 후보 가중치 (.onnx/.pt) — 예 box_yolo11n_v1.onnx
 ├─ colab/               Colab 작업 공간
 │  └─ t17/runs/        학습 체크포인트 (세션 끊김 대비)
@@ -35,7 +35,7 @@ rokey_cobot2_VOSS/
 ## 레포에서 가리키는 경로
 | 쓰는 곳 | Drive 경로 |
 |---|---|
-| `tools/colab/t17_yolo_train.ipynb` | 입력 `datasets/t17_yolo_v1/t17_yolo.zip`, 체크포인트 `colab/t17/runs/`, 출력 `models/` |
+| `tools/colab/t17_yolo_train.ipynb` | 입력 `datasets/t17_yolo_v1/t17_yolo_v1.zip`, 체크포인트 `colab/t17/runs/`, 출력 `models/` |
 | box_tracker `detector: yolo` (10/08 이후) | `models/box_yolo11n_v<N>.onnx` 를 공용 PC `~/voss_ws/models/` 로 내려받아 쓴다 |
 | T16 재측정 절차서, 현장 업로드 | `raw/<MMDD>/` |
 
