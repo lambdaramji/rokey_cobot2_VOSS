@@ -76,7 +76,7 @@ def main() -> None:
     ap.add_argument("--pose-topic", default="/voss/robot/pose")
     ap.add_argument("--board", type=int, nargs=2, default=[10, 7], help="내부 코너 (가로 세로)")
     ap.add_argument("--square-mm", type=float, default=25.0)
-    ap.add_argument("--count", type=int, default=25)
+    ap.add_argument("--count", type=int, default=40, help="최대 장수 (24장 + 추가 촬영 여유)")
     ap.add_argument(
         "--manual-pose", action="store_true", help="게이트웨이 없이 펜던트 TCP 값을 입력"
     )
