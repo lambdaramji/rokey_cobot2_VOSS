@@ -819,7 +819,7 @@ logger 상태(`/voss/log/status`)는 STARTING/OK/DB_ERROR/SPOOL_FULL, 1Hz reliab
 
 Command(`/voss/sort/command`) 응답은 접수/거부다. 실제 완료는 SortState/SortResult로 확인한다. Intent.type은 소문자, zone/result 값은 대문자다. Intent.box_id는 원래 투입 ID이며 answer에 사용한다. 음성은 발화 시작 시점의 질문과 box_id를 연결한다. query_history는 manager를 거치지 않고 intent_parser/웹→Spring REST로 직접 보낸다. 음성 stop은 LLM 호출 전 로컬 키워드 매칭으로 바로 발행하며 FastAPI·zone_map 수신을 기다리지 않는다(main intent_json.md, #73). 경계별 필드 이름은 Command.srv `command`/`arg`(문자열), Intent `type`, MQTT/REST `type`/`args`(객체, main web_api.md)이며, bridge의 args→arg 변환(answer는 `<box_id>|<동 또는 HOLD>`)은 F-11에서 확정한다.
 
-기본 질문 ID는 box_id다. 현재 ASKING·같은 ID·후보2동 또는 HOLD만 수용한다. 30초 타이머는 manager say 발행부터 시작한다. 무효 답은1회 재안내하고 타이머를 유지한다. TTS가 실패해도 HMI 질문을 표시하며 타이머는 진행한다. stop에서 멈추고 resume은 재발화와30초 재시작이다. 종료된 같은 box의 질문 회차·늦은 답 수락 창 전달은 B 상세로 남긴다. box_id#회차를 원래 투입 ID에 혼합하지 않는다. main intent_json.md에 남은 "앞 질문의 늦은 답이 와도 같은 박스의 답이라 해가 없고" 문장은 #54 최종 정정과 맞지 않아 인터페이스 정합 PR에서 고친다(F-09). human_wait는 say→유효 답 또는timeout 구간으로 별도 기록한다.
+기본 질문 ID는 box_id다. 현재 ASKING·같은 ID·후보2동 또는 HOLD만 수용한다. 30초 타이머는 manager say 발행부터 시작한다. 무효 답은1회 재안내하고 타이머를 유지한다. TTS가 실패해도 HMI 질문을 표시하며 타이머는 진행한다. stop에서 멈추고 resume은 재발화와30초 재시작이다. 종료된 같은 box의 질문 회차·늦은 답 수락 창 전달은 B 상세로 남긴다. box_id#회차를 원래 투입 ID에 혼합하지 않는다. main intent_json.md에 남은 "앞 질문의 늦은 답이 와도 같은 박스의 답이라 해가 없고" 문장은 #54 최종 정정과 맞지 않아 정의석 PR #81에서 고친다(F-09). human_wait는 say→유효 답 또는timeout 구간으로 별도 기록한다.
 
 say(`/voss/voice/say`, String) 발행자는 manager와 intent_parser다. 각자가 자기 이벤트의 중복을 억제하며 다른 박스의 같은 문장은 각각 발행한다. speech_out은 FIFO, G0에는 끼어들기 없음이다. TTS 엔진·우선 재생·half-duplex는 B 후속이며 발행 시각과 실제 재생 시작/완료 로그를 구분한다.
 
@@ -1397,7 +1397,7 @@ v0.4 문서/IDL 대조 기준은 main@`671c67f3a5e4f1de46dec3f34b4cf2975727c975`
 | TrackAndGrasp·SortResult·Command | main 확장/정정 확인 | 런타임/파지/정지·업무 부분 실패 |
 | MoveToZone mode/placed_stamp·SortState ready | main IDL 확인 | 실제 gateway/manager·복귀 사건 계측 |
 | Stats.srv | main 삭제 확인 | Spring REST 계약 main web_api.md(#68), 구현 #22 |
-| Intent.box_id·intent_json | main 반영(#73) | "늦은 답이 와도 같은 박스의 답이라 해가 없고" 문장을 #54 최종 정정에 맞게 고치기(인터페이스 정합 PR)·consumer rebuild |
+| Intent.box_id·intent_json | main 반영(#73) | "늦은 답이 와도 같은 박스의 답이라 해가 없고" 문장을 #54 최종 정정에 맞게 고치기(정의석 PR #81)·consumer rebuild |
 | SortState.session_id | main 반영(#78) | web_api 현재 세션·NO_SESSION 규칙 PR #81 open |
 | RobotState/Gripperfeedback/stop/RETURN_FAILED | #53/#55 합의 | 김학민 후속 문서/IDL/구현·리뷰 |
 | config direction_base/null/0 | main 반영(#64) | 구현의 크기 검사·null 미전달·config_sha256 기록 확인(F-05), view_pose 키 미정의(F-10) |

@@ -31,8 +31,8 @@
   },
   {
     "path": "markdown/01_VOSS_SRD_v0.4.md",
-    "bytes": 131966,
-    "sha256": "dc5f1e41dfc704da74cb8254e0e927874b6966fe140f7bcf1634f693d40b37cf"
+    "bytes": 131948,
+    "sha256": "d0d1e839a4a9da5317270eeaeb1741f378ddd42a067040e8df5b3cbc632278d1"
   },
   {
     "path": "markdown/02_상호확인_합의_종합.md",
@@ -41,8 +41,8 @@
   },
   {
     "path": "markdown/03_남은_결정_구현_실측_대장.md",
-    "bytes": 11928,
-    "sha256": "006377dac4ebf64a5d3e62638ebae2d4253a7977d60e0b6e9f24d1e88899741d"
+    "bytes": 11919,
+    "sha256": "2c46bad03bd269326d0f97357848e7ec38f3706ae41d0206bc7b7cdf7b4620b9"
   },
   {
     "path": "markdown/04_검증카드_70개요구사항_추적표.md",
@@ -231,8 +231,8 @@
   },
   {
     "path": "word/01_VOSS_SRD_v0.4.docx",
-    "bytes": 317529,
-    "sha256": "077f15f2416230076b4e42c2fb5f68c87c1df54caba0fab6f4a868a498931ba2"
+    "bytes": 317516,
+    "sha256": "4346dedf0607cffa69377eb3fb0a28decf8706cdfde5328a2328d59967058c54"
   },
   {
     "path": "word/02_상호확인_합의_종합.docx",
@@ -241,8 +241,8 @@
   },
   {
     "path": "word/03_남은_결정_구현_실측_대장.docx",
-    "bytes": 29700,
-    "sha256": "5bf1d55630f096231cab88ce1e5212d5a16ee8197e9957769db89aa943e95774"
+    "bytes": 29688,
+    "sha256": "e6651a69db9530dae012e0faf6940b79f6d5596e2b652629f29e1036f8452b55"
   },
   {
     "path": "word/04_검증카드_70개요구사항_추적표.docx",
@@ -256,7 +256,7 @@
   },
   {
     "path": "문서검증결과.json",
-    "bytes": 2684,
-    "sha256": "11ce93b510f9daa033ce7e449439a6893e0a3650a90e4df85acd693129ab4fc3"
+    "bytes": 2687,
+    "sha256": "aa32a83adb9f974b24bac849a0f0eb3cd2615fd91dda5ea8eeefbda06cfaf204"
   }
 ]
