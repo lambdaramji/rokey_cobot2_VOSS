@@ -1,0 +1,257 @@
+[
+  {
+    "path": "assets/VOSS_v0.3_논리구조.dot",
+    "bytes": 3024,
+    "sha256": "40967b6fb86d1c56932510289dfff5ee35b1fba72e72e60f2c410e4e370ba3a5"
+  },
+  {
+    "path": "assets/VOSS_v0.3_논리구조.png",
+    "bytes": 232110,
+    "sha256": "f2401fd2bec92a8f10db0492f6c2f018ffa8cff2f5f035f14b19f845cb33f5c8"
+  },
+  {
+    "path": "assets/VOSS_v0.3_논리구조_요약.dot",
+    "bytes": 2023,
+    "sha256": "e1460263869b77a725bc83c3dbe4cd9af088dfe303e9adb73dfc998097937a46"
+  },
+  {
+    "path": "assets/VOSS_v0.3_논리구조_전체.png",
+    "bytes": 464469,
+    "sha256": "1c6bebf872baa72a60ed59ea5ba484424dab1f4f267c886b7695d34f7aa02887"
+  },
+  {
+    "path": "manifest.json",
+    "bytes": 97339,
+    "sha256": "dbcd19c8cc97c31d5961b75e6bbc144df9fe8623523baab38cc65c531285bb39"
+  },
+  {
+    "path": "markdown/00_배포_사용안내.md",
+    "bytes": 2227,
+    "sha256": "4553ad130a89c9a21dfec2e7874c24c0cc0058b7300ce4d0045148a48b279d51"
+  },
+  {
+    "path": "markdown/01_VOSS_SRD_v0.3_합의반영본.md",
+    "bytes": 119859,
+    "sha256": "4c979f0b9ae590af06e67da88cf95fe601750565f64e3f2c03bfcf570e3b9b40"
+  },
+  {
+    "path": "markdown/02_상호확인_합의_종합.md",
+    "bytes": 40628,
+    "sha256": "bcc7b2dcc665ab0d975c61607b8a3258661a2c02d11afcaf05199881fbccd096"
+  },
+  {
+    "path": "markdown/03_남은_결정_구현_실측_대장.md",
+    "bytes": 10826,
+    "sha256": "7f71de65090bf1f356f2aac3be13f660067628c911ac1452f362f3051e5e4b2b"
+  },
+  {
+    "path": "markdown/04_검증카드_70개요구사항_추적표.md",
+    "bytes": 22676,
+    "sha256": "7aaca8ab2fda880029c9cb9a8c8a3d727448e5aa1285b83266de26617d65aa9b"
+  },
+  {
+    "path": "markdown/05_BRD_v1.1_v1.2_대조기록.md",
+    "bytes": 1849,
+    "sha256": "7225c3458c64e0c44c473f8e0ea8798378e55b86e7fe6471b0a39bb1ef52c6b3"
+  },
+  {
+    "path": "sources/BRD_comparison/BRD_requirements_diff.json",
+    "bytes": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  {
+    "path": "sources/BRD_comparison/BRD_v1.1_v1.2_diff.txt",
+    "bytes": 28300,
+    "sha256": "c4a22ad99f4b75eefa8c446524e6c0cba86e88578a0b62d5354a46ec76056dd6"
+  },
+  {
+    "path": "sources/BRD_comparison/BRD_v1.2_extracted.txt",
+    "bytes": 46046,
+    "sha256": "caba4ed45d742c34a72ad4541e32d1287bce11a9dd8ec6980bff53f35411d331"
+  },
+  {
+    "path": "sources/BRD_comparison/VOSS_BRD_v1.1.docx",
+    "bytes": 462286,
+    "sha256": "3fdc34342bb48a81c9acfb22f5ddf655ee5ddb4b0652e7e481dc53ea80d8d06f"
+  },
+  {
+    "path": "sources/BRD_comparison/VOSS_BRD_v1.2.docx",
+    "bytes": 460054,
+    "sha256": "2ab34391885dd53f558b59ea368d99b8b06dad1d03a365bc2268bbeefb71fe0d"
+  },
+  {
+    "path": "sources/current_main/config/voss_config.yaml",
+    "bytes": 1559,
+    "sha256": "30432088e2fbfe87ddd9397b029dd4cd2118582bf5039d9915fb0cf037ec0241"
+  },
+  {
+    "path": "sources/current_main/docs/adr/0002-grasp-method-gate.md",
+    "bytes": 1508,
+    "sha256": "52310445723223b9eb94698ddc4857c144b0774ad372cf3205521ce08465abf6"
+  },
+  {
+    "path": "sources/current_main/docs/adr/0006-web-ai-db-stack.md",
+    "bytes": 6145,
+    "sha256": "2eebde99c9dd9c7c117276cdb9596f22554995c91c72eacec7b08ebf51663d2a"
+  },
+  {
+    "path": "sources/current_main/docs/interfaces/intent_json.md",
+    "bytes": 972,
+    "sha256": "28acdaa7859d4288a26cc5406b52c4bf04f04bc5e2553adbf3367f2bb8aad0ea"
+  },
+  {
+    "path": "sources/current_main/docs/interfaces/mqtt.md",
+    "bytes": 621,
+    "sha256": "1c6fc6ee57559f39fe6aa3082e5fdee2ce179d16b282a3f0abbbf9ce98d192b3"
+  },
+  {
+    "path": "sources/current_main/docs/interfaces/topics.md",
+    "bytes": 7852,
+    "sha256": "fd423ce3bff7d4fa5dbdf3594279ea573a24a5b19d0995f577eb32d82d7c7bb0"
+  },
+  {
+    "path": "sources/current_main/docs/interfaces/voss_config.md",
+    "bytes": 3935,
+    "sha256": "a0466fac5d02049e3188267c2b4b1c83debb136bf4ab6fd155dbdd9be6b62d58"
+  },
+  {
+    "path": "sources/current_main/docs/interfaces/voss_msgs.md",
+    "bytes": 13470,
+    "sha256": "5b1d78a69be92a6d9f44930141ff17842d7264b295259daccd0bdda8a2adfa1e"
+  },
+  {
+    "path": "sources/current_main/docs/measurements-1006.md",
+    "bytes": 18674,
+    "sha256": "3669a9f5a33fa6917646863bdb1ac1b7859af76fddd56bb9522002a28ba3633b"
+  },
+  {
+    "path": "sources/current_main/docs/pending-decisions.md",
+    "bytes": 3023,
+    "sha256": "bd34dba559843d25de9f5a03c9f74036e13c04a3598f191e8e394b414f22d6ce"
+  },
+  {
+    "path": "sources/current_main/src/voss_msgs/action/TrackAndGrasp.action",
+    "bytes": 600,
+    "sha256": "c58f07f60bf6a1285904f8bed27b5c216c7dc57b290e4173dc621e99b2f41df0"
+  },
+  {
+    "path": "sources/current_main/src/voss_msgs/msg/BoxTrack.msg",
+    "bytes": 901,
+    "sha256": "fbb139e5f747f8cb6e4580fef4bf04c259b02e986a729e10c167a80d9204bcbf"
+  },
+  {
+    "path": "sources/current_main/src/voss_msgs/msg/Intent.msg",
+    "bytes": 283,
+    "sha256": "e7c654c0322e32c7efaaa704220c12a83417091bbf075792786a7cd7e600a22d"
+  },
+  {
+    "path": "sources/current_main/src/voss_msgs/msg/SortResult.msg",
+    "bytes": 1039,
+    "sha256": "a598d60f33f399361ce783a0c66e8d4f90765be2027339a3a4babf55e81330af"
+  },
+  {
+    "path": "sources/current_main/src/voss_msgs/msg/SortState.msg",
+    "bytes": 393,
+    "sha256": "58af11e6d8029201a1f86ffc33b5a08dac1e7808a1eb69a3e6380a1a7e75b9da"
+  },
+  {
+    "path": "sources/current_main/src/voss_msgs/srv/Gripper.srv",
+    "bytes": 92,
+    "sha256": "4dad6b1c742f788598a4c71bbfea74821032e25599ec44b47346623b26cad84f"
+  },
+  {
+    "path": "sources/current_main/src/voss_msgs/srv/MoveToZone.srv",
+    "bytes": 772,
+    "sha256": "f1d81cbb47d0a0a604b2d994018cd6aed3c263405caa0ca612ca9d1d727d8751"
+  },
+  {
+    "path": "sources/current_main_출처.json",
+    "bytes": 7458,
+    "sha256": "a096be210e567d65b938d07fd1f6795c8feb0c88bb8d6951c2ba864c6b2aba19"
+  },
+  {
+    "path": "sources/상호확인_이슈_원문_snapshot.json",
+    "bytes": 801229,
+    "sha256": "289dc2db55e6553d6533271aece54584ccef743f3e0a1e8648ddf24b2c751e8f"
+  },
+  {
+    "path": "sources/열린_PR68_web_api_참고.md",
+    "bytes": 9455,
+    "sha256": "ba75d27ac024c1aca47c00792de4ac9d4f2984b98fe818054736edefed992c3c"
+  },
+  {
+    "path": "sources/열린_PR70_파지방향_선택보고.json",
+    "bytes": 2329,
+    "sha256": "ebf2bfaed0b082f1033949311a5e622912c17a6772f09120afe7282ade0a4afc"
+  },
+  {
+    "path": "sources/이슈_50_회신_전체.md",
+    "bytes": 42934,
+    "sha256": "5c8fe9eb8a23e2d0c726db256230b9e9e02a2a3348700a1a99219385f31c5dee"
+  },
+  {
+    "path": "sources/이슈_51_회신_전체.md",
+    "bytes": 30655,
+    "sha256": "12a8ae75a8f4ef1ad320b4ee6800cfb07ed1c7733cbde0d1c3a566337c731242"
+  },
+  {
+    "path": "sources/이슈_52_회신_전체.md",
+    "bytes": 32347,
+    "sha256": "b2f458b9cabc304cceb6bf8b975fe4728636472099989fc0d50b1c1069792a51"
+  },
+  {
+    "path": "sources/이슈_53_회신_전체.md",
+    "bytes": 46049,
+    "sha256": "044bcb0d8193aef8a8daffb1014044f75a91e89391953cfa08888bdc3e5c1649"
+  },
+  {
+    "path": "sources/이슈_54_회신_전체.md",
+    "bytes": 30697,
+    "sha256": "4d155612362ab48f3c3f9975c8556b17a7a1e27a1fadef427dc95187a7b0ce26"
+  },
+  {
+    "path": "sources/이슈_55_회신_전체.md",
+    "bytes": 16122,
+    "sha256": "5523810a7205c316b5c7b92b4d72213a9c95802b0de8c76dd93e788259e74525"
+  },
+  {
+    "path": "sources/이전_SRD_v0.2_r2.md",
+    "bytes": 85010,
+    "sha256": "5cf9c3ab060c7371dffaedb0a5d64010041ed1cc201b47f9b390977d77e75ad9"
+  },
+  {
+    "path": "word/00_배포_사용안내.docx",
+    "bytes": 25533,
+    "sha256": "cea1af174b9a524a16c51b3308abf4b1d289d26666fde14782a97dae3c26a9e6"
+  },
+  {
+    "path": "word/01_VOSS_SRD_v0.3_합의반영본.docx",
+    "bytes": 311529,
+    "sha256": "44277bd034dbdb7fee1e4460232589028258c052c4751e6cc16d502704c4f173"
+  },
+  {
+    "path": "word/02_상호확인_합의_종합.docx",
+    "bytes": 41812,
+    "sha256": "46e6da9e98e28045214c9ad16d392ae16bb53577ce7de191a20a7eefad99d8ad"
+  },
+  {
+    "path": "word/03_남은_결정_구현_실측_대장.docx",
+    "bytes": 29118,
+    "sha256": "8266a31371d5d13b28f9e42f983fbe9dc74eafc1cbe1173ed307981f1f3d8ccf"
+  },
+  {
+    "path": "word/04_검증카드_70개요구사항_추적표.docx",
+    "bytes": 36440,
+    "sha256": "e8f3f4320288a2850a240e0a6df872e7c1831736247980fe6662d126956c2b07"
+  },
+  {
+    "path": "word/05_BRD_v1.1_v1.2_대조기록.docx",
+    "bytes": 25344,
+    "sha256": "c4dbc23c883bb93435bc0e709e3f6cb108987b0527e4fb21e2bfe130148a8b0a"
+  },
+  {
+    "path": "문서검증결과.json",
+    "bytes": 2413,
+    "sha256": "05719744bc997b5bb54e9fcf5b82bda104a6e6965f2ea6871e0198b2bf26ddc0"
+  }
+]

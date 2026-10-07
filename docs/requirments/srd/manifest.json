@@ -1,0 +1,1748 @@
+{
+  "version": "v0.3",
+  "date_kst": "2026-10-07",
+  "repository_main": "fff112116bef3992d27a094456b055f647ed61a8",
+  "source": "#50~55 전체 댓글의 최종 정정·합의 및 main 계약/IDL",
+  "source_old_srd_sha256": "5cf9c3ab060c7371dffaedb0a5d64010041ed1cc201b47f9b390977d77e75ad9",
+  "agreements": [
+    {
+      "id": "MC-001",
+      "title": "픽셀→베이스 위치의 제공 책임·출력 단위",
+      "kind": "명시적 충돌",
+      "phase": "A",
+      "pairs": [
+        "VB"
+      ],
+      "ids": "SYS-FR-007, IC-VISION-02, TBD-002·003; NEW-B-01",
+      "a": "남현지: BoxTrack 픽셀만 발행, servo/manager가 공용 함수로 변환. 출력 mm.",
+      "b": "박병후: 현지의 변환 단계에서 base position·frame·valid를 공급받아 사용. ROS 입력 m.",
+      "question": "변환 담당 노드와 공급 경로를 하나로 정할 것. 기존 픽셀 필드 유지 여부, base 위치 별도 출력 또는 명시적 추가 필드, mm→m 경계를 결정할 것.",
+      "deliverable": "생산자/소비자·최종 메시지 또는 함수 API·상단 중심 기준·단위 변환·캘리브레이션 버전·실제 수신 예시.",
+      "lead": "남현지 주작성, 박병후 수용 확인",
+      "refs": "V V-02·IC-V-02(L73–83,199–214); B IC-BH-VISION·NEW-B-01(L158–175,361–371)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "비전이 BoxTrack.position_base에 촬영 시각의 박스 윗면 중심을 base_link·m로 제공한다. position_valid/source/calib_version을 함께 보내며, TCP 목표·지연/벨트 예측·파지 오프셋은 servo 단독 계산이다. 픽셀 필드는 유지한다.",
+      "residual": "이동 변환·유효 범위의 실측은 MC-002에서 계속한다. 비전 변환을 servo에서 import/중복 구현하지 않는다.",
+      "location": "§3.4·5.4",
+      "owners": "남현지·박병후",
+      "due": "10/07~08",
+      "github_issues": [
+        50
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/50#issuecomment-6028992757"
+      ]
+    },
+    {
+      "id": "MC-002",
+      "title": "고정 관측 자세 호모그래피와 이동 카메라 추종",
+      "kind": "전제 충돌",
+      "phase": "A",
+      "pairs": [
+        "VB",
+        "VR",
+        "RB"
+      ],
+      "ids": "SYS-FR-007·008, SYS-CT-002, TBD-002·014·020",
+      "a": "남현지: 현재 호모그래피는 observe_pose에서만 유효. 카메라 이동 시 정식 핸드아이로 보완 예정.",
+      "b": "박병후: 손목 카메라가 움직이는 동안 촬영 시점 pose로 계속 base 위치를 산출하는 폐루프.",
+      "question": "고정 자세 캘리브레이션만으로 이동 추종이 되는 것으로 가정하지 말 것. 핸드아이/촬영 시점 pose 이력/평면 교점 방식과 담당·완료 조건을 결정할 것.",
+      "deliverable": "observe_pose·카메라 내부/외부 파라미터·툴 기준·이동 중 변환 식/담당·정적/동적 검증 로그. ≤5mm는 승인 전 제안.",
+      "lead": "남현지 변환 설계, 김학민 기준 자세/실측, 박병후 소비 검증",
+      "refs": "V V-02(L73–83); R R-04·IC-R-01(L79–89,139–162); B B-02·IC-BH-VISION(L71–87,158–175)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "관측 자세 정지에서만 고정 호모그래피를 사용한다. 이동 카메라에서는 촬영 시각의 TCP pose 이력과 T_tcp→camera, 박스 윗면 평면을 사용한 위치 갱신이 G0 A 필수다. 동적 검증 전/시각 정합 불가 시 position_valid=false다.",
+      "residual": "핸드아이 결과·촬영 pose 정합·상류 외삽 범위·정적/동적 오차 실측 필요. 1.72 mm는 가상 시험값이고 ≤5 mm는 제안이다. #25·#41·#36, PR #48.",
+      "location": "§3.4·5.4·10",
+      "owners": "남현지·김학민·박병후",
+      "due": "촬영10/07·동적10/08",
+      "github_issues": [
+        50,
+        51,
+        53
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/50#issuecomment-6028992757",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/51#issuecomment-6029239857",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/53#issuecomment-6028997780"
+      ]
+    },
+    {
+      "id": "MC-003",
+      "title": "track/box/session/task/attempt 유일성과 재투입",
+      "kind": "계약 공백·충돌 가능",
+      "phase": "A/B",
+      "pairs": [
+        "VE",
+        "VB",
+        "BE"
+      ],
+      "ids": "SYS-FR-004·014, SYS-DT-001, TBD-003·007·008·012·022",
+      "a": "남현지: 투입 회차별 box_id, 재시도는 같은 box_id의 attempt 1~3, 재투입은 새 box_id. 접두 MMDDTHHMM-순번.",
+      "b": "정의석: attempt_id 또는 처리 시도별 box_id 유일키 제안. 박병후: task/session/attempt와 물리 박스 대응 필요.",
+      "question": "처리 시도라는 말이 투입 회차인지 파지 재시도인지 통일할 것. 같은 분 재시작·노드 재기동·해가 바뀌어도 DB 키 충돌이 없는지, track 만료 후 같은 박스와 재투입을 구분하는지 확인할 것.",
+      "deliverable": "ID 대응표·유일키·생성/만료 주체·재시작 규약·물리 박스 시험대장. retry/reinsert/중복 수신 각 예시와 DB 행 수.",
+      "lead": "남현지 업무 ID, 정의석 DB키, 박병후 시험 ID 취합",
+      "refs": "V V-03·V-07·IC-V-07(L85–96,138–149,333–359); E E-04·IC-EUS-DB-01(L148–187,297–315); B B-04(L106–122)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "track_id는 tracker 실행 중 증가하고 재사용하지 않으며 DB 키가 아니다. manager가 투입 회차마다 <session_id>-<3자리 순번> box_id를 발급한다. session_id=YYYYMMDDTHHMMSS-xxxx(랜덤4hex), manager 재기동은 새 세션. 파지 retry는 같은 box_id/goal의 attempts, 재투입은 새 box_id다. DB PK=box_id, 중복은 DO NOTHING이다.",
+      "residual": "4자리 난수는 충돌 가능성을 줄이며 절대 유일성을 보장하지 않는다. 충돌·순번 범위·정지/재개 시 세션 유지 확인 필요. DB session_id varchar(24), box_id varchar(32). #29·#21.",
+      "location": "§3.4·5.8·7.1",
+      "owners": "남현지·정의석",
+      "due": "G0 전·DB10/09",
+      "github_issues": [
+        52,
+        50,
+        54
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/52#issuecomment-6029577258",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/50#issuecomment-6028992757",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/54#issuecomment-6029002275"
+      ]
+    },
+    {
+      "id": "MC-004",
+      "title": "촬영·pose·제어 시각과 시계 이력",
+      "kind": "명시적 충돌·계약 공백",
+      "phase": "A/B",
+      "pairs": [
+        "VB",
+        "RB",
+        "VR"
+      ],
+      "ids": "SYS-PF-007, IC-VISION-01·02, IC-ROBOT-02, TBD-003·014·020·026",
+      "a": "남현지: camera header.stamp를 호스트 촬영 시각으로 보존. 김학민: pose stamp는 조회 응답 수신 시각.",
+      "b": "박병후: pose stamp는 실제 측정 시각, 촬영 시점의 pose/TF 이력 사용. 카메라 하드웨어 시계 매핑 확인 요구.",
+      "question": "응답 수신 시각을 실제 장비 측정 시각으로 표기할 수 있는지 확인할 것. 불가하면 응답 시각·측정 불확실성·보간/예측 한계를 명시. 카메라 stamp domain, ROS/system/monotonic, 다중 PC 동기를 정할 것.",
+      "deliverable": "시각 필드 정의표·시계 변환·pose 이력 보존/보간 범위·age/stale/future 기준·capture→consume 로그.",
+      "lead": "김학민 pose 원천, 남현지 camera/변환, 박병후 제어 age",
+      "refs": "R IC-R-01(L139–162); V V-03·IC-V-01(L85–96,183–197); B IC-BH-ROBOT02·B-02(L215–232,71–87)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "민감 노드는 공용 PC 시스템 시계를 사용한다. 카메라 촬영 stamp를 crop/OCR까지 보존한다. robot pose stamp는 get_current_posx 응답 수신 시각이며 실제 측정 시각이 아니다. gateway가 요청·응답·RTT·큐 대기를 로그로 남긴다. 응답 시각·RTT/2를 측정 시각·보장 오차로 쓰지 않는다.",
+      "residual": "RealSense global-time 매핑 확인, pose ~50 Hz 실제 주기·지연, 이력1 s/보간50 ms 후보, future·범위 밖 입력 규칙·동적 오차 검증. #25·#41 T32.",
+      "location": "§3.4·5.4·6.2",
+      "owners": "김학민·남현지·박병후",
+      "due": "10/07~08",
+      "github_issues": [
+        50,
+        53,
+        51
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/50#issuecomment-6028992757",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/53#issuecomment-6028997780",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/51#issuecomment-6029239857"
+      ]
+    },
+    {
+      "id": "MC-005",
+      "title": "재시도 담당과 액션/attempt 경계",
+      "kind": "명시적 충돌",
+      "phase": "B",
+      "pairs": [
+        "VB"
+      ],
+      "ids": "SYS-FR-011, IC-PICK-01, TBD-019; NEW-B-04",
+      "a": "남현지: manager가 실패 result를 받아 같은 box_id로 새 attempt/goal, 최대 2회 추가.",
+      "b": "박병후: servo가 국소 재시도, manager는 최종 실패를 확정.",
+      "question": "최대3회 카운터의 유일 소유자와 재시도 위치를 정할 것. 양쪽에서 재시도해 총횟수가 늘지 않도록 goal UUID·attempt·종료 result 관계를 확인.",
+      "deliverable": "한 번 실패→재시도 성공/3회 실패/시야상실/안전오류의 호출 시퀀스·카운터·최종 result 수.",
+      "lead": "박병후 픽업안 작성, 남현지 FSM 연결",
+      "refs": "V IC-V-05(L269–282); B B-01·IC-BH-PICK(L53–69,177–194)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "파지 재시도는 belt_servo가 goal 하나 안에서 최초 포함 최대3회 수행한다. attempts의 유일 소유자는 servo다. manager는 투입 박스당 goal 하나를 보내고 retry goal을 중복 생성하지 않는다. 장비·안전 오류는 자동 재시도하지 않는다.",
+      "residual": "세부 timeout·재시도 가능 위치/시간·goal 실패 로그를 #36·#29에서 검증한다. 최대3회는 B 기능이며 A 연결에 모든 retry 시나리오 통과를 요구하지 않는다.",
+      "location": "§3.3·5.5·SYS-FR-011",
+      "owners": "박병후·남현지",
+      "due": "G2 전",
+      "github_issues": [
+        50
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/50#issuecomment-6028992757"
+      ]
+    },
+    {
+      "id": "MC-006",
+      "title": "픽업 phase·성공 인계·reason enum",
+      "kind": "명시적 충돌·상세 미정",
+      "phase": "A/B",
+      "pairs": [
+        "VB",
+        "RB"
+      ],
+      "ids": "SYS-FR-009·010, SYS-IF-002, IC-PICK-01, TBD-019; NEW-B-04",
+      "a": "남현지: approach/track/descend/grasp, 소문자 ok/lost/grasp_fail/canceled/robot_error.",
+      "b": "박병후: prepare/track/descend/grasp/lift/verify, 대문자 OK/GRASP_FAILED/STALE_INPUT/DEVICE_ERROR 등 예시. 안전 높이까지 인계.",
+      "question": "phase와 reason의 최종 허용값·대소문자·ROS action status를 일치시킬 것. grasped=true의 물체 확보 및 lift 완료 경계와 인계 높이/자세를 명시할 것.",
+      "deliverable": "goal/feedback/result 정의·상태/사유 매핑표·인계 조건·timeout/BUSY 정책. err_u/v는 px 유지, m 오차는 별도 필드 후보.",
+      "lead": "박병후 액션 의미, 남현지 소비, 김학민 모션 완료 확인",
+      "refs": "V IC-V-05(L269–282); B IC-BH-PICK(L177–194); R R-03·R-04(L67–89)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "phase=PREPARE/TRACK/DESCEND/GRASP/LIFT/VERIFY. result.grasped=true는 물체 확보 후 안전 높이 LIFT·VERIFY를 마친 인계다. reason=OK/GRASP_FAILED/LOST/OUT_OF_REACH/STALE_INPUT/DEVICE_ERROR/CANCELED와 action status를 매핑하며 manager는 reason으로 분기한다. BUSY/미준비 goal은 reject(result 없음). err_u/v는 px다.",
+      "residual": "인계 높이·자세·timeout은 실측/설정 검증 필요. #51 최종의 31mm 면 선택 보고·열린 PR #70과 #53 일부합의/T34 조건을 함께 남긴다. -19mm는 보장값으로 승격하지 않는다. #43·#36.",
+      "location": "§5.5·10",
+      "owners": "박병후·김학민·남현지(PL)",
+      "due": "T34 10/07~08",
+      "github_issues": [
+        50,
+        53
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/50#issuecomment-6028992757",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/53#issuecomment-6028997780"
+      ]
+    },
+    {
+      "id": "MC-007",
+      "title": "2차 OCR 실현가능성과 수렴 프레임",
+      "kind": "전제 차이·요구사항 변경 제안",
+      "phase": "B",
+      "pairs": [
+        "VB"
+      ],
+      "ids": "SYS-FR-023, VT-023, IC-VISION-03·04, TBD-003·004·019; NEW-B-06",
+      "a": "남현지: tracker가 PICKING 상태·화면 목표점·선명도로 3~5장 선택, 서보 추가 신호 불필요. 약0.3초 시야 유지 추정.",
+      "b": "박병후: 손목 시야/가림/거리상 불가능할 수 있어 B에서 실험 후 판단, 필요 시 수렴 신호 협의.",
+      "question": "PICKING만으로 내려가기/가림/목표 수렴을 구분할 수 있는지 실제 프레임으로 확인할 것. 가능/불가 조건과 신호·종료 시점을 정하고, 불가하면 대안 및 SYS/VT 변경 승인을 별도로 기록.",
+      "deliverable": "실기 프레임·box/stage/stamp 대응·선택 기준·OCR 부하 영향·가능성 판정 및 변경 카드. 현 B 필수 요구를 자동 삭제하지 않음.",
+      "lead": "남현지 OCR/PL, 박병후 추종 실험",
+      "refs": "V V-03·V-04(L85–111); B B-01·NEW-B-06(L53–69,421–431)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "2차 OCR은 비전이 현재 SortState.track_id의 PICKING 영상에서 선명도·가림·송장 크기로 프레임을 선택한다. GRASP 중에도 추종하므로 GRASP 진입만으로 마감하거나 phase 문자열에 의존하지 않는다. action result까지 품질로 선택하고 별도 servo 수렴 신호는 필수 추가하지 않는다.",
+      "residual": "추종 중 실제 영상·OCR 부하로 실현가능성 검증 필요. 불가 시 1차+재확인 대안은 SYS-FR-023/VT-023 변경 승인 후 적용하며 B 필수 요구를 자동 삭제하지 않는다. #28·#36.",
+      "location": "§4.2·5.4",
+      "owners": "남현지·박병후",
+      "due": "10/08~10",
+      "github_issues": [
+        50
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/50#issuecomment-6028992757"
+      ]
+    },
+    {
+      "id": "MC-008",
+      "title": "10/10 게이트와 개루프 검토 조건",
+      "kind": "회신↔기존 문서 충돌",
+      "phase": "A/B",
+      "pairs": [
+        "VB",
+        "RB"
+      ],
+      "ids": "TBD-021, SYS-FR-008, SYS-PF-001; NEW-B-05; ADR-0002",
+      "a": "저장소 ADR-0002: B 개루프 베이스라인부터, 10/10 14/20 미달이면 B로 전환. 남현지: 같은 ADR을 기준으로 A/B 전환 가능 기재.",
+      "b": "박병후: 폐루프 FF+P 우선. 실측 성능이 상당히 부족하다고 팀 판단할 때만 개루프 대안을 검토. 날짜/목표 미달로 자동 전환하지 않음.",
+      "question": "현재 담당 방향과 팀 기준선을 동기화할 것. 70% 목표와 성능 점검은 유지하며 대안 검토 조건·결정자·증거·ADR 갱신을 확인.",
+      "deliverable": "팀 검토 기록·ADR-0002 정정안·현재 채택 방식·전환 미결정/결정 여부. speedl 미지원과 폐루프 포기를 구분.",
+      "lead": "박병후 방향 제시, 남현지 PL·김학민 실행 경로 확인",
+      "refs": "B B-03·NEW-B-05(L89–104,409–419); V IC-V-05(L269–282); repo docs/adr/0002-grasp-method-gate.md",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "폐루프 FF+P를 우선 구현한다. 10/10 20사례≥14 파지 성능 게이트를 유지하며 미달만으로 자동 전환하지 않는다. 전원이 로그/원인에 따라 ①개루프 ②범위 축소 ③폐루프10/12 연장 중 결정하고 PL이 ADR-0002에 기록한다.",
+      "residual": "G0 실제1박스 통과와 20사례 성능 시험은 별도다. 실제 제어 경로 미지원과 폐루프 성능 포기는 구분한다. #13·#36·#37.",
+      "location": "§3.1·8.2",
+      "owners": "전원·남현지(기록)",
+      "due": "10/10",
+      "github_issues": [
+        50,
+        53
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/50#issuecomment-6028992757",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/53#issuecomment-6028997780"
+      ]
+    },
+    {
+      "id": "MC-009",
+      "title": "단일 설정 snapshot·스키마·단위·유효값",
+      "kind": "대체로 합치·상세 공백",
+      "phase": "A",
+      "pairs": [
+        "VR",
+        "VB",
+        "RB"
+      ],
+      "ids": "SYS-FR-033, SYS-IF-007, IC-CONFIG-01, TBD-006·013·017·018·020",
+      "a": "남현지: 정적 값 launch→parameters, runtime writer=manager, belt direction_axis, 미정 null 제안.",
+      "b": "김학민: 방향은 base 단위벡터, zones/limits 필요. 박병후: Kp/height/offset/age/watchdog/TCP/calibration/version/valid를 함께 검증.",
+      "question": "launch 전달 원칙을 수용하는지, 전체 schema와 소비자 목록·단위를 정할 것. 좌표 mm/deg와 제어 SI 변환, 부호 있는 벨트 단위벡터·속도, 0/null의 유효성을 필드별로 구분할 것.",
+      "deliverable": "버전/해시 있는 초기 설정 예시·노드별 parameter 표·검증/READY 조건·누락 거부 사례. angular=0 같은 정상 0까지 일괄 금지하지 않음.",
+      "lead": "남현지 schema/bringup, 김학민 실측/limits, 박병후 제어 값",
+      "refs": "V V-06·IC-V-08(L126–136,361–379); R IC coverage·R-02(L128–137,54–65); B IC-BH-CONFIG(L253–270)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "단일 YAML 원본, runtime writer=manager. bringup이 정적 snapshot을 파라미터로 전달하고 소비자가 version/sha256을 기록한다. 사람 단위 mm/deg/cmps는 로드·gateway 경계에서 SI 변환한다. belt.direction_base=[0.99992,-0.01292,0.0], speed_cmps=4.8. null은 미측정, 필요한 값이 null이면 해당 기능 미준비다. 의미 있는 0(예 latency_offset_ms=0)은 유효다.",
+      "residual": "main에는 direction_axis가 남아 있고 PR #64가 열려 있다. 서보 전용 게인/높이/age/watchdog은 servo YAML, 공유 값만 voss_config. null 파라미터 전달 제외·TCP 등록 비교·설정 validation 구현 확인 필요.",
+      "location": "§3.4·5.9",
+      "owners": "남현지·김학민·박병후",
+      "due": "PR #64·G0 전",
+      "github_issues": [
+        51,
+        50,
+        53
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/51#issuecomment-6029239857",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/50#issuecomment-6028992757",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/53#issuecomment-6028997780"
+      ]
+    },
+    {
+      "id": "MC-010",
+      "title": "플랜지/TCP·orientation·좌표 원점",
+      "kind": "명시적 충돌·미정",
+      "phase": "A",
+      "pairs": [
+        "VR",
+        "RB"
+      ],
+      "ids": "SYS-FR-007·012, SYS-IF-003, IC-ROBOT-02·03, TBD-002·014·016",
+      "a": "김학민: zones는 플랜지 기준(TCP 미적용), pose 기준점은 미정. 남현지: 캘리브레이션 TCP 터치.",
+      "b": "박병후: 실제 TCP pose·파지 offset·상단 중심의 대응을 전제로 함.",
+      "question": "장비 API가 반환하는 기준점과 설정/pose/캘리브레이션 기준점을 통일하거나 변환을 명시할 것. base_link가 실제 두산 베이스와 일치하는지, ZYZ↔quaternion과 각속도 의미도 확인.",
+      "deliverable": "TCP/tool 명칭·오프셋·frame 관계·단위·변환 예시·재기동 재등록 절차·측정 조건.",
+      "lead": "김학민 장비 기준, 남현지 캘리브레이션, 박병후 파지 기준",
+      "refs": "R R-04·R-07·IC-R-01(L79–89,117–126,139–162); V V-02(L73–83); B IC-BH-ROBOT02(L215–232)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "zones/observe_pose는 플랜지 posx mm·deg 원본이다. /voss/robot/pose와 servo_cmd는 실제 TCP 기준, base_link(두산 Base 원점·축)·m/quaternion·m/s/rad/s다. gateway가 robot.tcp_offset_mm=[1.382,2.684,246.642]로 등록/변환한다. G0는 고정 자세·각속도0이다.",
+      "residual": "Base 축·TCP 등록·터치 데이터 대조, ZYZ↔quaternion/각속도 변환과 재기동 등록 검증은 T32. servo가 TCP 오프셋을 중복 적용하지 않는다.",
+      "location": "§5.6·7.2",
+      "owners": "김학민·남현지·박병후",
+      "due": "10/07~08",
+      "github_issues": [
+        51,
+        53
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/51#issuecomment-6029239857",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/53#issuecomment-6028997780"
+      ]
+    },
+    {
+      "id": "MC-011",
+      "title": "speedl/servol/move_line 실제 API·큐·주기",
+      "kind": "후보 차이·실기 공백",
+      "phase": "A/B",
+      "pairs": [
+        "RB"
+      ],
+      "ids": "SYS-CT-003, IC-ROBOT-01·DEVICE-01, TBD-014·020; NEW-B-02",
+      "a": "김학민: 소스상 speedl_stream이 Twist와 의미 대응, M2.40 이상 조건·실장비 미확인. 서비스 단일 큐, stop 우회 후보.",
+      "b": "박병후: latest base 속도 목표를 speedl 우선 실행, 옛 속도 목표 누적 금지. actual 적용과 publish를 구분 요구.",
+      "question": "실제 설치 namespace/type/DRCF 지원·vel/acc/time/ref 단위·stream/서비스 동시성·pose 조회 경쟁을 확인할 것. 위치 명령으로 바꾸면 속도→목표 변환 의미를 별도 합의.",
+      "deliverable": "ros2 실제 타입/경로·설치 커밋·버전·유효명령/실제 적용 또는 관측 가능한 proxy 로그·주기/지터·고정자세 시험. 경로는 /dsr01/dsr_controller2/* 후보.",
+      "lead": "김학민 장비/API, 박병후 제어 출력",
+      "refs": "R R-02·IC-R-03(L54–65,189–206); B IC-BH-ROBOT01·DEVICE(L196–213,272–289)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "servo_cmd는 최신 목표 하나만 유지하고 옛 목표를 누적하지 않는다. stream은 두산 서비스 직렬 큐 밖에서 처리하고 실제 장비 적용과 ROS 발행을 구분한다. stop 우선성과 pose 조회 경쟁을 검증한다.",
+      "residual": "설치 컨트롤러의 speedl_stream/servol_stream 실제 경로·타입·DRCF지원·단위·적용 proxy·backlog는 실측 대기다. 서비스/위치명령 fallback은 의미 정합 후 사용한다. #34·#41 T32.",
+      "location": "§5.6·SYS-CT-003",
+      "owners": "김학민·박병후",
+      "due": "10/07~08",
+      "github_issues": [
+        53
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/53#issuecomment-6028997780"
+      ]
+    },
+    {
+      "id": "MC-012",
+      "title": "RG2 파지 성공 피드백과 판정 방법",
+      "kind": "방향 합치·실측/타입 공백",
+      "phase": "A",
+      "pairs": [
+        "RB"
+      ],
+      "ids": "SYS-FR-010, IC-ROBOT-03·DEVICE-01, TBD-015·019; NEW-R-02·NEW-B-03",
+      "a": "김학민: Modbus grip_detected+busy+width 가용 후보, grip_detected AND 폭46±3mm 제안. 서비스 응답 필드 확장 제안.",
+      "b": "박병후: 직접 물체 확보 피드백을 먼저 실험, 없다면 닫힘 완료+실측 폭+lift 유지. 판정 방법 유보.",
+      "question": "raw bit가 물체 확보를 의미하는지 빈 파지/정상/미끄러짐으로 검증할 것. width/힘/시간/valid/오류·최종 판정 방식을 선택하고 Gripper 응답을 결정.",
+      "deliverable": "빈 파지·정상 파지 raw 로그/영상·stamp·busy 완료·폭 범위·최저 무손상 힘·최종 IDL/판정 표. 90mm/40mm/46±3mm는 실측 전 후보.",
+      "lead": "김학민 센서/경로, 박병후 성공 판정",
+      "refs": "R R-03·NEW-R-02(L67–77,286–296); B IC-BH-GRIP·NEW-B-03(L234–251,385–395)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "GRASP→LIFT는 유효 통신의 닫힘 완료 응답 + grip_detected + 검증된 RG2 보고폭 범위를 모두 만족할 때다. busy 해제 후 서비스 응답, width_actual은 보고폭이며 실제 간격과 구분한다. goal/attempt별 future로 이전 늦은 응답을 버리고 Gripper 요청에 attempt를 추가하지 않는다.",
+      "residual": "목표폭39mm·힘14N·보고폭39.5~41.5mm는 설정/시험 후보와 제한된 관측이다. 빈 파지·미끄러짐·상승 유지·무손상10회 및 방향/높이 최종 확인 필요. Gripper 피드백 확장은 김학민 후속 PR.",
+      "location": "§5.5·5.6·10",
+      "owners": "김학민·박병후·남현지(PL)",
+      "due": "10/07~08",
+      "github_issues": [
+        53
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/53#issuecomment-6028997780"
+      ]
+    },
+    {
+      "id": "MC-013",
+      "title": "닫힘 중 추종과 비차단 실행·busy 의미",
+      "kind": "계약 공백",
+      "phase": "A",
+      "pairs": [
+        "RB"
+      ],
+      "ids": "SYS-FR-009·010, IC-ROBOT-01·03, TBD-014·015·019",
+      "a": "김학민: gripper 실제 완료 후 서비스 응답, 동시에 한 동작만/busy 거부, Modbus는 별도 연결.",
+      "b": "박병후: async close 요청 중에도 추종을 계속하고, stop/watchdog은 우선 처리.",
+      "question": "한 동작만이 로봇 모션과 RG2 병행까지 금지하는지 확인할 것. 콜백/큐 블로킹 없이 추종·pose·close·stop이 가능한지 실행 모델과 busy 기준을 결정.",
+      "deliverable": "모션/그리퍼 소유 상태·허용 동시성 표·async 호출 시퀀스·timeout/중복 close/stop 시험.",
+      "lead": "김학민 gateway 실행 모델, 박병후 비차단 호출",
+      "refs": "R R-02·IC-R-02(L54–65,164–187); B IC-BH-GRIP(L234–251)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "모션과 RG2 자원을 분리해 추종 중 call_async 닫힘을 허용한다. goal 중 PREPARE/GRASP/VERIFY의 gripper 호출자는 servo 하나, manager는 동시에 호출하지 않는다. 적재 개방은 gateway MoveToZone PLACE다. 같은 자원 중복은 BUSY 거부, stop은 우선한다.",
+      "residual": "추종+close+pose+stop 동시 시험·timeout/늦은 응답·작업 인계는 #41·#36에서 실측한다.",
+      "location": "§3.3·5.5·5.6",
+      "owners": "김학민·박병후",
+      "due": "10/08",
+      "github_issues": [
+        53
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/53#issuecomment-6028997780"
+      ]
+    },
+    {
+      "id": "MC-014",
+      "title": "cancel·watchdog·실제 정지 확인",
+      "kind": "명시적 충돌·안전 계약 공백",
+      "phase": "A/B",
+      "pairs": [
+        "VB",
+        "RB",
+        "VR"
+      ],
+      "ids": "SYS-SF-001·002, IC-PICK-01·ROBOT-03, TBD-005·017·019·020; NEW-R-04",
+      "a": "남현지: cancel 후 servo가 0속도 발행 후 canceled 반환 제안. 김학민: stop 서비스·pose 변화 없음 확인, 감시시간 미정.",
+      "b": "박병후: 단발 0속도 의존 금지, 실제 정지 확인 후 cancel 완료. pose만으로 actualstop 판단하지 않음. 불확실하면 STOP_UNCONFIRMED/PAUSED/새goal금지.",
+      "question": "정지 요청 담당·우선순위·독립 watchdog·command expiry·실제 정지 확인 근거/연속 확인 조건을 정할 것. gateway 프로세스 종료 시 장비 동작도 시험하고 물체 보유 중 자동 개방 금지 여부를 결정.",
+      "deliverable": "단계별 stop/cancel/노드 종료 시퀀스·/voss/robot/stop 최종 타입·정지 모드·timeout/최대 지연·거리·confirmed/unconfirmed 표시와 재개 조건.",
+      "lead": "김학민 실제 중단, 박병후 액션, 남현지 전체 PAUSED",
+      "refs": "V IC-V-05·06(L269–331); R R-05·NEW-R-04(L91–102,310–320); B B-02·IC-BH-PICK(L71–87,177–194)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "기본 stop/cancel·입력 상실 대응은 A. /voss/robot/stop=std_srvs/Trigger, gateway가 신규 작업/servo_cmd를 막고 move_stop(Quick stop)을 요청한다. 정상 응답 시 success=true, 응답 없음/오류 시 false(TIMEOUT/DEVICE_ERROR). 액션은 정상 취소 CANCELED, 정지 요청 실패 ABORTED+DEVICE_ERROR+상세 로그, manager PAUSED·사람 확인 후 수동 재개다. 자동 개방 금지.",
+      "residual": "별도 STOP_UNCONFIRMED enum·자동 정지 판별을 추가하지 않는 최종 최소안이다. 요청 성공을 실물 정지 보장으로 쓰지 않는다. watchdog200ms·최대정지지연/거리·gateway종료 동작은 제안/실측 대기. 100ms 관측 성능과 별개. stop 서비스 문서/IDL 후속 PR.",
+      "location": "§3.3·5.6·6.3",
+      "owners": "김학민·박병후·남현지",
+      "due": "10/08·G0 전",
+      "github_issues": [
+        50,
+        53,
+        51
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/50#issuecomment-6028992757",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/53#issuecomment-6028997780",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/51#issuecomment-6029239857"
+      ]
+    },
+    {
+      "id": "MC-015",
+      "title": "정지 후 보유 박스와 재개",
+      "kind": "명시적 충돌",
+      "phase": "B",
+      "pairs": [
+        "VR",
+        "VB"
+      ],
+      "ids": "SYS-FR-019, TBD-005·017·019",
+      "a": "남현지: 파지 후 정지면 확정 구역으로 이동 계속/재확인 이동, ASKING 질문 재발화·30초 재시작.",
+      "b": "김학민: 정지 후 보유 박스는 사람이 확인·제거. 박병후: 실제 정지/보유 상태 확인 후 새goal, 자동 개방 금지 방향.",
+      "question": "재개 때 물체를 유지한 채 이어갈지 수동 제거할지 단계별 하나의 정책을 정할 것. start와 resume 차이, 노드 재기동과 단순 일시정지를 구분하고 이미 기록된 박스 중복 동작을 막을 것.",
+      "deliverable": "정지 단계×물체 보유×기록 여부의 resume 전이표·인적 확인 지점·질문 타이머 정책.",
+      "lead": "남현지 FSM, 김학민 보유/재기동, 박병후 픽업 중단",
+      "refs": "V IC-V-06(L284–331); R R-05(L91–102); B B-02(L71–87)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "일시정지와 manager 재기동/장비 오류를 구분한다. resume은 PAUSED만. 단순 일시정지 후 보유 확인·오류 해소 조건에서 구역 확정 박스는 그 구역, 미확정은 RECHECK로 이어간다. 미파지 박스는 현재 유효 대상 재확인 후 새 goal 또는 PASSED, 이미 결과 확정된 box_id는 재처리하지 않는다. 재기동/장비 오류는 사람이 확인·제거하고 새 세션이다.",
+      "residual": "단계별 resume·질문 재발화·보유/기록 여부 조합은 B 상세/실기 대기다. 수직 상승 후 수평 이동의 안전 높이는 배치 변경에 맞춰 검증한다. #29·#18·#44, 계획10/09.",
+      "location": "§3.3·5.7·SYS-FR-019",
+      "owners": "남현지·김학민·박병후",
+      "due": "B·10/09 이후",
+      "github_issues": [
+        51,
+        50
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/51#issuecomment-6029239857",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/50#issuecomment-6028992757"
+      ]
+    },
+    {
+      "id": "MC-016",
+      "title": "적재 완료·결과 발행·복귀·DB 순서",
+      "kind": "명시적 충돌·전달 경로 공백",
+      "phase": "A/B",
+      "pairs": [
+        "VR",
+        "VE",
+        "BE",
+        "RB"
+      ],
+      "ids": "SYS-FR-012·013·014, SYS-PF-004, IC-ROBOT-03·RESULT-01·DB-01, TBD-007·012·016·025",
+      "a": "남현지: 최종 그리퍼 개방 성공 직후, 복귀 전 SortResult 발행, DB commit 기다리지 않음. 사이클 detected→result.",
+      "b": "김학민: MoveToZone 내부에서 개방+observe 복귀까지 하고 응답. 박병후: 실제placed/observe_ready/db_committed를 분리, 정상 사이클detect→placed. 정의석: commit/조회가 A 완료 조건.",
+      "question": "현재 서비스 응답만으로 복귀 전 개방/placed를 manager가 어떻게 아는지 결정할 것. 서비스 의미 변경/중간 이벤트/응답 시각 필드 등 대안을 비교. manager의 DB 비차단과 G0 검증의 commit 필수를 구분.",
+      "deliverable": "placed/result/observe_ready/db_committed/query 시퀀스·이벤트 생산자/타입/시각·실패 시 결과 규칙. 개방 ack만으로 올바른 물리 적재가 확인되는지도 명시.",
+      "lead": "김학민 모션 이벤트, 남현지 result, 정의석 commit, 박병후 측정",
+      "refs": "V V-07·사이클(L138–149,394); R R-04·IC-R-02(L79–89,164–187); B B-05(L124–140); E E-04(L148–187)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "MoveToZone PLACE는 이동→개방→상승→OBSERVE복귀 뒤 응답한다. placed_stamp=RG2 busy해제·개방폭 확인 시각(물리 적재 proxy), result/observe_ready/commit/query는 별도 사건이다. manager는 PLACE 응답 뒤 box_id당 SortResult1건을 발행하고 DB를 기다리지 않는다. G0는 commit 성공 반환 후 로그+같은 box_id 별도 SELECT를 요구한다.",
+      "residual": "개방 후 복귀 실패: gateway ok=false/message=RETURN_FAILED, placed_stamp 유지(개방 전 실패는0), 응답 유실 시 확인 없이 자동 재호출 금지. 최종 업무 outcome/reason은 남현지·김학민 결정 대기이며 logger는 받은 대로 저장한다. 영상 대조·복귀 사건 계측·manager 결과 로그 필요. #44·#29·#21.",
+      "location": "§5.6·5.8·8.2",
+      "owners": "김학민·남현지·정의석",
+      "due": "G0 전·후속PR",
+      "github_issues": [
+        51,
+        52,
+        54,
+        53
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/51#issuecomment-6029239857",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/52#issuecomment-6029577258",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/54#issuecomment-6029002275",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/53#issuecomment-6028997780"
+      ]
+    },
+    {
+      "id": "MC-017",
+      "title": "재확인 자세·정지 OCR·재픽업",
+      "kind": "기능 경로 누락",
+      "phase": "B",
+      "pairs": [
+        "VR"
+      ],
+      "ids": "SYS-FR-025·027, IC-ROBOT-03·VISION-04, TBD-004·016",
+      "a": "남현지: recheck에 놓은 뒤 read_label 호출, 확정 후 다시 집어 목적 구역 이동. MoveToZone pick 모드 필요.",
+      "b": "김학민: 현 MoveToZone은 놓기+observe 복귀만 제공, 재확인에서 집기 요청 없음.",
+      "question": "recheck에 놓은 후 카메라가 송장을 볼 자세/track 연결을 어떻게 유지하는지 정할 것. 정지 재판독 및 동일 박스 재픽업의 호출 경로·높이·실패 처리를 추가할 것.",
+      "deliverable": "recheck place→촬영 자세→read_label→응답/질문→repick→final place 시퀀스 및 타입·실제 영상.",
+      "lead": "김학민 정적 repick, 남현지 OCR/FSM",
+      "refs": "V V-03·IC-ROBOT-03 coverage·미정(L85–96,162–181,427–440); R R-04·IC-R-02(L79–89,164–187)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "MoveToZone 요청 mode는 빈값/PLACE, VIEW, PICK. 재확인은 PLACE RECHECK→VIEW RECHECK→ReadLabel(track_id=-1)→판정/질문→PICK RECHECK→PLACE 목적구역이다. VIEW는 관측 자세 이동만, PICK은 해당 slot에서 확보·안전 높이까지 상승만 한다. 작업대 파지 높이와 놓기/벨트 높이는 구분한다.",
+      "residual": "zones.recheck.view_pose 교시·PICK 높이/실패 검증 필요. VIEW/OCR 실패는 질문, 재픽업 실패는 사람 확인·재확인 구역에 남는 박스 처리로 연결한다. HELD의 zone 표현/슬롯 반납 상세는 manager/gateway 정합. #44·#29, 10/12 목표.",
+      "location": "§5.6·SYS-FR-025/027",
+      "owners": "김학민·남현지",
+      "due": "10/07~08 교시·10/12 기능",
+      "github_issues": [
+        51
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/51#issuecomment-6029239857"
+      ]
+    },
+    {
+      "id": "MC-018",
+      "title": "구역 slot·hold 격자·용량 초과",
+      "kind": "대체로 합치·상세 공백",
+      "phase": "A/B",
+      "pairs": [
+        "VR"
+      ],
+      "ids": "SYS-FR-012, IC-CONFIG-01·ROBOT-03, TBD-005·016",
+      "a": "김학민: A/B/C 2×2 pitch60mm, 중심 원점/행우선 slot, 카운터 manager. recheck1칸, hold 격자 없음.",
+      "b": "남현지: 구역 좌표/설정 공급, hold 용량·가득 참 후속 처리 미제시.",
+      "question": "slot 소유/증가 시점·실패 시 재사용·reset·격자 원점·hold 크기를 확인할 것. 전체/우선 재투입 시 capacity 소진과 수동 비우기 정책을 정할 것.",
+      "deliverable": "5구역 pose/grid 표·slot→좌표 예시·적재/실패/가득 참 시험·수동 비우기 확인 규약.",
+      "lead": "김학민 물리 grid, 남현지 카운터/가득 참 FSM",
+      "refs": "R R-04(L79–89); V IC-V-08·미정(L361–379,427–440)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "최신 트레이 배치는 X방향 한 줄, pitch60mm, A/B/C3×1·RECHECK/HOLD2×1이다. 2×2안은 최신 실측 배치로 대체됐다. manager가 slot 카운터를 소유하고 적재 성공 확인 후 증가한다. 실패는 적재 여부 확인 없이 슬롯 재사용하지 않는다. 구역 가득 참은 PAUSED→사람 비움→reset_zone→resume이다.",
+      "residual": "최종 #51의 구역별 누적최대3 표기와 RECHECK/HOLD 물리2칸을 정합해야 한다. RECHECK 동시1개·임시점유 반환, RETURN_FAILED 시 점유 처리, HOLD 도달/간섭 시험이 남는다. 지원 범위 밖 slot을 만들지 않는다. #44·#29.",
+      "location": "§5.6·10",
+      "owners": "남현지·김학민",
+      "due": "G0 전 A/B/C·B HOLD 전",
+      "github_issues": [
+        51
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/51#issuecomment-6029239857"
+      ]
+    },
+    {
+      "id": "MC-019",
+      "title": "준비 판단 주담당·상태 원천·기동",
+      "kind": "할당 변경 제안·전달 공백",
+      "phase": "A/B",
+      "pairs": [
+        "VR",
+        "VB",
+        "RE",
+        "VE"
+      ],
+      "ids": "SYS-FR-001·031, IC-STATE-01, TBD-011·018; NEW-R-01·05·06",
+      "a": "김학민: FR-001 주담당은 manager 남현지로 변경, gateway는 READY/로봇 상태 제공. stop/observe/state 신설 제안.",
+      "b": "박병후: 설정/유효 입력/gateway READY 필수. 정의석: HMI 로봇 상태 데이터 원천 없음. 남현지: 통합 상태는6개 후보.",
+      "question": "FR-001의 주담당 변경·각 파트 ready/error/heartbeat와 통합 판단·로봇 상태 필드를 확인할 것. 관측 자세 이동 요청(zone=observe 또는 별도)을 정하고 launch/툴 등록/설정 적용 순서를 정할 것.",
+      "deliverable": "ready matrix·발행 주체/타입/주기·미준비 차단·stale/UNKNOWN 표시·기동/복구 체크. 상태 신설과 FR 담당 변경은 승인 후 반영.",
+      "lead": "남현지 통합, 김학민 장비, 정의석 화면/저장, 박병후 servo",
+      "refs": "R NEW-R-01·05·06/R-06(L274–284,322–344,104–115); E E-03(L129–146); B IC-BH-CONFIG(L253–270)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "SYS-FR-001 통합 준비 판단 주담당은 남현지(manager), 파트별 ready 원천은 각 담당이다. SortState ready/not_ready, ROBOT/SERVO/VISION/OCR/LOG를 모은다. RobotState는 header/connected/state/action/gripper_width_mm/error_code/detail, READY/BUSY/STOPPED/ERROR, 상태변화+2Hz reliable/transient_local/depth1. HMI는 미수신/3초무갱신 UNKNOWN. logger상태는 STARTING/OK/DB_ERROR/SPOOL_FULL 1Hz다.",
+      "residual": "RobotState IDL/stop/Gripper 후속 PR, SortState.session_id 추가, 비전 heartbeat/calib 준비 경로·ready freshness 구현 확인 필요. main ROBOT pose0.5s+서비스 임시판정은 목표 준비 계약을 대체하지 않는다. 기동은 logger가 manager보다 먼저다.",
+      "location": "§3.3·5.7·7.2",
+      "owners": "남현지·김학민·정의석·박병후",
+      "due": "G0 전·10/07 PR",
+      "github_issues": [
+        51,
+        50,
+        55,
+        52
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/51#issuecomment-6029239857",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/50#issuecomment-6028992757",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/55#issuecomment-6029240527",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/52#issuecomment-6029577258"
+      ]
+    },
+    {
+      "id": "MC-020",
+      "title": "SortResult→DB 필드·enum·누락 데이터",
+      "kind": "명시적 충돌·계약 공백",
+      "phase": "A/B",
+      "pairs": [
+        "VE"
+      ],
+      "ids": "SYS-IF-004, IC-RESULT-01·DB-01, TBD-007·012; NEW-V-01·02",
+      "a": "남현지: decided_by=ocr/recheck/operator, outcome=placed/held/failed/passed(추가 후보), raw_text/reason/attempts 추가.",
+      "b": "정의석: DB decided_by=AUTO/OPERATOR/TIMEOUT, result=PLACED/HELD/FAILED, track_id/started_at/second_region/rule_version/retries 등.",
+      "question": "대소문자·enum 및 의미 매핑을 정할 것. TIMEOUT은 판정 주체인지 reason인지, passed 저장/집계, attempts 총횟수↔retries 추가횟수(attempts-1) 경계를 확인. 현 메시지에 없는 DB 필드 전달 경로를 정할 것.",
+      "deliverable": "ROS→DB 컬럼 매핑·nullable/필수/실제 타입·OCR 원문/2위 후보·start/finish/rule_version 원천·4결과 실제 JSON/행 예시. 누락값을 추정으로 채우지 않음.",
+      "lead": "남현지 result 원천, 정의석 schema/변환",
+      "refs": "V IC-V-04·07/NEW-V-01·02(L244–267,333–359,398–419); E E-04·IC-EUS-DB-01(L148–187,297–315)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "SortResult outcome=PLACED/HELD/FAILED/PASSED, decided_by=OCR/RECHECK/OPERATOR/NONE, zone=A/B/C/RECHECK/HOLD/빈값. session_id/track_id/started_at/raw_text/dong_alt/rule_version/reason/attempts를 저장한다. NO_ANSWER는 NONE+HELD이며 TIMEOUT은 판정 주체가 아니다. DB result←outcome, second_region←dong_alt, retries=max(attempts−1,0).",
+      "residual": "DDL/migration은 #21. 0시각은 미상(NULL)으로 표시하며 finished_at NOT NULL 제안과 미상시각 처리 일치 검토 필요. RETURN_FAILED 업무 분류는 미정이다. 실제 DB버전/볼륨·commit 증거 구현 검증 필요.",
+      "location": "§5.8·7.1",
+      "owners": "남현지·정의석",
+      "due": "10/09·G0 저장 전",
+      "github_issues": [
+        52
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/52#issuecomment-6029577258"
+      ]
+    },
+    {
+      "id": "MC-021",
+      "title": "남은 수에서 FAILED 포함·재투입 집계",
+      "kind": "명시적 충돌",
+      "phase": "B",
+      "pairs": [
+        "VE",
+        "BE"
+      ],
+      "ids": "SYS-FR-029·032, IC-STATS-01, TBD-007·008",
+      "a": "남현지: remaining=planned−(placed+held+failed), passed 제외.",
+      "b": "정의석: remaining=max(planned−(PLACED+HELD),0), FAILED 제외하여 재투입 가능.",
+      "question": "예정 수량이 물리 박스 수인지 투입 회차 수인지 먼저 결정할 것. failed/held/passed/재투입의 완료·누적 처리·남은 수를 각각 정의하고 음성/HMI/DB 동일값으로 맞출 것.",
+      "deliverable": "failed→재투입→placed, passed→재투입→placed, held와 planned변경을 포함한 입력/예상 집계 표·음수 clamp·session 범위.",
+      "lead": "남현지 업무 의미, 정의석 SQL, 박병후 물리 분모 확인",
+      "refs": "V V-07(L138–149); E E-05(L57–74); B B-04(L106–122)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "planned는 물리 박스 예정 수량(시연 기본10, 변경 가능). current session의 remaining=max(planned−(PLACED+HELD+FAILED),0). PASSED는 제외하고 재투입 시 새 box_id. FAILED는 처리 종료 건수에 포함하지만 파지/적재 성공으로 세지 않는다. session_plan은 Spring Boot가 저장한다.",
+      "residual": "물리 박스 대장과 투입 회차를 대응시켜 중복 물리 완료를 확인한다. 새 세션/첫 결과 전 current session·예정값 전달, 완료 박스 재투입 제한 구현은 #29·#22.",
+      "location": "§5.8·SYS-FR-032",
+      "owners": "남현지·정의석",
+      "due": "B 조회 전",
+      "github_issues": [
+        52,
+        54
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/52#issuecomment-6029577258",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/54#issuecomment-6029002275"
+      ]
+    },
+    {
+      "id": "MC-022",
+      "title": "Stats 제공자·API와 메모리 백업",
+      "kind": "명시적 차이·계약 공백",
+      "phase": "B",
+      "pairs": [
+        "VE"
+      ],
+      "ids": "SYS-FR-029, IC-STATS-01, TBD-008·009",
+      "a": "남현지: DB기준 조회는 정의석 측 담당, manager Stats는 세션 메모리 백업 후보.",
+      "b": "정의석: DB만 source of truth, provider 미정. query_kind/dong/session 요청·count/as_of 응답 제안.",
+      "question": "서비스 이름 중복을 피하도록 단일 owner와 호출 경로를 정할 것. DB장애 시 메모리값을 공식 이력으로 내보낼지 금지/명시할지 결정. 기존 Stats는 빈 요청→total/placed/held/failed/json으로 새안과 다름.",
+      "deliverable": "Stats 최종 srv·owner·음성/HMI query 경로·DB unavailable 응답·commit snapshot/as_of 기준·동일 SQL.",
+      "lead": "정의석 조회안, 남현지 소비/현재 service 인계",
+      "refs": "V IC-STATS coverage(L162–181); E IC-EUS-STATS-01(L261–277); repo src/voss_msgs/srv/Stats.srv",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "공식 집계의 유일 원천은 PostgreSQL이다. 제공자는 Spring Boot REST GET /api/stats 한 곳이고 intent_parser/HMI가 공용으로 호출한다. manager Stats.srv·/voss/sort/stats는 삭제하며 새 ROS /voss/log/query도 만들지 않는다. DB 장애에는 조회 불가로 답하고 메모리 값을 공식 이력으로 대체하지 않는다.",
+      "residual": "web_api.md는 열린 PR #68. G0는 직접 SELECT로 동일box 검증 가능하고 B 음성 이력은 Spring기동 의존. query_kind/count/as_of·현재 세션 전달 구현/검증은 #22.",
+      "location": "§5.8·IC-STATS-01",
+      "owners": "정의석·남현지",
+      "due": "B·#22",
+      "github_issues": [
+        52
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/52#issuecomment-6029577258"
+      ]
+    },
+    {
+      "id": "MC-023",
+      "title": "전체 분류·이력 질의·HOLD·명령 인자",
+      "kind": "명시적 충돌·양식 공백",
+      "phase": "B",
+      "pairs": [
+        "VE"
+      ],
+      "ids": "SYS-FR-017·018·020·027·029, IC-CMD-01, TBD-005·009·011; CHG-EUS-01",
+      "a": "남현지: 전체=priority(dong=\"\"), 이력은 Stats 경로. V-05/FR018에는 start IDLE·PAUSED, 상세 전이표에는 start IDLE만/resume PAUSED.",
+      "b": "정의석: priority는 dong필수, 전체=start(mode=all), query_history/query_kind 추가, 보류 zone=HOLD 후보. MQTT type/args.",
+      "question": "canonical command와 Command(command,arg) 직렬화 문법을 결정. 전체 전환과 시작/재개를 분리할지, query_history 라우터, HOLD↔hold↔보류, 동 allow-list/default값을 확인. 현지 회신 내부 start 불일치도 정정.",
+      "deliverable": "운전/우선/전체/이력/답변 정답 JSON·Intent→service/MQTT 대응·상태별 유효표·접수/완료·command_id/TTL.",
+      "lead": "정의석 명령 schema, 남현지 FSM/서비스",
+      "refs": "V IC-V-06·CMD coverage(L284–331,162–181), FR018(L20–51); E E-01·CHG-EUS-01(L76–109,417–427); repo srv/Command.srv",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "Command(command,arg)은 접수 응답이며 완료는 state/result다. start(arg빈값/ALL)는 IDLE 시작·RUNNING 전체모드 전환, resume은 PAUSED, priority는 허용 동 이름·다음박스부터, stop은 모든 상태, answer=<box_id>|<후보동/HOLD> ASKING, reset_zone은 PAUSED다. query_history는 manager를 거치지 않고 REST로 보낸다. Intent.type소문자, 값enum대문자, Intent.box_id는 answer용이다.",
+      "residual": "Intent.box_id·intent_json은 열린 PR #73(#67 대체), wire 변경은 소비자 동시 rebuild/배포 필요. state별 명령 거부·원격 움직임 명령 제한 구현은 #29·#18·#20.",
+      "location": "§5.7·SYS-IF-005",
+      "owners": "남현지·정의석",
+      "due": "PR #73·B",
+      "github_issues": [
+        52
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/52#issuecomment-6029577258"
+      ]
+    },
+    {
+      "id": "MC-024",
+      "title": "질문 ID·답변 유효성·30초·TTS 실패",
+      "kind": "대체로 합치·계약 공백",
+      "phase": "B",
+      "pairs": [
+        "VE",
+        "BE"
+      ],
+      "ids": "SYS-FR-026·027·028, IC-VOICE-01·CMD-01·STATE-01, TBD-005·009·010·025",
+      "a": "남현지: question_id=box_id, 후보는 pending_question 문자열, say 발행 시각부터30초. 무효 답1회 재안내·timer유지·만료답무시.",
+      "b": "정의석: 현재 Intent/say는 question_id가 없음, TTS 중 동시 입력 정책 미정. 박병후: 질문 시작/유효답/timeout 대기구간 측정 필요.",
+      "question": "질문 ID를 명령에 실어야 할지, 늦은 답을 다음 질문에 적용하지 않는 상관 규약을 정할 것. 타이머 publication/재생시작/재생완료 기준과 TTS실패/stop/resume/API지연에서의 처리 및 human_wait 경계를 확인.",
+      "deliverable": "질문/답 event schema·box/question 연결·무효/late/무응답/TTS실패 사례·30초 기준·측정 타임라인. 타이머 시작 차이는 미합의이며 상대가 다른 값을 확정한 것으로 쓰지 않음.",
+      "lead": "남현지 질문 FSM, 정의석 음성, 박병후 시간 집계",
+      "refs": "V IC-V-06(L284–331); E E-02·IC-EUS-VOICE-01(L111–127,243–259); B B-05(L124–140)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "기본 질문 ID는 원래 투입 box_id. answer는 현재 ASKING/box_id/후보동 또는HOLD를 검증한다. 30초는 manager say 발행 시각부터, 무효답은1회재안내·타이머유지, TTS실패에도타이머진행. stop에서멈추고 resume 재발화/30초재시작. human_wait는 say→유효답/timeout 별도기록이다.",
+      "residual": "box_id#회차를 Intent.box_id에 넣는 안은 철회됐다. 같은box의 종료된 질문·늦은답을 거르는 회차/수락창 전달 방법은 남현지·정의석 B 상세다. 발화 시작시 box연결·비동기응답/재질문 검증 필요. #18·#29.",
+      "location": "§5.7·SYS-FR-026~028",
+      "owners": "남현지·정의석",
+      "due": "B·상세일 별도 지정",
+      "github_issues": [
+        52,
+        54
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/52#issuecomment-6029577258",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/54#issuecomment-6029002275"
+      ]
+    },
+    {
+      "id": "MC-025",
+      "title": "TTS 우선순위·중복 억제의 소유자",
+      "kind": "명시적 충돌",
+      "phase": "B",
+      "pairs": [
+        "VE"
+      ],
+      "ids": "SYS-FR-022, IC-VOICE-01, TBD-010",
+      "a": "남현지: 발화 우선순위/중복억제는 speech_out 결정.",
+      "b": "정의석: 동일문구 중복은 upstream manager 책임 제안, speech_out dedupe 미정.",
+      "question": "동일 box 이벤트 재전달과 서로 다른 box의 같은 문장을 구분할 것. stop/장비오류/질문/집계의 발화 우선순위·기존 발화 중단·dedupe key/window·half-duplex를 정할 것.",
+      "deliverable": "발화 큐 정책·주담당·String 유지/메타데이터 필요성·반복/긴급발화 시험.",
+      "lead": "정의석 speech_out, 남현지 발행 이벤트",
+      "refs": "V IC-VOICE coverage(L162–181); E IC-EUS-VOICE-01(L243–259)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "manager는 같은 box_id의 같은 say 이벤트를 한 번만 발행한다. intent_parser도 되묻기·조회답을 발행하며 자기 문장의 중복 억제를 맡는다. speech_out은 FIFO, G0에는 끼어들기 없음. 다른 박스의 같은 문장은 각각 발행한다.",
+      "residual": "TTS 엔진·half-duplex·정지/오류 우선재생 상세는 정의석 B 후속. say String에는 재생 ack가 없으며 타이머는 발행 기준이다. speech_out 시작/완료 로그로 검증. #19.",
+      "location": "§5.7·SYS-FR-022",
+      "owners": "남현지·정의석",
+      "due": "10/08·B",
+      "github_issues": [
+        52
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/52#issuecomment-6029577258"
+      ]
+    },
+    {
+      "id": "MC-026",
+      "title": "MQTT JSON·ack·중복·QoS·timestamp",
+      "kind": "회신↔기존 계약 차이·미정",
+      "phase": "B",
+      "pairs": [
+        "VE",
+        "RE"
+      ],
+      "ids": "SYS-IF-006, IC-MQTT-01, TBD-011·026; CHG-EUS-01",
+      "a": "기존 mqtt.md: command/arg JSON. 정의석: command_id/type/args/sent_at JSON, ack topic 또는 HTTP 대안·QoS1 제안.",
+      "b": "남현지: ROS Command는 command/arg, state reliable volatile 제안 vs conventions state transient_local. JSON변환 및 최종QoS 미확인.",
+      "question": "JSON→service 변환·ack경로·error/timeout·중복/TTL·retained 정책을 확정. 서로 다른 시계 ISO/epoch/ROS값 변환과 reconnect snapshot·broker 포트/도달성을 확인.",
+      "deliverable": "4topic schema+command ack·QoS/retained표·중복미실행·재접속/연결상실 로그·port/NIC 조건. publish 성공과 manager 접수 구분.",
+      "lead": "정의석 bridge/web, 남현지 ROS endpoint, 김학민 network",
+      "refs": "E E-03·IC-EUS-MQTT-01(L129–146,279–295); V V-06(L126–136); repo docs/interfaces/mqtt.md·conventions.md",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "MQTT command JSON=command_id/type/args/raw_text/sent_at, bridge가 canonical Command로 변환하고 ack=command_id/ok/message/acked_at. 중복ID10분억제·30초지난명령EXPIRED. state/result/command/ack QoS1 비retained, zone_map QoS1 retained, robot QoS0 비retained. 시각 ISO8601+09:00. Spring MQTT→브라우저SSE, 움직임 명령은 공용PC 로컬만·원격stop/조회허용이다.",
+      "residual": "최종 JSON/ACL·1883시연개방·log_status 전달은 #20 mqtt.md(10/08)/PR #68. wlo1에80/1883/TCP·DDS7400–7600UDP, robotNIC신규웹연결차단, 내부8080/8000/5432루프백 바인드. 적용/우회차단 실기검증 필요.",
+      "location": "§5.7·7.2",
+      "owners": "정의석·김학민·남현지",
+      "due": "10/07 네트워크·10/08 JSON",
+      "github_issues": [
+        52,
+        55
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/52#issuecomment-6029577258",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/55#issuecomment-6029240527"
+      ]
+    },
+    {
+      "id": "MC-027",
+      "title": "DB 장애·다음 박스 허용·durable 보존",
+      "kind": "정책 미합의",
+      "phase": "A/B",
+      "pairs": [
+        "VE",
+        "BE"
+      ],
+      "ids": "SYS-DT-002·003, IC-DB-01, TBD-012·018",
+      "a": "남현지: manager는 저장 완료를 기다리지 않음.",
+      "b": "정의석: commit 실패 집계 제외, 다음 박스 허용/queue/retry/보존/초기화는 미정. 박병후: A는 commit+query필수.",
+      "question": "정상 운전 비차단과 DB 장애 정책을 별도 결정할 것. 영속 재전달·중복키·실패 알림/ack·buffer/backoff·유실 방지·next-box pause·세션/reset/보존 기간을 정할 것.",
+      "deliverable": "DB_ERROR event/표시·manager 상태·buffer한도/재기동 복원·writer/read 접속·volume/backup/retention/reset 표·장애 시험.",
+      "lead": "정의석 저장 정책, 남현지 운전 상태, 박병후 G0 수락",
+      "refs": "V V-07(L138–149); E E-04·DB card(L148–187,297–315); B B-04(L106–122)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "manager DB비차단운전, logger의 durable JSONL스풀+1/2/5/10초 후30초 재전송·box_id멱등저장. 스풀기록후 DB장애/재기동 복구와 수신전/스풀전/디스크full 누락발견을 구분한다. /voss/log/status DB_ERROR/SPOOL_FULL 경고, 조회불가. 10/16까지전부보존·초기화는새세션·CSV내보내기. reliable QoS만으로종단저장보장하지 않는다.",
+      "residual": "유실1건이내/기록후무유실은 보장값이 아닌 시험범위. manager결과로그제공/형식확인 대기. 1000행/디스크1GB경고는제안. logger강제종료전후/DB중단/디스크full각3회,manager↔스풀↔DB box/outcome/zone/reason 대조. #21 10/09~11.",
+      "location": "§5.8·7.1·8.2",
+      "owners": "정의석·남현지",
+      "due": "10/09~11·정상G0는10/10",
+      "github_issues": [
+        52,
+        54
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/52#issuecomment-6029577258",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/54#issuecomment-6029002275"
+      ]
+    },
+    {
+      "id": "MC-028",
+      "title": "공용 PC 사양·GPU 동거·음성/비전 선택",
+      "kind": "증거 수준 차이·자원 공백",
+      "phase": "A/B",
+      "pairs": [
+        "VE",
+        "RE"
+      ],
+      "ids": "SYS-CT-001·005, TBD-001·010·026",
+      "a": "정의석: MSI/i7/RAM32GB/4060Laptop8GB/드라이버595.91/CUDA13.2 등 문서상 #5 완료, 원본 로그 없음.",
+      "b": "남현지: 사양은 회신 전달 내용, #5 미기록. 로컬 repo #5는 빈 칸. 음성/비전 동시 VRAM·CPU·주기 실측 없음.",
+      "question": "기본 사양은 담당자 보고와 실측 증거를 구분할 것. #5 로그/측정일·실제컨테이너/driver/USB inventory를 보완하고 Whisper/YOLO/PaddleOCR 동시부하 조건을 정할 것.",
+      "deliverable": "env_report/nvidia-smi/USB/NIC 원본·실행 버전·동시 CPU/RAM/VRAM/latency/servo 로그·모델 선택 근거. Docker/CUDA 버전을 검증 완료로 쓰지 않음.",
+      "lead": "정의석 PC/음성, 남현지 비전, 김학민 장비/NIC",
+      "refs": "E E-06(L189–207); V §0/V-01(L10–18,55–71); R R-01·R-06(L41–52,104–115); repo measurements #5",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "공용PC MSI Katana17/i7-13620H/RAM32GB/RTX4060Laptop8188MiB,Ubuntu24.04/ROS2Jazzy,CycloneDDS와 nvidia-smi/USB/NIC 원본은 #60에서 확인됐다. D435i는 USB3 5000M 포트직결·허브금지. Whisper와비전 GPU동시부하를 함께 시험한다.",
+      "residual": "GPU컨테이너/USB육안·내장DMIC1m수음·Whisper모델/VRAM/검출/서보주기·클라우드지연을 검증한다. CPU정지OCR 오프라인 결과를 공용GPU300ms·이동OCR 통과로대체하지 않는다. #17·#74·#75.",
+      "location": "§3.1·7.2·6.2",
+      "owners": "정의석·남현지·김학민",
+      "due": "10/07 확인·10/08 부하",
+      "github_issues": [
+        52,
+        55
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/52#issuecomment-6029577258",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/55#issuecomment-6029240527"
+      ]
+    },
+    {
+      "id": "MC-029",
+      "title": "호스트/컨테이너·DDS NIC·CT005 할당",
+      "kind": "상세 미정·담당 변경 제안",
+      "phase": "A/B",
+      "pairs": [
+        "RE",
+        "VR",
+        "VE"
+      ],
+      "ids": "SYS-CT-005, VT-064, TBD-011·012·018·026; NEW-R-03",
+      "a": "김학민: Mosquitto host1883, vision/DB owner 분리, DDS lo-only 수정 예정·유선 gateway 제거·host-network.",
+      "b": "정의석: Web React+Spring Boot, DBPostgreSQL, broker host/container 모두 제안. 최종 위치/포트/볼륨 미정. 남현지 vision container.",
+      "question": "실행 위치/이미지/포트/host-network/domain/NIC/읽기전용 설정/DBvolume를 정할 것. CT005 주담당 변경은 비전·DB 담당과 확인. DDS와 인터넷/MQTT 접근을 함께 검증.",
+      "deliverable": "배포표·책임자·compose/launch 버전·포트/라우팅/DDS시험·API접속·기동/복구·volume. React/Spring/PostgreSQL은 현재 확정하지 않음.",
+      "lead": "김학민 network/host, 남현지 vision, 정의석 web/DB",
+      "refs": "R R-06·NEW-R-03(L104–115,298–308); E E-03·E-06(L129–146,189–207); V IC-V-01·V-06(L183–197,126–136)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "ADR-0006의 React+Nginx/SpringBoot/FastAPI(Whisper·OpenAI)/PostgreSQL를 채택했다. ROS/gateway/servo/manager/voice/bridge/logger는호스트,vision은남현지,docker ai/web/db는정의석,bringup/네트워크는김학민. domain30·host-network;ROS컨테이너만CycloneDDS lo+wlo1 config공유,robot enp4s0 제외·never-default이다.",
+      "residual": "vision/AI GPU공유·compose/볼륨·제어와DB기동/복구를 검증. CT005는 비전남현지/DB정의석/호스트김학민 공동책임으로 세분한다. 포트/AP격리·OpenAI호스트/AI컨테이너접속 결과는 #55·#20·#24.",
+      "location": "§3.1·7.2·SYS-CT-005",
+      "owners": "남현지·정의석·김학민",
+      "due": "10/07 네트워크·10/11~13 배포",
+      "github_issues": [
+        55,
+        51,
+        52
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/55#issuecomment-6029240527",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/51#issuecomment-6029239857",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/52#issuecomment-6029577258"
+      ]
+    },
+    {
+      "id": "MC-030",
+      "title": "정상 사이클의 감지/적재 경계·재시도 분류",
+      "kind": "명시적 충돌·세부 공백",
+      "phase": "B",
+      "pairs": [
+        "VB",
+        "BE",
+        "VR"
+      ],
+      "ids": "SYS-PF-004, VT-048, TBD-025",
+      "a": "남현지: detected→SortResult(placed, decided_by=ocr), 재시도 포함 여부 명시 없음.",
+      "b": "박병후: t_detect→실제t_placed, result/return/commit 별도. retry도 예외로 제안. 정상/예외/작업자대기 분리는 공통.",
+      "question": "t_detect는 최초 유효 capture/검출 처리/수신 중 무엇인지, placed는 물리 완료의 어떤 이벤트인지 결정. retry 포함/제외와 최대값/분포 합격 기준·종료실패/skip 측정을 확정.",
+      "deliverable": "이벤트명·생산자·공통ID·clock·정상/예외 분류표·측정 계산식·CSV예시. human wait 구간은 MC024와 동일 결정.",
+      "lead": "박병후 측정, 남현지 detect/result, 김학민 placed, 정의석 evidence",
+      "refs": "V 사이클 측정(L394); B B-05(L124–140); E E-04(L148–187); R R-04(L79–89)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "정상자동은 attempts=1·decided_by=OCR·outcome=PLACED. t_detect=해당box를만든첫유효BoxTrack촬영stamp, t_placed=개방완료proxy placed_stamp(영상대조). 정상 cycle=t_placed−t_detect,박스별≤30초. retry/recheck/operator/held/failed는예외로분리, human_wait별도. result/observe/commit/query는별도시각이다.",
+      "residual": "무효/누락시간을 정상표본으로계산하거나 삭제하지 않는다. manager이벤트로그·복귀도달증거·물리적재영상·CSV전체와고정SQL필터를 준비한다. inserted_at은commit시각아님. #29·#21·#37.",
+      "location": "§6.2·5.8·SYS-PF-004",
+      "owners": "남현지·김학민·정의석·박병후",
+      "due": "G0·G2 전",
+      "github_issues": [
+        50,
+        54,
+        51
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/50#issuecomment-6028992757",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/54#issuecomment-6029002275",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/51#issuecomment-6029239857"
+      ]
+    },
+    {
+      "id": "MC-031",
+      "title": "시험 분모·판정·카드와 성능 측정 범위",
+      "kind": "목표 합치·검증 상세 미정",
+      "phase": "A/B",
+      "pairs": [
+        "VB",
+        "BE",
+        "RB"
+      ],
+      "ids": "SYS-PF-001~009, SYS-MT-001, TBD-020·022·025",
+      "a": "공통: 70%(20사례≥14)/OCR90·95/intent19of20/30초/3초/30Hz/100ms, 최종10물리박스≥8 목표. 전원실기 미수행.",
+      "b": "정의석: API 실패는 intent 분모 별도, HMI 시작=bridge수신(전체 상태발행지연을 포함하지 않음). 반복횟수 제안 다수. 박병후: 사례사후제외금지, capture→consume 및 실제적용 구분.",
+      "question": "실패/timeout/API오류/skip/재투입 분모·재시험 기준을 사전 고정할 것. HMI 상태 변경→DOM 목표와 bridge수신→DOM 부분구간을 구분하고 공용/브라우저 시계동기 방법을 정할 것. max/p95/평균 허용·부하·횟수/수행일을 승인.",
+      "deliverable": "전체 VT계획표·case정답세트/환경·하위판정·수행일/확인자·rawlogs. 1차OCR≤300ms/검출30Hz BRD목표, 20ms·100ms crop 내부예산, ≤5mm제안 분리.",
+      "lead": "박병후 검증 취합, 각 기능 담당·남현지 PL",
+      "refs": "B B-04/VT-BH04(L106–122,340–353); E VC-EUS-INTENT/TTS/HMI(L336–394); V §4(L381–394); R VC-R02/03(L225–268)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "사전고정분모·원본보존. G0 1박스,파지20사례≥14,최종10물리박스≥8은별도시험. intent전체20중≥19,API오류/timeout도분모유지하며 API성공건조건부지표는별도. TTS3초/HMI1초는개별회차판정+p95/최대. 관측capture→비전발행/servo소비 및cmd발행/실제적용을분리한다. 100ms초과만으로정지·폐기하지 않는다.",
+      "residual": "관측p95≤100ms로합격기준변경하는안·위치≤5mm는미확정제안. 원래목표유지·평균/p95/최대/초과횟수공개. 수행일/입회자·정답세트·HMI전체상태변경→DOM와부분bridge→DOM/시계보정 증거필요. #13·#36·#37.",
+      "location": "§6.2·8·9",
+      "owners": "박병후 취합·각담당·남현지",
+      "due": "10/08~15·개별카드",
+      "github_issues": [
+        50,
+        54,
+        53
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/50#issuecomment-6028992757",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/54#issuecomment-6029002275",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/53#issuecomment-6028997780"
+      ]
+    },
+    {
+      "id": "MC-032",
+      "title": "카메라 실행 설정·노출·작업대 실측",
+      "kind": "설정 합치·설치/증거 공백",
+      "phase": "A",
+      "pairs": [
+        "VR"
+      ],
+      "ids": "SYS-FR-002·003, SYS-EN-001~003, TBD-001·002·013·016·017",
+      "a": "남현지: 목표/설정1920×1080 rgb8 30fps, 수동5~8ms고정 화이트밸런스, 상류왼쪽/진행오른쪽.",
+      "b": "김학민: 실제브링업1280×720인 차이 지적, 노출/pose/벨트속도/투입위치/간섭 미측정.",
+      "question": "실제 launch가1080p·rgb8·30fps인지 확인하고 단위/driver 노출 속성/카메라info를 기록. 해상도/observepose/벨트높이 바뀌면 캘리브레이션 갱신. 오른쪽을base방향으로 명시.",
+      "deliverable": "카메라/노출/화이트밸런스 설정·실제FPS·벨트설정별3회/편차·투입/관측분리사진·5구역좌표·케이블/가이드/회수함. 미측정 좌표를0으로 확정하지 않음.",
+      "lead": "김학민 실장비·배치, 남현지 영상/캘리브레이션",
+      "refs": "V V-01·02/IC-V-01(L55–83,183–197); R R-01·R-04·미정(L41–52,79–89,346–360)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "운용 RGB1920×1080/rgb8/30fps 설정,깊이끔·수동노출60(0.1ms단위)=6.0ms/WB4600을최종적용한다. 앞선720p안은철회됐다. 해상도·관측자세·벨트높이변경 시캘리브레이션재검증. 벨트개발속도4.8cm/s·실측표/트레이pose가main에등록됐다.",
+      "residual": "실제부하fps/지연·작업대치수/동적간섭·배치변경후pose·밝기품질을확인한다. 카메라설정은성능달성증거가아니다. #11·#25·#44·#57.",
+      "location": "§3.1·7.4·TBD-001/013",
+      "owners": "김학민·남현지",
+      "due": "10/07~08",
+      "github_issues": [
+        51
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/51#issuecomment-6029239857"
+      ]
+    },
+    {
+      "id": "MC-033",
+      "title": "선택 매핑/교시의 채택·원자 갱신",
+      "kind": "선택 채택 미합의",
+      "phase": "C",
+      "pairs": [
+        "VE",
+        "VR"
+      ],
+      "ids": "SYS-OP-001·002, IC-OPTION-01, TBD-023·024",
+      "a": "남현지: 매핑변경10/11이후 채택 제안, 이미PICKING 목적구역 유지·원자swap/실패원복.",
+      "b": "정의석/박병후: 후속검토, 현재선택미채택. 김학민: teach좌표 반환필드 없음/저장=manager원칙, TCP/플랜지차이.",
+      "question": "G0이후에만 채택 여부를 정할 것. 채택 시 동일box의 최종목적구역결정 시점·rule_version·confirm/rollback·teachpose반환/등록취소 경로를 확정.",
+      "deliverable": "선택 채택/미채택 기록·영향·원자변경·TeachZone 응답·writer권한·별도시험. C미확정을A완료 차단조건으로 쓰지 않음.",
+      "lead": "남현지 PL, 정의석 intent/HMI, 김학민 teach",
+      "refs": "V V-08(L151–160); R R-07(L117–126); E §0/E-01(L10–25,76–109)",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "자연어매핑변경·신규구역교시는 C 선택이며 G0이후10/11에채택여부판단한다. 미채택은A/G0차단조건이아니다. 채택 시manager단일writer·원자교체/실패원복·rule_version·현재박스목적지유지·다음결정박스적용을관리한다.",
+      "residual": "TeachZone pose반환/플랜지기준·등록/취소·confirm/rollback 상세는 채택 후별도계약/시험. 기존service존재를기능채택으로표시하지 않는다. #31·#32.",
+      "location": "§4.3·9.1·TBD-023/024",
+      "owners": "남현지(PL)·김학민·정의석",
+      "due": "10/11 이후",
+      "github_issues": [
+        52,
+        51
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/52#issuecomment-6029577258",
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/51#issuecomment-6029239857"
+      ]
+    },
+    {
+      "id": "MC-034",
+      "title": "참조 BRD 판·브랜치·승인 증거",
+      "kind": "문서 기준선 차이",
+      "phase": "A/B",
+      "pairs": [
+        "VR"
+      ],
+      "ids": "SRD §1.3/§9, SYS-IF-008, TBD-003·006·022",
+      "a": "김학민: BRD v1.2(10/06) 참조. 남현지/박병후 및 기존SRD: v1.1. 남현지: LabelCrop/ReadLabel/ZoneMap code·aliases 팀승인 주장·branch386d632.",
+      "b": "현재 제공된 BRD는 v1.1, 로컬main668703e에 새 타입/필드 없음. 다른회신은 직접확인없음, 승인기록/새브랜치 미첨부.",
+      "question": "최종 적용BRD 판과 diff를 제공/확인할 것. 팀승인3건은 승인자/일시/최종schema/PR·commit으로 확인. 정의 변경은필드추가만으로wire호환이보장되지 않으므로동시rebuild/배포.",
+      "deliverable": "BRD v1.2 또는v1.1유지 결정·변경대비표·3건 승인증거/PR·타입diff·consumer목록/rebuild 계획. 이번SRD는owner보고 후보로만 수록.",
+      "lead": "남현지 문서/PL, 김학민 참조판 확인, 박병후 기준선 취합",
+      "refs": "R §0(L10–18); V §0/NEW-V-03(L10–18,421–425); B §0(L12–29); repo src/voss_msgs·HEAD668703e",
+      "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
+      "decision": "PL은 BRD기준v1.2를확인했고 Word원본은 PR #66에게시됐다. LabelCrop/ReadLabel/ZoneMap code·aliases 및 #63/#65확장/Stats삭제는 현재main IDL·문서에서확인했다. runtime요구사항과문서기준선은commit으로핀한다.",
+      "residual": "Word v1.1↔v1.2 TR/NFR45행 동일 대조 완료(05). Markdown 재내보내기·파지 방향 후속 정정 및 미반영 IDL 동기화가 남는다.",
+      "location": "§1.3·5.3·9.1",
+      "owners": "남현지·김학민·박병후",
+      "due": "v0.3 최종승인 전",
+      "github_issues": [
+        51
+      ],
+      "evidence": [
+        "https://github.com/yujh5537/rokey_cobot2_VOSS/issues/51#issuecomment-6029239857"
+      ]
+    }
+  ],
+  "followups": [
+    [
+      "F-01",
+      "A/G0",
+      "동적 좌표·촬영/pose 정합",
+      "핸드아이·상류외삽/검증점·이동중 position_valid·RTT/이력 검증, ≤5mm 제안 승인 여부. 정적H만으로이동중valid금지.",
+      "남현지·김학민·박병후",
+      "#25·#41·#36 / PR #48",
+      "10/07촬영·10/08동적",
+      "MC-001·002·004·010"
+    ],
+    [
+      "F-02",
+      "A/G0",
+      "실제 제어 API·최신목표·동시성",
+      "speedl/servol경로·타입/DRCF·단위·실제적용proxy/주기·stream/close/pose/stop경쟁,큐누적금지 검증.",
+      "김학민·박병후",
+      "#34·#41·#36",
+      "10/07~08",
+      "MC-011·013"
+    ],
+    [
+      "F-03",
+      "A/G0",
+      "파지방향·폭/힘/높이·안전인계",
+      "31mm면선택보고(PR #70)와MC006/012 T34조건/PL승인·ADR/BRD정정정합.39mm/14N/-19mm·39.5~41.5보고폭의 빈파지/미끄러짐/상승/무손상10회.",
+      "김학민·박병후·남현지(PL)",
+      "#43·#36 / PR #70",
+      "10/07~08·G0전",
+      "MC-006·012"
+    ],
+    [
+      "F-04",
+      "A/G0",
+      "기본stop·입력상실·limit",
+      "Trigger/Gripper확장/RobotState 문서→IDL→구현·stop우선/PAUSED·사람확인. watchdog200ms후보·정지지연/거리·gateway종료/제한값 검증.",
+      "김학민·박병후·남현지",
+      "#41·#36·#29 / 김학민 후속 PR",
+      "10/08·G0전",
+      "MC-014·019"
+    ],
+    [
+      "F-05",
+      "A/G0",
+      "초기설정·ready·기동",
+      "PR #64 방향벡터/null·0/version/hash,등록TCP대조. manager ROBOT/SERVO/VISION/OCR/LOG신선도/미준비start차단,logger가manager보다먼저.",
+      "남현지·김학민·정의석·박병후",
+      "#40·#24·#29 / PR #64",
+      "G0전",
+      "MC-009·019·029"
+    ],
+    [
+      "F-06",
+      "A/G0",
+      "적재 후 복귀 실패의 업무 결과",
+      "gateway RETURN_FAILED+placed_stamp유지와 manager 최종outcome/reason·slot점유·기록·재실행금지 정합. logger는받은결과보존. 응답유실은상태확인전재호출금지.",
+      "남현지·김학민·정의석",
+      "#44·#29·#21",
+      "G0전(날짜별도확정)",
+      "MC-016·018·020·030"
+    ],
+    [
+      "F-07",
+      "A/G0·B",
+      "격자·실물용량·RECHECK점유",
+      "최신ABC3×1/RECHECK·HOLD2×1,pitch60을사용. 구역별누적3표기와2칸정합,RECHECK동시1개/반납·HOLD좌표·도달/간섭·비움/reset 규약.",
+      "남현지·김학민",
+      "#44·#29",
+      "G0전ABC·B재확인/보류전",
+      "MC-017·018"
+    ],
+    [
+      "F-08",
+      "A/G0",
+      "정상DB commit·조회·로그대조",
+      "DBDDL session24/box32·SortResult1:1·중복DO NOTHING·영시각nullable정합. commit성공반환로그+동일box별도SELECT+실물영상. manager결과로그제공/형식확인필요.",
+      "정의석·남현지",
+      "#21·#29",
+      "정상G0는10/10까지",
+      "MC-003·016·020·027·030"
+    ],
+    [
+      "F-09",
+      "B",
+      "질문회차·수락창·resume",
+      "원래box_id유지,Intent에box#회차혼용금지. 종료된질문의늦은답/stop-resume/발화중박스전환의거부 방법을현지·의석이계약화.",
+      "남현지·정의석",
+      "#18·#29 / PR #73",
+      "B실험전·일자별도지정",
+      "MC-015·023·024"
+    ],
+    [
+      "F-10",
+      "B",
+      "2차 OCR·재확인/재픽업",
+      "PICKING영상품질/가림/GRASP추종/판독부하검증. view_pose교시·PICK높이/피드백·실패HELD/zone·slot반납. 기능축소시SYS/VT변경승인.",
+      "남현지·박병후·김학민",
+      "#28·#44·#29·#36",
+      "10/08~10영상·10/12기능",
+      "MC-007·017"
+    ],
+    [
+      "F-11",
+      "B",
+      "웹·음성·집계·현재세션",
+      "PR #73 Intent.box_id;SortState.session_id;PR #68 REST현재세션/plan/export경로명정합. MQTT JSON/TTL/ack/ACL·원격움직임차단·stop허용·HMI UNKNOWN/DB오류전달.",
+      "정의석·남현지·김학민",
+      "#18·#20·#22 / PR #68·#71·#73",
+      "10/08 JSON·B조회전",
+      "MC-019·021~026"
+    ],
+    [
+      "F-12",
+      "B",
+      "저장 장애·스풀·누락 발견",
+      "각3회 강제종료(스풀전후)/DB중단·재기동/디스크full. manager↔스풀↔DB ID와outcome/zone/reason대조·중복로그,스풀밖누락자동복구주장금지. 경고1000행/1GB후보조정.",
+      "정의석·남현지",
+      "#21·#29",
+      "회신계획10/09~11(정상G0와별도)",
+      "MC-027"
+    ],
+    [
+      "F-13",
+      "A환경·B성능",
+      "PC·네트워크·GPU동시부하",
+      "wlo1 DDS/never-default/ufw/AP격리/ss,로봇NIC웹차단·OpenAI호스트/AI컨테이너.USB직결·GPU컨테이너·DMIC1m·Whisper/vision부하와모델선택.",
+      "김학민·정의석·남현지",
+      "#55·#17·#20·#24 / PR #74",
+      "10/07환경·10/08부하",
+      "MC-026·028·029·032"
+    ],
+    [
+      "F-14",
+      "B수락",
+      "시험정답·분모·측정·수락자",
+      "정지OCR50/추종50·검출영상프레임·intent20·개별TTS/HMI상한·30Hz/100ms. 관측p95단독통과/≤5mm는승인대기. manager이벤트시각/DOM시계·증거·입회자사전고정.",
+      "박병후취합·각담당·남현지",
+      "#13·#36·#37·#29",
+      "10/10게이트·G2전",
+      "MC-030·031"
+    ],
+    [
+      "F-15",
+      "문서기준선",
+      "BRD v1.2/Markdown·공동기준선",
+      "Word 판의 요구사항 대조 완료(05). Markdown 재내보내기·BRD 파지 방향 정정·미반영 IDL·전체 기준선 승인·#6/#56 자료 갱신. 문서 승인과 실기 통과를 구분한다.",
+      "남현지·김학민·박병후",
+      "#6·#56·#66 / PR #70",
+      "v0.3 최종승인 전",
+      "MC-034"
+    ],
+    [
+      "F-16",
+      "C선택",
+      "매핑변경·교시 채택",
+      "G0이후채택/미채택기록.채택하면원자swap/rule_version/현재box목적지·TeachZonepose/등록취소·별도시험.",
+      "남현지(PL)·김학민·정의석",
+      "#31·#32",
+      "10/11 이후",
+      "MC-033"
+    ]
+  ],
+  "requirements_to_mc": {
+    "SYS-FR-001": [
+      19,
+      9,
+      29
+    ],
+    "SYS-FR-002": [
+      4,
+      32
+    ],
+    "SYS-FR-003": [
+      1,
+      3,
+      28,
+      31
+    ],
+    "SYS-FR-004": [
+      3,
+      4,
+      20
+    ],
+    "SYS-FR-005": [
+      7,
+      34
+    ],
+    "SYS-FR-006": [
+      20,
+      32
+    ],
+    "SYS-FR-007": [
+      1,
+      2,
+      4,
+      10
+    ],
+    "SYS-FR-008": [
+      2,
+      8,
+      11
+    ],
+    "SYS-FR-009": [
+      6,
+      12,
+      13
+    ],
+    "SYS-FR-010": [
+      6,
+      12
+    ],
+    "SYS-FR-011": [
+      5,
+      6
+    ],
+    "SYS-FR-012": [
+      10,
+      16,
+      18
+    ],
+    "SYS-FR-013": [
+      16,
+      19
+    ],
+    "SYS-FR-014": [
+      3,
+      16,
+      20,
+      27
+    ],
+    "SYS-FR-015": [
+      28
+    ],
+    "SYS-FR-016": [
+      28,
+      29
+    ],
+    "SYS-FR-017": [
+      23,
+      24,
+      26
+    ],
+    "SYS-FR-018": [
+      14,
+      23
+    ],
+    "SYS-FR-019": [
+      15,
+      24
+    ],
+    "SYS-FR-020": [
+      23
+    ],
+    "SYS-FR-021": [
+      3,
+      21,
+      23
+    ],
+    "SYS-FR-022": [
+      24,
+      25
+    ],
+    "SYS-FR-023": [
+      7,
+      17,
+      31
+    ],
+    "SYS-FR-024": [
+      20,
+      31
+    ],
+    "SYS-FR-025": [
+      17
+    ],
+    "SYS-FR-026": [
+      24
+    ],
+    "SYS-FR-027": [
+      17,
+      23,
+      24
+    ],
+    "SYS-FR-028": [
+      24
+    ],
+    "SYS-FR-029": [
+      21,
+      22
+    ],
+    "SYS-FR-030": [
+      23,
+      26
+    ],
+    "SYS-FR-031": [
+      19,
+      26,
+      31
+    ],
+    "SYS-FR-032": [
+      3,
+      21,
+      22
+    ],
+    "SYS-FR-033": [
+      9,
+      19,
+      34
+    ],
+    "SYS-FR-034": [
+      6,
+      14,
+      16,
+      20,
+      27
+    ],
+    "SYS-OP-001": [
+      33
+    ],
+    "SYS-OP-002": [
+      33
+    ],
+    "SYS-IF-001": [
+      1,
+      3,
+      4,
+      7,
+      34
+    ],
+    "SYS-IF-002": [
+      5,
+      6,
+      14
+    ],
+    "SYS-IF-003": [
+      4,
+      10,
+      11,
+      12,
+      13,
+      14,
+      16,
+      17
+    ],
+    "SYS-IF-004": [
+      3,
+      16,
+      20
+    ],
+    "SYS-IF-005": [
+      23,
+      24,
+      26
+    ],
+    "SYS-IF-006": [
+      19,
+      26
+    ],
+    "SYS-IF-007": [
+      9,
+      19,
+      34
+    ],
+    "SYS-IF-008": [
+      34
+    ],
+    "SYS-PF-001": [
+      8,
+      31
+    ],
+    "SYS-PF-002": [
+      7,
+      31
+    ],
+    "SYS-PF-003": [
+      31
+    ],
+    "SYS-PF-004": [
+      16,
+      24,
+      30,
+      31
+    ],
+    "SYS-PF-005": [
+      25,
+      28,
+      31
+    ],
+    "SYS-PF-006": [
+      11,
+      28,
+      31
+    ],
+    "SYS-PF-007": [
+      4,
+      11,
+      31
+    ],
+    "SYS-PF-008": [
+      19,
+      26,
+      31
+    ],
+    "SYS-PF-009": [
+      3,
+      21,
+      31
+    ],
+    "SYS-SF-001": [
+      14
+    ],
+    "SYS-SF-002": [
+      9,
+      10,
+      14
+    ],
+    "SYS-SF-003": [
+      14,
+      19
+    ],
+    "SYS-SF-004": [
+      5,
+      14,
+      15,
+      17,
+      24
+    ],
+    "SYS-DT-001": [
+      3,
+      20,
+      21
+    ],
+    "SYS-DT-002": [
+      19,
+      27
+    ],
+    "SYS-DT-003": [
+      27,
+      29
+    ],
+    "SYS-CT-001": [
+      28,
+      29
+    ],
+    "SYS-CT-002": [
+      2
+    ],
+    "SYS-CT-003": [
+      11,
+      13,
+      14
+    ],
+    "SYS-CT-004": [
+      32
+    ],
+    "SYS-CT-005": [
+      28,
+      29
+    ],
+    "SYS-CT-006": [
+      26,
+      29
+    ],
+    "SYS-MT-001": [
+      31
+    ],
+    "SYS-EN-001": [
+      32
+    ],
+    "SYS-EN-002": [
+      32
+    ],
+    "SYS-EN-003": [
+      10,
+      18,
+      32
+    ]
+  },
+  "scope_counts": {
+    "SYS": 70,
+    "VT": 70,
+    "IC": 18,
+    "TBD": 26,
+    "MC": 34
+  },
+  "open_prs": [
+    {
+      "number": 75,
+      "head": "3fe5371571d304f621c03f9a79868f037d0ed70c",
+      "title": "feat(voss_vision): label OCR preprocessing and fuzzy matching for T18 (#27)"
+    },
+    {
+      "number": 74,
+      "head": "862db069319db0f3604335b1c757304d6f5768b5",
+      "title": "feat(docker/ai): FastAPI AI service with Whisper /ai/stt and OpenAI /ai/intent (#18)"
+    },
+    {
+      "number": 73,
+      "head": "47a40cae1aba939493c7639a73648e122cd8a996",
+      "title": "docs(interfaces): intent JSON query_history, HOLD, aliases and Intent.box_id (#18)"
+    },
+    {
+      "number": 72,
+      "head": "a8107c72a95bea155a7c94e130c1dafaf0e3cd4f",
+      "title": "feat(voss_voice): voice_listener with energy VAD, wake phrase match and text fallback (#17)"
+    },
+    {
+      "number": 71,
+      "head": "15b1fcba8f2684f6838a863c0365a3a56c276642",
+      "title": "feat(voss_voice): intent_parser with local stop, allow-list validation and stats query (#18)"
+    },
+    {
+      "number": 70,
+      "head": "4beac0de3066f67db7a2133d7749b71d551f52e0",
+      "title": "docs: record invoice decisions and 31 mm face grasp (#42, #43)"
+    },
+    {
+      "number": 69,
+      "head": "f7913f17b30b6137a4f14fc78356d016c71703d9",
+      "title": "docs(adr): apply #49 review follow-ups to ADR-0004 (#26)"
+    },
+    {
+      "number": 68,
+      "head": "c4283dc3e6e3422b23ec4b240b9abdf8955e44f5",
+      "title": "docs(interfaces): add web_api.md for Spring Boot /api and FastAPI /ai (#22)"
+    },
+    {
+      "number": 64,
+      "head": "da3c81277a66042e7cbb3844e0248caca1ab5c81",
+      "title": "docs(interfaces): belt.direction_base unit vector and config value rules (#40)"
+    },
+    {
+      "number": 56,
+      "head": "a2038fbd89276ab95f7831461cd7f6fb2e9079fe",
+      "title": "docs: SRD v0.2 r2 취합 자료·6개 상호확인 이슈 배포"
+    },
+    {
+      "number": 48,
+      "head": "951b7cf7a208181773e6342c4df282a1cc2550bc",
+      "title": "feat(voss_vision): belt-plane homography calibration for T16 (#25)"
+    }
+  ],
+  "not_implemented_by_this_task": [
+    "runtime changes",
+    "hardware tests",
+    "GitHub publication/merge"
+  ],
+  "brd_comparison": {
+    "TR_NFR_rows_v11": 45,
+    "TR_NFR_rows_v12": 45,
+    "changed_requirement_rows": 0,
+    "comparison_scope": "paragraph/table text normalized whitespace, visual layout not compared",
+    "evidence": "sources/BRD_comparison"
+  },
+  "source_files": [
+    {
+      "path": "docs/interfaces/topics.md",
+      "github_sha": "9768ab8277c3392f50ccd9540a569efd99e78693",
+      "computed_git_blob_sha": "9768ab8277c3392f50ccd9540a569efd99e78693",
+      "exact_match": true,
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/docs/interfaces/topics.md",
+      "sha256": "fd423ce3bff7d4fa5dbdf3594279ea573a24a5b19d0995f577eb32d82d7c7bb0"
+    },
+    {
+      "path": "docs/interfaces/voss_msgs.md",
+      "github_sha": "fae589e394c386595eebee87237c0c11420e74fb",
+      "computed_git_blob_sha": "fae589e394c386595eebee87237c0c11420e74fb",
+      "exact_match": true,
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/docs/interfaces/voss_msgs.md",
+      "sha256": "5b1d78a69be92a6d9f44930141ff17842d7264b295259daccd0bdda8a2adfa1e"
+    },
+    {
+      "path": "docs/interfaces/intent_json.md",
+      "github_sha": "c0e0e27a9456c3fb9c785365f9b562cc02a49f2d",
+      "computed_git_blob_sha": "c0e0e27a9456c3fb9c785365f9b562cc02a49f2d",
+      "exact_match": true,
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/docs/interfaces/intent_json.md",
+      "sha256": "28acdaa7859d4288a26cc5406b52c4bf04f04bc5e2553adbf3367f2bb8aad0ea"
+    },
+    {
+      "path": "docs/interfaces/mqtt.md",
+      "github_sha": "6b0041129cf01825f2517fefda018f9627ef14a1",
+      "computed_git_blob_sha": "6b0041129cf01825f2517fefda018f9627ef14a1",
+      "exact_match": true,
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/docs/interfaces/mqtt.md",
+      "sha256": "1c6fc6ee57559f39fe6aa3082e5fdee2ce179d16b282a3f0abbbf9ce98d192b3"
+    },
+    {
+      "path": "docs/interfaces/voss_config.md",
+      "github_sha": "c4cdddb825daca0d6931e9aaa21093bacdd03ab8",
+      "computed_git_blob_sha": "c4cdddb825daca0d6931e9aaa21093bacdd03ab8",
+      "exact_match": true,
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/docs/interfaces/voss_config.md",
+      "sha256": "a0466fac5d02049e3188267c2b4b1c83debb136bf4ab6fd155dbdd9be6b62d58"
+    },
+    {
+      "path": "config/voss_config.yaml",
+      "github_sha": "a13d7b671f371a45fa1dba49f5577fd660bf7f04",
+      "computed_git_blob_sha": "a13d7b671f371a45fa1dba49f5577fd660bf7f04",
+      "exact_match": true,
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/config/voss_config.yaml",
+      "sha256": "30432088e2fbfe87ddd9397b029dd4cd2118582bf5039d9915fb0cf037ec0241"
+    },
+    {
+      "path": "docs/measurements-1006.md",
+      "github_sha": "0518c53087178d81a8dedb34fa28cce8e19f89cf",
+      "computed_git_blob_sha": "0518c53087178d81a8dedb34fa28cce8e19f89cf",
+      "exact_match": true,
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/docs/measurements-1006.md",
+      "sha256": "3669a9f5a33fa6917646863bdb1ac1b7859af76fddd56bb9522002a28ba3633b"
+    },
+    {
+      "path": "docs/pending-decisions.md",
+      "github_sha": "87b8943fed8ce3e5765b220dcc0a87e59c31086d",
+      "computed_git_blob_sha": "87b8943fed8ce3e5765b220dcc0a87e59c31086d",
+      "exact_match": true,
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/docs/pending-decisions.md",
+      "sha256": "bd34dba559843d25de9f5a03c9f74036e13c04a3598f191e8e394b414f22d6ce"
+    },
+    {
+      "path": "docs/adr/0002-grasp-method-gate.md",
+      "github_sha": "98140363d6abbcbb5395ec4b2aacb20d7fc1aa38",
+      "computed_git_blob_sha": "98140363d6abbcbb5395ec4b2aacb20d7fc1aa38",
+      "exact_match": true,
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/docs/adr/0002-grasp-method-gate.md",
+      "sha256": "52310445723223b9eb94698ddc4857c144b0774ad372cf3205521ce08465abf6"
+    },
+    {
+      "path": "docs/adr/0006-web-ai-db-stack.md",
+      "github_sha": "d4eeca39b4b6e4e771c468fd49cc028a9fda01c7",
+      "computed_git_blob_sha": "d4eeca39b4b6e4e771c468fd49cc028a9fda01c7",
+      "exact_match": true,
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/docs/adr/0006-web-ai-db-stack.md",
+      "sha256": "2eebde99c9dd9c7c117276cdb9596f22554995c91c72eacec7b08ebf51663d2a"
+    },
+    {
+      "path": "src/voss_msgs/action/TrackAndGrasp.action",
+      "github_sha": "1bbd4ce52250d27160238b30ba2dd6e4e0641912",
+      "computed_git_blob_sha": "1bbd4ce52250d27160238b30ba2dd6e4e0641912",
+      "exact_match": true,
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/src/voss_msgs/action/TrackAndGrasp.action",
+      "sha256": "c58f07f60bf6a1285904f8bed27b5c216c7dc57b290e4173dc621e99b2f41df0"
+    },
+    {
+      "path": "src/voss_msgs/msg/BoxTrack.msg",
+      "github_sha": "1e64753f8c1137697ae05ca210ec0dc24a0c3268",
+      "computed_git_blob_sha": "1e64753f8c1137697ae05ca210ec0dc24a0c3268",
+      "exact_match": true,
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/src/voss_msgs/msg/BoxTrack.msg",
+      "sha256": "fbb139e5f747f8cb6e4580fef4bf04c259b02e986a729e10c167a80d9204bcbf"
+    },
+    {
+      "path": "src/voss_msgs/msg/SortResult.msg",
+      "github_sha": "d68592e4f374b0c5db9989f99d766be67d1c3f97",
+      "computed_git_blob_sha": "d68592e4f374b0c5db9989f99d766be67d1c3f97",
+      "exact_match": true,
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/src/voss_msgs/msg/SortResult.msg",
+      "sha256": "a598d60f33f399361ce783a0c66e8d4f90765be2027339a3a4babf55e81330af"
+    },
+    {
+      "path": "src/voss_msgs/msg/SortState.msg",
+      "github_sha": "d6c245d260c5921ee90210c648c04f8dd7b8eb35",
+      "computed_git_blob_sha": "d6c245d260c5921ee90210c648c04f8dd7b8eb35",
+      "exact_match": true,
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/src/voss_msgs/msg/SortState.msg",
+      "sha256": "58af11e6d8029201a1f86ffc33b5a08dac1e7808a1eb69a3e6380a1a7e75b9da"
+    },
+    {
+      "path": "src/voss_msgs/msg/Intent.msg",
+      "github_sha": "a546c277cfac920c6c5c9660429f36a81ae21f32",
+      "computed_git_blob_sha": "a546c277cfac920c6c5c9660429f36a81ae21f32",
+      "exact_match": true,
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/src/voss_msgs/msg/Intent.msg",
+      "sha256": "e7c654c0322e32c7efaaa704220c12a83417091bbf075792786a7cd7e600a22d"
+    },
+    {
+      "path": "src/voss_msgs/srv/Gripper.srv",
+      "github_sha": "deaab6adde8b42e9ebb3894c41a4bfc6b9dddf3f",
+      "computed_git_blob_sha": "deaab6adde8b42e9ebb3894c41a4bfc6b9dddf3f",
+      "exact_match": true,
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/src/voss_msgs/srv/Gripper.srv",
+      "sha256": "4dad6b1c742f788598a4c71bbfea74821032e25599ec44b47346623b26cad84f"
+    },
+    {
+      "path": "src/voss_msgs/srv/MoveToZone.srv",
+      "github_sha": "28891820a24fc37e926effbdd90e01dcfe0419f1",
+      "computed_git_blob_sha": "28891820a24fc37e926effbdd90e01dcfe0419f1",
+      "exact_match": true,
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/src/voss_msgs/srv/MoveToZone.srv",
+      "sha256": "f1d81cbb47d0a0a604b2d994018cd6aed3c263405caa0ca612ca9d1d727d8751"
+    }
+  ]
+}
