@@ -1,14 +1,27 @@
 # 웹·AI HTTP API (Spring Boot `/api`, FastAPI `/ai`)
 
-ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/api` → Spring Boot(8080), `/ai` → FastAPI(8000) 로 넘어간다. 브라우저·Spring Boot 는 ROS 에 직접 붙지 않는다(ROS ↔ 웹은 MQTT, `mqtt.md`).
+ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React, `/api` → Spring Boot(127.0.0.1:8080) 로 넘어간다. **Nginx 는 `/ai` 를 넘기지 않는다** — FastAPI 는 음성 ROS 노드만 `http://127.0.0.1:8000` 으로 부른다(Wi-Fi 에서 OpenAI 사용량이 나가지 않게). 브라우저·Spring Boot 는 ROS 에 직접 붙지 않는다(ROS ↔ 웹은 MQTT, `mqtt.md`).
 
 ## 공통
 - JSON, UTF-8. 시각은 ISO-8601 `+09:00` 문자열(공용 PC 시스템 시계).
 - 실패 응답: HTTP 4xx/5xx + `{"ok": false, "message": "<대문자 코드>", "detail": "<사람이 읽을 문구>"}`.
-  - 코드: `DB_ERROR`(DB 연결·조회 실패) · `INVALID_QUERY`(허용 외 파라미터) · `UNKNOWN_DONG`(zone_map 에 없는 동) · `NO_SESSION`(세션 없음) · `MQTT_DOWN`(브로커 끊김)
-- 인증 없음. 공용 PC `wlo1` 에서만 열고 로봇망 `enp4s0` 에는 열지 않는다(#55 MC-026, ufw 는 김학민 10/07).
+  - 코드: `DB_ERROR`(DB 연결·조회 실패) · `INVALID_QUERY`(허용 외 파라미터) · `UNKNOWN_DONG`(zone_map 에 없는 동) · `NO_SESSION`(세션 없음) · `MQTT_DOWN`(브로커 끊김) · `FORBIDDEN_REMOTE`(원격에서 움직이는 명령)
+- **열 포트 (ufw 기준, #55 MC-026·029 · #68 김학민 리뷰):**
+
+  | 포트 | 바인드 | `wlo1` 개방 |
+  |---|---|---|
+  | 80 Nginx | 0.0.0.0 | ✅ |
+  | 1883 Mosquitto | 0.0.0.0 (아래 ACL 적용) | ✅ 디버그 읽기용. 시연 때 닫을지는 #20 에서 결정 |
+  | 8080 Spring Boot (`server.address=127.0.0.1`) · 8000 FastAPI · 5432 PostgreSQL (`listen_addresses=localhost`) | 127.0.0.1 | ❌ |
+
+  로봇망 `enp4s0` 에는 어떤 웹·MQTT 포트도 열지 않는다.
+- **로봇을 움직이는 명령의 접근 제한 (안전, #68 남현지 🔴):** `POST /api/commands` 의 `start`·`resume`·`priority`·`answer`·`reset_zone` 은 **공용 PC 로컬 접속(공용 PC 화면의 HMI)** 에서만 받는다. 그 밖은 `403 {"ok": false, "message": "FORBIDDEN_REMOTE"}`. **`stop` 은 어디서든 받는다**(멈추는 쪽은 막지 않는다). 조회(`GET`)·SSE 는 `wlo1` 허용.
+  - 원격 판정은 Nginx 가 넣는 `X-Real-IP $remote_addr` 로만 한다. 클라이언트가 보낸 `X-Forwarded-For` 는 믿지 않는다(Nginx 뒤에서는 모든 요청이 127.0.0.1 로 보이므로).
+  - 판정은 Spring Boot 한 곳에서만 한다. hmi_bridge(ROS) 는 원격 여부를 다시 판단하지 않는다.
+- **Mosquitto ACL:** `voss/command` 쓰기는 Spring Boot 계정(`web`)만. 개인 PC 디버그 계정(`debug`)은 `voss/#` 읽기만. hmi_bridge 계정(`bridge`)은 `voss/command` 읽기, 나머지 `voss/#` 쓰기. 비밀번호는 `.env`(gitignore). 상세 설정은 #20 mqtt.md.
+- 그 밖의 인증은 없다(교육장 LAN, 시연 2주). 원격 HMI 시작이 필요해지면 `.env` 공유 토큰 헤더로 바꾼다.
 - **집계의 유일한 원천은 PostgreSQL `sort_log`**(#52 MC-022). Spring Boot 는 읽기 전용 계정으로만 조회한다. 쓰기는 sort_logger(ROS) 하나.
-- 현재 세션 = `sort_log` 에서 가장 최근 `finished_at` 의 `session_id`. SortState 에 `session_id` 가 생기면 그것을 쓴다(아래 "확인 요청").
+- 현재 세션 = **`SortState.session_id`**(남현지 수용, 추가 예정). 그 필드가 main 에 들어오기 전까지는 `sort_log` 에서 가장 최근 `finished_at` 의 `session_id`.
 
 ## Spring Boot `/api`
 
@@ -62,6 +75,7 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/api` → Spr
 - Spring Boot 가 `command_id`(UUID)·`sent_at` 을 붙여 MQTT 로 발행하고 **즉시** `202 {"ok": true, "command_id": "…"}` 를 준다. 이것은 "브로커 전달" 이지 manager 접수가 아니다.
 - manager 접수 결과는 SSE `command_ack` 이벤트로 온다(hmi_bridge 가 `/voss/sort/command` 응답을 `voss/command/ack` 로 회신). 완료는 `state`·`result` 이벤트로 본다.
 - 브로커 끊김: `503 {"ok": false, "message": "MQTT_DOWN"}`, HMI 버튼 비활성화.
+- 원격에서 움직이는 명령: `403 FORBIDDEN_REMOTE`(위 공통 절). `stop` 은 원격·로컬 모두 받는다.
 
 ### `GET /api/stream` — SSE (React 실시간 갱신)
 | event | data | 원천 |
@@ -78,7 +92,7 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/api` → Spr
 - HMI 반영 ≤ 1초 측정: manager 상태 변경 로그 → DOM(전체), hmi_bridge 수신 → DOM(부분) 둘 다 기록(#54 MC-031).
 
 ## FastAPI `/ai` (음성 ROS 노드 전용, ADR-0006)
-브라우저는 쓰지 않는다. voice_listener·intent_parser 가 `http://localhost:8000` 으로 직접 호출한다. `OPENAI_API_KEY` 는 이 컨테이너 환경 변수에만 둔다.
+브라우저는 쓰지 않는다(Nginx 미노출). voice_listener·intent_parser 가 `http://127.0.0.1:8000` 으로 직접 호출한다. stop 키워드는 FastAPI 를 거치지 않는다(intent_json.md). `OPENAI_API_KEY` 는 이 컨테이너 환경 변수에만 둔다.
 
 ### `POST /ai/stt` — Whisper 전사
 - 요청: `multipart/form-data` `audio`(WAV 16 kHz mono) + `language=ko`
@@ -91,8 +105,9 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/api` → Spr
 - 실패: `{"ok": false, "message": "LLM_TIMEOUT|LLM_ERROR|PARSE_ERROR"}`, timeout 기본 3초.
 - **intent_parser 가 응답을 다시 검증**한다(허용 목록·필수 필드). FastAPI 응답을 그대로 믿지 않는다.
 
-## 확인 요청
-- **SortState 에 `string session_id` 추가 (남현지):** 첫 결과가 나오기 전에도 HMI·투입 수량이 현재 세션을 알 수 있게, SortState 끝에 `session_id` 를 붙이는 것을 제안한다. 받기 전까지는 위 "현재 세션" 규칙(최근 sort_log 행)으로 동작한다.
+## 의존
+- **SortState 끝에 `string session_id`** — 남현지 수용(#68 리뷰), 남현지 인터페이스 PR 에서 추가. 들어오면 "현재 세션" 은 이 값을 쓴다.
 
 ## 변경 이력
+- 2026-10-07: 리뷰 반영(#68 남현지·김학민) — 움직이는 명령은 공용 PC 로컬만·`stop` 은 어디서든, 원격 판정은 Nginx `X-Real-IP`, 포트 바인드 표, Mosquitto ACL, Nginx `/ai` 제거, SortState.session_id 수용.
 - 2026-10-06: 초안 (#22, ADR-0006, SRD 상호확인 #52 MC-020·021·022·026·027, #54 MC-030·031). 제안 상태 — mqtt.md(10/08, #20) 확정 때 SSE `data` 형식을 함께 맞춘다.
