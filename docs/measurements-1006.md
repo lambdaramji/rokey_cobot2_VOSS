@@ -82,6 +82,13 @@
 - 5·6번 D435i: **해결.** 첫 포트에서는 `Bus 001` 480M(USB 2)로 잡혀 포트를 바꿨다. `Bus 002` Port 2 에 5000M 으로 연결. RGB 1920×1080 30 Hz, 수동 노출 6 ms 확인 (#9).
 - 1번 CycloneDDS `lo`: 그대로 둠. 10/06 실측은 브링업·스크립트·카메라를 공용 PC 한 대에서 돌려 문제없었다.
 - 3번 유선 게이트웨이: 그대로 둠.
+
+### 10/07 갱신 (김학민, #55 MC-026·029)
+- 1번 CycloneDDS: **해결.** `lo` 옆에 `wlo1`을 추가했다(`enp4s0`은 넣지 않음). 교육장 AP가 단말 간 멀티캐스트를 막아서, 개인 PC 쪽 설정에 공용 PC `wlo1` IP를 유니캐스트 peer로 둔다. 개인 PC `listener`가 공용 PC `/chatter` 수신 확인. 도메인 30의 DDS 포트는 14900–15149/udp다.
+- 3번 유선 게이트웨이: **해결.** `Wired connection 1·2`의 게이트웨이를 비우고 `ipv4.never-default yes`로 바꿨다. 기본 경로는 `wlo1` 하나다. 로봇·RG2 ping 정상, OpenAI 도달(HTTP 401) 확인.
+- ufw를 켰다: 들어오는 연결은 기본 차단, `wlo1`에서 80/tcp·1883/tcp·14900–15149/udp만 허용. 적용 후 브링업·RG2 정상.
+- 결과와 원본 출력: [#55 댓글](https://github.com/yujh5537/rokey_cobot2_VOSS/issues/55#issuecomment-6031848319)
+
 9. 기타
    - `nvidia-driver-595`, `docker-ce`, `docker-ce-cli`, `containerd.io`가 apt hold 상태다. 일부러 고정한 것으로 보이니 그대로 둔다.
    - `nvidia-smi` 전력 값이 `590W / 80W`로 비정상 표시된다. 센서 값 오류로 보이며 동작에는 영향이 없다.
