@@ -56,6 +56,7 @@ python3 servo_stream_trial.py speedl --z-min <학민과 정한 값>
 - **브링업 로그(터미널 1)의 알람**을 기록 칸 C 에 옮긴다. 에뮬레이터에서는 아래 두 개가 나왔다. 실로봇에서도 같은지가 핵심이다.
   - 1216 `[SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.2500 [s] ...)` → `time` 은 가속(도달) 시간이고 가속도 한계가 우선한다
   - 1215 `[SpeedL] speedl() generates time-out error if it is called for 0.1 [sec]` → 0.1 s 안에 다음 명령이 없으면 컨트롤러가 멈춘다 (끊김 시험 때)
+  - **10/07 실로봇 결과: 1215 는 나오지 않았고, 끊겨도 마지막 속도로 계속 갔다(+5 mm).** 1216 은 같았다. → measurements #3 2부 기록, ADR-0009 결과 절
 - 위가 정상일 때만 이어서 `time`·`acc` 를 바꿔 본다. 동작이 다르면(예: 한 틱만 움직이고 멈춤, 끊겨도 계속 감) 그대로 기록하고 멈춘다.
 ```bash
 python3 servo_stream_trial.py speedl --z-min <값> --time 0.1
