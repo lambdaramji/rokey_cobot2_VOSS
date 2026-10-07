@@ -101,6 +101,15 @@ def tcp_to_flange(pose: Sequence[float], tcp_offset_mm: Sequence[float]) -> Pose
     return [x - d[0], y - d[1], z - d[2], rx, ry, rz]
 
 
+def flange_to_ros_pose(
+    flange: Sequence[float], tcp_offset_mm: Sequence[float]
+) -> tuple[tuple[float, float, float], tuple[float, float, float, float]]:
+    """플랜지 posx(mm·deg) → /voss/robot/pose 값: TCP 위치(m), 쿼터니언(x, y, z, w)."""
+    tcp = flange_to_tcp(flange, tcp_offset_mm)
+    pos = (tcp[0] / 1000.0, tcp[1] / 1000.0, tcp[2] / 1000.0)  # mm → m
+    return pos, zyz_to_quaternion(tcp[3], tcp[4], tcp[5])
+
+
 def grid_slot_offset_mm(cols: int, rows: int, pitch_mm: float, slot: int) -> tuple[float, float]:
     """격자 칸 번호 → 구역 중심 기준 (dx, dy) mm. cols = X(벨트 방향), 행 우선 번호.
 

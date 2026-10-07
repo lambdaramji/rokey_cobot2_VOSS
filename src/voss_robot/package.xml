@@ -8,6 +8,11 @@
   <license>MIT</license>
   <depend>rclpy</depend>
   <depend>voss_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <!-- dsr_msgs2 는 rosdep 에 없다: 실기·에뮬레이터에서 ~/cobot2_ws 오버레이로 쓴다(doosan.py 지연 import) -->
   <test_depend>python3-pytest</test_depend>
   <export>
     <build_type>ament_python</build_type>

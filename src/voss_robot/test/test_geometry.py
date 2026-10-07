@@ -86,3 +86,10 @@ def test_clamp_speed():
 def test_in_box():
     assert g.in_box([0, 0, 0], [-1, -1, -1], [1, 1, 1])
     assert not g.in_box([0, 0, 2], [-1, -1, -1], [1, 1, 1])
+
+
+def test_flange_to_ros_pose_units():
+    # /voss/robot/pose = TCP 위치 m. 관측 자세 TCP z ≈ 203.58 mm → 0.2036 m (펜던트 값)
+    (x, y, z), q = g.flange_to_ros_pose(OBSERVE_FLANGE, TCP)
+    assert [x, y, z] == pytest.approx([v / 1000.0 for v in OBSERVE_TCP_PENDANT], abs=2e-4)
+    assert math.sqrt(sum(c * c for c in q)) == pytest.approx(1.0)
