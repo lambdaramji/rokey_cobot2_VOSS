@@ -44,6 +44,14 @@ def test_box_cut_by_image_edge_is_not_reported() -> None:
     assert detect_boxes(frame((1130, 40))) == []  # 위쪽(상류)에서 들어오는 중
 
 
+@pytest.mark.parametrize("v", [LABEL[0] // 2 + 8, 1079 - LABEL[0] // 2 - 8])
+def test_label_near_edge_but_whole_is_reported(v: int) -> None:
+    # 박스(골판지)는 화면 끝에 잘려도 송장이 끝에서 8 px 떨어져 온전하면 낸다.
+    # 닫힘 연산이 화면 밖을 흰색으로 보던 때는 이 틈이 메워져 '가장자리 걸림'으로 버려졌다(#76 사람 확인).
+    dets = detect_boxes(frame((1130, v)))
+    assert len(dets) == 1 and abs(dets[0].v - v) < 3
+
+
 def test_no_belt_no_detection() -> None:
     img = np.full((1080, 1920, 3), 200, np.uint8)
     assert detect_boxes(img, SegParams()) == []

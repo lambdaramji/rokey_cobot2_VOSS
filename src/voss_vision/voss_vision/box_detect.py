@@ -62,7 +62,11 @@ def detect_boxes(bgr: np.ndarray, p: SegParams = DEFAULT_PARAMS) -> list[Detecti
     m[:, : roi[0]] = 0
     m[:, roi[1] + 1 :] = 0
     ck = max(3, (p.close_px // k) | 1)
-    m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((ck, ck), np.uint8))
+    # 화면 밖을 배경(0)으로 덧대고 닫는다. 그냥 닫으면 OpenCV 기본 테두리가 화면 밖을 흰색처럼 다뤄
+    # 끝에서 ck/2 안쪽 송장이 화면 끝과 붙고 border_px 판정에서 버려진다(실효 여유 ≈ 10 px, #76).
+    r = ck // 2 + 1
+    m = cv2.copyMakeBorder(m, r, r, r, r, cv2.BORDER_CONSTANT, value=0)
+    m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((ck, ck), np.uint8))[r:-r, r:-r]
     n, lab, st, _ = cv2.connectedComponentsWithStats(m)
     H, W = small.shape[:2]
     b = p.border_px / k
