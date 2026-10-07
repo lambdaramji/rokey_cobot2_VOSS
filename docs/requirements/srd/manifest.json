@@ -1,5 +1,5 @@
 {
-  "version": "v0.4",
+  "version": "v1.0",
   "date_kst": "2026-10-07",
   "repository_main": "671c67f3a5e4f1de46dec3f34b4cf2975727c975",
   "source": "#50~55 전체 댓글의 최종 정정·합의 및 main 계약/IDL",
@@ -1786,7 +1786,7 @@
       "note": "open_prs entries other than #76 are the 7e5e928 snapshot"
     },
     {
-      "rev": "v0.4",
+      "rev": "v1.0",
       "date_kst": "2026-10-07",
       "base_main": "671c67f3a5e4f1de46dec3f34b4cf2975727c975",
       "inputs": [
@@ -1800,12 +1800,13 @@
         "stream 경로 /dsr01/dsr_controller2/servol_stream·speedl_stream",
         "/voss/robot/state = 타입 미정의",
         "sources/current_main 671c67f 19개로 갱신",
-        "파일명 01_VOSS_SRD_v0.4"
-      ]
+        "파일명 01_VOSS_SRD_v1.0"
+      ],
+      "note": "작업 중 v0.4로 부르던 판을 기준 문서 v1.0으로 번호 지정(내용 동일, 박병후 10/07)"
     }
   ],
   "repository_main_v0.3": "fff112116bef3992d27a094456b055f647ed61a8",
-  "open_prs_v0.4": [
+  "open_prs_v1.0": [
     {
       "number": 48
     },

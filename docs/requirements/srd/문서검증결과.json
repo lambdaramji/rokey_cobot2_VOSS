@@ -52,7 +52,7 @@
       "word_zip_integrity": true
     },
     {
-      "document": "01_VOSS_SRD_v0.4",
+      "document": "01_VOSS_SRD_v1.0",
       "word_tables": 19,
       "word_paragraphs": 750,
       "markdown_word_body_text_identical": true,
@@ -88,5 +88,5 @@
     }
   ],
   "limits": "정적 문서·원본·Word 구조/본문 동일성 검사. 실기 시험·전체 문서 승인·Word 페이지별 시각 렌더링은 별도. r1 재검증: Markdown↔Word 본문 일치(목록 번호 제외), ID 수 유지, Word ZIP 무결성.",
-  "revision": "v0.4 (취합자 확정본, main@671c67f)"
+  "revision": "v1.0 (기준 문서, main@671c67f)"
 }
