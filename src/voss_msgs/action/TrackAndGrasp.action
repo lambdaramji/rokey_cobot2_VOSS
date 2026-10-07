@@ -1,8 +1,9 @@
 int32 track_id
 ---
-bool grasped
-string reason
+bool grasped              # true = 물체 확보 후 안전 높이까지 LIFT·VERIFY 완료 (닫힘만으로는 false)
+string reason             # OK | GRASP_FAILED | LOST | OUT_OF_REACH | STALE_INPUT | DEVICE_ERROR | CANCELED (status 대응은 voss_msgs.md)
+int32 attempts            # 이 goal 안의 파지 총 시도 수 (최초 + 재시도, 최대 3). 카운터는 belt_servo 단독 소유
 ---
-float32 err_u
-float32 err_v
-string phase             # approach | track | descend | grasp
+float32 err_u             # px (제어용 m 오차와 섞지 않는다)
+float32 err_v             # px
+string phase              # PREPARE | TRACK | DESCEND | GRASP | LIFT | VERIFY
