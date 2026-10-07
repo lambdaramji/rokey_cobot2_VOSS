@@ -3,7 +3,8 @@
 두산 서비스는 SerialCallQueue 하나로만 부른다(CLAUDE.md 절대 규칙 3). dry_run 이면 두산·RG2 에
 연결하지 않고 관측 자세에 멈춘 가짜 로봇을 쓴다(개인 PC 개발용).
 
-지금 있는 것: /voss/robot/pose (TCP, base_link). 다음 단계: gripper → move_to_zone → stop → servo_cmd.
+지금 있는 것: /voss/robot/pose (TCP, base_link). 다음 단계: gripper → servo_cmd → move_to_zone → stop
+(10/08 게이트 1차에 servo_cmd 가 필요해 move_to_zone 보다 앞당김, 남현지 10/07).
 """
 
 import time
