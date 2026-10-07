@@ -1,7 +1,7 @@
 # ADR-0005: RG2 는 robot_gateway 안에서 Modbus TCP 로 직접 제어한다
 
 - 날짜: 2026-10-06
-- 상태: 제안됨
+- 상태: 승인됨 (2026-10-06, PL 남현지)
 - 결정자: 김학민
 - 관련: SR-HW-02, SR-SW-05, pending-decisions #9, measurements-1006 #4 #8
 
