@@ -49,9 +49,9 @@
 ### 추종·파지 — 박병후
 | 기간 | 작업 | 완료 기준 |
 |---|---|---|
-| 10/06 | servol_stream 계열 토픽 확인, 제어 방식 결정 | measurements 기록 + ADR |
-| 10/07~08 | 개루프 동기 추종(벨트 속도 피드포워드) 베이스라인 | 벨트 위 박스 파지 1회 |
-| 10/08~10 | belt_servo: 폐루프 서보, 하강·파지 타이밍 | **20회 중 14회** |
+| 10/06~07 | 두산 서보 경로 확인·결정 | measurements #3 + ADR-0010(speedl_stream, #87) — 완료 |
+| 10/07~08 | FF 추종 베이스라인(벨트 속도 피드포워드, `direction_base`) → TrackAndGrasp 1회 인계. gateway watchdog 실기 확인 뒤 시작(ADR-0010) | 벨트 위 박스 파지 1회 (G0 리허설) |
+| 10/08~10 | belt_servo: FF+P 폐루프(A안 우선, ADR-0002), 하강·파지 타이밍, cancel·기본 정지 | **G1: 20회 중 14회** |
 | 10/11~13 | 서보 안정화, 실패 감지·재시도, 2단계 OCR 프레임 연동 | 재시도 포함 유지 |
 | 10/14~15 | 타이밍 튜닝·리허설 | 통과 |
 
@@ -73,15 +73,15 @@ G0 는 박스 1개를 실물로 끝까지 보내는 첫 연결이다. 음성·HM
 | 파트 | G0 에 필요한 것 | 담당 |
 |---|---|---|
 | 비전 | box_tracker 가 `/voss/vision/box` 에 `position_base` 발행(관측 자세 = 호모그래피, 이동 중 = 핸드아이), label_reader 1단계 판독, sort_manager 최소 경로·slot 카운터·SortResult | 남현지 |
-| 추종·파지 | TrackAndGrasp 1회 성공 인계(A안·B안 무관 — 방식 결정은 G1 게이트), cancel 처리 | 박병후 |
-| 로봇 | robot_gateway `/voss/robot/pose`(TCP)·`move_to_zone`(PLACE → OBSERVE 복귀)·`gripper`·`stop`, 기본 구역 좌표 | 김학민 |
+| 추종·파지 | TrackAndGrasp 1회 성공 인계(A안·B안 무관 — 방식 결정은 G1 게이트), cancel·기본 정지(#53 MC-014). 선행: 로봇 행 watchdog, `Gripper.srv` `grip_detected`(LIFT 조건, #65·#92), 비전 행 `position_base`(관측 자세) | 박병후 |
+| 로봇 | robot_gateway `/voss/robot/pose`(TCP)·**`/voss/robot/servo_cmd` → speedl_stream(ADR-0010) + 만료 watchdog(0 속도 → 항상 move_stop, 값은 F-04)·TCP z 하한 clamp**·`move_to_zone`(PLACE → OBSERVE 복귀)·`gripper`(응답 `grip_detected`)·`stop`, 기본 구역 좌표. **watchdog 실기 확인(F-04) 전에는 이동 추종 시험을 하지 않는다.** speedl 실기 전 컨트롤러 공간 제한(TCP z 하한·추종 구간 x) 확인(ADR-0010 리스크 대책 ②) | 김학민 |
 | 기록 | sort_logger 가 SortResult 1건을 DB 에 commit, 같은 box_id 조회(SELECT 또는 `GET /api/stats`), `/voss/log/status` 발행 | 정의석 |
 
-- 증거(SRD 8.2): 실물 영상, box/track/goal/attempt ID, OCR·좌표, 파지 인계, 적재 영상, 복귀, commit 반환 후 로그, 같은 ID SELECT.
-- 순서 제안: 10/08 저녁 부분 연결 리허설(게이트 1차와 같은 슬롯) → 10/10 오전 G0 실기 → 오후 G1 게이트 측정. 로봇 시간은 09:30 스탠드업에서 확정한다.
+- 증거(SRD 8.2): 실물 영상, box/track/goal/attempt ID, OCR·좌표, 파지 인계, 적재 영상과 `placed_stamp`(실제 적재의 proxy) 대조(#53 MC-016), OBSERVE 복귀·다음 관측 준비, commit 반환 후 로그, 같은 ID SELECT.
+- 순서 제안: 10/08 오전 핸드아이(남현지·김학민) → 오후 servo_cmd speedl 실기(김학민·박병후) → **10/08 저녁 우선순위: ① F-04 gateway watchdog·종료 시험(김학민) → ② TrackAndGrasp 1회(G0 리허설) → ③ 남는 시간에 G1 1차 일부** (G1 20회는 박스 재투입까지 약 1시간이라 한 슬롯에 다 못 한다) → 10/10 오전 G0 실기 → 오후 G1 게이트 측정. 로봇 시간은 09:30 스탠드업에서 확정한다.
 - 정상 G0 와 DB 장애·스풀 복구 시험은 분리한다(SRD 8.2). DB 오류 회차도 지우지 않고 기록한다.
 
 ## 병목 주의
 - G0 가 10/13 에서 10/10 으로 당겨졌다(SRD v1.0, 10/07 PL 수용). 10/09 휴무라 연결 작업 시간은 10/08 과 10/10 오전뿐이다. 막히면 그 자리에서 Slack 에 올린다.
 - 10/06 하루에 실측 10항목이 몰려 있다. 캘리브레이션(남현지+김학민)과 서보 토픽 확인(박병후)이 로봇 한 대를 번갈아 써야 하므로 시간 배분을 아침에 정한다.
-- 10/09 휴무, 10/10 토요일이 게이트. 게이트 측정을 10/08 저녁에 1차로 돌려 둔다.
+- 10/09 휴무, 10/10 토요일이 G0·G1. 10/08 저녁은 위 "G0 준비" 순서 제안의 우선순위(watchdog → G0 리허설 → G1 1차 일부)를 따른다.
