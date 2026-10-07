@@ -1,4 +1,4 @@
-"""AI 서비스 시험 — Whisper·OpenAI 는 가짜로 바꿔 네트워크·GPU 없이 돈다.
+"""AI 서비스 시험 — Whisper·LangChain LLM은 가짜로 바꿔 네트워크·GPU 없이 돈다.
 
 실행: cd docker/ai && pip install -r requirements.txt httpx pytest && pytest -q
 """
@@ -12,6 +12,7 @@ import pytest
 from app import main
 from app.intent_prompt import INTENT_SCHEMA, build_messages, normalize
 from fastapi.testclient import TestClient
+from langchain_core.exceptions import OutputParserException
 
 ALLOWED = {
     "dongs": ["역삼동", "대치동", "청담동"],
@@ -80,16 +81,19 @@ def client(monkeypatch):
     monkeypatch.setattr(main, "_get_whisper", lambda: fake_whisper)
     return TestClient(main.app)
 
+class FakeIntentLlm:
+    """네트워크 없이 LangChain structured-output 호출 결과를 흉내 낸다."""
 
-def _fake_openai(content=None, exc=None):
-    def create(**kw):
-        if exc:
-            raise exc
-        assert kw["response_format"]["json_schema"]["strict"] is True
-        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=content))])
+    def __init__(self, result=None, error=None):
+        self.result = result
+        self.error = error
 
-    return SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+    def invoke(self, messages):
+        """가짜 LLM 결과를 반환하거나 지정한 예외를 발생시킨다."""
+        if self.error is not None:
+            raise self.error
 
+        return self.result
 
 def test_stt_ok(client):
     r = client.post(
@@ -117,24 +121,32 @@ def test_intent_needs_key_and_model(client, monkeypatch):
 def test_intent_ok(client, monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "test")
     monkeypatch.setenv("OPENAI_MODEL", "test-model")
-    content = json.dumps(
-        {
-            "type": "priority",
-            "dong": "역삼동",
-            "zone": None,
-            "count": 0,
-            "query_kind": None,
-            "raw_text": "역삼부터",
-        }
+
+    result = {
+        "type": "priority",
+        "dong": "역삼동",
+        "zone": None,
+        "count": 0,
+        "query_kind": None,
+        "raw_text": "역삼부터",
+    }
+
+    fake_llm = FakeIntentLlm(result=result)
+    monkeypatch.setattr(main, "_get_intent_llm", lambda: fake_llm)
+
+    response = client.post(
+        "/ai/intent",
+        json={
+            "text": "역삼부터 해",
+            "allowed": ALLOWED,
+        },
     )
-    monkeypatch.setattr(main, "_get_openai", lambda: _fake_openai(content))
-    r = client.post("/ai/intent", json={"text": "역삼부터 해", "allowed": ALLOWED})
-    body = r.json()
-    assert (
-        body["ok"]
-        and body["intent"]["dong"] == "역삼동"
-        and body["intent"]["raw_text"] == "역삼부터 해"
-    )
+
+    body = response.json()
+
+    assert body["ok"]
+    assert body["intent"]["dong"] == "역삼동"
+    assert body["intent"]["raw_text"] == "역삼부터 해"
 
 
 def test_intent_timeout_maps_to_code(client, monkeypatch):
@@ -144,13 +156,76 @@ def test_intent_timeout_maps_to_code(client, monkeypatch):
     class APITimeoutError(Exception):
         pass
 
-    monkeypatch.setattr(main, "_get_openai", lambda: _fake_openai(exc=APITimeoutError()))
-    r = client.post("/ai/intent", json={"text": "시작"})
-    assert r.status_code == 504 and r.json()["message"] == "LLM_TIMEOUT"
-    assert r.json()["detail"] == "APITimeoutError"
+    fake_llm = FakeIntentLlm(error=APITimeoutError())
+    monkeypatch.setattr(main, "_get_intent_llm", lambda: fake_llm)
+
+    response = client.post(
+        "/ai/intent",
+        json={"text": "시작"},
+    )
+
+    assert response.status_code == 504
+    assert response.json()["message"] == "LLM_TIMEOUT"
+    assert response.json()["detail"] == "APITimeoutError"
 
 
 def test_health_never_leaks_key(client, monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-secret")
     body = client.get("/ai/health").json()
     assert body["openai_key_set"] is True and "sk-secret" not in json.dumps(body)
+
+def test_intent_parse_error_maps_to_code(client, monkeypatch):
+    """LangChain 구조화 출력 파싱 실패가 PARSE_ERROR로 변환되는지 확인한다."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test")
+    monkeypatch.setenv("OPENAI_MODEL", "test-model")
+
+    fake_llm = FakeIntentLlm(
+        error=OutputParserException("invalid structured output")
+    )
+    monkeypatch.setattr(main, "_get_intent_llm", lambda: fake_llm)
+
+    response = client.post(
+        "/ai/intent",
+        json={
+            "text": "역삼부터 해",
+            "allowed": ALLOWED,
+        },
+    )
+
+    body = response.json()
+
+    assert response.status_code == 422
+    assert body["ok"] is False
+    assert body["message"] == "PARSE_ERROR"
+    assert body["detail"] == "OutputParserException"
+
+def test_intent_llm_uses_strict_json_schema(monkeypatch):
+    """LangChain이 계약된 strict JSON Schema 설정으로 구성되는지 확인한다."""
+    calls = {}
+    fake_structured_llm = object()
+
+    class FakeChatOpenAI:
+        def __init__(self, **kwargs):
+            calls["init"] = kwargs
+
+        def with_structured_output(self, schema, **kwargs):
+            calls["schema"] = schema
+            calls["structured"] = kwargs
+            return fake_structured_llm
+
+    monkeypatch.setattr(main, "ChatOpenAI", FakeChatOpenAI)
+    monkeypatch.setattr(main, "_intent_llm", None)
+    monkeypatch.setenv("OPENAI_MODEL", "test-model")
+    monkeypatch.setenv("LLM_TIMEOUT_S", "3")
+
+    result = main._get_intent_llm()
+
+    assert result is fake_structured_llm
+    assert calls["init"]["model"] == "test-model"
+    assert calls["init"]["temperature"] == 0
+    assert calls["init"]["timeout"] == 3.0
+    assert calls["schema"] is INTENT_SCHEMA
+    assert calls["structured"] == {
+        "method": "json_schema",
+        "strict": True,
+    }

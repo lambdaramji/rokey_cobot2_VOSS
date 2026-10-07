@@ -19,6 +19,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from app.intent_prompt import INTENT_SCHEMA, build_messages, normalize
+from langchain_core.exceptions import OutputParserException
+from langchain_openai import ChatOpenAI
 
 app = FastAPI(title="VOSS AI", docs_url=None, redoc_url=None)
 
@@ -28,7 +30,7 @@ STT_PROMPT = os.getenv(
     "헬로 로키. 역삼동, 대치동, 청담동. 분류, 보류, 멈춰, 다시 시작, 몇 개 남았어.",
 )
 _whisper = None
-_openai = None
+_intent_llm = None
 
 
 def _err(code: int, message: str, detail: str = "") -> JSONResponse:
@@ -51,13 +53,28 @@ def _get_whisper():
     return _whisper
 
 
-def _get_openai():
-    global _openai
-    if _openai is None:
-        from openai import OpenAI
+def _get_intent_llm():
+    """환경 변수 설정으로 LangChain structured-output LLM을 한 번 생성해 돌려준다."""
+    global _intent_llm
 
-        _openai = OpenAI()  # OPENAI_API_KEY 는 환경 변수에서만 읽는다
-    return _openai
+    if _intent_llm is not None:
+        return _intent_llm
+
+    model = os.getenv("OPENAI_MODEL", "")
+    timeout_s = float(os.getenv("LLM_TIMEOUT_S", "3"))
+
+    llm = ChatOpenAI(
+        model=model,
+        temperature=0,
+        timeout=timeout_s,
+    )
+
+    _intent_llm = llm.with_structured_output(
+        INTENT_SCHEMA,
+        method="json_schema",
+        strict=True,
+    )
+    return _intent_llm
 
 
 @app.get("/ai/health")
@@ -106,22 +123,19 @@ def intent(req: IntentRequest):
         return _err(503, "LLM_ERROR", "OPENAI_MODEL/OPENAI_API_KEY not set")
     t0 = time.monotonic()
     try:
-        r = _get_openai().chat.completions.create(
-            model=model,
-            messages=build_messages(req.text, req.allowed),
-            response_format={
-                "type": "json_schema",
-                "json_schema": {"name": "intent", "schema": INTENT_SCHEMA, "strict": True},
-            },
-            temperature=0,
-            timeout=float(os.getenv("LLM_TIMEOUT_S", "3")),
+        raw = _get_intent_llm().invoke(
+            build_messages(req.text, req.allowed)
         )
-        raw = r.choices[0].message.content
-    except Exception as e:  # noqa: BLE001
-        name = type(e).__name__
-        if "Timeout" in name:
-            return _err(504, "LLM_TIMEOUT", name)
-        return _err(502, "LLM_ERROR", name)
+    except OutputParserException as error:
+        return _err(422, "PARSE_ERROR", type(error).__name__)
+    except Exception as error:  # noqa: BLE001 — LLM SDK 오류를 HTTP 계약 코드로 변환한다
+        error_name = type(error).__name__
+
+        if "Timeout" in error_name:
+            return _err(504, "LLM_TIMEOUT", error_name)
+
+        return _err(502, "LLM_ERROR", error_name)
+
     out = normalize(raw, req.text)
     if out is None:
         return _err(422, "PARSE_ERROR", "LLM output is not a valid intent")
