@@ -31,8 +31,11 @@ _whisper = None
 _openai = None
 
 
-def _err(code: int, message: str) -> JSONResponse:
-    return JSONResponse(status_code=code, content={"ok": False, "message": message})
+def _err(code: int, message: str, detail: str = "") -> JSONResponse:
+    """web_api.md: message = 대문자 코드, detail = 사람이 읽는 설명."""
+    return JSONResponse(
+        status_code=code, content={"ok": False, "message": message, "detail": detail}
+    )
 
 
 def _get_whisper():
@@ -69,10 +72,11 @@ def health() -> dict:
 
 
 @app.post("/ai/stt")
-async def stt(audio: Annotated[UploadFile, File()], language: Annotated[str, Form()] = "ko"):
-    data = await audio.read()
+def stt(audio: Annotated[UploadFile, File()], language: Annotated[str, Form()] = "ko"):
+    # 동기 def: 블로킹 전사를 FastAPI 스레드풀에서 돌려 /ai/intent 를 막지 않는다
+    data = audio.file.read()
     if not data.startswith(b"RIFF"):
-        return _err(400, "AUDIO_INVALID")
+        return _err(400, "AUDIO_INVALID", "WAV (RIFF) only")
     t0 = time.monotonic()
     try:
         segments, info = _get_whisper().transcribe(
@@ -80,7 +84,7 @@ async def stt(audio: Annotated[UploadFile, File()], language: Annotated[str, For
         )
         text = " ".join(s.text.strip() for s in segments).strip()
     except Exception as e:  # noqa: BLE001 — 모델·장치 오류를 코드로 돌려준다
-        return _err(500, f"STT_ERROR: {type(e).__name__}")
+        return _err(500, "STT_ERROR", type(e).__name__)
     return {
         "ok": True,
         "text": text,
@@ -99,7 +103,7 @@ class IntentRequest(BaseModel):
 def intent(req: IntentRequest):
     model = os.getenv("OPENAI_MODEL")
     if not model or not os.getenv("OPENAI_API_KEY"):
-        return _err(503, "LLM_ERROR: OPENAI_MODEL/OPENAI_API_KEY not set")
+        return _err(503, "LLM_ERROR", "OPENAI_MODEL/OPENAI_API_KEY not set")
     t0 = time.monotonic()
     try:
         r = _get_openai().chat.completions.create(
@@ -115,12 +119,12 @@ def intent(req: IntentRequest):
         raw = r.choices[0].message.content
     except Exception as e:  # noqa: BLE001
         name = type(e).__name__
-        return _err(
-            504 if "Timeout" in name else 502, "LLM_TIMEOUT" if "Timeout" in name else "LLM_ERROR"
-        )
+        if "Timeout" in name:
+            return _err(504, "LLM_TIMEOUT", name)
+        return _err(502, "LLM_ERROR", name)
     out = normalize(raw, req.text)
     if out is None:
-        return _err(422, "PARSE_ERROR")
+        return _err(422, "PARSE_ERROR", "LLM output is not a valid intent")
     return {
         "ok": True,
         "intent": out,

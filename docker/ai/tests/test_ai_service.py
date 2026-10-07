@@ -102,14 +102,16 @@ def test_stt_ok(client):
 
 def test_stt_rejects_non_wav(client):
     r = client.post("/ai/stt", files={"audio": ("x.mp3", b"ID3....", "audio/mpeg")})
-    assert r.status_code == 400 and r.json() == {"ok": False, "message": "AUDIO_INVALID"}
+    assert r.status_code == 400 and r.json()["message"] == "AUDIO_INVALID"
 
 
 def test_intent_needs_key_and_model(client, monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_MODEL", raising=False)
     r = client.post("/ai/intent", json={"text": "시작", "allowed": ALLOWED})
-    assert r.status_code == 503 and r.json()["ok"] is False
+    body = r.json()
+    assert r.status_code == 503 and body["ok"] is False
+    assert body["message"] == "LLM_ERROR" and "OPENAI_MODEL" in body["detail"]
 
 
 def test_intent_ok(client, monkeypatch):
@@ -145,6 +147,7 @@ def test_intent_timeout_maps_to_code(client, monkeypatch):
     monkeypatch.setattr(main, "_get_openai", lambda: _fake_openai(exc=APITimeoutError()))
     r = client.post("/ai/intent", json={"text": "시작"})
     assert r.status_code == 504 and r.json()["message"] == "LLM_TIMEOUT"
+    assert r.json()["detail"] == "APITimeoutError"
 
 
 def test_health_never_leaks_key(client, monkeypatch):
