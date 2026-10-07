@@ -2,6 +2,8 @@
 
 안전 규칙(intent_json.md): stop 은 **잠금 밖에서** 바로 발행한다. 앞 발화가 LLM(/ai/intent, 최대 3 s)이나
 /api/stats(최대 2 s)를 기다리는 중이어도 "멈춰" 는 줄을 서지 않는다. LLM·REST 는 잠금으로 한 번에 하나씩.
+잠금을 **기다리지 않는다**: 처리 중에 온 발화는 "처리 중" 으로 답하고 버린다. 기다리게 하면 그 콜백이
+executor 스레드를 붙잡아, 쌓인 발화가 스레드 수(4)를 채우는 순간 "멈춰" 를 받을 스레드가 없어진다.
 """
 
 from __future__ import annotations
@@ -20,6 +22,7 @@ from voss_voice.intent_logic import (
 )
 
 SAY_AI_DOWN = "음성 해석 서비스에 연결할 수 없습니다. 잠시 후 다시 말씀해 주세요."
+SAY_BUSY = "앞 지시를 처리하고 있습니다. 잠시 후 다시 말씀해 주세요."
 
 
 class TranscriptFlow:
@@ -45,7 +48,7 @@ class TranscriptFlow:
         self.box_id = ""
 
     def handle(self, text: str) -> tuple[str, float]:
-        """(처리 결과 종류, 걸린 ms). 종류: stop | publish | query | say | empty."""
+        """(처리 결과 종류, 걸린 ms). 종류: stop | publish | query | say | busy | empty."""
         text = text.strip()
         if not text:
             return "empty", 0.0
@@ -56,7 +59,10 @@ class TranscriptFlow:
             self._publish(stop_decision(text).intent)
             return "stop", 1000 * (self._clock() - t0)
 
-        with self._llm_lock:
+        if not self._llm_lock.acquire(blocking=False):  # 기다리지 않는다 (위 모듈 설명)
+            self._say(SAY_BUSY)
+            return "busy", 1000 * (self._clock() - t0)
+        try:
             view = self.view
             llm = None
             if view is not None:
@@ -72,6 +78,8 @@ class TranscriptFlow:
             else:
                 self._say(d.say)
             return d.kind, 1000 * (self._clock() - t0)
+        finally:
+            self._llm_lock.release()
 
     def _say(self, text: str) -> None:
         if text and self._dedup.allow(text, self._clock()):

@@ -4,7 +4,7 @@ import threading
 import time
 
 from voss_voice.intent_logic import ZoneMapView
-from voss_voice.transcript_flow import SAY_AI_DOWN, TranscriptFlow
+from voss_voice.transcript_flow import SAY_AI_DOWN, SAY_BUSY, TranscriptFlow
 
 VIEW = ZoneMapView.from_entries([("역삼동", "A", ["역삼"]), ("대치동", "B", [])])
 
@@ -52,13 +52,42 @@ def test_llm_calls_are_serialized():
             active[0] -= 1
         return {"type": "start"}
 
-    f, published, _ = _flow(llm)
-    ts = [threading.Thread(target=f.handle, args=(f"시작 {i}",)) for i in range(3)]
+    f, published, said = _flow(llm)
+    kinds = []
+    ts = [
+        threading.Thread(target=lambda i=i: kinds.append(f.handle(f"시작 {i}")[0]))
+        for i in range(3)
+    ]
     for t in ts:
         t.start()
     for t in ts:
         t.join()
-    assert peak[0] == 1 and len(published) == 3
+    # 한 번에 하나만 LLM 을 부르고, 그사이 온 발화는 기다리지 않고 "처리 중" 으로 돌려보낸다
+    assert peak[0] == 1
+    assert sorted(kinds) == ["busy", "busy", "publish"] and len(published) == 1
+    assert said == [SAY_BUSY]  # 같은 문장은 3 초 중복 억제
+
+
+def test_busy_utterances_do_not_hold_threads():
+    """처리 중에 온 발화는 바로 돌아와야 한다 — 잠금을 기다리면 executor 스레드(4)가 차서
+    "멈춰" 를 받을 스레드가 없어진다(#71 리뷰: 일반 발화 4개 쌓이면 stop 2.8 s 지연 재현)."""
+    started = threading.Event()
+
+    def slow_llm(text, allowed):
+        started.set()
+        time.sleep(1.0)
+        return {"type": "start"}
+
+    f, published, _ = _flow(slow_llm)
+    t = threading.Thread(target=f.handle, args=("시작해",))
+    t.start()
+    assert started.wait(1.0)
+    t0 = time.monotonic()
+    kinds = [f.handle(f"역삼 먼저 {i}")[0] for i in range(6)]
+    assert kinds == ["busy"] * 6
+    assert 1000 * (time.monotonic() - t0) < 100
+    assert f.handle("멈춰")[0] == "stop"
+    t.join()
 
 
 def test_ai_down_says_so_instead_of_retry():
