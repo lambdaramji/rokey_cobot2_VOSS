@@ -8,9 +8,10 @@ pixels.csv 가 없으면 사진을 하나씩 띄워 송장의 + 를 클릭하게
 
 points.csv 의 기준점은 --pose-frame 으로 알려 준다(10/06 측정은 tcp). flange 면 각 터치 자세와
 --tcp-offset-mm 로 접촉점(핑거 끝)으로 바꾼 뒤 계산한다. 출력은 항상 같은 의미로 정규화된다:
-  H·plane_z = 접촉점(박스 윗면) 기준, observe_pose = 플랜지 기준(voss_config·/voss/robot/pose 와 같음).
+  H·plane_z = 접촉점(박스 윗면) 기준, observe_pose = 플랜지 기준(voss_config observe_pose 와 같음).
 
-  python3 tools/calib/fit_belt_homography.py --dir ~/voss_calib --out config/belt_homography.yaml
+  python3 tools/calib/fit_belt_homography.py --dir ~/voss_calib --pose-frame tcp \
+      --out config/belt_homography.yaml
 """
 
 import argparse
@@ -36,7 +37,10 @@ from voss_vision.belt_plane import (  # noqa: E402
 )
 
 SCALE = 0.5  # 1920×1080 을 화면에 맞게 줄여 보여 준다 (클릭 좌표는 원본으로 환산)
-TILT_WARN_DEG = 0.5  # 터치 자세가 관측 자세와 이만큼 넘게 다르면 다시 터치 (1° ≈ 3.5 mm)
+# 터치 자세가 관측 자세와 이만큼 넘게 다르면 경고. 접촉점은 터치 자세마다 TCP 로 정규화하므로
+# 기울기 자체는 오차가 아니고, 남는 영향은 TCP 오프셋 오차 × 각도(1 mm·1° ≈ 0.02 mm)뿐이다.
+# 10/06 관측 자세(=홈)는 수직에서 0.93° 기울어 있어 수직 터치도 0.93° 가 나온다 → 0.5° 는 오경보.
+TILT_WARN_DEG = 2.0
 Z_RANGE_WARN_MM = 3.0  # 접촉점 z 범위가 넘으면 평면·터치 재확인
 POSE_MATCH_MM, POSE_MATCH_DEG = 1.0, 0.5  # voss_config observe_pose 와 비교 허용치
 
@@ -125,7 +129,7 @@ def main() -> None:
     else:
         contact = {n: flange_to_tcp(pose[n], t_tcp) for n in cal + val}
 
-    # 2) 관측 자세는 플랜지 기준으로 정규화 (voss_config observe_pose·/voss/robot/pose 와 같은 기준)
+    # 2) 관측 자세는 플랜지 기준으로 정규화 (voss_config observe_pose 와 같은 기준)
     obs = pose.get("OBS")
     obs_flange = None
     if obs is None:
@@ -137,9 +141,14 @@ def main() -> None:
 
     # 3) 기울기: ZYZ 각을 빼지 않고 툴 z축 사이 각으로 본다 (ry≈±180 에서 각 차가 360 가까이 튐)
     tilts = {n: tool_axis_angle_deg(pose[n], obs) for n in cal + val} if obs is not None else {}
+    if tilts:
+        worst = max(tilts, key=tilts.get)
+        print(f"터치 툴축 − 관측 툴축 최대 {tilts[worst]:.2f}° ({worst}) — 접촉점은 TCP 로 정규화")
     for n, a in tilts.items():
         if a > TILT_WARN_DEG:
-            print(f"  ! {n} 터치 자세 툴축이 관측 자세와 {a:.2f}° 다름 — 다시 터치")
+            print(
+                f"  ! {n} 툴축이 {a:.2f}° 다름 — TCP 오프셋 오차가 섞일 수 있다. 자세·오프셋 확인"
+            )
 
     # 4) 픽셀: 클릭 원본 → 왜곡 보정 (box_tracker 와 같은 함수)
     pix_csv = args.dir / "pixels.csv"
