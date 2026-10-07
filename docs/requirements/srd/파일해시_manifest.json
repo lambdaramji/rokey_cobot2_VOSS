@@ -75,11 +75,6 @@
     "sha256": "3fdc34342bb48a81c9acfb22f5ddf655ee5ddb4b0652e7e481dc53ea80d8d06f"
   },
   {
-    "path": "sources/BRD_comparison/VOSS_BRD_v1.2.docx",
-    "bytes": 460054,
-    "sha256": "2ab34391885dd53f558b59ea368d99b8b06dad1d03a365bc2268bbeefb71fe0d"
-  },
-  {
     "path": "sources/current_main/config/voss_config.yaml",
     "bytes": 1559,
     "sha256": "30432088e2fbfe87ddd9397b029dd4cd2118582bf5039d9915fb0cf037ec0241"

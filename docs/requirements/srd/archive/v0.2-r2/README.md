@@ -18,8 +18,8 @@
 - [Markdown 문서·6개 상호확인서](markdown/) / [Word 문서·6개 상호확인서](word/)
 - [시스템 구조도](assets/VOSS_회신취합_논리구조.png)
 - [팀원 4인 회신 원문·이전 초안](sources/)
-- [전체 취합 문서 ZIP](VOSS_SRD_v0.2_r2_회신취합_상호확인.zip)
-- [이슈 초안 포함 전체 첨부 ZIP](VOSS_SRD_v0.2_GitHub_이슈초안_첨부자료.zip)
+- [전체 취합 문서 ZIP](https://github.com/yujh5537/rokey_cobot2_VOSS/blob/a2038fbd89276ab95f7831461cd7f6fb2e9079fe/docs/requirements/srd-v0.2-r2/VOSS_SRD_v0.2_r2_%ED%9A%8C%EC%8B%A0%EC%B7%A8%ED%95%A9_%EC%83%81%ED%98%B8%ED%99%95%EC%9D%B8.zip) (PR #56 head 고정 링크)
+- [이슈 초안 포함 전체 첨부 ZIP](https://github.com/yujh5537/rokey_cobot2_VOSS/blob/a2038fbd89276ab95f7831461cd7f6fb2e9079fe/docs/requirements/srd-v0.2-r2/VOSS_SRD_v0.2_GitHub_%EC%9D%B4%EC%8A%88%EC%B4%88%EC%95%88_%EC%B2%A8%EB%B6%80%EC%9E%90%EB%A3%8C.zip) (PR #56 head 고정 링크)
 
 `issue_drafts/` 및 이슈 초안 ZIP은 등록 전 검토본의 보관 사본입니다. 그 안의 미게시·승인 대기 문구는 당시 기록이며, 실제 운영 상태는 GitHub #6과 연결 이슈를 기준으로 확인하세요.
 
