@@ -22,7 +22,12 @@ class _Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_POST(self):
-        req = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+        body = self.rfile.read(int(self.headers["Content-Length"]))
+        if self.path == "/ai/stt":
+            ok = b'name="audio"' in body and b"RIFF" in body and b'name="language"' in body
+            self._send(200 if ok else 400, {"ok": ok, "text": "작업 시작", "stt_ms": 12})
+            return
+        req = json.loads(body)
         if req["text"] == "fail":
             self._send(502, {"ok": False, "message": "LLM_ERROR"})
         else:
@@ -64,3 +69,12 @@ def test_get_stats_ok_and_encodes_dong(base):
 def test_get_stats_db_error_body_is_returned(base):
     r = http_client.get_stats({"query_kind": "held_count", "dong": ""}, base=base)
     assert r == {"ok": False, "message": "DB_ERROR"}
+
+
+def test_post_stt_sends_multipart_wav(base):
+    r = http_client.post_stt(b"RIFF....WAVEfmt ", base=base)
+    assert r["ok"] and r["text"] == "작업 시작"
+
+
+def test_post_stt_unreachable_returns_none():
+    assert http_client.post_stt(b"RIFF", base="http://127.0.0.1:9", timeout_s=0.5) is None
