@@ -19,7 +19,7 @@
 - 커스텀 msg/srv/action은 `voss_msgs` 에만. 표준 메시지로 되면 표준을 쓴다.
 - QoS: 센서·서보 스트림은 best_effort depth 1~5. zone_map 은 reliable + transient_local. `/voss/sort/state` 는 reliable·volatile 로 ≥2 Hz 주기 발행(늦게 뜬 노드는 0.5 s 안에 받음). 표는 docs/interfaces/topics.md.
 - 파라미터는 launch 파일에서 넘긴다. 하드코딩된 좌표·속도 금지 → `config/voss_config.yaml` (sort_manager) 또는 패키지 파라미터 YAML.
-- 두산 서비스는 robot_gateway 단일 큐로만. 좌표계·단위는 두산 posx 기준 (mm, deg).
+- 두산 서비스는 robot_gateway 단일 큐로만. 두산 서비스 호출과 voss_config 의 pose 는 두산 posx (mm, deg), ROS 표준 메시지(geometry_msgs)는 SI (m, rad, m/s). 변환은 robot_gateway 가 한다. 표는 docs/interfaces/voss_config.md 값 규칙.
 
 ## Python
 - Python 3.12, `ruff` (설정은 루트 `pyproject.toml`). 타입 힌트 권장.

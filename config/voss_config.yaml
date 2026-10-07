@@ -19,7 +19,7 @@ robot:
   tcp_offset_mm: [1.382, 2.684, 246.642]   # 플랜지 → 핑거 끝 TCP (툴 좌표). 펜던트 등록값 (measurements #6)
 belt:
   speed_cmps: 4.8          # 아두이노 h250
-  direction_axis: "x"
+  direction_base: [0.99992, -0.01292, 0.0]   # 진행 방향 단위벡터(베이스 기준), +x 에서 −0.74°, z = 0 수평 성분만 (measurements #6, 김학민)
 gripper:   # 폭은 RG2 보고값 (실제 간격 ≈ 보고값 − 10 mm)
   pre_open_mm: 90
   grasp_width_mm: 39
@@ -28,4 +28,4 @@ ocr:
   confidence_min: 0.6
   codes: {"S07-01": "역삼동", "S07-02": "대치동", "S07-03": "청담동"}
 timing:
-  latency_offset_ms: 0
+  latency_offset_ms: 0     # 0 = 보정 없음(유효값). 양수 = 벨트 방향으로 앞당겨 예측 (박병후 튜닝)
