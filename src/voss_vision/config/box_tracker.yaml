@@ -1,0 +1,20 @@
+# box_tracker 파라미터 (ADR-0004: detector·HSV 임계는 voss_config 가 아니라 이 파일. voss_bringup 이 넘긴다)
+# 값은 10/06 녹화(관측 자세, 1920x1080, 노출 6 ms, WB 4600) 기준. 조명·노출이 바뀌면 seg.* 를 다시 맞춘다.
+box_tracker:
+  ros__parameters:
+    detector: seg            # seg | yolo. 게이트(10/08 1차·10/10) 측정 중에는 바꾸지 않는다 (ADR-0004)
+    min_hits: 5              # 이만큼 검출돼야 트랙 확정·발행 (손으로 올리는 순간의 짧은 트랙 억제)
+    max_missed: 15           # 연속 미검출 폐기 프레임 (PICKING 중 현재 트랙은 보류) — voss_msgs.md BoxTrack
+    gate_px: 120.0           # 트랙 연결 거리 (등속 예측 위치 기준)
+    seg:
+      downscale: 2           # 계산 해상도 1/2
+      v_min: 200             # 송장 밝기 하한 (HSV V)
+      s_max: 90              # 송장 채도 상한
+      close_px: 21           # 글자 구멍 메우기
+      area_min: 6000         # 송장 면적 px² (관측 자세 ≈ 18000)
+      area_max: 400000
+      aspect_tol: 0.3        # 송장 40:25 = 1.6 ± 0.3
+      fill_min: 0.8
+      border_px: 4           # 화면 가장자리에 걸린 송장은 내지 않는다
+      belt_green_frac: 0.25
+      belt_margin_px: 60

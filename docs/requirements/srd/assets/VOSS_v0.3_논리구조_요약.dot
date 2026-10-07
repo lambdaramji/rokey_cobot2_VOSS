@@ -1,0 +1,30 @@
+digraph VOSS_Summary {
+ graph [rankdir=TB, bgcolor=white, pad=0.25, nodesep=0.42, ranksep=0.60, fontname="Noto Sans CJK KR", fontsize=17, label="VOSS v0.3 · 합의된 책임과 경로", labelloc=t];
+ node [shape=box,style="rounded,filled",fillcolor="#EAF2FB",fontname="Noto Sans CJK KR",fontsize=13,color="#4F7191",margin="0.15,0.1"];
+ edge [fontname="Noto Sans CJK KR",fontsize=10,color="#516577",arrowsize=.7];
+ vision [label="비전 / 남현지\nRGB 검출 · OCR\n촬영 윗면 중심 base(m)"];
+ manager [label="manager / 남현지\nready · ID · FSM · 구역\n최종 결과 · 설정 writer",fillcolor="#D9ECE7"];
+ voice [label="음성 / 정의석\nSTT · intent · TTS\nFastAPI Whisper/OpenAI"];
+ servo [label="servo / 박병후\nTCP 목표 · 추종/픽업\nretry · LIFT/VERIFY",fillcolor="#E7E0F1"];
+ gateway [label="gateway / 김학민\nTCP 변환 · stop · RG2\n적재/복귀 · 장비 접근",fillcolor="#FFF0D8"];
+ bridge [label="bridge / 정의석\nROS ↔ MQTT\n명령 접수 ack"];
+ hardware [label="로봇 · 그리퍼\n벨트 수동 운전",fillcolor="#F1F1F1"];
+ data [label="기록/조회 / 정의석\nsort_logger → PostgreSQL\ncommit · 동일 box 조회"];
+ web [label="Spring / React HMI\n공식 REST 집계 · SSE\n로컬 운전 / 원격 조회·stop"];
+ {rank=same;vision;manager;voice;}
+ {rank=same;servo;gateway;bridge;}
+ {rank=same;hardware;data;web;}
+ vision -> manager [label="Box / OCR"];
+ manager -> voice [label="Intent / say·질문",dir=both];
+ vision -> servo [label="관측 / valid"];
+ manager -> servo [label="goal / result",dir=both];
+ servo -> gateway [label="TCP / gripper",dir=both];
+ manager -> gateway [label="PLACE / stop"];
+ gateway -> hardware [label="단일 접근"];
+ manager -> data [label="SortResult 1건/box"];
+ gateway -> bridge [label="RobotState"];
+ manager -> bridge [label="state / command",dir=both];
+ bridge -> web [label="MQTT / ack",dir=both];
+ data -> web [label="DB 기반 REST"];
+ voice -> web [label="이력 질의",style=dashed,constraint=false];
+}

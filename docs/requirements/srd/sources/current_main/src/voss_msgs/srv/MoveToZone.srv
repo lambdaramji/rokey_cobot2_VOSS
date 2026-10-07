@@ -1,0 +1,7 @@
+string zone              # A | B | C | RECHECK | HOLD | OBSERVE (대문자. voss_config zones 키는 대소문자 무시, OBSERVE = observe_pose)
+int32 slot               # 격자 칸 번호 (0부터, zones.<zone>.grid 순서). VIEW·OBSERVE 는 무시
+string mode              # "" = PLACE (놓기 + OBSERVE 복귀) | VIEW (카메라로 구역을 보는 자세로만 이동) | PICK (slot 에서 집어 안전 높이로)
+---
+bool ok                  # PLACE 는 OBSERVE 복귀까지 마친 뒤 응답한다 (응답 즉시 다음 추종 시작 가능)
+string message           # 실패 시 대문자 코드로 시작 (GRIP_FAIL / TIMEOUT / LIMIT …)
+builtin_interfaces/Time placed_stamp   # PLACE: RG2 개방 완료 확인 시각 (호스트 시계). 그 밖의 mode 는 0

@@ -9,3 +9,5 @@
   ~/.venvs/voss_ocr/bin/python tools/ocr/eval_static.py --dir <ocr_static> --out <결과.csv> [--save-crops <폴더>]
   ```
   paddle 3.3 CPU 는 oneDNN 오류가 있어 도구가 `enable_mkldnn=False` 로 띄운다 (남현지)
+- `vision/eval_bag.py` — T17 녹화 bag 평가(ADR-0004): 분할 검출(`voss_vision.box_detect`) + 트래커 → 오검출·트랙·구간 검출률·지연(CPU 참고), 확인 시트, YOLO 자동 라벨 내보내기(`--export-yolo`, 음성은 앞뒤 2 s 안에 검출이 없는 프레임만). ROS Jazzy 환경에서 실행 (남현지)
+- `colab/t17_yolo_train.ipynb` — 자동 라벨로 YOLO nano 학습·이어 학습·holdout 평가·ONNX 내보내기. 입력·체크포인트·출력 경로는 팀 Drive 구조(`docs/setup/drive.md`)를 따른다 (남현지)
