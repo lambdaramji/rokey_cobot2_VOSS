@@ -1,9 +1,9 @@
 # #3 서보 스트리밍 현장 절차서 (U7 · T25 #34, 박병후)
 
 `docs/measurements-1006.md` #3 의 "실측 필요" 칸과 pending #8 을 채우기 위한 실로봇 시험 절차.
-소스 조사 결과와 근거(파일:줄)는 measurements #3 절, 결정 초안은 `docs/adr/0009-doosan-servo-command-path.md`.
+소스 조사 결과와 근거(파일:줄)는 measurements #3 절, 결정 초안은 `docs/adr/0010-doosan-servo-command-path.md`.
 
-**결정: speedl_stream 주 경로**(pending #8, ADR-0009). servol_stream 은 대안 비교용, move_line ASYNC 는 쓰지 않는다.
+**결정: speedl_stream 주 경로**(pending #8, ADR-0010). servol_stream 은 대안 비교용, move_line ASYNC 는 쓰지 않는다.
 "토픽이 있다"는 #55(김학민 10/07)로 확인됐다. 여기서는 speedl 을 **어떻게 쓸지** — 적용률·acc·퍼블리시 주기·끊김 뒤 정지(타임아웃 0.1 s)·watchdog 순서 — 를 잰다.
 
 | 파일 | 로봇을 움직이나 |
@@ -56,7 +56,7 @@ python3 servo_stream_trial.py speedl --z-min <학민과 정한 값>
 - **브링업 로그(터미널 1)의 알람**을 기록 칸 C 에 옮긴다. 에뮬레이터에서는 아래 두 개가 나왔다. 실로봇에서도 같은지가 핵심이다.
   - 1216 `[SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.2500 [s] ...)` → `time` 은 가속(도달) 시간이고 가속도 한계가 우선한다
   - 1215 `[SpeedL] speedl() generates time-out error if it is called for 0.1 [sec]` → 0.1 s 안에 다음 명령이 없으면 컨트롤러가 멈춘다 (끊김 시험 때)
-  - **10/07 실로봇 결과: 1215 는 나오지 않았고, 끊겨도 마지막 속도로 계속 갔다(+5 mm).** 1216 은 같았다. → measurements #3 2부 기록, ADR-0009 결과 절
+  - **10/07 실로봇 결과: 1215 는 나오지 않았고, 끊겨도 마지막 속도로 계속 갔다(+5 mm).** 1216 은 같았다. → measurements #3 2부 기록, ADR-0010 결과 절
 - 위가 정상일 때만 이어서 `time`·`acc` 를 바꿔 본다. 동작이 다르면(예: 한 틱만 움직이고 멈춤, 끊겨도 계속 감) 그대로 기록하고 멈춘다.
 ```bash
 python3 servo_stream_trial.py speedl --z-min <값> --time 0.1
@@ -74,7 +74,7 @@ python3 servo_stream_trial.py servol --z-min <값>
 - servol 은 끊어도 마지막 목표점까지는 간다(에뮬레이터 1.8 mm). `drift_after_cut_mm` 는 "따라잡기"이지 폭주가 아니다.
 
 ## 6. 둘 다 움직이지 않으면
-- 멈추고 기록한다. `move_line` ASYNC 는 쓰지 않기로 했으므로(ADR-0009) 시험하지 않는다 — 결과를 주관 세션·학민과 보고 다음 단계를 정한다.
+- 멈추고 기록한다. `move_line` ASYNC 는 쓰지 않기로 했으므로(ADR-0010) 시험하지 않는다 — 결과를 주관 세션·학민과 보고 다음 단계를 정한다.
 - 브링업 로그의 경고·에러(`dsr_controller2`, `Drfl`)를 그대로 복사해 기록 칸 C 에 붙인다.
 
 ## 7. 끝

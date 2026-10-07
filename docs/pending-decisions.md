@@ -11,7 +11,7 @@
 | 5 | 호출어 검출 엔진 (키워드 매칭 / 경량 모델) | 정의석 | 10/06 | SR-SW-10 | 미정 | |
 | 6 | Whisper 모델 크기 | 정의석 | 10/06 | SR-SW-11 | 미정 | |
 | 7 | 박스 검출 방식: YOLO 학습 vs 세그멘테이션, 라벨링 도구 | 남현지 | 10/06 | SR-SW-07 | 결정 | OpenCV 분할 먼저 → 분할 자동 라벨로 YOLO nano 학습 → 10/08 공용 PC 비교 후 기본 선택. 라벨링 도구 없음(자동 라벨 + 육안 검수) (10/06) / ADR-0004 |
-| 8 | 두산 제어 경로: servol_stream vs move_line ASYNC | 박병후 | 10/06 | SR-SW-04, SR-IF-09 | 결정 | speedl_stream 주 경로(속도 목표, belt_servo TwistStamped 와 의미 일치). servol_stream 은 대안, move_line ASYNC 미사용. 실로봇 2부(10/07): 30 Hz 수용, 지령 이동 100 %, 시작 지연 62~114 ms(acc 100~20). **끊겨도 멈추지 않음**(0.1 s 타임아웃 없음) → robot_gateway watchdog 이 0 속도·move_stop 을 보낸다 (measurements #3) (10/07) / ADR-0009 |
+| 8 | 두산 제어 경로: servol_stream vs move_line ASYNC | 박병후 | 10/06 | SR-SW-04, SR-IF-09 | 결정 | speedl_stream 주 경로(속도 목표, belt_servo TwistStamped 와 의미 일치). servol_stream 은 대안, move_line ASYNC 미사용. 실로봇 2부(10/07): 30 Hz 수용, 지령 이동 100 %, 시작 지연 62~114 ms(acc 100~20). **끊겨도 멈추지 않음**(0.1 s 타임아웃 없음) → robot_gateway watchdog 이 0 속도·move_stop 을 보낸다 (measurements #3) (10/07) / ADR-0010 |
 | 9 | RG2 제어 경로: Modbus TCP 직접 vs onrobot ROS 2 드라이버 | 김학민 | 10/06 | SR-HW-02, SR-SW-05 | 결정 | robot_gateway 안에서 Modbus TCP 직접. WebLogic DIO 는 펜던트 시험용 예비 (10/06) / ADR-0005 |
 | 10 | 흐린 송장 인쇄 농도 | 김학민 | 10/07 | SR-HW-07 | 결정 | 농도가 아니라 **번짐(blur) 처리**로 만든다. S07-01 역삼동 1종, 인쇄 시트 2장 중 1장을 시연 박스에 부착(BRD 2.4 "흐린 송장 1"). 10/06 촬영본 기준 번짐이 약해 판독될 수 있음 → T18(#27) 결과로 정도를 다시 본다 (10/06, `VOSS_송장_인쇄.docx`) |
 | 11 | 시연 송장 받는 사람 이름 목록 | 김학민 | 10/07 | SR-HW-07 | 결정 | 팀원 4명 이름(남현지·김학민·정의석·박병후)을 돌려 쓴다. 시연 박스 10개 = S07-01·02·03 각 3 + 흐린 S07-01 1, 10/06 부착 완료(10/06 인수인계 Slack, T17 촬영 bag A_MIX_01) |

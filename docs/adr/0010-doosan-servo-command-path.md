@@ -1,10 +1,10 @@
-# ADR-0009: robot_gateway 의 두산 서보 명령 경로
+# ADR-0010: robot_gateway 의 두산 서보 명령 경로
 
 - 날짜: 2026-10-07
 - 상태: 승인 제안 (2026-10-07, PL 승인 전). 경로는 결정(pending #8). 2부 실로봇 실측(10/07) 반영
 - 결정자: 박병후(제안), 김학민(robot_gateway 구현 #41)
 - 관련: SR-SW-04, SR-IF-09, pending-decisions #8, measurements-1006 #3, ADR-0002, `src/voss_servo/DESIGN.md` DEC-02 · DEC-16
-- 번호: 0003·0007·0008 은 열린 PR(#48·#72·#75)이 쓰고 있어 0009 를 쓴다.
+- 번호: 0003·0007·0008 은 열린 PR(#48·#72·#75), 0009 는 SRD v1.0·#88(31 mm 폭 파지, 김학민)이 먼저 잡아 0010 을 쓴다.
 
 ## 배경
 belt_servo 는 30 Hz 로 `/voss/robot/servo_cmd`(geometry_msgs/TwistStamped, TCP 선속도 m/s, 각속도 0, frame base_link)를 낸다(topics.md belt_servo 행, MC-010). robot_gateway 는 이것을 두산 M0609 에 넘겨야 하고, 후보는 셋이다. 경로·타입은 실로봇에서 광고가 확인됐다(이슈 #55 김학민 10/07, PR #84 topics.md robot_gateway 행). 남은 질문은 "30 Hz 로 바뀌는 목표를 실제로 받아 움직이는가, 끊기면 멈추는가"였고, 10/07 실로봇 시험(measurements #3 2부)으로 답했다.
