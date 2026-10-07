@@ -4,8 +4,8 @@
 | 타입 | 필드 | 비고 |
 |---|---|---|
 | Intent | `string type` (start/stop/resume/priority/answer/update_zone_map), `string dong`, `string zone`, `int32 count`, `string raw_text` | intent_parser → sort_manager |
-| SortState | `string state` (IDLE/RUNNING/PICKING/RECHECK/ASKING/PAUSED), `string box_id`, `string pending_question`, `int32 track_id` | `track_id` = 현재 처리 중인 박스의 BoxTrack.track_id (없으면 -1). box_tracker 가 LabelCrop stage 를 정하는 데 쓴다 |
-| SortResult | `string box_id`, `string code`, `string dong`, `float32 confidence`, `string decided_by` (ocr/recheck/operator), `string zone`, `string outcome` (placed/held/failed), `builtin_interfaces/Time stamp` | sort_logger 가 DB 1행으로 |
+| SortState | `string state` (IDLE/RUNNING/PICKING/RECHECK/ASKING/PAUSED), `string box_id`, `string pending_question`, `int32 track_id`, `bool ready`, `string[] not_ready` | `track_id` = 현재 처리 중인 박스의 BoxTrack.track_id (없으면 -1). box_tracker 가 LabelCrop stage 를 정하는 데 쓴다. `ready`·`not_ready` = sort_manager 의 준비 판단(ROBOT/SERVO/VISION/OCR/LOG). ROBOT 은 RobotState 가 생기기 전까지 "`/voss/robot/pose` 가 0.5 s 안에 들어오고 `/voss/robot/move_to_zone` 서비스가 있음"으로 임시 판정. LOG 는 `/voss/log/status` 가 `STARTING` 이거나 3 s 동안 안 오면 not_ready(start 거부, G0 는 DB 필수). 운전 중 `DB_ERROR`·`SPOOL_FULL` 은 경고만 — PAUSED 로 가지 않고 not_ready 에도 넣지 않는다(MC-027 비차단) |
+| SortResult | `string box_id`, `string code`, `string dong`, `float32 confidence`, `string decided_by` (OCR/RECHECK/OPERATOR/NONE), `string zone` (A/B/C/RECHECK/HOLD/""), `string outcome` (PLACED/HELD/FAILED/PASSED), `builtin_interfaces/Time stamp`, `string session_id`, `int32 track_id`, `builtin_interfaces/Time started_at`, `string raw_text`, `string dong_alt`, `string rule_version`, `string reason`, `int32 attempts` | box_id 당 1건. sort_logger 가 DB `sort_log` 1행으로(유일키 box_id). 빈 값은 ""·0, 추정값으로 채우지 않음. 무응답 보류 = decided_by NONE + reason NO_ANSWER |
 | ZoneMapEntry | `string dong`, `string zone`, `string code`, `string[] aliases` | `code` = 분류코드(예 `S07-01`), `aliases` = 자연어 별칭(예 `[역삼, 역삼동]`). 둘 다 voss_config.yaml 에서 sort_manager 가 채운다. UpdateZoneMap 요청에서는 `dong`·`zone` 만 쓰고 나머지는 비워도 된다 — **빈 `code`·`aliases` = 기존 값 유지**. `dong`(정식 이름)은 항상 허용되고 `aliases` 는 추가 별칭만 담는다(빈 목록이어도 안전) |
 | ZoneMap | `ZoneMapEntry[] entries`, `string version` | transient_local |
 | BoxTrack | `int32 track_id`, `float32 u`, `float32 v`, `int32[4] bbox` (x,y,w,h), `builtin_interfaces/Time stamp` | 30 Hz, 픽셀 좌표 |
@@ -15,12 +15,11 @@
 ## srv
 | 타입 | 요청 | 응답 |
 |---|---|---|
-| Command | `string command`, `string arg` | `bool ok`, `string message` |
+| Command | `string command`, `string arg` | `bool ok`, `string message` — 응답은 **접수** 의미(완료는 SortState·SortResult). command: `start`(arg ""/`ALL`, IDLE→RUNNING, RUNNING 중이면 전체 모드로 전환) · `priority`(arg 동 이름 필수) · `stop` · `resume`(PAUSED 에서만) · `answer`(arg `<box_id>\|<동 또는 HOLD>`, ASKING 에서만) · `reset_zone`(arg 구역, PAUSED) |
 | UpdateZoneMap | `ZoneMapEntry[] entries` | `bool ok`, `string message` |
-| Stats | — | `int32 total`, `int32 placed`, `int32 held`, `int32 failed`, `string json` |
-| MoveToZone | `string zone`, `int32 slot` | `bool ok`, `string message` |
+| MoveToZone | `string zone` (A/B/C/RECHECK/HOLD/OBSERVE), `int32 slot`, `string mode` (""=PLACE / VIEW / PICK) | `bool ok`, `string message`, `builtin_interfaces/Time placed_stamp` (PLACE 의 RG2 개방 완료 시각) | zone 은 대문자, robot_gateway 는 voss_config `zones` 키를 대소문자 무시로 찾고 OBSERVE 는 `observe_pose`. slot = `zones.<zone>.grid` 칸 번호(A·B·C 3칸, RECHECK·HOLD 2칸 — #57), VIEW·OBSERVE 는 무시. **PLACE 응답은 OBSERVE 복귀 완료 후**(`placed_stamp` 는 개방 시각). 실패는 `ok=false`, message 는 대문자 코드(GRIP_FAIL/TIMEOUT/LIMIT)로 시작 |
 | Gripper | `float32 width` (mm), `float32 force` (N) | `bool ok`, `float32 width_actual` |
-| TeachZone | `string zone` | `bool ok`, `string message` |
+| TeachZone | `string zone` (MoveToZone 과 같은 값) | `bool ok`, `string message` |
 | ReadLabel | `int32 track_id` (-1 = 시야 안 박스 아무거나. 재확인 구역에는 박스 1개뿐), `uint8 max_frames` (0 = 기본 5), `float32 timeout_s` (0 = 기본 2.0) | `bool ok`, `voss_msgs/LabelRead label` (stage = 3), `string message` (실패 사유: timeout / no_box / no_text). 호출 전 sort_manager 가 `MoveToZone(zone=RECHECK, mode=VIEW)` 로 카메라를 재확인 구역 위로 옮긴다(SRD 상호확인 #51 MC-017) |
 
 ## action
@@ -35,3 +34,11 @@
   - `ReadLabel` srv 신설: 3단계(재확인 구역 정지 재판독)를 sort_manager 가 시작시킬 인터페이스가 없었음.
   - `SortState` 끝에 `int32 track_id` 추가: LabelCrop stage 규칙(현재 박스 트랙만 2·3)에 필요 (김학민 리뷰 ③).
   - `ZoneMapEntry` 에 `code`·`aliases` 추가 (끝에 붙임): BRD 2.4·TR-SYS-06 의 별칭과 분류코드를 노드들이 YAML 을 직접 읽지 않고 zone_map 토픽으로 받게 함 (intent_parser 별칭 해석, label_reader 퍼지 매칭 후보).
+- 2026-10-06: SRD v0.2 상호확인 합의 반영 (#51 김학민, #52 정의석).
+  - `SortResult`: enum 대문자, outcome `PASSED` 추가, 끝에 `session_id`·`track_id`·`started_at`·`raw_text`·`dong_alt`·`rule_version`·`reason`·`attempts` 추가 (MC-003·020).
+  - `SortState`: 끝에 `ready`·`not_ready` 추가 (MC-019, SYS-FR-001 주담당 남현지).
+  - `MoveToZone`: 요청 끝에 `mode`(PLACE/VIEW/PICK), 응답 끝에 `placed_stamp` 추가 (MC-016·017).
+  - `Command`: canonical 명령 표 명시 (MC-023).
+  - `Stats` srv 삭제: 집계는 DB 하나가 원천이고 정의석 측 REST `GET /api/stats` 로 제공 (MC-022, `docs/interfaces/web_api.md` 예정).
+  - 보류 중(병후 확인 대기, #50): BoxTrack 위치 필드, TrackAndGrasp phase·reason·attempts.
+  - 리뷰 반영(#63 김학민·정의석): zone 대문자·대소문자 무시 조회, MoveToZone slot·PLACE 응답 시점·실패 코드, TeachZone 값 목록, Command.srv 주석을 canonical 표와 일치, SortState ROBOT 임시 판정·LOG 비차단 규칙.
