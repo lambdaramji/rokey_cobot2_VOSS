@@ -10,7 +10,7 @@
 | 토픽 | 방향 | QoS | retained | JSON |
 |---|---|---|---|---|
 | `voss/state` | ROS → 웹 | 1 | false | SortState 필드 이름 그대로: `state`, `box_id`, `pending_question`, `track_id`, `ready`, `not_ready`, `session_id`. Spring Boot 가 최신값을 메모리에 두고 SSE 로 넘긴다 |
-| `voss/result` | ROS → 웹 | 1 | false | SortResult 필드 이름 그대로. `stamp`·`started_at` 은 ISO 문자열(0 시각을 `null` 로 할지는 제안 — DB 규약(#52 MC-020)과 맞춤, #20 확정) |
+| `voss/result` | ROS → 웹 | 1 | false | SortResult 필드 이름 그대로. `stamp`·`started_at` 은 ISO 문자열(0 시각은 `null` — DB 규약(#52 MC-020)과 같다, 정의석 #84 확인) |
 | `voss/zone_map` | ROS → 웹 | 1 | **true** | `{"version", "entries": [{"dong", "zone", "code", "aliases"}]}` |
 | `voss/robot` | ROS → 웹 | 0 | false | `{"connected", "state", "action", "gripper_width_mm", "error_code", "detail", "stamp"}` — RobotState(voss_msgs.md 합의·IDL 반영 대기), `stamp` = header.stamp |
 | `voss/command` | 웹 → ROS | 1 | false | `{"command_id", "type", "args", "raw_text", "sent_at"}` — Spring Boot 가 `command_id`(UUID)·`sent_at` 을 붙인다(web_api.md `POST /api/commands`) |
@@ -18,11 +18,11 @@
 
 - 시각은 모두 ISO-8601 `+09:00` 문자열(공용 PC 시스템 시계). ROS Time 은 hmi_bridge 가 바꾼다.
 - `type` 은 Command canonical 명령(voss_msgs.md): `start`·`stop`·`resume`·`priority`·`answer`·`reset_zone`. `args` 객체 → `Command.arg` 문자열 변환표는 #20 에서 확정한다. 변환 결과는 Command.srv 형식을 따른다 — start `""`/`ALL`, priority 동 이름, answer `<box_id>|<동 또는 HOLD>`, reset_zone 구역.
-- 로그 상태(`/voss/log/status`)를 웹으로 넘기는 토픽 이름은 #20 에서 정한다(web_api.md SSE `log_status`, SRD v1.0 F-11).
+- 로그 상태(`/voss/log/status`)를 웹으로 넘기는 토픽 — 정의석 제안: `voss/log_status`, QoS 1, retained true, `{"status": "STARTING|OK|DB_ERROR|SPOOL_FULL", "stamp": "…"}`(SSE `log_status` 와 같은 형식, Spring Boot 재기동 뒤에도 DB_ERROR 를 바로 표시). #20 에서 확정(SRD v1.0 F-11).
 
 ## 명령 처리 규칙 (hmi_bridge)
 - 같은 `command_id` 는 10분 동안 기억하고 다시 실행하지 않는다(ack 는 다시 보낸다).
-- `sent_at` 이 30초보다 오래된 명령은 실행하지 않고 `ok=false`, `message="EXPIRED"` 로 ack 한다.
+- `sent_at` 이 30초보다 오래된 명령은 실행하지 않고 `ok=false`, `message="EXPIRED"` 로 ack 한다. **단 `stop` 은 예외** — 늦게 와도 실행한다(멈추는 쪽은 막지 않는다는 web_api.md 원칙, 정의석 #84 리뷰).
 - `/voss/sort/command` 응답을 그대로 ack 로 보낸다. 실제 완료는 `voss/state`·`voss/result` 로 본다.
 
 ## HMI 지연 (≤ 1초, #54 MC-031)
@@ -31,4 +31,4 @@
 
 ## 변경 이력
 - 2026-10-05: 초안.
-- 2026-10-07: SRD v1.0 정합 (#6). #52 MC-026 합의(정의석 결정)를 옮김 — 6개 토픽·QoS·retained, command/ack JSON, 10분 중복 억제·30초 EXPIRED, ISO 시각, Spring Boot 가 클라이언트. `voss/robot` 필드(#55). 브로커 위치·args 변환표·로그 상태 토픽은 #20.
+- 2026-10-07: SRD v1.0 정합 (#6). #52 MC-026 합의(정의석 결정)를 옮김 — 6개 토픽·QoS·retained, command/ack JSON, 10분 중복 억제·30초 EXPIRED, ISO 시각, Spring Boot 가 클라이언트. `voss/robot` 필드(#55). 브로커 위치·args 변환표·로그 상태 토픽은 #20. #84 리뷰 반영: stop 은 EXPIRED 예외, result 0 시각 = null 확정, `voss/log_status` 제안.

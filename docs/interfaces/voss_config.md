@@ -53,7 +53,8 @@ timing:
 - zones·observe_pose 는 **플랜지 기준** posx(김학민). TCP 기준 값(캘리브레이션 파일 등)과 비교할 때는 TCP 오프셋으로 변환한다.
 - 정적 값은 voss_bringup launch 가 이 파일을 읽어 노드 파라미터로 넘기고, `config_version`·`config_sha256` 파라미터도 함께 넘긴다(구현 김학민). 각 노드는 기동 때 그 두 값을 로그에 남긴다.
 - 비전 컨테이너 노드(box_tracker·label_reader)는 호스트 bringup 이 아니라 컨테이너 launch 로 뜨므로, 읽기 전용 마운트된 같은 파일을 직접 읽고 version·sha256 을 계산해 로그에 남긴다. 런타임에 쓰는 노드는 sort_manager 뿐.
-- **공유 설정은 정지 상태에서만 바꾼다.** 바꾼 뒤에는 같은 version 을 모든 노드에 다시 적용하고 ready 를 확인한 다음 재개한다(#53 MC-009). 운전 중 일부 노드만 새 값을 쓰는 상태를 만들지 않는다.
+- **launch 로 넘기는 정적 값은 정지 상태에서만 바꾼다.** 바꾼 뒤에는 같은 version 을 모든 노드에 다시 적용하고 ready 를 확인한 다음 재개한다(#53 MC-009). 운전 중 일부 노드만 새 값을 쓰는 상태를 만들지 않는다.
+- **런타임 zone_map** 은 sort_manager 가 IDLE·PAUSED 에서만 UpdateZoneMap 을 받아 한 번에 바꾸고 version 을 올려 `/voss/sort/zone_map` 으로 발행한다. RUNNING·PICKING 중 요청은 `ok=false`(남현지 #84 리뷰).
 - 서보 전용 값(Kp, 높이, 오프셋, age·입력 상실 watchdog)은 voss_config 가 아니라 belt_servo 파라미터 YAML 에 둔다(#53 MC-009). robot_gateway 의 `servo_cmd` 만료 watchdog 은 gateway 파라미터다.
 
 ## 변경 이력
@@ -64,4 +65,4 @@ timing:
 - 2026-10-06: `belt.direction_axis`(문자) → `belt.direction_base`(베이스 기준 단위벡터, 부호 포함). 값 규칙 절 추가 (SRD 상호확인 MC-009, 김학민 합의).
 - 2026-10-06: #64 리뷰 반영. 단위 규칙 범위(pose 배열 = 두산 mm·deg, 표준 geometry_msgs = SI, 커스텀 필드 = 주석 단위), 스키마 예시를 null 로, bringup 의 `config_version`·`config_sha256` 전달.
 - 2026-10-07: #64 를 main 위로 다시 쌓으며 #57 최종본과 합침. 박병후 리뷰 반영 — latency_offset_ms 0 = 보정 없음·양수 = 앞당김, null 키는 launch 로 넘기지 않음, pose·servo_cmd 기준점 TCP·base_link, direction_base 크기 검사·z = 0 의미.
-- 2026-10-07: SRD v1.0 정합 (#6). `zones.recheck.view_pose`(null, MC-017) 추가, 정지 상태에서만 공유 설정 변경(MC-009)·서보 전용 값 위치·gateway watchdog 위치를 값 규칙에 추가.
+- 2026-10-07: SRD v1.0 정합 (#6). `zones.recheck.view_pose`(null, MC-017) 추가, 정지 상태에서만 정적 설정 변경(MC-009)·런타임 zone_map 은 IDLE·PAUSED 에서만(남현지 #84 리뷰)·서보 전용 값 위치·gateway watchdog 위치를 값 규칙에 추가.
