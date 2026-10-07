@@ -1,7 +1,7 @@
-# VOSS SRD v0.3 — 시스템 요구사항 명세서
+# VOSS SRD v0.4 — 시스템 요구사항 명세서
 
-**문서 ID:** SRD-VOSS-001 · **버전:** v0.3 r1(PR #77 리뷰 반영) · **작성일:** 2026-10-07(KST) 
-**상태:** #50~#55 상호 확인 합의 반영본 / 전체 문서 최종 승인 및 실기 수락 별도 
+**문서 ID:** SRD-VOSS-001 · **버전:** v0.4 · **작성일:** 2026-10-07(KST) 
+**상태:** 취합자 확정본(#50~#55 합의·PR #77 리뷰·독립 재검·main@671c67f 재대조 반영) / 팀 전체 기준선 승인(PL, #6)과 실기 수락은 별도 
 **작성·취합:** 박병후 · **범위·기준선 승인:** 남현지(PL) 및 영향 담당자
 
 **일정:** 상호 확인 회신은 2026-10-06 까지(KST, 시간 지정 없음)로 변경했고 6 개 이슈가 10/07 종료됐다. 첫 실기 실험·실측 목표는 **10/07 까지**, 실제 1 박스 전체 흐름 **G0 통과 목표는 10/10 까지**다. 수행 사실·수락 결과는 증거로 별도 기록한다.
@@ -34,6 +34,7 @@
 | v0.2 r2 | 4 인 회신 공통 내용 반영, MC-001~034와 6 개 상호 확인서로 충돌·미정 관리 | 당시 상호 확인 전 |
 | v0.3 | 종료된 #50~#55의 최종 정정·합의·후속 범위 반영. 70 SYS·70 VT·18 IC·26 TBD·34 MC ID 유지. 좌표/TCP/정지/재시도/결과/조회/배포 규약 정합 | 조합별 회신 확인 완료 / 전체 문서 최종 승인·실기 수락 별도 |
 | v0.3 r1 | PR #77 리뷰(남현지·김학민) 반영: 경로 docs/requirements/srd/, 중복 ZIP 제거. #50~#55 재대조로 MC-018 slot 재사용·MC-015 새 session 범위·HMI 시계·시험 분모를 정정하고, stop·RobotState·MQTT·설정의 main 미반영 표시와 토픽·서비스 이름을 보강 | 문서 게시 승인(리뷰 2건) / 전체 기준선 승인·실기 수락 별도 |
+| v0.4 | 독립 재검 채택분과 main@671c67f 재대조 반영: 31 mm 폭 파지 결정(pending #16·#70·BRD v1.3 #79), Intent.box_id(#73)·web_api(#68)·SortState.session_id(#78)·direction_base/값 규칙(#64) main 반영, DDS 14900–15149/udp(#55 10/07), 남은 계약 차이(늦은 답 문장·stop·RobotState·MQTT) 정리. 파일명 01_VOSS_SRD_v0.4 | 취합자 확정 / 팀 기준선 승인(PL)·실기 수락 별도 |
 
 ### 0.2 승인·검토
 
@@ -78,13 +79,13 @@ VOSS 전체 시스템의 기능, 외부·파트 간 입출력, 성능, 데이터
 | 범위·측정·일정 안내 | #6 본문·#50~#55 공통 안내, 2026-10-06~07 | A 먼저, B 최종 필수, C 선택. 정상/예외 분리·작업자 대기 별도. 첫 실험 10/07·G0 10/10. docs/plan.md는 아직 10/13을 전체 루프 첫 완주로 두므로 PL 정합 대기(F-15) |
 | SRD v0.2 r2·4 인 회신 | 2026-10-06 | 기존 70 SYS/VT·18 IC·26 TBD·34 MC 및 카드 출처 |
 | GitHub #50~#55 전체 댓글 | 6 개 종료, 2026-10-07 확인 | 최종 정정·공동 수용과 잔여 범위. 02 합의 종합에 permalink |
-| BRD v1.2 Word | PL #51 결정, PR #66 | 적용 BRD 판. Word v1.1↔v1.2의 45 개 TR/NFR 행은 동일함을 대조했다(05 참조). Markdown 동기화는 F-15 |
-| VOSS_BRD.md 및 기존 BRD v1.1 | 기존 TR/NFR 연결의 출처 | Markdown은 아직 v1.1 사본. 기존 요구사항 ID 연결을 유지하며 판 차이 검토 필요 |
+| BRD v1.3 Word | PL, PR #79 (v1.2 #66에서 파지 방향만 정정) | 적용 BRD 판. v1.1↔v1.2 TR/NFR 45 행 동일, v1.2→v1.3은 TR-PICK-06·2.4 크기 조건·R-06만 바뀜(05 참조) |
+| VOSS_BRD.md 및 기존 BRD v1.1 | 기존 TR/NFR 연결의 출처 | #79에서 v1.3 사본으로 교체됨. 기존 요구사항 ID 연결 유지 |
 | VOSS_개발일정.xlsx | 기존 계획 | 담당·마일스톤. #6의 최신 일정을 우선하며 plan.md 반영은 PL 확인 대기 |
-| docs/interfaces/*·src/voss_msgs/* | main@fff112116bef3992d27a094456b055f647ed61a8 | 실제 문서/IDL 대조 기준. PR #63/#65 등 머지 내용과 미반영 IDL 구분 |
+| docs/interfaces/*·src/voss_msgs/* | main@671c67f3a5e4f1de46dec3f34b4cf2975727c975 (v0.3은 fff1121) | 실제 문서/IDL 대조 기준. #63/#65/#64/#68/#70/#73/#78/#79 머지 내용과 미반영 IDL 구분 |
 | docs/measurements-1006.md·config/voss_config.yaml | 같은 main | 벨트/카메라/TCP/트레이/PC 관측·설정 출처. 동적 성능 수락과 구분 |
-| ADR-0002/0005/0006 | 같은 main | 폐루프 게이트·RG2 Modbus 직접·웹/AI/DB 스택. 예정 번호: 0003 캘리브레이션(#48)·0007 호출어(#72)·0008 OCR(#75)·0009 31mm 면 파지(김학민, PR #77 리뷰) |
-| 열린 PR #48/#64/#68/#70/#71/#72/#73/#74/#75/#76 | 확인 당시 head 별도 기록 | 후속 제안·구현/시험 보고. main 반영 또는 전체 실기 승인으로 표시하지 않음 |
+| ADR-0002/0005/0006 | 같은 main | 폐루프 게이트·RG2 Modbus 직접·웹/AI/DB 스택. 예정 번호: 0003 캘리브레이션(#48)·0007 호출어(#72)·0008 OCR(#75)·0009 31 mm 폭 파지 근거(김학민, PR #77 리뷰) |
+| 열린 PR #48/#71/#72/#75/#76/#80/#81/#82 (v0.3 때 열려 있던 #64/#68/#70/#73/#74는 머지됨) | 확인 당시 head 별도 기록 | 후속 제안·구현/시험 보고. main 반영 또는 전체 실기 승인으로 표시하지 않음 |
 
 최종 공동 정정과 사용자 지침을 우선 적용했다. 오래된 720p·플랜지 pose·중간 시각·Stats/ROS query·STOP_UNCONFIRMED·질문 box_id#회차 제안은 최신 규약으로 대체했다. 다른 시점의 수치·초안과 혼용하지 않는다. 문서와 구현의 차이는 부록 C/03 후속 대장에서 추적한다.
 
@@ -133,7 +134,7 @@ VOSS 전체 시스템의 기능, 외부·파트 간 입출력, 성능, 데이터
 
 - M0609/RG2/손목 D435i, RGB만, 알려진 박스 46×31×27mm·송장 40×25mm, A/B/C/RECHECK/HOLD 5 구역. 벨트 목표≤10cm/s, 개발설정 4.8cm/s는 실측 기반 설정이다.
 - 한 번에 1 개 투입. VOSS는 벨트 운전/속도/전원을 자동 조작하지 않는다. 로봇 분류 stop과 벨트 정지는 별개다.
-- 31mm 면 파지는 #51 최종에서 선택 보고됐고 PR #70은 열린 상태다. 최종 PL/ADR(ADR-0009, 김학민 작성 예정)·BRD 정정·T34 결과와 높이/힘/폭의 승인 범위는 F-03 에 남긴다. main pending #16은 아직 미정이다.
+- 파지 방향은 31 mm 폭 파지(핑거 간격 31 mm, 46×27 mm 긴 옆면 두 개를 잡고 닫힘축은 벨트 가로, 46 mm 변은 벨트 방향)으로 PL이 확정했다(pending #16 결정, PR #70, BRD v1.3 #79). 정량 비교 없는 현장 판단이며 게이트에서 면 방향 원인 실패가 반복되면 재검토한다. 근거 ADR-0009(김학민)와 T34 10회 시험(빈 파지·미끄러짐·상승 유지·무손상)은 F-03 에 남긴다.
 - 제외: 대형택배·다중박스 연속투입·다단적재최적화·WMS·손글씨/다국어/받는사람판독·현업인증/24 시간운영. 흐린송장은 재확인·질문 시험을 실제로 유발하는 세트를 별도 확보한다.
 
 ## 3. 시스템 개요와 할당
@@ -339,7 +340,7 @@ manager는 대상·구역·최종 업무 결과와 준비 여부를 판단한다
 - 출처: TR-SYS-06
 - 검증 VT-033: 기본 매핑과 제어·OCR·표시 값이 일치하는지 확인. 배포 경로는 TBD-006.
 - 후속 추적: TBD-006
-- v0.3 합의 반영: 공유 YAML의 runtime writer는 manager이며, launch에서 같은 snapshot/version/hash를 전달하고 로드 시 검증한다. 단위벡터·null·의미 있는 0·ZoneMap code/aliases를 사용하며, PR #64와 main의 차이를 추적한다.
+- v0.3 합의 반영: 공유 YAML의 runtime writer는 manager이며, launch에서 같은 snapshot/version/hash를 전달하고 로드 시 검증한다. 단위벡터·null·의미 있는 0·ZoneMap code/aliases를 사용하며, main(#64) 값 규칙을 따른다.
 - 합의 근거: MC-009, MC-019, MC-034 (02 합의 종합의 최종 댓글).
 - 이행·검증: 계약 반영과 구현/실측 수락을 구분한다. VT 별 상태는 04 검증 추적표 참조.
 
@@ -517,7 +518,7 @@ manager는 대상·구역·최종 업무 결과와 준비 여부를 판단한다
 - 출처: TR-VOICE-08; TR-SYS-04
 - 검증 VT-029: DB 조회값·음성·HMI 값의 일치를 대조.
 - 후속 추적: TBD-008
-- v0.3 합의 반영: 음성/HMI는 Spring GET /api/stats 한 곳을 사용한다. count_by_dong은 PLACED의 동별 수, held_count는 HELD이며(이 정의는 열린 PR #68 제안) remaining_count는 확정식을 따른다. DB 오류는 조회 불가로 표시하고 메모리 값을 공식 대체값으로 쓰지 않는다.
+- v0.3 합의 반영: 음성/HMI는 Spring GET /api/stats 한 곳을 사용한다. count_by_dong은 PLACED의 동별 수, held_count는 HELD이며(main web_api.md, #68) remaining_count는 확정식을 따른다. DB 오류는 조회 불가로 표시하고 메모리 값을 공식 대체값으로 쓰지 않는다.
 - 합의 근거: MC-021, MC-022 (02 합의 종합의 최종 댓글).
 - 이행·검증: 계약 반영과 구현/실측 수락을 구분한다. VT 별 상태는 04 검증 추적표 참조.
 
@@ -688,7 +689,7 @@ manager는 대상·구역·최종 업무 결과와 준비 여부를 판단한다
 
 ### 5.2 합의 반영 계약 목록
 
-아래 규약은 최종 공동 회신을 반영했다. 문서/IDL 반영 여부와 장비 수치는 별도 열로 관리한다. 데이터 예시는 형식 예시이며 실측 결과가 아니다. 토픽·서비스 이름은 main topics.md 기준이며 "(미반영)"은 합의만 있고 main 문서·IDL에 없는 이름이다. IC↔SYS 연결: IC-VISION-01~04→SYS-IF-001, IC-PICK-01→SYS-IF-002, IC-ROBOT-01~03·IC-DEVICE-01→SYS-IF-003, IC-RESULT-01·IC-DB-01·IC-STATS-01→SYS-IF-004, IC-CMD-01·IC-VOICE-01→SYS-IF-005, IC-STATE-01·IC-MQTT-01→SYS-IF-006, IC-CONFIG-01→SYS-IF-007, IC-OPTION-01→SYS-OP-001/002. 모든 IC는 SYS-IF-008의 버전 관리 대상이다.
+아래 규약은 최종 공동 회신을 반영했다. 문서/IDL 반영 여부와 장비 수치는 별도 열로 관리한다. 데이터 예시는 형식 예시이며 실측 결과가 아니다. 토픽·서비스 이름은 main topics.md 기준이며 "(미반영)"은 합의만 있고 main 문서·IDL에 없는 이름, "(타입 미정의)"는 이름은 topics.md에 있으나 메시지 타입·QoS가 없는 것이다. QoS·depth는 main topics.md QoS 표를 따르고, 서비스 timeout 값은 F-02/F-04에서 정한다. IC↔SYS 연결: IC-VISION-01~04→SYS-IF-001, IC-PICK-01→SYS-IF-002, IC-ROBOT-01~03·IC-DEVICE-01→SYS-IF-003, IC-RESULT-01·IC-DB-01·IC-STATS-01→SYS-IF-004, IC-CMD-01·IC-VOICE-01→SYS-IF-005, IC-STATE-01·IC-MQTT-01→SYS-IF-006, IC-CONFIG-01→SYS-IF-007, IC-OPTION-01→SYS-OP-001/002. 모든 IC는 SYS-IF-008의 버전 관리 대상이다.
 
 | IC-ID | 연결·타입 | 합의한 의미 | 잔여/근거 |
 |---|---|---|---|
@@ -699,12 +700,12 @@ manager는 대상·구역·최종 업무 결과와 준비 여부를 판단한다
 | IC-PICK-01 | manager↔servo, `/voss/servo/track_and_grasp` TrackAndGrasp | goal1/box, servo 최대 3회 attempt, phase/reason·LIFT/VERIFY 인계, 정상 cancel/실패구분 | MC-005/006/012/014 |
 | IC-ROBOT-01 | servo→gateway, `/voss/robot/servo_cmd` TwistStamped 30Hz·best_effort/volatile/1 | 실제 TCP 속도 base_link, m/s·rad/s, 각속도 0(G0), latest 목표·stop 우선 | MC-010/011/014, 실제 stream |
 | IC-ROBOT-02 | gateway→vision/servo, `/voss/robot/pose` PoseStamped ~50Hz | 실제 TCP m/quaternion, stamp=get_current_posx 응답 수신 | MC-004/010, RTT/50Hz |
-| IC-ROBOT-03 | manager/servo↔gateway, `/voss/robot/move_to_zone`·`/voss/robot/gripper`·`/voss/robot/stop`(미반영)·`/voss/robot/state`(미반영) | PLACE/VIEW/PICK·placed_stamp, servo goal 내 gripper 단독·async 닫힘, stop Trigger | MC-012~019, 그리퍼/state/stop IDL 후속 |
-| IC-CMD-01 | voice/HMI→manager, `/voss/voice/intent` Intent·`/voss/sort/command` Command | canonical 소문자 type·arg·answer 원래 box_id/HOLD, 접수≠완료, 조회 REST | MC-023/024/026, Intent 추가 |
+| IC-ROBOT-03 | manager/servo↔gateway, `/voss/robot/move_to_zone`·`/voss/robot/gripper`·`/voss/robot/stop`(미반영)·`/voss/robot/state`(타입 미정의) | PLACE/VIEW/PICK·placed_stamp, servo goal 내 gripper 단독·async 닫힘, stop Trigger | MC-012~019, 그리퍼/state/stop IDL 후속 |
+| IC-CMD-01 | voice/HMI→manager, `/voss/voice/intent` Intent·`/voss/sort/command` Command | canonical 소문자 type·arg·answer 원래 box_id/HOLD, 접수≠완료, 조회 REST | MC-023/024/026, Intent.box_id #73 반영 |
 | IC-VOICE-01 | manager/intent_parser→speech_out, `/voss/voice/say` String | 발행자별 중복 억제·FIFO, 질문 30 초는 say 발행기준 | MC-024/025, B 회차 상세 |
-| IC-STATE-01 | manager/gateway/logger→소비자, `/voss/sort/state`·`/voss/robot/state`(미반영)·`/voss/log/status` | SortState6 상태+ready/not_ready·state≥2Hz; RobotState4 상태·UNKNOWN; logger4 상태 | MC-015/019/026, RobotState/session_id 추가 |
+| IC-STATE-01 | manager/gateway/logger→소비자, `/voss/sort/state`·`/voss/robot/state`(타입 미정의)·`/voss/log/status` | SortState6 상태+ready/not_ready·state≥2Hz; RobotState4 상태·UNKNOWN; logger4 상태 | MC-015/019/026, RobotState 추가(session_id는 #78 반영) |
 | IC-RESULT-01 | manager→logger/HMI, `/voss/sort/result` SortResult | box/session/track·started/stamp·원문/후보/rule/reason/attempts·대문자 enum·최종 1 건 | MC-003/016/020, 부분 실패 업무 분류 |
-| IC-CONFIG-01 | YAML/manager→소비자, params·`/voss/sort/zone_map` ZoneMap(transient_local) | snapshot/version/hash, 단위/유효성, writer1 개, code/aliases | MC-009/019/034, PR #64 |
+| IC-CONFIG-01 | YAML/manager→소비자, params·`/voss/sort/zone_map` ZoneMap(transient_local) | snapshot/version/hash, 단위/유효성, writer1 개, code/aliases | MC-009/019/034, main #64 |
 | IC-STATS-01 | DB→SpringREST→음성/HMI | GET /api/stats, DB 유일원천·현재 session·FAILED 포함/PASSED 제외 | MC-021/022; 기존 Stats.srv 삭제 |
 | IC-MQTT-01 | bridge↔Spring↔React, MQTT `voss/*` | 6 토픽 QoS/retain·command_id/TTL/ack·ISO 시각·SSE·로컬 운전 제한 | MC-026/029, mqtt JSON/ACL 후속 |
 | IC-DB-01 | logger→PostgreSQL→Spring | PK box_id, DO NOTHING·commit 로그+조회·스풀/누락구분 | MC-003/020/027, DDL/장애 시험 |
@@ -715,7 +716,7 @@ manager는 대상·구역·최종 업무 결과와 준비 여부를 판단한다
 
 합의→docs/interfaces→voss_msgs/구현→소비자 동시 rebuild/배포→시험 순서로 이행한다. 필드 추가만으로 wire 호환이 보장되지 않는다. 기존 18IC ID를 유지하며 IC-STATS-01은 삭제된 ROS 서비스의 이름이 아니라 업무 집계 연결을 가리킨다. 미반영 IDL을 실행 가능한 계약으로 표시하지 않는다.
 
-현재 main 에는 BoxTrack/LabelCrop/LabelRead/ReadLabel/ZoneMap/TrackAndGrasp/SortResult/SortState ready/MoveToZone mode·placed_stamp/Command 정정과 Stats 삭제가 확인된다. Intent.box_id는 PR #73, SortState.session_id·RobotState·Gripper 피드백·stop·RETURN_FAILED 문서는 후속 반영이다. MQTT JSON(main mqtt.md는 초안)·view_pose·direction_base도 main에 없다. 부록 C에 기준 commit과 상태를 기록한다.
+현재 main 에는 BoxTrack/LabelCrop/LabelRead/ReadLabel/ZoneMap/TrackAndGrasp/SortResult/SortState ready/MoveToZone mode·placed_stamp/Command 정정과 Stats 삭제가 확인된다. Intent.box_id(#73)·SortState.session_id(#78)·direction_base와 설정 값 규칙(#64)·web_api(#68)도 main에 들어왔다. RobotState 타입·Gripper 피드백·stop·RETURN_FAILED·MQTT JSON(main mqtt.md는 초안)·view_pose는 아직 main에 없다. 부록 C에 기준 commit과 상태를 기록한다.
 
 ### 5.4 영상·좌표·시각 계약
 
@@ -770,7 +771,7 @@ GRASP→LIFT 전환은 정상 통신의 닫힘 완료 응답, `grip_detected`, �
 
 goal 중 PREPARE 개방·GRASP 닫힘·VERIFY 확인의 Gripper 호출자는 servo 하나다. manager는 동시에 호출하지 않는다. `call_async`로 닫힘 응답을 기다리는 동안 추종을 유지한다. 같은 RG2 자원의 중복 요청은 BUSY로 거부하며, 이전 goal/attempt의 늦은 응답은 해당 future를 식별해 버린다. 요청에 attempt 필드를 추가하지 않는다. 늦은 응답을 버리는 것과 별개로 gateway에서 진행 중인 동작의 종료·자원 해제를 확인한다.
 
-31mm 면 선택은 #51 최종 회신과 열린 PR #70에서 보고됐다. 목표39mm·14N, 보고 폭39.5~41.5mm, TCP z=윗면−19mm의 승인·시험 범위는 F-03에서 확인한다. 실제 간격≈보고 폭−10mm는 관측 특성이며 모든 폭에 적용되는 정밀 보정식으로 보장하지 않는다. 안전 인계 높이·놓기 높이·작업대 재픽업 높이는 구분한다.
+파지 방향은 31 mm 폭 파지(pending #16 결정, PR #70)다. 벨트 위 파지 높이 TCP z=윗면−19mm는 PL 결정값이고, 목표39mm·14N·보고 폭39.5~41.5mm는 T34 10회 시험으로 확인한다(F-03). 실제 간격≈보고 폭−10mm는 관측 특성이며 모든 폭에 적용되는 정밀 보정식으로 보장하지 않는다. 안전 인계 높이·놓기 높이·작업대 재픽업 높이는 구분한다.
 
 ### 5.6 장비·적재·정지 계약
 
@@ -816,9 +817,9 @@ logger 상태(`/voss/log/status`)는 STARTING/OK/DB_ERROR/SPOOL_FULL, 1Hz reliab
 | answer | box_id\|후보동/HOLD | 현재 ASKING·ID·후보 검증 |
 | reset_zone | 구역 | PAUSED에서 작업자 비움 확인 |
 
-Command(`/voss/sort/command`) 응답은 접수/거부다. 실제 완료는 SortState/SortResult로 확인한다. Intent.type은 소문자, zone/result 값은 대문자다. Intent.box_id는 원래 투입 ID이며 answer에 사용한다. 음성은 발화 시작 시점의 질문과 box_id를 연결한다. query_history는 manager를 거치지 않고 intent_parser/웹→Spring REST로 직접 보낸다. 음성 stop은 LLM 호출 전 로컬 키워드 매칭으로 바로 발행하며 FastAPI·zone_map 수신을 기다리지 않는다(PR #73). 경계별 필드 이름은 Command.srv `command`/`arg`(문자열), Intent `type`, MQTT/REST `type`/`args`(객체, PR #68)이며, bridge의 args→arg 변환(answer는 `<box_id>|<동 또는 HOLD>`)은 F-11에서 확정한다.
+Command(`/voss/sort/command`) 응답은 접수/거부다. 실제 완료는 SortState/SortResult로 확인한다. Intent.type은 소문자, zone/result 값은 대문자다. Intent.box_id는 원래 투입 ID이며 answer에 사용한다. 음성은 발화 시작 시점의 질문과 box_id를 연결한다. query_history는 manager를 거치지 않고 intent_parser/웹→Spring REST로 직접 보낸다. 음성 stop은 LLM 호출 전 로컬 키워드 매칭으로 바로 발행하며 FastAPI·zone_map 수신을 기다리지 않는다(main intent_json.md, #73). 경계별 필드 이름은 Command.srv `command`/`arg`(문자열), Intent `type`, MQTT/REST `type`/`args`(객체, main web_api.md)이며, bridge의 args→arg 변환(answer는 `<box_id>|<동 또는 HOLD>`)은 F-11에서 확정한다.
 
-기본 질문 ID는 box_id다. 현재 ASKING·같은 ID·후보2동 또는 HOLD만 수용한다. 30초 타이머는 manager say 발행부터 시작한다. 무효 답은1회 재안내하고 타이머를 유지한다. TTS가 실패해도 HMI 질문을 표시하며 타이머는 진행한다. stop에서 멈추고 resume은 재발화와30초 재시작이다. 종료된 같은 box의 질문 회차·늦은 답 수락 창 전달은 B 상세로 남긴다. box_id#회차를 원래 투입 ID에 혼합하지 않는다. human_wait는 say→유효 답 또는timeout 구간으로 별도 기록한다.
+기본 질문 ID는 box_id다. 현재 ASKING·같은 ID·후보2동 또는 HOLD만 수용한다. 30초 타이머는 manager say 발행부터 시작한다. 무효 답은1회 재안내하고 타이머를 유지한다. TTS가 실패해도 HMI 질문을 표시하며 타이머는 진행한다. stop에서 멈추고 resume은 재발화와30초 재시작이다. 종료된 같은 box의 질문 회차·늦은 답 수락 창 전달은 B 상세로 남긴다. box_id#회차를 원래 투입 ID에 혼합하지 않는다. main intent_json.md에 남은 "앞 질문의 늦은 답이 와도 같은 박스의 답이라 해가 없고" 문장은 #54 최종 정정과 맞지 않아 인터페이스 정합 PR에서 고친다(F-09). human_wait는 say→유효 답 또는timeout 구간으로 별도 기록한다.
 
 say(`/voss/voice/say`, String) 발행자는 manager와 intent_parser다. 각자가 자기 이벤트의 중복을 억제하며 다른 박스의 같은 문장은 각각 발행한다. speech_out은 FIFO, G0에는 끼어들기 없음이다. TTS 엔진·우선 재생·half-duplex는 B 후속이며 발행 시각과 실제 재생 시작/완료 로그를 구분한다.
 
@@ -850,15 +851,15 @@ session_id는 `YYYYMMDDTHHMMSS-xxxx`(랜덤4hex,20자), box_id는 `<session>-<3�
 
 manager는 PLACE 응답 후 box_id당 최종 SortResult1건을 `/voss/sort/result`로 발행하며 DB commit을 기다리지 않는다. logger는 commit 성공 반환 직후 event=db_committed/box_id/committed_at/rows 로그를 남긴다. 동일 box_id를 별도 SELECT하고 필드·물리 적재·복귀를 대조해야 G0다. commit 로그는 호스트에서 관측한 확인 시각이며 DB 내부 commit의 정밀 시각을 보장하지 않는다.
 
-공식 조회는 Spring `GET /api/stats` 한 곳이다. query_kind=count_by_dong/held_count/remaining_count, dong, session_id를 받아 ok/count/as_of를 반환한다. DB가 유일 원천이며 manager Stats와 ROS log-query는 없다. 남은 수는 현재 세션의 `max(planned−(PLACED+HELD+FAILED),0)`, PASSED는 제외한다. FAILED 운영 처리 수와 물리 적재 성공률은 구분한다. session_plan은 Spring이 저장하며 sort_log writer는 logger만이다. 수용된 SortState.session_id는 main 미반영이므로 첫 결과 전·재기동 시 현재 세션 전달을 F-11에서 정합한다. DB 오류는 조회 불가로 답하고 메모리 집계를 공식 이력으로 대체하지 않는다.
+공식 조회는 Spring `GET /api/stats` 한 곳이다. query_kind=count_by_dong/held_count/remaining_count, dong, session_id를 받아 ok/count/as_of를 반환한다. DB가 유일 원천이며 manager Stats와 ROS log-query는 없다. 남은 수는 현재 세션의 `max(planned−(PLACED+HELD+FAILED),0)`, PASSED는 제외한다. FAILED 운영 처리 수와 물리 적재 성공률은 구분한다. session_plan은 Spring이 저장하며 sort_log writer는 logger만이다. SortState.session_id는 main에 반영됐다(#78, start 때 생성·다음 start까지 유지·첫 start 전 ""). web_api의 현재 세션을 이 값으로 바꾸는 규칙(세션 없음=NO_SESSION)은 열린 PR #81이다(F-11). DB 오류는 조회 불가로 답하고 메모리 집계를 공식 이력으로 대체하지 않는다.
 
-스풀 경로는 `/var/lib/voss/spool/sort_log.jsonl`의 durable 볼륨이다. 재시도 간격은1→2→5→10초, 이후30초다. 스풀 기록 후 복구와 수신 전/스풀 전/디스크full 누락 발견을 구분한다. 유실 경계는 시험 대상이며 reliable QoS나 경고 후보1000행/디스크1GB를 저장 보장으로 표시하지 않는다. manager↔스풀↔DB의 box_id/outcome/zone/reason 대조가 필요하다. 10/16까지 전체 보존하며 초기화는 새 세션, CSV는 Spring API로 내보낸다. export 경로/API 세부는 PR #68/#22 확정 후 동기화한다.
+스풀 경로는 `/var/lib/voss/spool/sort_log.jsonl`의 durable 볼륨이다. 재시도 간격은1→2→5→10초, 이후30초다. 스풀 기록 후 복구와 수신 전/스풀 전/디스크full 누락 발견을 구분한다. 유실 경계는 시험 대상이며 reliable QoS나 경고 후보1000행/디스크1GB를 저장 보장으로 표시하지 않는다. manager↔스풀↔DB의 box_id/outcome/zone/reason 대조가 필요하다. 10/16까지 전체 보존하며 초기화는 새 세션, CSV는 Spring API로 내보낸다. export는 main web_api.md `GET /api/export.csv`(#68)를 따른다.
 
 ### 5.9 설정·배포 계약
 
-공유 원본은 config/voss_config.yaml 하나이며 runtime writer는 manager다. bringup launch가 같은 snapshot을 파라미터로 전달하고 각 소비자가 version/sha256을 기록한다(PR #64 머지 후 계약). 비전 컨테이너 노드는 읽기 전용으로 마운트한 파일을 직접 읽어 sha256을 계산하고, null 키는 파라미터로 넘기지 않는다(미선언=미측정). 공유 설정은 정지 상태에서만 바꾸며 같은 버전을 다시 적용하고 ready를 확인한 뒤 재개한다(#53 MC-009). 벨트 설정은 speed_cmps=4.8이다. 방향은 열린 PR #64가 direction_base=[0.99992,-0.01292,0.0] 단위벡터를 제안하며 main은 아직 `direction_axis: "x"`다. zones/observe는 플랜지 mm/deg, tcp_offset은 툴 좌표 mm다. 소비자는 로드 때 SI 변환·유효성 검사를 수행한다.
+공유 원본은 config/voss_config.yaml 하나이며 runtime writer는 manager다. bringup launch가 같은 snapshot을 파라미터로 전달하고 `config_version`·`config_sha256`을 함께 넘기며 각 소비자가 기록한다(main voss_config.md 값 규칙, #64). 비전 컨테이너 노드는 읽기 전용으로 마운트한 파일을 직접 읽어 sha256을 계산하고, null 키는 파라미터로 넘기지 않는다(미선언=미측정). 공유 설정은 정지 상태에서만 바꾸며 같은 버전을 다시 적용하고 ready를 확인한 뒤 재개한다(#53 MC-009). 벨트 설정은 speed_cmps=4.8이다. 방향은 `belt.direction_base=[0.99992,-0.01292,0.0]` 단위벡터이며 소비 노드는 ‖v‖가 1±0.01이 아니면 거부한다(main #64). zones/observe는 플랜지 mm/deg, tcp_offset은 툴 좌표 mm다. 소비자는 로드 때 SI 변환·유효성 검사를 수행한다.
 
-servo 전용 Kp/높이/오프셋/age/watchdog(servo 입력 상실 판단)은 servo YAML로 관리하며 gateway의 servo_cmd 만료 watchdog(§5.6)과 별개다. null은 미측정이며 필요한 값이 null인 기능은 미준비다. 의미 있는0은 유효하며 latency_offset_ms=0은 보정 없음이다. TCP 등록값과 설정을 기동 때 대조한다. main의 direction_axis 잔존과 열린 PR #64의 direction_base/null 규약 차이는 부록 C에서 추적한다. main conventions.md의 "좌표계·단위는 두산 posx 기준 (mm, deg)" 문장도 ROS SI 규약과 충돌하므로 PR #64에서 함께 정정한다.
+servo 전용 Kp/높이/오프셋/age/watchdog(servo 입력 상실 판단)은 servo YAML로 관리하며 gateway의 servo_cmd 만료 watchdog(§5.6)과 별개다. null은 미측정이며 필요한 값이 null인 기능은 미준비다. 의미 있는0은 유효하며 latency_offset_ms=0은 보정 없음이다. TCP 등록값과 설정을 기동 때 대조한다. 단위 규칙은 main conventions.md·voss_config.md(#64)와 같다: 두산 서비스·pose 배열은 mm·deg, 표준 geometry_msgs는 SI, 변환은 robot_gateway. view_pose 키는 아직 스키마에 없다(F-10).
 
 
 ## 6. 비기능 요구사항
@@ -894,7 +895,7 @@ servo 전용 Kp/높이/오프셋/age/watchdog(servo 입력 상실 판단)은 ser
 - 출처: NFR-03
 - 검증 VT-047: 운전·분류·이력·예외 4 종×5 문장 중 19 개 이상.
 - 후속 추적: TBD-009, TBD-022
-- v0.3 합의 반영: 전체 20건 중 19건 이상이며 API 오류/timeout도 전체 분모에 남긴다. API 정상 응답에 한정한 조건부 정확도는 별도다. 허용 외 입력 거부 100%도 함께 판정한다(#54). "API 오류 2건 이상이면 그 회차 무효·전체 재시험" 규칙이 #54 11:41 정정 뒤에도 유효한지는 정의석 확인 대기다. 실패/무효/재시험 원본을 보존한다.
+- v0.3 합의 반영: 전체 20건 중 19건 이상이며 API 오류/timeout도 전체 분모에 남긴다. API 정상 응답에 한정한 조건부 정확도는 별도다. 허용 외 입력 거부 100%도 함께 판정한다(#54). "API 오류 2건 이상이면 그 회차 무효·전체 재시험" 규칙이 #54 10/06 20:41(KST) 정정 뒤에도 유효한지는 정의석 확인 대기다. 실패/무효/재시험 원본을 보존한다.
 - 합의 근거: MC-031 (02 합의 종합의 최종 댓글).
 - 이행·검증: 계약 반영과 구현/실측 수락을 구분한다. VT 별 상태는 04 검증 추적표 참조.
 
@@ -998,7 +999,7 @@ servo 전용 Kp/높이/오프셋/age/watchdog(servo 입력 상실 판단)은 ser
 - 출처: TR-VOICE-05; NFR-09에서 파생
 - 검증 VT-053: 진행 단계별 stop/cancel/입력 상실 시험. 최대 정지 지연과 정책은 TBD-017.
 - 후속 추적: TBD-017, TBD-020
-- v0.3 합의 반영: Trigger+move_stop 최소안과 DEVICE_ERROR/PAUSED·사람 확인을 적용한다. 별도 STOP_UNCONFIRMED/자동 정지 판별은 추가하지 않는다. 음성 stop은 LLM을 거치지 않는 로컬 경로다(PR #73). watchdog·최대 정지 지연/거리·gateway 종료는 실측 대기이며 요청 응답을 물리 정지 보장으로 쓰지 않는다.
+- v0.3 합의 반영: Trigger+move_stop 최소안과 DEVICE_ERROR/PAUSED·사람 확인을 적용한다. 별도 STOP_UNCONFIRMED/자동 정지 판별은 추가하지 않는다. 음성 stop은 LLM을 거치지 않는 로컬 경로다(main intent_json.md). watchdog·최대 정지 지연/거리·gateway 종료는 실측 대기이며 요청 응답을 물리 정지 보장으로 쓰지 않는다.
 - 합의 근거: MC-014 (02 합의 종합의 최종 댓글).
 - 이행·검증: 계약 반영과 구현/실측 수락을 구분한다. VT 별 상태는 04 검증 추적표 참조.
 
@@ -1196,9 +1197,9 @@ servo 전용 Kp/높이/오프셋/age/watchdog(servo 입력 상실 판단)은 ser
 
 웹/DB/AI/Mosquitto→WebLogic STOP→두산 bringup→tool/TCP 등록→gateway READY→카메라/비전→servo→**sort_logger→manager**→음성/hmi_bridge 순서로 연결한다. 단순 프로세스 시작으로 READY를 가정하지 않고 파트 준비 상태를 확인한다.
 
-비전(남현지)·AI/웹/DB(정의석) 컨테이너는 host-network, ROS 컨테이너만 domain30/CycloneDDS lo+wlo1 설정을 공유한다. 인터넷은 Wi-Fi, 로봇 NIC enp4s0은 DDS/웹 개방에서 제외하고 never-default로 설정한다. 개인 PC 읽기·디버그 포트/범위는 합의에 따른다.
+비전(남현지)·AI/웹/DB(정의석) 컨테이너는 host-network, ROS 컨테이너만 domain30/CycloneDDS lo+wlo1 설정을 공유한다. 인터넷은 Wi-Fi, 로봇 NIC enp4s0은 DDS/웹 개방에서 제외하고 never-default로 둔다(10/07 적용, CycloneDDS lo+wlo1 추가 — #55 김학민 14:48 KST). 교육장 AP가 단말 간 멀티캐스트를 막아 개인 PC는 공용 PC wlo1 IP를 유니캐스트 peer로 둔다(discovery 최대 약 30 s, 개인 PC에서 1080p image_raw 구독 금지). 개인 PC 읽기·디버그 포트/범위는 합의에 따른다.
 
-Nginx80·Mosquitto1883은 wlo1에서 관리하고 Spring8080/FastAPI8000/PostgreSQL5432는 loopback 바인드다. DDS7400–7600/UDP는 wlo1 개발/디버그용으로 확인한다. 실제 방화벽/ACL/AP 격리·OpenAI 호스트/AI 컨테이너 연결은 F-13 시험으로 확인한다.
+Nginx80·Mosquitto1883은 wlo1에서 관리하고 Spring8080/FastAPI8000/PostgreSQL5432는 loopback 바인드다. DDS는 도메인 30 기준 14900–15149/udp(7400+250×30)를 wlo1에서만 연다(ufw 적용, #55 10/07). 80·1883·8080·8000·5432 서비스 기동 후 바인드 재확인은 F-13이다. 실제 방화벽/ACL/AP 격리·OpenAI 호스트/AI 컨테이너 연결은 F-13 시험으로 확인한다.
 
 정지/재기동/DB 오류 운영 절차는 보유 박스·저장상태·사람 확인을 구분한다. manager 재기동은 새 session이며 이미 발행한 box_id를 재처리하지 않는다. HMI UNKNOWN/DB 조회 불가는 정상값·0 건으로 위장하지 않는다.
 
@@ -1318,10 +1319,10 @@ Nginx80·Mosquitto1883은 wlo1에서 관리하고 Spring8080/FastAPI8000/Postgre
 
 | 항목 | v0.3 적용 | 근거·잔여 |
 |---|---|---|
-| BRD 판 | PL이 v1.2 확인, Word #66. 기존 TR/NFR ID 유지 | Word v1.1↔v1.2 TR/NFR 45 행 동일·본문 중복 정리 확인(05). Markdown/후속 파지 정정은 F-15 |
+| BRD 판 | 적용 판 v1.3(#79). 기존 TR/NFR ID 유지 | v1.1↔v1.2 TR/NFR 45 행 동일, v1.3은 TR-PICK-06·2.4·R-06 파지 방향 정정(05). Markdown 사본 v1.3 교체 완료 |
 | 매핑 변경/교시 | SYS-OP-001/002 C 선택, G0 이후 채택 | 사용자 지침·MC-033, 10/11 이후 |
 | 사이클 NFR-04 | 정상 30 초·재시도/예외/human_wait 별도 | MC-016/030/031, placed proxy 영상 대조 |
-| 파지 방향 TR-PICK-06 | 31mm 면 선택 보고를 수록(PR #70, main pending #16 미정). 채택하면 사전 개방 여유는 벨트 가로 방향이고 벨트 방향 타이밍 오차는 추종이 맡으며, 46mm 면 기준 ±22mm 여유를 가정하지 않는다 | #51·#53/열린 PR #70; ADR-0009(김학민)·BRD 정정/수치의 T34 확인 F-03 |
+| 파지 방향 TR-PICK-06 | 31 mm 폭 파지로 결정(pending #16, #70)·BRD v1.3 반영(#79). 사전 개방 여유는 벨트 가로 약 ±24.5 mm이고 벨트 방향 타이밍 오차는 추종이 맡으며, 옛 ±22 mm 여유를 가정하지 않는다 | #51·#53·#70·#79; ADR-0009(김학민)·수치의 T34 확인 F-03 |
 | 준비/집계/HMI 파생 요구 | manager 준비 주담당·REST DB 원천·HMI1 초 목표 수용 | MC-019/021/022/031, 실제 구현·검증 별도 |
 | 제어 전환 | 14/20 미달만으로 자동 전환 없음 | 승인 ADR-0002·MC-008 |
 
@@ -1346,20 +1347,20 @@ Nginx80·Mosquitto1883은 wlo1에서 관리하고 Spring8080/FastAPI8000/Postgre
 | TBD-ID | 원 질문 | 상태 | 채운 내용 / 남은 확인 | 근거 |
 |---|---|---|---|---|
 | TBD-001 | 영상·검출 / V-01 | 관측·설정 반영(최종 T33) / 성능 대기 | 1080p/30fps/rgb8·6ms/WB4600 적용. 실제 FPS/지연·분할/YOLO 비교·정답 검증 F-13/14 | MC-028·031·032 |
-| TBD-002 | 좌표·캘리브레이션 / V-02 | 규약 확정 / 동적 검증 대기 | 비전윗면 m/TCP 소비·G0 HAND_EYE. 파일/촬영 pose 정합·상류외삽·≤5mm 제안/오차 F-01 | MC-001·002·004·010 |
+| TBD-002 | 좌표·캘리브레이션 / V-02 | 규약 확정 / 동적 검증 대기 | 비전윗면 m/TCP 소비·G0 HAND_EYE. 파일/촬영 pose 정합·상류외삽·≤5mm 제안/오차 F-01. 정적 검증점 5곳 ≤5mm(최대 2.63mm) 보고는 열린 PR #48 | MC-001·002·004·010 |
 | TBD-003 | 식별·시각·OCR 연결 / V-03 | 규약 반영 / 세부 검증 | box/session/track·LabelCrop/ReadLabel/ZoneMap·원본 stamp·PICKING 가림 확정. 시계매핑·이력/만료후보·난수충돌 대응 F-01/08 | MC-003·004·007·020·034 |
 | TBD-004 | OCR 판정·후보 / V-04 | 필드/흐름 확정 / 튜닝 대기 | 원문/2위 후보·촬영 stamp·현재단계판독·confidence0.6 설정. 2 차품질·다수결/임계값·재확인 검증 F-10/14 | MC-007·017·020·024 |
 | TBD-005 | FSM·정지·예외 / V-05 | 기본 규약 확정 / B 상세 | 서보 retry·canonical 명령·기본 stop/PAUSED·질문 30 초 수용. 단계별보유/resume·질문 회차수락 창 F-09/10 | MC-005·014·015·019·023·024 |
-| TBD-006 | 설정 전달 / V-06 | snapshot 원칙 확정 / 동기화 | writer/launch/version/hash·vector/null/0 확정. PR #64·누락 validation·TCP 대조 F-05 | MC-009·019·034 |
+| TBD-006 | 설정 전달 / V-06 | snapshot 원칙 확정 / 동기화 | writer/launch/version/hash·vector/null/0 확정. main #64 값 규칙·누락 validation·TCP 대조 F-05 | MC-009·019·034 |
 | TBD-007 | 결과·업무 ID / V-07 | 기본 계약 확정 / 부분 실패 상세 | PKbox/session24·final1 건·enum 필드·attempts. RETURN_FAILED outcome/reason·키충돌·시각누락 F-06/08 | MC-003·016·020·021 |
 | TBD-008 | 이력·남은수 / E-05 | 집계규약 확정 / 구현 대기 | Spring REST·DB 원천·현재 session·FAILED 포함/PASSED 제외/clamp. 현재 세션 전달·session_plan·API F-11 | MC-021·022 |
-| TBD-009 | 명령 schema / E-01 | canonical 확정 / IDL/B 상세 | Command type/arg/허용상태·query_history REST·HOLD·Intent.box_id. PR #73·TTL/원격제한·질문수락 창 F-09/11 | MC-023·024·026 |
+| TBD-009 | 명령 schema / E-01 | canonical 확정 / IDL/B 상세 | Command type/arg/허용상태·query_history REST·HOLD·Intent.box_id. main #73(늦은 답 문장 정정 필요)·TTL/원격제한·질문수락 창 F-09/11 | MC-023·024·026 |
 | TBD-010 | 음성 / E-02 | 기본역할 확정 / 선택·시험 | say 발행기준·발행자별 dedupe/FIFO. 호출어 ADR-0007 제안(PR #72, pending #5)·Whisper 크기(pending #6)·TTS(pending #12)는 10/08 정의석. VAD/마이크 1m·duplex·지연 F-11/13/14 | MC-024·025·028·031 |
 | TBD-011 | HMI/MQTT / E-03 | 원칙 확정 / schema·구현 대기 | RobotState/UNKNOWN·명령 ID/TTL/ack·QoS/retain·React/Spring/SSE/로컬제한. JSON/ACL/로그상태전달·DOM 시계 F-11/13/14 | MC-019·026·029·031 |
 | TBD-012 | DB / E-04 | 저장계약 확정 / migration·시험 | PostgreSQL·sort_log PK/필드·commit 로그+SELECT·스풀재시도·보존. DDLnullable 정합/볼륨·manager 로그·장애각 3 회 F-08/12 | MC-003·016·020·027·029 |
 | TBD-013 | 장비/벨트/환경 / R-01 | 관측·설정 반영 / 환경 검증 | 벨트표/4.8cmps·단위벡터·RGB 노출/트레이/TCP 관측. 드라이버버전·변경후간섭 F-01/13. 작업대 치수는 생략(measurements #6, 배치 변경 시 재교시) | MC-009·028·032 |
-| TBD-014 | robot API/큐 / R-02 | TCP/자원규약 확정 / 실측 | pose 응답 수신·SI/native·stream latest/직렬서비스·RG2 분리. 실제 path/type/DRCF/적용·RTT/stop 경쟁 F-02/04. 제어 경로 결정은 pending #8(박병후, 미정)·measurements #3 | MC-004·010·011·013·014 |
-| TBD-015 | gripper / R-03 | 판정 원칙 확정 / 수치·IDL 대기 | 닫힘완료+grip_detected+검증보고 폭·async/latefuture. Gripper 확장·힘/폭/높이 T34·31mm 면승인 F-03/04. 파지 방향 pending #16(PR #70) | MC-012·013 |
+| TBD-014 | robot API/큐 / R-02 | TCP/자원규약 확정 / 실측 | pose 응답 수신·SI/native·stream latest/직렬서비스·RG2 분리. stream 경로·타입 확인(`/dsr01/dsr_controller2/servol_stream` ServolStream·`speedl_stream` SpeedlStream, #55 10/07). M2.40 대응·적용률·RTT/stop 경쟁 F-02/04. 제어 경로 결정은 pending #8(박병후, 미정)·measurements #3 | MC-004·010·011·013·014 |
+| TBD-015 | gripper / R-03 | 판정 원칙 확정 / 수치·IDL 대기 | 닫힘완료+grip_detected+검증보고 폭·async/latefuture. Gripper 확장·힘/폭/높이 T34·T34 10회 F-03/04. 파지 방향은 31 mm 폭으로 결정(pending #16, #70) | MC-012·013 |
 | TBD-016 | pose/grid/적재 / R-04 | 기본 규약 확정 / 부분 실패·용량 | 플랜지설정/TCPpose·PLACE 복귀응답/placed_stamp·최신 3/2 칸·slot은 PLACED 후 증가/개방 전 실패 재사용/start에서 0. 2 칸 vs 누적 3·recheck 점유/view_pose·RETURN_FAILED F-06/07/10 | MC-010·016·017·018·019·032 |
 | TBD-017 | stop/limits/recovery / R-05 | 최소정지 규약 확정 / 실측 | Trigger/move_stop·DEVICE_ERROR/PAUSED·수동확인·개방금지. watchdog/영역/속도/정지 거리·배치재검증·/voss/robot/stop 호출 주체(manager·servo)/순서/중복 호출 F-04 | MC-009·014·015·032 |
 | TBD-018 | 배포/READY / R-06 | 할당·기동 확정 / 구현 검증 | manager 통합 ready·RobotState/logger 신선도·logger 선기동·tool 등록·컨테이너할당. IDL/ready 자세/heartbeat F-05/13 | MC-009·019·029 |
@@ -1372,7 +1373,7 @@ Nginx80·Mosquitto1883은 wlo1에서 관리하고 Spring8080/FastAPI8000/Postgre
 | TBD-025 | 사이클 / B-05 | 측정 규약 확정 / 계측 대기 | t_detect 유효촬영→t_placed proxy·attempts1/OCR/PLACED 각 30 초·예외/human_wait 별도. 영상/시각/manager 로그 F-08/14 | MC-016·024·030·031 |
 | TBD-026 | PC/GPU/resources / E-06 | 사양 근거 확인 / 부하 대기 | PC/GPU/RAM/NIC 원본 확인(USB 육안은 measurements #5 미완료)·ADR 스택/포트. GPU 컨테이너/DMIC/Whisper 비전부하·DDS/wlo1/AP/ACL F-13 | MC-028·029 |
 
-정적 설정·관측값을 반영해도 전체 동작의 성능/안전 수락을 확정하지 않는다. 특히 31mm 파지의 승인 범위/수치, HOLD2 칸과 누적 3, RETURN_FAILED 업무 분류, 같은 box 질문 수락 창, manager 결과 로그 및 미반영 IDL은 별도 확인이 필요하다.
+정적 설정·관측값을 반영해도 전체 동작의 성능/안전 수락을 확정하지 않는다. 특히 31 mm 폭 파지의 T34 수치 확인, HOLD2 칸과 누적 3, RETURN_FAILED 업무 분류, 같은 box 질문 수락 창, manager 결과 로그 및 미반영 IDL은 별도 확인이 필요하다.
 
 ## 부록 A. 합의 반영 후 기준선 확정 절차
 
@@ -1388,27 +1389,28 @@ ID / 상태 / A·B·C / 책임 / 조건 / 해야 할 동작 / 측정 가능한 �
 
 ## 부록 C. 합의 근거와 구현 동기화 상태
 
-문서/IDL 대조 기준은 main@`fff112116bef3992d27a094456b055f647ed61a8`다. 검토 당시 열린 PR은 병합된 것으로 표시하지 않는다. r1 재검토 시점 main@`a4d33ef`는 fff1121 이후 ADR-0004 보강과 pending #17 추가만 있어 계약 영향이 없다. `sources/current_main/`의 pending-decisions.md는 fff1121 사본이다. 6 개 이슈 댓글 원문과 경로/commit/hash는 sources와 manifest 에 보존했다.
+v0.4 문서/IDL 대조 기준은 main@`671c67f3a5e4f1de46dec3f34b4cf2975727c975`다(v0.3은 fff1121). 그 사이 #69(ADR-0004)·#73·#68·#74·#70·#78·#64·#79가 머지됐다. 검토 당시 열린 PR은 병합된 것으로 표시하지 않는다. `sources/current_main/`은 671c67f 사본 19개다. 6 개 이슈 댓글 원문과 경로/commit/hash는 sources와 manifest 에 보존했다.
 
 | 항목 | 현재 확인 | 잔여 |
 |---|---|---|
 | BoxTrack/LabelCrop/LabelRead/ReadLabel/ZoneMap | main 문서/IDL 확인 | 동적 좌표/2 차 OCR/정지 판독 실기 |
 | TrackAndGrasp·SortResult·Command | main 확장/정정 확인 | 런타임/파지/정지·업무 부분 실패 |
 | MoveToZone mode/placed_stamp·SortState ready | main IDL 확인 | 실제 gateway/manager·복귀 사건 계측 |
-| Stats.srv | main 삭제 확인 | SpringREST 계약/구현 PR #68 |
-| Intent.box_id·intent_json | #52 수용·PR #73 open | 머지 전 "늦은 답이 와도 같은 박스의 답이라 해가 없고" 문장을 #54 최종 정정에 맞게 고치기(정의석)·PL 승인/머지·consumer rebuild |
-| SortState.session_id | #52 최종 수용 보고 | main 미반영·현재 세션 전달 |
+| Stats.srv | main 삭제 확인 | Spring REST 계약 main web_api.md(#68), 구현 #22 |
+| Intent.box_id·intent_json | main 반영(#73) | "늦은 답이 와도 같은 박스의 답이라 해가 없고" 문장을 #54 최종 정정에 맞게 고치기(인터페이스 정합 PR)·consumer rebuild |
+| SortState.session_id | main 반영(#78) | web_api 현재 세션·NO_SESSION 규칙 PR #81 open |
 | RobotState/Gripperfeedback/stop/RETURN_FAILED | #53/#55 합의 | 김학민 후속 문서/IDL/구현·리뷰 |
-| config direction_base/null/0 | #51/PR #64 합의 방향 | main direction_axis 잔존·PR #64 open |
-| BRD v1.2 | PL 확인·Word #66 | Word 판 비교 완료(05), Markdown 갱신·파지 정정 |
-| 31mm 면/힘/폭/높이 | #51 선택 보고·PR #70 open | PL/ADR·T34 검증/승인 범위 |
+| config direction_base/null/0 | main 반영(#64) | 구현의 크기 검사·null 미전달·config_sha256 기록 확인(F-05), view_pose 키 미정의(F-10) |
+| BRD v1.3 | v1.3 기준판·Markdown 사본(#79) | v1.1/v1.2/v1.3 비교 완료(05) |
+| 31 mm 폭 파지/힘/폭/높이 | pending #16 결정·#70·BRD v1.3 | ADR-0009(김학민)·T34 10회 시험 |
 | PC/벨트/카메라/TCP/트레이 | main 측정/설정 근거 | 전체 성능·동적간섭·부하 수락과 별도 |
 | stop 서비스 `/voss/robot/stop` | #51·#53 합의(Trigger), main topics.md에 없음 | 김학민 T32 PR·호출 주체/순서 F-04 |
 | 열린 PR #48·#76 | 호모그래피 파일·valid 조건 / BoxTrack 확정 발행(min_hits, ID 건너뜀) | 머지 때 §5.4·TBD-025 갱신 |
+| 열린 PR #81 | web_api 현재 세션 = SortState.session_id, NO_SESSION | 머지 때 §5.8·F-11 갱신 |
 | mqtt.md | main 초안: 토픽 4개·`{"command","arg"}` | MC-026 형식·ack·robot 토픽 반영, 정의석 #20(10/08) |
 | view_pose·PICK 높이 | MoveToZone mode만 main 반영 | voss_config 스키마·교시(김학민 T35, F-10) |
 | voss_msgs.md ROBOT 임시 ready | pose 0.5 s 이내 + move_to_zone 서비스 존재 | RobotState 반영 때 §5.7 기준으로 교체(남현지·김학민) |
-| conventions.md 단위 | "좌표계·단위는 두산 posx 기준 (mm, deg)" | ROS SI 규약과 충돌, PR #64에서 정정 |
-| topics.md 지난 표기 | robot_gateway `/dsr01/servol_stream (10/06 확인)`, sort_manager `/voss/robot/gripper` 호출 | MC-011 실측 대기·MC-013 goal 중 gripper 단독 호출자와 정합(김학민·남현지) |
+| conventions.md 단위 | main 정정(#64): posx mm·deg, geometry_msgs SI | 해결 |
+| topics.md 지난 표기 | robot_gateway `/dsr01/servol_stream (10/06 확인)`, sort_manager `/voss/robot/gripper` 호출 | 실제 stream 경로는 `/dsr01/dsr_controller2/servol_stream`·`speedl_stream`(#55 10/07). 문구·gripper 호출자 정합은 인터페이스 정합 PR |
 
 이 문서 작성 중 장비를 작동하거나 실측하지 않았다. 실측 근거를 확인한 항목과 아직 수행/승인이 남은 항목을 분리했다. G0/G2 통과는 실제 증거/확인자 없이 선언하지 않는다.

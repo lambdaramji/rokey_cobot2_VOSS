@@ -1,7 +1,7 @@
 {
-  "version": "v0.3",
+  "version": "v0.4",
   "date_kst": "2026-10-07",
-  "repository_main": "fff112116bef3992d27a094456b055f647ed61a8",
+  "repository_main": "671c67f3a5e4f1de46dec3f34b4cf2975727c975",
   "source": "#50~55 전체 댓글의 최종 정정·합의 및 main 계약/IDL",
   "source_old_srd_sha256": "5cf9c3ab060c7371dffaedb0a5d64010041ed1cc201b47f9b390977d77e75ad9",
   "agreements": [
@@ -181,7 +181,7 @@
       "refs": "V IC-V-05(L269–282); B IC-BH-PICK(L177–194); R R-03·R-04(L67–89)",
       "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
       "decision": "phase=PREPARE/TRACK/DESCEND/GRASP/LIFT/VERIFY. result.grasped=true는 물체 확보 후 안전 높이 LIFT·VERIFY를 마친 인계다. reason=OK/GRASP_FAILED/LOST/OUT_OF_REACH/STALE_INPUT/DEVICE_ERROR/CANCELED와 action status를 매핑하며 manager는 reason으로 분기한다. BUSY/미준비 goal은 reject(result 없음). err_u/v는 px다.",
-      "residual": "인계 높이·자세·timeout은 실측/설정 검증 필요. #51 최종의 31mm 면 선택 보고·열린 PR #70과 #53 일부합의/T34 조건을 함께 남긴다. -19mm는 보장값으로 승격하지 않는다. #43·#36.",
+      "residual": "인계 높이·자세·timeout은 실측/설정 검증 필요. 파지 방향은 31 mm 폭 파지로 PL 결정(pending #16, #70), −19mm는 PL 결정값이다. 39mm/14N/보고 폭은 T34 10회 시험으로 확인한다. #43·#36.",
       "location": "§5.5·10",
       "owners": "박병후·김학민·남현지(PL)",
       "due": "T34 10/07~08",
@@ -272,7 +272,7 @@
       "refs": "V V-06·IC-V-08(L126–136,361–379); R IC coverage·R-02(L128–137,54–65); B IC-BH-CONFIG(L253–270)",
       "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
       "decision": "단일 YAML 원본, runtime writer=manager. bringup이 정적 snapshot을 파라미터로 전달하고 소비자가 version/sha256을 기록한다(비전 컨테이너는 마운트 파일을 직접 읽음, PR #64). 사람 단위 mm/deg/cmps는 로드·gateway 경계에서 SI 변환한다. speed_cmps=4.8, belt.direction_base=[0.99992,-0.01292, 0.0] (PR #64 제안, main은 direction_axis). 공유 설정은 정지 상태에서만 바꾸고 같은 버전을 재적용·ready 확인 후 재개한다. null은 미측정, 필요한 값이 null이면 해당 기능 미준비다. 의미 있는 0(예 latency_offset_ms=0)은 유효다.",
-      "residual": "main에는 direction_axis가 남아 있고 PR #64가 열려 있다. 서보 전용 게인/높이/age/watchdog은 servo YAML, 공유 값만 voss_config. null 파라미터 전달 제외·TCP 등록 비교·설정 validation 구현 확인 필요.",
+      "residual": "direction_base·값 규칙은 main에 반영됐다(#64). 서보 전용 게인/높이/age/watchdog은 servo YAML, 공유 값만 voss_config. null 파라미터 전달 제외·TCP 등록 비교·설정 validation 구현 확인 필요.",
       "location": "§3.4·5.9",
       "owners": "남현지·김학민·박병후",
       "due": "PR #64·G0 전",
@@ -673,7 +673,7 @@
       "refs": "V IC-STATS coverage(L162–181); E IC-EUS-STATS-01(L261–277); repo src/voss_msgs/srv/Stats.srv",
       "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
       "decision": "공식 집계의 유일 원천은 PostgreSQL이다. 제공자는 Spring Boot REST GET /api/stats 한 곳이고 intent_parser/HMI가 공용으로 호출한다. manager Stats.srv·/voss/sort/stats는 삭제하며 새 ROS /voss/log/query도 만들지 않는다. DB 장애에는 조회 불가로 답하고 메모리 값을 공식 이력으로 대체하지 않는다.",
-      "residual": "web_api.md는 열린 PR #68. G0는 직접 SELECT로 동일box 검증 가능하고 B 음성 이력은 Spring기동 의존. query_kind/count/as_of·현재 세션 전달 구현/검증은 #22.",
+      "residual": "web_api.md는 main 반영(#68), 현재 세션 규칙은 PR #81. G0는 직접 SELECT로 동일box 검증 가능하고 B 음성 이력은 Spring기동 의존. query_kind/count/as_of·현재 세션 전달 구현/검증은 #22.",
       "location": "§5.8·IC-STATS-01",
       "owners": "정의석·남현지",
       "due": "B·#22",
@@ -701,7 +701,7 @@
       "refs": "V IC-V-06·CMD coverage(L284–331,162–181), FR018(L20–51); E E-01·CHG-EUS-01(L76–109,417–427); repo srv/Command.srv",
       "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
       "decision": "Command(command,arg)은 접수 응답이며 완료는 state/result다. start(arg빈값/ALL)는 IDLE 시작·RUNNING 전체모드 전환, resume은 PAUSED, priority는 허용 동 이름·다음박스부터, stop은 모든 상태, answer=<box_id>|<후보동/HOLD> ASKING, reset_zone은 PAUSED다. query_history는 manager를 거치지 않고 REST로 보낸다. Intent.type소문자, 값enum대문자, Intent.box_id는 answer용이다.",
-      "residual": "Intent.box_id·intent_json은 열린 PR #73(#67 대체), wire 변경은 소비자 동시 rebuild/배포 필요. state별 명령 거부·원격 움직임 명령 제한 구현은 #29·#18·#20.",
+      "residual": "Intent.box_id·intent_json은 main 반영(#73), wire 변경은 소비자 동시 rebuild/배포 필요. 늦은 답 문장은 #54 최종 정정에 맞게 고칠 것. state별 명령 거부·원격 움직임 명령 제한 구현은 #29·#18·#20.",
       "location": "§5.7·SYS-IF-005",
       "owners": "남현지·정의석",
       "due": "PR #73·B",
@@ -789,7 +789,7 @@
       "refs": "E E-03·IC-EUS-MQTT-01(L129–146,279–295); V V-06(L126–136); repo docs/interfaces/mqtt.md·conventions.md",
       "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
       "decision": "MQTT command JSON=command_id/type/args/raw_text/sent_at, bridge가 canonical Command로 변환하고 ack=command_id/ok/message/acked_at. 중복ID10분억제·30초지난명령EXPIRED. state/result/command/ack QoS1 비retained, zone_map QoS1 retained, robot QoS0 비retained. 시각 ISO8601+09:00. Spring MQTT→브라우저SSE, 움직임 명령은 공용PC 로컬만·원격stop/조회허용이다.",
-      "residual": "최종 JSON/ACL·1883시연개방·log_status 전달은 #20 mqtt.md(10/08)/PR #68. wlo1에80/1883/TCP·DDS7400–7600UDP, robotNIC신규웹연결차단, 내부8080/8000/5432루프백 바인드. 적용/우회차단 실기검증 필요.",
+      "residual": "최종 JSON/ACL·1883시연개방·log_status 전달은 #20 mqtt.md(10/08)/PR #68. wlo1 에 80/1883/TCP·DDS 14900–15149/udp(10/07 ufw 적용), robotNIC신규웹연결차단, 내부8080/8000/5432루프백 바인드. 적용/우회차단 실기검증 필요.",
       "location": "§5.7·7.2",
       "owners": "정의석·김학민·남현지",
       "due": "10/07 네트워크·10/08 JSON",
@@ -1619,87 +1619,87 @@
       "github_sha": "9768ab8277c3392f50ccd9540a569efd99e78693",
       "computed_git_blob_sha": "9768ab8277c3392f50ccd9540a569efd99e78693",
       "exact_match": true,
-      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/docs/interfaces/topics.md",
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/671c67f3a5e4f1de46dec3f34b4cf2975727c975/docs/interfaces/topics.md",
       "sha256": "fd423ce3bff7d4fa5dbdf3594279ea573a24a5b19d0995f577eb32d82d7c7bb0"
     },
     {
       "path": "docs/interfaces/voss_msgs.md",
-      "github_sha": "fae589e394c386595eebee87237c0c11420e74fb",
-      "computed_git_blob_sha": "fae589e394c386595eebee87237c0c11420e74fb",
+      "github_sha": "15ee7be3df81a773d54bcf7cb9639bbc23f96c33",
+      "computed_git_blob_sha": "15ee7be3df81a773d54bcf7cb9639bbc23f96c33",
       "exact_match": true,
-      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/docs/interfaces/voss_msgs.md",
-      "sha256": "5b1d78a69be92a6d9f44930141ff17842d7264b295259daccd0bdda8a2adfa1e"
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/671c67f3a5e4f1de46dec3f34b4cf2975727c975/docs/interfaces/voss_msgs.md",
+      "sha256": "d20f1018c221e052554e0a82c7de1210e5bee6767c3649b9ba411eb90208450e"
     },
     {
       "path": "docs/interfaces/intent_json.md",
-      "github_sha": "c0e0e27a9456c3fb9c785365f9b562cc02a49f2d",
-      "computed_git_blob_sha": "c0e0e27a9456c3fb9c785365f9b562cc02a49f2d",
+      "github_sha": "f4558689a14f7eee6b0e620aa70699b4f84b2450",
+      "computed_git_blob_sha": "f4558689a14f7eee6b0e620aa70699b4f84b2450",
       "exact_match": true,
-      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/docs/interfaces/intent_json.md",
-      "sha256": "28acdaa7859d4288a26cc5406b52c4bf04f04bc5e2553adbf3367f2bb8aad0ea"
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/671c67f3a5e4f1de46dec3f34b4cf2975727c975/docs/interfaces/intent_json.md",
+      "sha256": "78647c71a7e641dc72f02b901cc36ae16f2ebc7fb0874664466cdb52edc6feb1"
     },
     {
       "path": "docs/interfaces/mqtt.md",
       "github_sha": "6b0041129cf01825f2517fefda018f9627ef14a1",
       "computed_git_blob_sha": "6b0041129cf01825f2517fefda018f9627ef14a1",
       "exact_match": true,
-      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/docs/interfaces/mqtt.md",
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/671c67f3a5e4f1de46dec3f34b4cf2975727c975/docs/interfaces/mqtt.md",
       "sha256": "1c6fc6ee57559f39fe6aa3082e5fdee2ce179d16b282a3f0abbbf9ce98d192b3"
     },
     {
       "path": "docs/interfaces/voss_config.md",
-      "github_sha": "c4cdddb825daca0d6931e9aaa21093bacdd03ab8",
-      "computed_git_blob_sha": "c4cdddb825daca0d6931e9aaa21093bacdd03ab8",
+      "github_sha": "dc14d78fb96f1e6ec1975e744a4eb1b99118e3d8",
+      "computed_git_blob_sha": "dc14d78fb96f1e6ec1975e744a4eb1b99118e3d8",
       "exact_match": true,
-      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/docs/interfaces/voss_config.md",
-      "sha256": "a0466fac5d02049e3188267c2b4b1c83debb136bf4ab6fd155dbdd9be6b62d58"
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/671c67f3a5e4f1de46dec3f34b4cf2975727c975/docs/interfaces/voss_config.md",
+      "sha256": "0abde5556d1354baa1295396d8063471d6b64e672a88fcb08311f855eceb0310"
     },
     {
       "path": "config/voss_config.yaml",
-      "github_sha": "a13d7b671f371a45fa1dba49f5577fd660bf7f04",
-      "computed_git_blob_sha": "a13d7b671f371a45fa1dba49f5577fd660bf7f04",
+      "github_sha": "5495b90cf3822a409c72995c32848f4580d0be7a",
+      "computed_git_blob_sha": "5495b90cf3822a409c72995c32848f4580d0be7a",
       "exact_match": true,
-      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/config/voss_config.yaml",
-      "sha256": "30432088e2fbfe87ddd9397b029dd4cd2118582bf5039d9915fb0cf037ec0241"
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/671c67f3a5e4f1de46dec3f34b4cf2975727c975/config/voss_config.yaml",
+      "sha256": "f5563de2851d0b9b1f035e8494a6c654e52ae393621fcf2ecc48af74606db18a"
     },
     {
       "path": "docs/measurements-1006.md",
       "github_sha": "0518c53087178d81a8dedb34fa28cce8e19f89cf",
       "computed_git_blob_sha": "0518c53087178d81a8dedb34fa28cce8e19f89cf",
       "exact_match": true,
-      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/docs/measurements-1006.md",
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/671c67f3a5e4f1de46dec3f34b4cf2975727c975/docs/measurements-1006.md",
       "sha256": "3669a9f5a33fa6917646863bdb1ac1b7859af76fddd56bb9522002a28ba3633b"
     },
     {
       "path": "docs/pending-decisions.md",
-      "github_sha": "87b8943fed8ce3e5765b220dcc0a87e59c31086d",
-      "computed_git_blob_sha": "87b8943fed8ce3e5765b220dcc0a87e59c31086d",
+      "github_sha": "1bcf8ae514fab28ae45c229367eb7d3d1f55d33f",
+      "computed_git_blob_sha": "1bcf8ae514fab28ae45c229367eb7d3d1f55d33f",
       "exact_match": true,
-      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/docs/pending-decisions.md",
-      "sha256": "bd34dba559843d25de9f5a03c9f74036e13c04a3598f191e8e394b414f22d6ce"
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/671c67f3a5e4f1de46dec3f34b4cf2975727c975/docs/pending-decisions.md",
+      "sha256": "fa1f2e38929a4d93a855b32676e536b6f81c7483caa980a4bcd28d83138967a5"
     },
     {
       "path": "docs/adr/0002-grasp-method-gate.md",
       "github_sha": "98140363d6abbcbb5395ec4b2aacb20d7fc1aa38",
       "computed_git_blob_sha": "98140363d6abbcbb5395ec4b2aacb20d7fc1aa38",
       "exact_match": true,
-      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/docs/adr/0002-grasp-method-gate.md",
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/671c67f3a5e4f1de46dec3f34b4cf2975727c975/docs/adr/0002-grasp-method-gate.md",
       "sha256": "52310445723223b9eb94698ddc4857c144b0774ad372cf3205521ce08465abf6"
     },
     {
       "path": "docs/adr/0006-web-ai-db-stack.md",
-      "github_sha": "d4eeca39b4b6e4e771c468fd49cc028a9fda01c7",
-      "computed_git_blob_sha": "d4eeca39b4b6e4e771c468fd49cc028a9fda01c7",
+      "github_sha": "72f01f0304ff580a4f2c2020f2b99b9b9a40f6d6",
+      "computed_git_blob_sha": "72f01f0304ff580a4f2c2020f2b99b9b9a40f6d6",
       "exact_match": true,
-      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/docs/adr/0006-web-ai-db-stack.md",
-      "sha256": "2eebde99c9dd9c7c117276cdb9596f22554995c91c72eacec7b08ebf51663d2a"
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/671c67f3a5e4f1de46dec3f34b4cf2975727c975/docs/adr/0006-web-ai-db-stack.md",
+      "sha256": "0cf7b0c4d84156fd1a8c271906fb956b668faca86827a75f42767b35eb02358e"
     },
     {
       "path": "src/voss_msgs/action/TrackAndGrasp.action",
       "github_sha": "1bbd4ce52250d27160238b30ba2dd6e4e0641912",
       "computed_git_blob_sha": "1bbd4ce52250d27160238b30ba2dd6e4e0641912",
       "exact_match": true,
-      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/src/voss_msgs/action/TrackAndGrasp.action",
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/671c67f3a5e4f1de46dec3f34b4cf2975727c975/src/voss_msgs/action/TrackAndGrasp.action",
       "sha256": "c58f07f60bf6a1285904f8bed27b5c216c7dc57b290e4173dc621e99b2f41df0"
     },
     {
@@ -1707,7 +1707,7 @@
       "github_sha": "1e64753f8c1137697ae05ca210ec0dc24a0c3268",
       "computed_git_blob_sha": "1e64753f8c1137697ae05ca210ec0dc24a0c3268",
       "exact_match": true,
-      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/src/voss_msgs/msg/BoxTrack.msg",
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/671c67f3a5e4f1de46dec3f34b4cf2975727c975/src/voss_msgs/msg/BoxTrack.msg",
       "sha256": "fbb139e5f747f8cb6e4580fef4bf04c259b02e986a729e10c167a80d9204bcbf"
     },
     {
@@ -1715,31 +1715,31 @@
       "github_sha": "d68592e4f374b0c5db9989f99d766be67d1c3f97",
       "computed_git_blob_sha": "d68592e4f374b0c5db9989f99d766be67d1c3f97",
       "exact_match": true,
-      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/src/voss_msgs/msg/SortResult.msg",
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/671c67f3a5e4f1de46dec3f34b4cf2975727c975/src/voss_msgs/msg/SortResult.msg",
       "sha256": "a598d60f33f399361ce783a0c66e8d4f90765be2027339a3a4babf55e81330af"
     },
     {
       "path": "src/voss_msgs/msg/SortState.msg",
-      "github_sha": "d6c245d260c5921ee90210c648c04f8dd7b8eb35",
-      "computed_git_blob_sha": "d6c245d260c5921ee90210c648c04f8dd7b8eb35",
+      "github_sha": "9f0d6385331ae1f974ad32c30768da494fdf8e09",
+      "computed_git_blob_sha": "9f0d6385331ae1f974ad32c30768da494fdf8e09",
       "exact_match": true,
-      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/src/voss_msgs/msg/SortState.msg",
-      "sha256": "58af11e6d8029201a1f86ffc33b5a08dac1e7808a1eb69a3e6380a1a7e75b9da"
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/671c67f3a5e4f1de46dec3f34b4cf2975727c975/src/voss_msgs/msg/SortState.msg",
+      "sha256": "671dc45655ccd2ef9b894446b38f34c0286f05119ce6f1e7b8091a44829abee7"
     },
     {
       "path": "src/voss_msgs/msg/Intent.msg",
-      "github_sha": "a546c277cfac920c6c5c9660429f36a81ae21f32",
-      "computed_git_blob_sha": "a546c277cfac920c6c5c9660429f36a81ae21f32",
+      "github_sha": "b311449f580809ebf4340065068063dc6fe0441c",
+      "computed_git_blob_sha": "b311449f580809ebf4340065068063dc6fe0441c",
       "exact_match": true,
-      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/src/voss_msgs/msg/Intent.msg",
-      "sha256": "e7c654c0322e32c7efaaa704220c12a83417091bbf075792786a7cd7e600a22d"
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/671c67f3a5e4f1de46dec3f34b4cf2975727c975/src/voss_msgs/msg/Intent.msg",
+      "sha256": "825a7b2d72563f7dd8697ce9489e09a6c4fdc8f9af00868abebe1f50a321fc3b"
     },
     {
       "path": "src/voss_msgs/srv/Gripper.srv",
       "github_sha": "deaab6adde8b42e9ebb3894c41a4bfc6b9dddf3f",
       "computed_git_blob_sha": "deaab6adde8b42e9ebb3894c41a4bfc6b9dddf3f",
       "exact_match": true,
-      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/src/voss_msgs/srv/Gripper.srv",
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/671c67f3a5e4f1de46dec3f34b4cf2975727c975/src/voss_msgs/srv/Gripper.srv",
       "sha256": "4dad6b1c742f788598a4c71bbfea74821032e25599ec44b47346623b26cad84f"
     },
     {
@@ -1747,8 +1747,24 @@
       "github_sha": "28891820a24fc37e926effbdd90e01dcfe0419f1",
       "computed_git_blob_sha": "28891820a24fc37e926effbdd90e01dcfe0419f1",
       "exact_match": true,
-      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/fff112116bef3992d27a094456b055f647ed61a8/src/voss_msgs/srv/MoveToZone.srv",
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/671c67f3a5e4f1de46dec3f34b4cf2975727c975/src/voss_msgs/srv/MoveToZone.srv",
       "sha256": "f1d81cbb47d0a0a604b2d994018cd6aed3c263405caa0ca612ca9d1d727d8751"
+    },
+    {
+      "path": "docs/interfaces/web_api.md",
+      "github_sha": "0295e4488a81dfabab800b0bf669e9aabce837f3",
+      "computed_git_blob_sha": "0295e4488a81dfabab800b0bf669e9aabce837f3",
+      "exact_match": true,
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/671c67f3a5e4f1de46dec3f34b4cf2975727c975/docs/interfaces/web_api.md",
+      "sha256": "055d38257a1179062bfecacc3cd90435d61c50613d76b99ab1d91630cc760a76"
+    },
+    {
+      "path": "docs/conventions.md",
+      "github_sha": "426f80289137d76cee0dba5584f7e08553bf0f4f",
+      "computed_git_blob_sha": "426f80289137d76cee0dba5584f7e08553bf0f4f",
+      "exact_match": true,
+      "source_url": "https://github.com/yujh5537/rokey_cobot2_VOSS/blob/671c67f3a5e4f1de46dec3f34b4cf2975727c975/docs/conventions.md",
+      "sha256": "c13197ccee9829972521570278cba9ead3a6f5d8d149be010e09c34e2bd6ac4e"
     }
   ],
   "revisions": [
@@ -1768,6 +1784,51 @@
         "#50~#55 re-check corrections: MC-009/013/014/015/017/018/031 and main-not-merged markers, topic/service names, IC↔SYS mapping"
       ],
       "note": "open_prs entries other than #76 are the 7e5e928 snapshot"
+    },
+    {
+      "rev": "v0.4",
+      "date_kst": "2026-10-07",
+      "base_main": "671c67f3a5e4f1de46dec3f34b4cf2975727c975",
+      "inputs": [
+        "independent re-review (Fable 5.1) — 9 of 10 findings adopted, '#52 종료 11:30 반올림' 지적은 실제 close 시각 11:30:06 KST로 기각",
+        "main merges #64 #68 #70 #73 #74 #78 #79"
+      ],
+      "changes": [
+        "31 mm 폭 파지 결정 반영(pending #16, #70, BRD v1.3 #79)",
+        "Intent.box_id·SortState.session_id·web_api·direction_base main 반영 표기",
+        "DDS 14900–15149/udp, never-default·wlo1 적용(#55 10/07)",
+        "stream 경로 /dsr01/dsr_controller2/servol_stream·speedl_stream",
+        "/voss/robot/state = 타입 미정의",
+        "sources/current_main 671c67f 19개로 갱신",
+        "파일명 01_VOSS_SRD_v0.4"
+      ]
+    }
+  ],
+  "repository_main_v0.3": "fff112116bef3992d27a094456b055f647ed61a8",
+  "open_prs_v0.4": [
+    {
+      "number": 48
+    },
+    {
+      "number": 71
+    },
+    {
+      "number": 72
+    },
+    {
+      "number": 75
+    },
+    {
+      "number": 76
+    },
+    {
+      "number": 80
+    },
+    {
+      "number": 81
+    },
+    {
+      "number": 82
     }
   ]
 }

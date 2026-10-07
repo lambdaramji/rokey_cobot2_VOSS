@@ -22,7 +22,7 @@
     7,
     4
   ],
-  "source_git_blob_exact_matches": "17/17",
+  "source_git_blob_exact_matches": "19/19 (main@671c67f)",
   "original_v02_unchanged": "43/45 원본 유지. ZIP 2개는 PR #56 head 고정 링크로 대체, v0.2-r2/README.md의 ZIP 링크 2줄만 변경",
   "brd_v11_v12_requirement_rows": {
     "rows": 45,
@@ -52,7 +52,7 @@
       "word_zip_integrity": true
     },
     {
-      "document": "01_VOSS_SRD_v0.3_합의반영본",
+      "document": "01_VOSS_SRD_v0.4",
       "word_tables": 19,
       "word_paragraphs": 750,
       "markdown_word_body_text_identical": true,
@@ -88,5 +88,5 @@
     }
   ],
   "limits": "정적 문서·원본·Word 구조/본문 동일성 검사. 실기 시험·전체 문서 승인·Word 페이지별 시각 렌더링은 별도. r1 재검증: Markdown↔Word 본문 일치(목록 번호 제외), ID 수 유지, Word ZIP 무결성.",
-  "revision": "r1 (PR #77 리뷰 반영, 2026-10-07)"
+  "revision": "v0.4 (취합자 확정본, main@671c67f)"
 }
