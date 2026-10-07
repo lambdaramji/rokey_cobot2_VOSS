@@ -271,7 +271,7 @@
       "lead": "남현지 schema/bringup, 김학민 실측/limits, 박병후 제어 값",
       "refs": "V V-06·IC-V-08(L126–136,361–379); R IC coverage·R-02(L128–137,54–65); B IC-BH-CONFIG(L253–270)",
       "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
-      "decision": "단일 YAML 원본, runtime writer=manager. bringup이 정적 snapshot을 파라미터로 전달하고 소비자가 version/sha256을 기록한다(비전 컨테이너는 마운트 파일을 직접 읽음, PR #64). 사람 단위 mm/deg/cmps는 로드·gateway 경계에서 SI 변환한다. speed_cmps=4.8, belt.direction_base=[0.99992,-0.01292, 0.0] (PR #64 제안, main은 direction_axis). 공유 설정은 정지 상태에서만 바꾸고 같은 버전을 재적용·ready 확인 후 재개한다. null은 미측정, 필요한 값이 null이면 해당 기능 미준비다. 의미 있는 0(예 latency_offset_ms=0)은 유효다.",
+      "decision": "단일 YAML 원본, runtime writer=manager. bringup이 정적 snapshot을 파라미터로 전달하고 소비자가 version/sha256을 기록한다(비전 컨테이너는 마운트 파일을 직접 읽음, main #64). 사람 단위 mm/deg/cmps는 로드·gateway 경계에서 SI 변환한다. speed_cmps=4.8, belt.direction_base=[0.99992,-0.01292, 0.0] (main #64 반영). launch 정적 값은 정지 상태에서만 바꾸고 같은 버전을 재적용·ready 확인 후 재개한다. 런타임 zone_map은 IDLE·PAUSED에서만 UpdateZoneMap으로 바꾼다(PL, #84 리뷰). null은 미측정, 필요한 값이 null이면 해당 기능 미준비다. 의미 있는 0(예 latency_offset_ms=0)은 유효다.",
       "residual": "direction_base·값 규칙은 main에 반영됐다(#64). 서보 전용 게인/높이/age/watchdog은 servo YAML, 공유 값만 voss_config. null 파라미터 전달 제외·TCP 등록 비교·설정 validation 구현 확인 필요.",
       "location": "§3.4·5.9",
       "owners": "남현지·김학민·박병후",
@@ -335,7 +335,7 @@
       "refs": "R R-02·IC-R-03(L54–65,189–206); B IC-BH-ROBOT01·DEVICE(L196–213,272–289)",
       "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
       "decision": "servo_cmd는 최신 목표 하나만 유지하고 옛 목표를 누적하지 않는다. stream은 두산 서비스 직렬 큐 밖에서 처리하고 실제 장비 적용과 ROS 발행을 구분한다. stop 우선성과 pose 조회 경쟁을 검증한다.",
-      "residual": "설치 컨트롤러의 speedl_stream/servol_stream 실제 경로·타입·DRCF지원·단위·적용 proxy·backlog는 실측 대기다. 서비스/위치명령 fallback은 의미 정합 후 사용한다. #34·#41 T32.",
+      "residual": "speedl_stream/servol_stream 경로·타입은 #55(10/07) 실기 브링업에서 존재를 확인했고 두산 경로는 speedl_stream으로 정했다(박병후). M2.40 대응·실제 스트리밍 적용·단위·적용 proxy·backlog는 measurements #3 실측 대기다(PR #87). 서비스/위치명령 fallback은 의미 정합 후 사용한다. #34·#41 T32.",
       "location": "§5.6·SYS-CT-003",
       "owners": "김학민·박병후",
       "due": "10/07~08",
@@ -363,7 +363,7 @@
       "refs": "R R-03·NEW-R-02(L67–77,286–296); B IC-BH-GRIP·NEW-B-03(L234–251,385–395)",
       "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
       "decision": "GRASP→LIFT는 유효 통신의 닫힘 완료 응답 + grip_detected + 검증된 RG2 보고폭 범위를 모두 만족할 때다. busy 해제 후 서비스 응답, width_actual은 보고폭이며 실제 간격과 구분한다. goal/attempt별 future로 이전 늦은 응답을 버리고 Gripper 요청에 attempt를 추가하지 않는다.",
-      "residual": "목표폭39mm·힘14N·보고폭39.5~41.5mm는 설정/시험 후보와 제한된 관측이다. 빈 파지·미끄러짐·상승 유지·무손상10회 및 방향/높이 최종 확인 필요. Gripper 피드백 확장은 김학민 후속 PR.",
+      "residual": "목표폭39mm·힘14N·보고폭39.5~41.5mm는 설정/시험 후보와 제한된 관측이다. 방향은 pending #16에서 31 mm 폭 파지로 결정, −19mm는 PL 결정값이다. 남은 것은 빈 파지·미끄러짐·상승 유지·무손상 T34 10회 시험이다. Gripper 피드백 확장은 김학민 후속 PR.",
       "location": "§5.5·5.6·10",
       "owners": "김학민·박병후·남현지(PL)",
       "due": "10/07~08",
@@ -390,7 +390,7 @@
       "lead": "김학민 gateway 실행 모델, 박병후 비차단 호출",
       "refs": "R R-02·IC-R-02(L54–65,164–187); B IC-BH-GRIP(L234–251)",
       "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
-      "decision": "모션과 RG2 자원을 분리해 추종 중 call_async 닫힘을 허용한다. goal 중 PREPARE/GRASP/VERIFY의 gripper 호출자는 servo 하나, manager는 동시에 호출하지 않는다. 적재 개방은 gateway MoveToZone PLACE다. 같은 자원 중복(예: MoveToZone 중 servo_cmd, 닫는 중 다시 닫기)은 BUSY 거부, servo 추종과 MoveToZone의 동시 모션 소유는 차단, stop은 우선한다. 늦은 응답 무시와 별개로 진행 중 동작 종료·자원 해제를 확인한다.",
+      "decision": "모션과 RG2 자원을 분리해 추종 중 call_async 닫힘을 허용한다. goal 중 PREPARE/GRASP/VERIFY의 gripper 호출자는 servo 하나, manager는 동시에 호출하지 않는다. 적재 개방은 gateway MoveToZone PLACE다. 같은 자원의 두 번째 명령은 거부(서비스는 BUSY, servo_cmd 토픽은 무시·로그, MoveToZone PLACE·PICK은 모션·RG2 함께 점유 — 김학민 #84 리뷰), servo 추종과 MoveToZone의 동시 모션 소유는 차단, stop은 우선한다. 늦은 응답 무시와 별개로 진행 중 동작 종료·자원 해제를 확인한다.",
       "residual": "추종+close+pose+stop 동시 시험·timeout/늦은 응답·작업 인계는 #41·#36에서 실측한다.",
       "location": "§3.3·5.5·5.6",
       "owners": "김학민·박병후",
@@ -548,7 +548,7 @@
       "lead": "김학민 물리 grid, 남현지 카운터/가득 참 FSM",
       "refs": "R R-04(L79–89); V IC-V-08·미정(L361–379,427–440)",
       "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
-      "decision": "최신 트레이 배치는 X방향 한 줄, pitch60mm, A/B/C3×1·RECHECK/HOLD2×1이다. 2×2안은 최신 실측 배치로 대체됐다. manager가 slot 카운터를 소유하고 PLACED 성공 응답 후에만 증가한다. 실패하면 같은 slot을 재사용하고, 카운터는 IDLE에서 start(새 session)할 때 0으로 초기화한다. RETURN_FAILED처럼 개방 후 실패의 점유 처리만 F-06/07에서 정한다. 구역 가득 참은 PAUSED→사람 비움→reset_zone→resume이다.",
+      "decision": "최신 트레이 배치는 X방향 한 줄, pitch60mm, A/B/C3×1·RECHECK/HOLD2×1이다. 2×2안은 최신 실측 배치로 대체됐다. manager가 slot 카운터를 소유하고 그 칸에서 개방했을 때(placed_stamp≠0, RETURN_FAILED 포함) 증가한다. 개방 전 실패면 같은 slot을 재사용하고, 카운터는 IDLE에서 start(새 session)할 때 0으로 초기화한다(PL이 #84 리뷰에서 RETURN_FAILED까지 구체화). 확인 불가 실패의 점유 처리만 F-06/07에서 정한다. 구역 가득 참은 PAUSED→사람 비움→reset_zone→resume이다.",
       "residual": "최종 #51의 구역별 누적최대3 표기와 RECHECK/HOLD 물리2칸을 정합해야 한다. RECHECK 동시1개·임시점유 반환, RETURN_FAILED 시 점유 처리, HOLD 도달/간섭 시험이 남는다. 지원 범위 밖 slot을 만들지 않는다. #44·#29.",
       "location": "§5.6·10",
       "owners": "남현지·김학민",
@@ -580,7 +580,7 @@
       "refs": "R NEW-R-01·05·06/R-06(L274–284,322–344,104–115); E E-03(L129–146); B IC-BH-CONFIG(L253–270)",
       "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
       "decision": "SYS-FR-001 통합 준비 판단 주담당은 남현지(manager), 파트별 ready 원천은 각 담당이다. SortState ready/not_ready, ROBOT/SERVO/VISION/OCR/LOG를 모은다. RobotState는 header/connected/state/action/gripper_width_mm/error_code/detail, READY/BUSY/STOPPED/ERROR, 상태변화+2Hz reliable/transient_local/depth1. HMI는 미수신/3초무갱신 UNKNOWN. logger상태는 STARTING/OK/DB_ERROR/SPOOL_FULL 1Hz다.",
-      "residual": "RobotState IDL/stop/Gripper 후속 PR, SortState.session_id 추가, 비전 heartbeat/calib 준비 경로·ready freshness 구현 확인 필요. main ROBOT pose0.5s+서비스 임시판정은 목표 준비 계약을 대체하지 않는다. 기동은 logger가 manager보다 먼저다.",
+      "residual": "RobotState IDL/stop/Gripper 후속 PR(SortState.session_id는 #78 반영), 비전 heartbeat/calib 준비 경로·ready freshness 구현 확인 필요. main ROBOT pose0.5s+서비스 임시판정은 목표 준비 계약을 대체하지 않는다. 기동은 logger가 manager보다 먼저다.",
       "location": "§3.3·5.7·7.2",
       "owners": "남현지·김학민·정의석·박병후",
       "due": "G0 전·10/07 PR",
@@ -673,7 +673,7 @@
       "refs": "V IC-STATS coverage(L162–181); E IC-EUS-STATS-01(L261–277); repo src/voss_msgs/srv/Stats.srv",
       "status": "상호확인 회신 종료 / 본문 규약 반영 / 잔여 상세·구현·검증은 별도",
       "decision": "공식 집계의 유일 원천은 PostgreSQL이다. 제공자는 Spring Boot REST GET /api/stats 한 곳이고 intent_parser/HMI가 공용으로 호출한다. manager Stats.srv·/voss/sort/stats는 삭제하며 새 ROS /voss/log/query도 만들지 않는다. DB 장애에는 조회 불가로 답하고 메모리 값을 공식 이력으로 대체하지 않는다.",
-      "residual": "web_api.md는 main 반영(#68), 현재 세션 규칙은 PR #81. G0는 직접 SELECT로 동일box 검증 가능하고 B 음성 이력은 Spring기동 의존. query_kind/count/as_of·현재 세션 전달 구현/검증은 #22.",
+      "residual": "web_api.md는 main 반영(#68), 현재 세션 규칙은 main #81. G0는 직접 SELECT로 동일box 검증 가능하고 B 음성 이력은 Spring기동 의존. query_kind/count/as_of·현재 세션 전달 구현/검증은 #22.",
       "location": "§5.8·IC-STATS-01",
       "owners": "정의석·남현지",
       "due": "B·#22",
@@ -1803,6 +1803,15 @@
         "파일명 01_VOSS_SRD_v1.0"
       ],
       "note": "작업 중 v0.4로 부르던 판을 기준 문서 v1.0으로 번호 지정(내용 동일, 박병후 10/07)"
+    },
+    {
+      "rev": "v1.0 (재리뷰 반영)",
+      "date_kst": "2026-10-07",
+      "inputs": [
+        "PR #77 review rokeyhak 08:17Z, yujh5537 08:28Z, EuiseokJeongNZ comment 07:48Z",
+        "PR #84 reviews (slot·BUSY·zone_map·stop 제안)"
+      ],
+      "note": "머지 전 정정, 판 번호 v1.0 유지"
     }
   ],
   "repository_main_v0.3": "fff112116bef3992d27a094456b055f647ed61a8",
