@@ -19,4 +19,4 @@
 ## SRD 와의 대응
 SRD v0.4(PR #77 머지 후 `docs/requirements/srd/`) 5장의 IC-ID 가 이 폴더의 계약을 가리킨다. SRD 는 무엇을 보장해야 하는지, 이 폴더는 이름·타입·필드·QoS 를 정한다. 둘이 다르면 이 폴더를 고치는 PR 에서 SRD 부록 C 도 함께 확인한다.
 
-열린 interface PR 과의 관계(10/07 기준): #48 `calibration.md`(belt_homography.yaml, 관측 자세 초기 위치) · #76 BoxTrack 확정 발행(`min_hits`, ID 건너뜀) · #81 web_api 현재 세션 = `SortState.session_id`(`""` 이면 NO_SESSION). 이 폴더의 다른 문서는 이 세 PR 의 내용과 맞춰 두었고, 해당 PR 이 머지되면 그 문서가 기준이 된다.
+열린 interface PR 과의 관계(10/07 기준): #48 `calibration.md`(belt_homography.yaml, 관측 자세 초기 위치) · #76 BoxTrack 확정 발행(`min_hits`, ID 건너뜀) · #81 web_api 현재 세션 = `SortState.session_id`(`""` 이면 NO_SESSION) 및 intent_json.md 의 철회된 "늦은 답" 문장 정정(정의석, #54 최종 정정). 이 폴더의 다른 문서는 이 세 PR 의 내용과 맞춰 두었고, 해당 PR 이 머지되면 그 문서가 기준이 된다.

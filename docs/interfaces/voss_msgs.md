@@ -66,5 +66,5 @@
   - `BoxTrack.position_source` 를 msg 상수(`SOURCE_*`)로 정의 — 필드·값은 그대로.
   - `BoxTrack` 파지 중 가림: 현재 트랙(`SortState.track_id`)은 PICKING 동안 폐기 보류, 미검출 프레임은 발행하지 않음(박병후 🟡2).
 - 2026-10-06: `Intent` 끝에 `string box_id` 추가, `zone` 에 HOLD, `count` 미사용 표기 (#18, SRD 상호확인 #52 MC-023·024).
-- 2026-10-07: `SortState` 끝에 `string session_id` 추가 — HMI·투입 수량이 첫 SortResult 전에도 현재 세션을 알도록 (#68 정의석 요청, sort_manager 담당 수용). 타입 해시가 바뀌므로 각자 voss_msgs 재빌드.
 - 2026-10-07: SRD v0.4 정합 (#6). SortResult 에 reason 허용값·DB `sort_log` 대응, MoveToZone 에 RETURN_FAILED·placed_stamp 실패 의미·slot 카운터·수직 상승 경로·PICK 높이·VIEW 자세, SortState ROBOT 임시 판정을 과도 규칙으로 표시. "합의·IDL 반영 대기" 절 신설 — RobotState(#55)·Gripper 응답 확장(#53)·MoveToZone 주석·`/voss/robot/stop`. 필드(IDL) 변경 없음.
+- 2026-10-07: `SortState` 끝에 `string session_id` 추가 — HMI·투입 수량이 첫 SortResult 전에도 현재 세션을 알도록 (#68 정의석 요청, sort_manager 담당 수용). 타입 해시가 바뀌므로 각자 voss_msgs 재빌드.
