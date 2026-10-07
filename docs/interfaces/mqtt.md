@@ -3,14 +3,14 @@
 브라우저는 MQTT 에 붙지 않는다. **Spring Boot 가 MQTT 클라이언트**이고 브라우저는 HTTP·SSE(`web_api.md`)만 쓴다. hmi_bridge(ROS) 는 MQTT ↔ ROS 변환만 하고 원격 여부를 다시 판단하지 않는다(판정은 Spring Boot, web_api.md).
 
 ## 브로커
-- Mosquitto, 공용 PC 1883 (ADR-0006). 실행 위치(호스트/컨테이너)와 시연 때 `wlo1` 개방 여부는 #20 에서 확정.
-- `allow_anonymous false`, 비밀번호는 `.env`(gitignore). ACL: `voss/command` 쓰기는 Spring Boot 계정(`web`)만, hmi_bridge 계정(`bridge`)은 `voss/command` 읽기·나머지 `voss/#` 쓰기, 개인 PC 디버그 계정(`debug`)은 `voss/#` 읽기만(web_api.md, #55 MC-026).
+- Mosquitto, 공용 PC **호스트** 1883 (ADR-0006, #55 MC-026). 위치는 pending #13 에 남은 항목이라 #20 에서 재확인하고, 시연 때 `wlo1` 개방 여부도 #20 에서 정한다.
+- `allow_anonymous false`, 비밀번호는 `.env`(gitignore). ACL: `voss/command` 쓰기는 Spring Boot 계정(`web`)만, hmi_bridge 계정(`bridge`)은 `voss/command` 읽기·나머지 `voss/#` 쓰기, 개인 PC 디버그 계정(`debug`)은 `voss/#` 읽기만(web_api.md, #68 리뷰). 상세 설정은 #20.
 
 ## 토픽
 | 토픽 | 방향 | QoS | retained | JSON |
 |---|---|---|---|---|
 | `voss/state` | ROS → 웹 | 1 | false | SortState 필드 이름 그대로: `state`, `box_id`, `pending_question`, `track_id`, `ready`, `not_ready`, `session_id`. Spring Boot 가 최신값을 메모리에 두고 SSE 로 넘긴다 |
-| `voss/result` | ROS → 웹 | 1 | false | SortResult 필드 이름 그대로. `stamp`·`started_at` 은 ISO 문자열(0 시각은 `null`) |
+| `voss/result` | ROS → 웹 | 1 | false | SortResult 필드 이름 그대로. `stamp`·`started_at` 은 ISO 문자열(0 시각을 `null` 로 할지는 제안 — DB 규약(#52 MC-020)과 맞춤, #20 확정) |
 | `voss/zone_map` | ROS → 웹 | 1 | **true** | `{"version", "entries": [{"dong", "zone", "code", "aliases"}]}` |
 | `voss/robot` | ROS → 웹 | 0 | false | `{"connected", "state", "action", "gripper_width_mm", "error_code", "detail", "stamp"}` — RobotState(voss_msgs.md 합의·IDL 반영 대기), `stamp` = header.stamp |
 | `voss/command` | 웹 → ROS | 1 | false | `{"command_id", "type", "args", "raw_text", "sent_at"}` — Spring Boot 가 `command_id`(UUID)·`sent_at` 을 붙인다(web_api.md `POST /api/commands`) |
