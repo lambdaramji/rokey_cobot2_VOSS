@@ -3,8 +3,8 @@
 `docs/measurements-1006.md` #3 의 "실측 필요" 칸과 pending #8 을 채우기 위한 실로봇 시험 절차.
 소스 조사 결과와 근거(파일:줄)는 measurements #3 절, 결정 초안은 `docs/adr/0009-doosan-servo-command-path.md`.
 
-확인 순서: **① speedl_stream → ② servol_stream → (둘 다 안 되면) ③ move_line ASYNC**.
-"토픽이 있다"는 #55(김학민 10/07)로 확인됐다. 여기서는 **명령을 실제로 받아 움직이는지, 끊기면 멈추는지**를 잰다.
+**결정: speedl_stream 주 경로**(pending #8, ADR-0009). servol_stream 은 대안 비교용, move_line ASYNC 는 쓰지 않는다.
+"토픽이 있다"는 #55(김학민 10/07)로 확인됐다. 여기서는 speedl 을 **어떻게 쓸지** — 적용률·acc·퍼블리시 주기·끊김 뒤 정지(타임아웃 0.1 s)·watchdog 순서 — 를 잰다.
 
 | 파일 | 로봇을 움직이나 |
 |---|---|
@@ -73,7 +73,7 @@ python3 servo_stream_trial.py servol --z-min <값>
 - servol 은 끊어도 마지막 목표점까지는 간다(에뮬레이터 1.8 mm). `drift_after_cut_mm` 는 "따라잡기"이지 폭주가 아니다.
 
 ## 6. 둘 다 움직이지 않으면
-- 멈추고 기록한다. `move_line` ASYNC(③) 시험은 이 절차에 없다 — 결과를 주관 세션·학민과 보고 별도 단위로 정한다.
+- 멈추고 기록한다. `move_line` ASYNC 는 쓰지 않기로 했으므로(ADR-0009) 시험하지 않는다 — 결과를 주관 세션·학민과 보고 다음 단계를 정한다.
 - 브링업 로그의 경고·에러(`dsr_controller2`, `Drfl`)를 그대로 복사해 기록 칸 C 에 붙인다.
 
 ## 7. 끝

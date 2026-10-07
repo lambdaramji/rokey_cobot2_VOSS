@@ -1,7 +1,7 @@
 # ADR-0009: robot_gateway 의 두산 서보 명령 경로
 
 - 날짜: 2026-10-07
-- 상태: 제안됨 (1부: 소스·에뮬레이터 근거. 2부 실로봇 시험 뒤 "승인 제안"으로 갱신)
+- 상태: 승인 제안 (2026-10-07, PL 승인 전). 경로는 결정(pending #8), 적용 조건 수치는 2부 실로봇 실측 후 "결과" 절에 채운다
 - 결정자: 박병후(제안), 김학민(robot_gateway 구현 #41)
 - 관련: SR-SW-04, SR-IF-09, pending-decisions #8, measurements-1006 #3, ADR-0002, `src/voss_servo/DESIGN.md` DEC-02 · DEC-16
 - 번호: 0003·0007·0008 은 열린 PR(#48·#72·#75)이 쓰고 있어 0009 를 쓴다.
@@ -18,12 +18,7 @@ belt_servo 는 30 Hz 로 `/voss/robot/servo_cmd`(geometry_msgs/TwistStamped, TCP
 근거 전체(파일:줄, 에뮬레이터 표)는 measurements-1006 #3 에 있다.
 
 ## 결정
-**(비움 — 2부 실로봇 결과 후 채운다.)**
-
-1부 근거로는 다음을 제안한다. 확정이 아니다.
-- 주 경로 후보: **① speedl_stream**. 2부에서 실로봇이 30 Hz 명령을 받아 지령 속도로 움직이고, 끊기면 0.1 s 안팎에 멈추는 것이 확인되면 채택한다.
-- 대안: ② servol_stream. speedl 이 실로봇에서 안 되거나 타임아웃(0.1 s) 때문에 자주 멈추면 검토한다.
-- 폴백: ③ move_line ASYNC. ①② 모두 안 될 때만. 별도 시험 단위가 필요하다.
+robot_gateway 는 **speedl_stream** 을 주 경로로 쓴다. servol_stream 은 대안, move_line ASYNC 는 쓰지 않는다. 적용 조건(reliable 퍼블리셔, 0.1 s 안 퍼블리시 보장, acc 값, watchdog 순서)은 2부 실측 후 '결과' 절에 수치로 채운다.
 
 ## 고려한 대안
 - **① speedl_stream**

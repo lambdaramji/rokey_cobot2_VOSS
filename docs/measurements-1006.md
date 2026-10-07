@@ -31,7 +31,7 @@
 - 컨베이어 러너북의 "펄스 400 µs" 는 원본 스케치(500 µs)와 다르다.
 
 ## #3 서보 스트리밍
-belt_servo 의 `/voss/robot/servo_cmd`(TwistStamped, TCP 선속도 m/s) 를 robot_gateway 가 두산에 넘길 경로 후보를 소스로 정리했다. 확인 순서 ① speedl_stream → ② servol_stream → ③ move_line ASYNC (DESIGN.md DEC-02). 결정은 pending #8 · ADR-0009.
+belt_servo 의 `/voss/robot/servo_cmd`(TwistStamped, TCP 선속도 m/s) 를 robot_gateway 가 두산에 넘길 경로 후보를 소스로 정리했다. 확인 순서 ① speedl_stream → ② servol_stream → ③ move_line ASYNC (DESIGN.md DEC-02). 결정: speedl_stream(pending #8, ADR-0009). 2부는 적용 조건 실측.
 
 - **근거 출처**: 실로봇 광고 = 이슈 #55 김학민 10/07 댓글 "6. 변경 후 로봇·그리퍼"(`mode:=real`, `dsr_controller2` active). 소스 파일:줄 = 개인 PC `~/ws_cobot_pjt/ws_dsr/src/doosan-robot2` (커밋 `4d5657f`, 벤더 복사본) — **공용 PC `31750d6` 로 줄 번호 재확인 필요**. DRFL 본체는 정적 라이브러리(`dsr_common2/lib/jazzy/x86_64/libDRFL.a`)라 내부 동작은 소스로 볼 수 없다.
 - 에뮬레이터(개인 PC, DRCF `GF03020000`, 실로봇 `GF02120100` 과 다름)에서도 같은 토픽·서비스 이름·타입을 확인했다. 에뮬레이터의 주기·지연은 측정값으로 쓰지 않는다.
