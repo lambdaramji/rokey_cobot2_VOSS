@@ -6,7 +6,7 @@
 |---|---|---|---|---|---|
 | 1 | 벨트 속도: 아두이노 설정값별 cm/s 표, 10 cm/s 이하 설정 확인 | 김학민 | 아래 표. 개발 설정 h250 = 4.89 cm/s (5분 연속 후 4.79) → `belt.speed_cmps` = 4.8 | SR-HW-04, SR-FN-04 | ☑ |
 | 2 | 두산 컨트롤러 DRCF·doosan-robot2 버전 | 김학민 | DRCF `GF02120100`, DRFL `GL013303` (10/06 real 로그, 전 프로젝트와 같음). doosan-robot2 `31750d6` (공용 PC). **부분 완료: 팀원 PC 3대 커밋 비교 남음** | SR-HW-01, SR-SW-04 | ◐ |
-| 3 | 서보 스트리밍 토픽(servol_stream 계열) 유무, 주기 | 박병후 | | SR-IF-09 | ☐ |
+| 3 | 서보 스트리밍 토픽(servol_stream 계열) 유무, 주기 | 박병후 | `/dsr01/dsr_controller2/speedl_stream`·`servol_stream` 실로봇 동작 확인(10/07 17:24~17:45, 실행 박병후·비상정지 김학민). speedl: 30 Hz(33.3 ms) 명령 수용, 10 mm 지령 → 10.01~10.02 mm, 시작 지연 114 ms(acc 20)·62 ms(acc 100), RT 연결 불필요. **끊겨도 멈추지 않음**(0.1 s 타임아웃 없음, 마지막 속도로 계속) → gateway 가 0 속도/정지를 보내야 함. servol: 지연 205 ms, 끊기면 마지막 목표점에서 정지. 상세: [아래 #3](#3-서보-스트리밍) | SR-IF-09 | ☑ |
 | 4 | RG2 제어 경로 확인 (Modbus TCP 192.168.1.1:502 응답 / 드라이버) | 김학민 | 502 응답 (브링업 전·후). onrobot 드라이버 폴링(약 50 Hz)과 공존해도 직접 읽기·쓰기 정상 → Modbus TCP 직접 (ADR-0005) | SR-HW-02, SR-SW-05 | ☑ |
 | 5 | 공용 PC GPU 모델·VRAM·RAM, USB 3.0 포트 수, NIC 2개 | 정의석 | MSI Katana 17 B13VFK / Ubuntu 24.04.5 / RTX 4060 Laptop 8 GB (드라이버 595.91.07, CUDA 13.2) / RAM 32 GB / USB3 3개 (ACPI 기준, 육안 확인 전) / 유선 RTL8111 + Wi-Fi O. 상세: [아래 5번](#5-공용-pc-사양-상세-sr-hw-09) | SR-HW-09 | ☐ |
 | 6 | 작업대 치수, 로봇 베이스 위치·높이, 5구역 좌표(posx) | 김학민 | 5구역(트레이)·관측 자세·벨트·작업대 면 높이를 로봇 좌표로 측정 (아래 #6). 작업대 바깥 줄자 치수는 생략 | SR-HW-08 | ☑ |
@@ -29,6 +29,65 @@
 - 마이크로스텝은 실측으로 약 1/32 로 추정 (드라이버 SW1~SW3 미확인). 속도 ∝ 1/(반주기 + 약 11 µs).
 - 진행 방향: 원본 D2 LOW / D3 HIGH. 반전은 D3 만 LOW 로 한다 (**D2 HIGH 금지**: 벨트가 멈추고 핀 과전류 위험).
 - 컨베이어 러너북의 "펄스 400 µs" 는 원본 스케치(500 µs)와 다르다.
+
+## #3 서보 스트리밍
+belt_servo 의 `/voss/robot/servo_cmd`(TwistStamped, TCP 선속도 m/s) 를 robot_gateway 가 두산에 넘길 경로 후보를 소스로 정리했다. 확인 순서 ① speedl_stream → ② servol_stream → ③ move_line ASYNC (DESIGN.md DEC-02). 결정: speedl_stream(pending #8, ADR-0010). 2부(10/07 실로봇)로 적용 조건을 쟀다 — 아래 "2부 실측 기록".
+
+- **근거 출처**: 실로봇 광고 = 이슈 #55 김학민 10/07 댓글 "6. 변경 후 로봇·그리퍼"(`mode:=real`, `dsr_controller2` active). 소스 파일:줄 = 개인 PC `~/ws_cobot_pjt/ws_dsr/src/doosan-robot2` (커밋 `4d5657f`, 벤더 복사본) — 공용 PC 는 `31750d6`(10/07 2부 기록) — 줄 번호 대조는 남음. DRFL 본체는 정적 라이브러리(`dsr_common2/lib/jazzy/x86_64/libDRFL.a`)라 내부 동작은 소스로 볼 수 없다.
+- 에뮬레이터(개인 PC, DRCF `GF03020000`, 실로봇 `GF02120100` 과 다름)에서도 같은 토픽·서비스 이름·타입을 확인했다. 에뮬레이터의 주기·지연은 측정값으로 쓰지 않는다.
+
+### 후보별 실체
+| 항목 | ① speedl_stream | ② servol_stream | ③ move_line ASYNC |
+|---|---|---|---|
+| 이름 | 토픽 `/dsr01/dsr_controller2/speedl_stream` | 토픽 `/dsr01/dsr_controller2/servol_stream` | 서비스 `/dsr01/dsr_controller2/motion/move_line` (`sync_type`=1) |
+| 타입·필드 | `dsr_msgs2/msg/SpeedlStream`: `vel[6]`, `acc[2]`, `time` | `dsr_msgs2/msg/ServolStream`: `pos[6]`, `vel[2]`, `acc[2]`, `time` | `dsr_msgs2/srv/MoveLine`: `pos[6]`, `vel[2]`, `acc[2]`, `time`, `radius`, `ref`, `mode`, `blend_type`, `sync_type` → `success` |
+| 단위 | `vel` = x,y,z **mm/s** + rx,ry,rz deg/s, `acc` = [선 **mm/s²**, 각 deg/s²] — 실로봇 5 mm/s × 2 s = 10.01 mm, 알람 1216 의 a 단위로 확인 | `pos` mm·deg(posx), `vel`·`acc` = [선, 각] **상한** | MoveLine.srv 주석대로 mm/s·deg/s, `time` s |
+| 컨트롤러 구독·호출 | 구독 `dsr_controller2.cpp:2393` (QoS depth **10**) → `speedl_cb` `:2307` → `Drfl->speedl(vel, acc, time)` `:2315` | 구독 `:2391` (depth **20**) → `servol_cb` `:2279` → `Drfl->servol(pos, vel, acc, time)` `:2289`. 헤더 이름은 `fLimitVel`·`fLimitAcc` (`DRFLEx.h:503`) | `movel_cb` `:448` → `sync_type`≠0 이면 `Drfl->amovel(...)` `:464` (`radius` 는 넘기지 않음) |
+| 토픽 접두 | `svc_prefix_` = 노드 이름 + "/" (`:317`) → `/dsr01/dsr_controller2/` (`record_pose.py` `PREFIX` 와 같음) | 같음 | 같음 |
+| RT 연결 필요 | **불필요(실로봇 확인)**: RT 연결 없이 30 Hz 로 동작. 비 RT `speedl` 은 `CNDKHandler::SendMoveSpeedLCommand`(TCP 명령 채널), `_rt` 판은 `CNDKHandlerUDP::SendMoveSpeedLRTCommand` (libDRFL.a 심볼). RT 연결 서비스는 별도(`realtime/connect_rt_control` `:2536`). 2부에서 확인 | 불필요(실로봇 확인). `SendMoveServoLCommand` vs `...ServoLRTCommand` | 불필요 |
+| 새 명령이 오면 | 매 틱 새 속도로 이어 움직임. 실로봇 10 mm 지령 → 10.01~10.02 mm (에뮬레이터 9.4) | 매 틱 새 목표를 따라감. 실로봇 10.02 mm | `blend_type` 0 DUPLICATE / 1 OVERRIDE 로 지정. 미사용 결정이라 시험 안 함 |
+| 퍼블리시가 멈추면 | **실로봇: 멈추지 않는다.** 마지막 속도(5 mm/s)로 관찰 1.0 s 내내 계속 가서 +5.0 mm, 알람 1215 없음. 속도 0 을 다시 보내야 멈춘다. (에뮬레이터 `GF03020000` 은 알람 1215 "speedl() generates time-out error if it is called for 0.1 [sec]" 로 0.1~0.2 s 에 멈췄다 — **펌웨어별로 다르므로 에뮬레이터 결과를 안전 근거로 쓰지 않는다**) | 실로봇: 마지막 목표점까지 따라잡고(1.25 mm) 끊은 뒤 약 0.33 s 에 멈춤 (에뮬레이터 1.8 mm) | 예약된 이동까지 가고 멈춤 |
+| 주기·적용률·지연 | 퍼블리시 33.3 ms(최대 33.7), 지령 이동량 100 %, 시작 지연 113.5 ms(acc 20)·61.8 ms(acc 100) | 33.2 ms, 100 %, 205.4 ms | 시험 안 함(미사용 결정) |
+
+### 소스·에뮬레이터·실로봇에서 나온 주의점 (gateway 구현에 영향)
+1. **QoS 호환**: 컨트롤러 구독은 depth 만 준 기본 QoS(reliable) 다. 퍼블리셔를 best_effort 로 만들면 reliable 구독과 **연결되지 않아 명령이 전달되지 않는다**. gateway 의 두산 쪽 퍼블리셔는 reliable 이어야 한다(`servo_cmd` 의 best_effort·depth 1 은 belt_servo→gateway 구간 이야기).
+2. **밀린 명령**: 콜백이 TCP 명령을 보내는 동안 다음 메시지는 큐에 쌓인다. 처리 시간이 33 ms 를 넘으면 speedl 은 최대 10개(≈ 330 ms 분량) 지난 명령이 늦게 적용될 수 있다. 실로봇 2부(가벼운 부하, 단독 노드)에서는 밀림 징후 없음(시작 지연 62~114 ms 가 가속 시간과 맞음) — robot_gateway 안에서 다시 본다.
+3. **콜백 직렬화**: 스트림 구독과 `aux_control/get_current_posx`(`:2458`)는 컨트롤러 노드의 기본 콜백 그룹(상호 배제)을 함께 쓴다. 스트리밍 중 위치 조회는 서로를 늦춘다. 시험 스크립트는 스트리밍 중 위치를 `/dsr01/joint_states`·TF 로 보고, `get_current_posx` 는 전·후에만 부른다. `motion/move_stop`(`:2435`)은 별도 그룹(`cb_group_` `:2387`)이다.
+4. **servol 의 vel·acc 는 상한**이다(`DRFLEx.h:503`). 속도 값을 넣는 칸이 아니다. servol 을 쓰면 gateway 가 다음 위치 = 현재 + v·Δt 를 만들어야 한다.
+5. **speedl `time` = 목표 속도 도달(가속) 시간**: 에뮬레이터 알람 1216 "[SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.2500 [s], a=(20.0000[mm/s^2], ...))" — `time` 0 · 0.033 · 0.1 을 넣어도 컨트롤러가 v/a = 5 / 20 = 0.25 s 로 늘렸다. 즉 가속 한계가 `time` 보다 우선하고, 실제 반응 속도는 `acc` 로 정해진다. **실로봇도 같다**: `time` 0·0.1 모두 0.25 s 로 바뀌고 결과 차이 ≤ 0.03 mm·3 ms, `acc` 100 이면 0.05 s · 시작 지연 113.5 → 61.8 ms. 벨트 4.8 cm/s 추종이면 `acc` 를 그에 맞게 올려야 한다(값은 T26·T27 에서). Python API `_check_valid_vel_acc_task`(`DSR_ROBOT2.py:461`)의 `time`=0 검사는 gateway 가 메시지를 직접 퍼블리시하므로 적용되지 않는다.
+6. **옛 표기의 출처**: 예제 `dsr_visualservoing/send_pose_servol_gz.py:52` 가 `/dsr01/servol_stream` 으로 퍼블리시한다. 실제 경로는 `/dsr01/dsr_controller2/servol_stream` (#55, PR #84).
+7. **정지 수단**: `motion/move_stop` → `Drfl->stop(stop_mode)` (`:750`). `stop_mode` 0 DR_QSTOP_STO · 1 DR_QSTOP · 2 DR_SSTO(소프트) · 3 DR_HOLD (`MoveStop.srv`).
+8. **⚠ 실로봇 speedl 은 끊겨도 멈추지 않는다** (에뮬레이터의 0.1 s 타임아웃 1215 가 실로봇 `GF02120100` 에서는 한 번도 나오지 않음). 마지막 속도를 계속 유지하므로 **robot_gateway watchdog 이 `servo_cmd` 끊김을 감지하면 즉시 속도 0 을 보내고 이어서 항상 `move_stop` 을 부른다(정지 판별 없음, ADR-0010 조건 2·#53 MC-014)**. 속도 0 재전송 뒤 정지: acc 20 ≈ 0.41 s, acc 100 ≈ 0.15 s (김학민, joint 기준 silent 끝부터) / TF 0.05 mm 기준 재계산 0.22~0.28 s, 0.05 s (첫 0 명령부터). 추종 속도 48 mm/s 에서 watchdog 200 ms(PR #84 제안)이면 감지까지 약 9.6 mm, 감속(acc 100 이면 v²/2a ≈ 11.5 mm)까지 합쳐 20 mm 넘게 더 갈 수 있다 → watchdog 값·acc·정지 수단을 F-04 에서 수치로 정한다. **미측정**: 움직이는 중의 speedl 에 `move_stop` 을 부르면 끊기는지·그 뒤 새 speedl 을 다시 받는지(2부에서는 0 속도 hold 뒤에만 불렀다) → F-04(10/08, 김학민). 반대로 "0.1 s 넘게 명령이 없으면 컨트롤러가 멈춘다"는 제약은 실로봇에서는 없다.
+9. **servol 과 자세 표현**: 에뮬레이터 홈(ry = 0)은 ZYZ 오일러 표현이 퇴화해 같은 자세가 rx·rz = ±83° 또는 0° 로 다르게 보고됐다. 이전 표현의 rx·rz 로 servol 목표를 보낸 1회는 움직이지 않았고(알람 "[ServoL]Can't keep target time due to limit velocity or acceleration"), 다시 읽은 표현으로 보낸 다음 회는 정상이었다. 관측 자세(ry ≈ −179°)도 퇴화 근처라, servol 을 쓰면 목표 자세를 **직전 posx 그대로** 쓰고 회전 성분을 건드리지 않아야 한다. **실로봇에서는 관측 자세(ry ≈ −179°)에서 첫 시도에 정상 동작**했다(직전 posx 를 그대로 씀). speedl 은 각속도 0 이라 해당 없다.
+
+### 에뮬레이터 확인 (10/07, 개인 PC, 보조 근거)
+`servo_stream_inspect.py` · `servo_stream_trial.py` 를 DRCF `GF03020000` 에뮬레이터에서 돌렸다. 이 PC 는 ros2_control 100 Hz 를 자주 놓쳐(오버런) **지연·주기 값은 쓰지 않는다**. 명령을 받는지, 끊으면 멈추는지만 본다.
+
+| 항목 | speedl time=0 / 0.033 / 0.1 | servol (2회) |
+|---|---|---|
+| 구독 QoS | reliable / depth 10 | reliable / depth 20 |
+| 나가기·돌아오기 (지령 10 mm) | 9.42 / 9.42 / 9.42 mm, 9.44 / 9.42 / 9.41 mm | 10.0 · 10.0 mm (2회 모두) |
+| 끊김 시험 이동 (지령 3 mm) | 2.56 / 2.55 / 2.49 mm | 0.0 mm (1회차, 주의점 9) · 3.0 mm (2회차) |
+| 끊은 뒤 | 0.20 / 0.12 / 0.11 s 안에 정지, 추가 0.6 / 0.5 / 1.0 mm. 알람 1215 | 마지막 목표점까지 감(1.8 mm) 뒤 정지 |
+| 알람 | 1216 `time` 자동 조정 (t → 0.25 s). `acc` 100 이면 t → 0.05 s (= 5 / 100) | 1216 "Can't keep target time" |
+
+### 2부 실측 기록 (절차: `scripts/measure_1006/servo_stream_check.md`)
+10/07 17:24~17:45 공용 PC, DRCF `GF02120100`, doosan-robot2 `31750d6`. 실행 박병후, 비상정지 김학민. 시작 TCP posx `[-14.45, -276.54, 203.59, 85.16, -179.08, -6.12]`(관측 자세), `--z-min` 190, x 축 ±10 mm @ 5 mm/s. inspect: speedl reliable/depth 10, servol reliable/depth 20, robot_gateway 없음, AUTONOMOUS/STANDBY, joint_states 100 Hz, TF OK. 4회 모두 원위치 복귀(≤ 0.03 mm), Ctrl+C·비상정지 없음. 원자료(레포 밖): 공용 PC `~/voss_ws/measure_1006_data/servo_stream_*`, Drive `raw/1007/voss_1007_servo_stream.tar.gz`.
+
+| 항목 | speedl time=0 | speedl time=0.1 | speedl acc=100 | servol |
+|---|---|---|---|---|
+| 명령 수용 (out/back) | 예 | 예 | 예 | 예 |
+| 퍼블리시 주기 평균/최대 (ms) | 33.3 / 33.6 | 33.3 / 33.7 | 33.3 / 33.7 | 33.2 / 33.7 |
+| 명령 → 움직임 시작 (ms) | 113.5 | 113.5 | **61.8** | 205.4 |
+| 나감 / 돌아옴 (지령 10 mm) | 10.01 / 10.04 | 10.01 / 10.03 | 10.02 / 10.04 | 10.02 / 10.03 |
+| 끊김 시험 이동 (지령 3 mm) | **8.05** | **8.02** | **8.06** | 3.02 |
+| 끊은 뒤 (silent 1.0 s) | **계속 감** +5.01 mm | **계속 감** +5.02 mm | **계속 감** +4.99 mm | 0.33 s 에 정지, +1.25 mm(목표점까지) |
+| 속도 0 재전송 → 정지 | ≈ 0.41 s | — | ≈ 0.15 s | 해당 없음 |
+| 알람 | 1216 ×5 (t 0 → 0.25 s, a 20) · 1215 없음 | 1216 ×5 (t 0.1 → 0.25 s) · 1215 없음 | 1216 ×5 (t 0 → 0.05 s, a 100) · 1215 없음 | [ServoL] Can't keep target time ×2 · 1215 없음 |
+
+- 모든 알람 level 1(정보). 경고·에러 없음.
+- 절차서 4절은 "끊겨도 계속 감 → 기록하고 멈춘다"였으나, 같은 안전 범위(5 mm/s · 10 mm · 끊김 최대 +5 mm)라 김학민 판단으로 servol → time 0.1 → acc 100 까지 이어서 했다.
+- 요약값은 개인 PC 에서 CSV 로 다시 계산해 같음을 확인(`servo_stream_trial.py analyze`).
 
 ## #4 RG2 제어 경로
 - 브링업 전: `rg2_check.py status` 폭 109.1 mm, 상태 정상.
