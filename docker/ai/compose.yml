@@ -1,0 +1,18 @@
+# 사람이 실행: cd docker/ai && docker compose up -d --build
+services:
+  ai:
+    build: .
+    network_mode: host          # 127.0.0.1:8000 을 호스트의 voice 노드가 부른다
+    env_file: .env              # OPENAI_API_KEY 등 (커밋 금지)
+    volumes:
+      - whisper-cache:/root/.cache/huggingface   # 모델 가중치 캐시 (이미지·레포에 넣지 않음)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+volumes:
+  whisper-cache:
