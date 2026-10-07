@@ -21,38 +21,38 @@
   },
   {
     "path": "manifest.json",
-    "bytes": 97339,
-    "sha256": "dbcd19c8cc97c31d5961b75e6bbc144df9fe8623523baab38cc65c531285bb39"
+    "bytes": 99618,
+    "sha256": "8733f15b7dd4cb8658db922b6d7036a29aba98583744ca5cfb0f0a68bc91d98f"
   },
   {
     "path": "markdown/00_배포_사용안내.md",
-    "bytes": 2227,
-    "sha256": "4553ad130a89c9a21dfec2e7874c24c0cc0058b7300ce4d0045148a48b279d51"
+    "bytes": 2456,
+    "sha256": "3aec235623d2e276a223ec9d7ef57a427805e68d194498f14854824557e31541"
   },
   {
     "path": "markdown/01_VOSS_SRD_v0.3_합의반영본.md",
-    "bytes": 119859,
-    "sha256": "4c979f0b9ae590af06e67da88cf95fe601750565f64e3f2c03bfcf570e3b9b40"
+    "bytes": 129782,
+    "sha256": "77bb8fac10dd6d07c6fedcbad3557b85f617e36f0879d2d9fc66e5a60c50b8d8"
   },
   {
     "path": "markdown/02_상호확인_합의_종합.md",
-    "bytes": 40628,
-    "sha256": "bcc7b2dcc665ab0d975c61607b8a3258661a2c02d11afcaf05199881fbccd096"
+    "bytes": 41901,
+    "sha256": "579c6d0d98fcd5c00b69035526b2f838ff8aaf4d402107efed76d6452c369c9c"
   },
   {
     "path": "markdown/03_남은_결정_구현_실측_대장.md",
-    "bytes": 10826,
-    "sha256": "7f71de65090bf1f356f2aac3be13f660067628c911ac1452f362f3051e5e4b2b"
+    "bytes": 11747,
+    "sha256": "83d3319b3a3d4621d628fbe521ef2b754b30c75d40a92fa88cd89a0a8884382f"
   },
   {
     "path": "markdown/04_검증카드_70개요구사항_추적표.md",
-    "bytes": 22676,
-    "sha256": "7aaca8ab2fda880029c9cb9a8c8a3d727448e5aa1285b83266de26617d65aa9b"
+    "bytes": 23077,
+    "sha256": "7e222c91fa0c6b2f62f5ed5fc91ca4df3d7d7ac77e950568cebaaef349a0babb"
   },
   {
     "path": "markdown/05_BRD_v1.1_v1.2_대조기록.md",
-    "bytes": 1849,
-    "sha256": "7225c3458c64e0c44c473f8e0ea8798378e55b86e7fe6471b0a39bb1ef52c6b3"
+    "bytes": 1999,
+    "sha256": "0a8430ab7b4b6ae1e4068235373674342085a0d76085adf9e18ffdae2d610c83"
   },
   {
     "path": "sources/BRD_comparison/BRD_requirements_diff.json",
@@ -216,37 +216,37 @@
   },
   {
     "path": "word/00_배포_사용안내.docx",
-    "bytes": 25533,
-    "sha256": "cea1af174b9a524a16c51b3308abf4b1d289d26666fde14782a97dae3c26a9e6"
+    "bytes": 25663,
+    "sha256": "18910b2d7a242c16d2f60f85f2486589331b8fd10361635da515041521222bc5"
   },
   {
     "path": "word/01_VOSS_SRD_v0.3_합의반영본.docx",
-    "bytes": 311529,
-    "sha256": "44277bd034dbdb7fee1e4460232589028258c052c4751e6cc16d502704c4f173"
+    "bytes": 316311,
+    "sha256": "f9c6a9e4435b14791733ea1fbf3a5e78d37faae87c12de870f851c6f4c921edd"
   },
   {
     "path": "word/02_상호확인_합의_종합.docx",
-    "bytes": 41812,
-    "sha256": "46e6da9e98e28045214c9ad16d392ae16bb53577ce7de191a20a7eefad99d8ad"
+    "bytes": 42388,
+    "sha256": "0bd3906f28968735d05bd57fd86b3859a1bb1dafa745fc813779214a777f1901"
   },
   {
     "path": "word/03_남은_결정_구현_실측_대장.docx",
-    "bytes": 29118,
-    "sha256": "8266a31371d5d13b28f9e42f983fbe9dc74eafc1cbe1173ed307981f1f3d8ccf"
+    "bytes": 29587,
+    "sha256": "8988647342b1987baa9b39ed06ccf1d0c95d1e25cf37d0928668a33c36329db6"
   },
   {
     "path": "word/04_검증카드_70개요구사항_추적표.docx",
-    "bytes": 36440,
-    "sha256": "e8f3f4320288a2850a240e0a6df872e7c1831736247980fe6662d126956c2b07"
+    "bytes": 36763,
+    "sha256": "20c00df83038132ea5c29f62443a96f4ed7e1b1932e7d9949c417f7d569a7fd7"
   },
   {
     "path": "word/05_BRD_v1.1_v1.2_대조기록.docx",
-    "bytes": 25344,
-    "sha256": "c4dbc23c883bb93435bc0e709e3f6cb108987b0527e4fb21e2bfe130148a8b0a"
+    "bytes": 25433,
+    "sha256": "361c1d93115974c19c42eec408345f7534c6f26b8765fc68d1c88fa1738fcb33"
   },
   {
     "path": "문서검증결과.json",
-    "bytes": 2413,
-    "sha256": "05719744bc997b5bb54e9fcf5b82bda104a6e6965f2ea6871e0198b2bf26ddc0"
+    "bytes": 2684,
+    "sha256": "11ce93b510f9daa033ce7e449439a6893e0a3650a90e4df85acd693129ab4fc3"
   }
 ]

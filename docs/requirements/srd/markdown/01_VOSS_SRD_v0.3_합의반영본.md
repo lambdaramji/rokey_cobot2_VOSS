@@ -1,6 +1,6 @@
 # VOSS SRD v0.3 — 시스템 요구사항 명세서
 
-**문서 ID:** SRD-VOSS-001 · **버전:** v0.3 · **작성일:** 2026-10-07(KST) 
+**문서 ID:** SRD-VOSS-001 · **버전:** v0.3 r1(PR #77 리뷰 반영) · **작성일:** 2026-10-07(KST) 
 **상태:** #50~#55 상호 확인 합의 반영본 / 전체 문서 최종 승인 및 실기 수락 별도 
 **작성·취합:** 박병후 · **범위·기준선 승인:** 남현지(PL) 및 영향 담당자
 
@@ -33,6 +33,7 @@
 | v0.2 / r1 | ISO/IEC/IEEE 29148을 참고한 시스템 요구사항 구조, A/B/C, SYS/IC/VT/TBD 및 추적표. r1 독립 재검 반영 | 당시 취합·검토 전 |
 | v0.2 r2 | 4 인 회신 공통 내용 반영, MC-001~034와 6 개 상호 확인서로 충돌·미정 관리 | 당시 상호 확인 전 |
 | v0.3 | 종료된 #50~#55의 최종 정정·합의·후속 범위 반영. 70 SYS·70 VT·18 IC·26 TBD·34 MC ID 유지. 좌표/TCP/정지/재시도/결과/조회/배포 규약 정합 | 조합별 회신 확인 완료 / 전체 문서 최종 승인·실기 수락 별도 |
+| v0.3 r1 | PR #77 리뷰(남현지·김학민) 반영: 경로 docs/requirements/srd/, 중복 ZIP 제거. #50~#55 재대조로 MC-018 slot 재사용·MC-015 새 session 범위·HMI 시계·시험 분모를 정정하고, stop·RobotState·MQTT·설정의 main 미반영 표시와 토픽·서비스 이름을 보강 | 문서 게시 승인(리뷰 2건) / 전체 기준선 승인·실기 수락 별도 |
 
 ### 0.2 승인·검토
 
@@ -74,16 +75,16 @@ VOSS 전체 시스템의 기능, 외부·파트 간 입출력, 성능, 데이터
 
 | 참조 | 판·기준 | 적용 |
 |---|---|---|
-| 사용자 범위·측정·일정 지침 | 이 대화, 2026-10-06~07 | A 먼저, B 최종 필수, C 선택. 정상/예외 분리·작업자 대기 별도. 첫 실험 10/07·G0 10/10 |
+| 범위·측정·일정 안내 | #6 본문·#50~#55 공통 안내, 2026-10-06~07 | A 먼저, B 최종 필수, C 선택. 정상/예외 분리·작업자 대기 별도. 첫 실험 10/07·G0 10/10. docs/plan.md는 아직 10/13을 전체 루프 첫 완주로 두므로 PL 정합 대기(F-15) |
 | SRD v0.2 r2·4 인 회신 | 2026-10-06 | 기존 70 SYS/VT·18 IC·26 TBD·34 MC 및 카드 출처 |
 | GitHub #50~#55 전체 댓글 | 6 개 종료, 2026-10-07 확인 | 최종 정정·공동 수용과 잔여 범위. 02 합의 종합에 permalink |
 | BRD v1.2 Word | PL #51 결정, PR #66 | 적용 BRD 판. Word v1.1↔v1.2의 45 개 TR/NFR 행은 동일함을 대조했다(05 참조). Markdown 동기화는 F-15 |
 | VOSS_BRD.md 및 기존 BRD v1.1 | 기존 TR/NFR 연결의 출처 | Markdown은 아직 v1.1 사본. 기존 요구사항 ID 연결을 유지하며 판 차이 검토 필요 |
-| VOSS_개발일정.xlsx | 기존 계획 | 담당·마일스톤. 사용자 지정 최신 일정 우선 |
+| VOSS_개발일정.xlsx | 기존 계획 | 담당·마일스톤. #6의 최신 일정을 우선하며 plan.md 반영은 PL 확인 대기 |
 | docs/interfaces/*·src/voss_msgs/* | main@fff112116bef3992d27a094456b055f647ed61a8 | 실제 문서/IDL 대조 기준. PR #63/#65 등 머지 내용과 미반영 IDL 구분 |
 | docs/measurements-1006.md·config/voss_config.yaml | 같은 main | 벨트/카메라/TCP/트레이/PC 관측·설정 출처. 동적 성능 수락과 구분 |
-| ADR-0002/0005/0006 | 같은 main | 폐루프 게이트·RG2 Modbus 직접·웹/AI/DB 스택 |
-| 열린 PR #48/#64/#68/#70/#73/#74/#75 | 확인 당시 head 별도 기록 | 후속 제안·구현/시험 보고. main 반영 또는 전체 실기 승인으로 표시하지 않음 |
+| ADR-0002/0005/0006 | 같은 main | 폐루프 게이트·RG2 Modbus 직접·웹/AI/DB 스택. 예정 번호: 0003 캘리브레이션(#48)·0007 호출어(#72)·0008 OCR(#75)·0009 31mm 면 파지(김학민, PR #77 리뷰) |
+| 열린 PR #48/#64/#68/#70/#71/#72/#73/#74/#75/#76 | 확인 당시 head 별도 기록 | 후속 제안·구현/시험 보고. main 반영 또는 전체 실기 승인으로 표시하지 않음 |
 
 최종 공동 정정과 사용자 지침을 우선 적용했다. 오래된 720p·플랜지 pose·중간 시각·Stats/ROS query·STOP_UNCONFIRMED·질문 box_id#회차 제안은 최신 규약으로 대체했다. 다른 시점의 수치·초안과 혼용하지 않는다. 문서와 구현의 차이는 부록 C/03 후속 대장에서 추적한다.
 
@@ -132,7 +133,7 @@ VOSS 전체 시스템의 기능, 외부·파트 간 입출력, 성능, 데이터
 
 - M0609/RG2/손목 D435i, RGB만, 알려진 박스 46×31×27mm·송장 40×25mm, A/B/C/RECHECK/HOLD 5 구역. 벨트 목표≤10cm/s, 개발설정 4.8cm/s는 실측 기반 설정이다.
 - 한 번에 1 개 투입. VOSS는 벨트 운전/속도/전원을 자동 조작하지 않는다. 로봇 분류 stop과 벨트 정지는 별개다.
-- 31mm 면 파지는 #51 최종에서 선택 보고됐고 PR #70은 열린 상태다. 최종 PL/ADR·BRD 정정·T34 결과와 높이/힘/폭의 승인 범위는 F-03 에 남긴다.
+- 31mm 면 파지는 #51 최종에서 선택 보고됐고 PR #70은 열린 상태다. 최종 PL/ADR(ADR-0009, 김학민 작성 예정)·BRD 정정·T34 결과와 높이/힘/폭의 승인 범위는 F-03 에 남긴다. main pending #16은 아직 미정이다.
 - 제외: 대형택배·다중박스 연속투입·다단적재최적화·WMS·손글씨/다국어/받는사람판독·현업인증/24 시간운영. 흐린송장은 재확인·질문 시험을 실제로 유발하는 세트를 별도 확보한다.
 
 ## 3. 시스템 개요와 할당
@@ -371,7 +372,7 @@ manager는 대상·구역·최종 업무 결과와 준비 여부를 판단한다
 시스템은 수집한 한국어 음성 명령을 텍스트로 변환해야 한다.
 
 - 출처: TR-VOICE-02
-- 검증 VT-016: 녹음 시험 세트의 전사 결과와 정답 대조.
+- 검증 VT-016: 녹음 시험 세트의 전사 결과와 정답 대조. 제안 기준: 녹음 20개 중 18개 이상 정확(정답표 사전 커밋, #54 VC-EUS-VOICE-01).
 - 후속 추적: TBD-010
 - v0.3 합의 반영: FastAPI 로컬 Whisper와 host voice_listener의 전달/timeout/오류를 검증한다. 모델 크기는 공용 PC 동시 부하 결과로 결정한다.
 - 합의 근거: MC-028, MC-029 (02 합의 종합의 최종 댓글).
@@ -406,7 +407,7 @@ manager는 대상·구역·최종 업무 결과와 준비 여부를 판단한다
 - 출처: TR-VOICE-05
 - 검증 VT-019: 정지 단계별 재개 조건을 시험하고 이중 파지·이중 기록 여부 확인.
 - 후속 추적: TBD-005, TBD-017
-- v0.3 합의 반영: resume은 PAUSED에서만 허용한다. 일시정지는 정지 요청·오류 해소·보유 확인 후 구역 확정 여부에 따라 이어간다. 재기동/장비 오류는 사람이 확인·제거한 뒤 새 세션으로 시작한다. 단계별 상세와 실기는 B 후속이다.
+- v0.3 합의 반영: resume은 PAUSED에서만 허용한다. 일시정지는 정지 요청·오류 해소·보유 확인 후 구역 확정 여부에 따라 이어간다. 노드 재기동·장비 오류 뒤 보유 박스는 사람이 확인·제거한다. 새 session은 manager 재기동(크래시)에만 해당하며 IDLE부터 시작한다(#50·#51 MC-015). 단계별 상세와 실기는 B 후속이다.
 - 합의 근거: MC-015, MC-024 (02 합의 종합의 최종 댓글).
 - 이행·검증: 계약 반영과 구현/실측 수락을 구분한다. VT 별 상태는 04 검증 추적표 참조.
 
@@ -516,7 +517,7 @@ manager는 대상·구역·최종 업무 결과와 준비 여부를 판단한다
 - 출처: TR-VOICE-08; TR-SYS-04
 - 검증 VT-029: DB 조회값·음성·HMI 값의 일치를 대조.
 - 후속 추적: TBD-008
-- v0.3 합의 반영: 음성/HMI는 Spring GET /api/stats 한 곳을 사용한다. count_by_dong은 PLACED의 동별 수, held_count는 HELD이며 remaining_count는 확정식을 따른다. DB 오류는 조회 불가로 표시하고 메모리 값을 공식 대체값으로 쓰지 않는다.
+- v0.3 합의 반영: 음성/HMI는 Spring GET /api/stats 한 곳을 사용한다. count_by_dong은 PLACED의 동별 수, held_count는 HELD이며(이 정의는 열린 PR #68 제안) remaining_count는 확정식을 따른다. DB 오류는 조회 불가로 표시하고 메모리 값을 공식 대체값으로 쓰지 않는다.
 - 합의 근거: MC-021, MC-022 (02 합의 종합의 최종 댓글).
 - 이행·검증: 계약 반영과 구현/실측 수락을 구분한다. VT 별 상태는 04 검증 추적표 참조.
 
@@ -687,40 +688,40 @@ manager는 대상·구역·최종 업무 결과와 준비 여부를 판단한다
 
 ### 5.2 합의 반영 계약 목록
 
-아래 규약은 최종 공동 회신을 반영했다. 문서/IDL 반영 여부와 장비 수치는 별도 열로 관리한다. 데이터 예시는 형식 예시이며 실측 결과가 아니다.
+아래 규약은 최종 공동 회신을 반영했다. 문서/IDL 반영 여부와 장비 수치는 별도 열로 관리한다. 데이터 예시는 형식 예시이며 실측 결과가 아니다. 토픽·서비스 이름은 main topics.md 기준이며 "(미반영)"은 합의만 있고 main 문서·IDL에 없는 이름이다. IC↔SYS 연결: IC-VISION-01~04→SYS-IF-001, IC-PICK-01→SYS-IF-002, IC-ROBOT-01~03·IC-DEVICE-01→SYS-IF-003, IC-RESULT-01·IC-DB-01·IC-STATS-01→SYS-IF-004, IC-CMD-01·IC-VOICE-01→SYS-IF-005, IC-STATE-01·IC-MQTT-01→SYS-IF-006, IC-CONFIG-01→SYS-IF-007, IC-OPTION-01→SYS-OP-001/002. 모든 IC는 SYS-IF-008의 버전 관리 대상이다.
 
 | IC-ID | 연결·타입 | 합의한 의미 | 잔여/근거 |
 |---|---|---|---|
-| IC-VISION-01 | camera→tracker, Image/CameraInfo | 원본 촬영 stamp·1080p RGB30fps 설정·수동 6ms | MC-004/032, 실제 stamp/FPS |
-| IC-VISION-02 | tracker→manager/servo, BoxTrack | 윗면 중심 base_link/m·valid/source/calib_version, 변환은 비전·TCP 목표는 servo | MC-001/002/004, 동적 검증 |
-| IC-VISION-03 | tracker→reader, LabelCrop | header/track_id/stage/sharpness/image, 현재 트랙 PICKING/RECHECK 연결 | MC-007/034, 2차 영상 검증 |
-| IC-VISION-04 | reader→manager, LabelRead/ReadLabel | stage1/2/3·촬영 stamp/원문/2위 후보, RECHECK VIEW 후 정지 판독 | MC-017/020, view_pose/PICK |
-| IC-PICK-01 | manager↔servo, TrackAndGrasp | goal1/box, servo 최대 3회 attempt, phase/reason·LIFT/VERIFY 인계, 정상 cancel/실패구분 | MC-005/006/012/014 |
-| IC-ROBOT-01 | servo→gateway, TwistStamped | 실제 TCP 속도 base_link, m/s·rad/s, 각속도 0(G0), latest 목표·stop 우선 | MC-010/011/014, 실제 stream |
-| IC-ROBOT-02 | gateway→vision/servo, PoseStamped | 실제 TCP m/quaternion, stamp=get_current_posx 응답 수신 | MC-004/010, RTT/50Hz |
-| IC-ROBOT-03 | manager/servo↔gateway, MoveToZone/Gripper/stop/RobotState | PLACE/VIEW/PICK·placed_stamp, servo goal 내 gripper 단독·async 닫힘, stop Trigger | MC-012~019, 그리퍼/state/stop IDL 후속 |
-| IC-CMD-01 | voice/HMI→manager, Intent/Command | canonical 소문자 type·arg·answer 원래 box_id/HOLD, 접수≠완료, 조회 REST | MC-023/024/026, Intent 추가 |
-| IC-VOICE-01 | manager/intent_parser→speech_out, String | 발행자별 중복 억제·FIFO, 질문 30 초는 say 발행기준 | MC-024/025, B 회차 상세 |
-| IC-STATE-01 | manager/gateway/logger→소비자 | SortState6 상태+ready/not_ready·state≥2Hz; RobotState4 상태·UNKNOWN; logger4 상태 | MC-015/019/026, RobotState/session_id 추가 |
-| IC-RESULT-01 | manager→logger/HMI, SortResult | box/session/track·started/stamp·원문/후보/rule/reason/attempts·대문자 enum·최종 1 건 | MC-003/016/020, 부분 실패 업무 분류 |
-| IC-CONFIG-01 | YAML/manager→소비자, params/ZoneMap | snapshot/version/hash, 단위/유효성, writer1 개, code/aliases | MC-009/019/034, PR #64 |
+| IC-VISION-01 | camera→tracker, `/camera/color/image_raw`·`camera_info` Image/CameraInfo | 원본 촬영 stamp·1080p RGB30fps 설정·수동 6ms | MC-004/032, 실제 stamp/FPS |
+| IC-VISION-02 | tracker→manager/servo, `/voss/vision/box` BoxTrack 30Hz | 윗면 중심 base_link/m·valid/source/calib_version, 변환은 비전·TCP 목표는 servo | MC-001/002/004, 동적 검증 |
+| IC-VISION-03 | tracker→reader, `/voss/vision/label_crop` LabelCrop | header/track_id/stage/sharpness/image, 현재 트랙 PICKING/RECHECK 연결 | MC-007/034, 2차 영상 검증 |
+| IC-VISION-04 | reader→manager, `/voss/vision/label` LabelRead·`/voss/vision/read_label` ReadLabel | stage1/2/3·촬영 stamp/원문/2위 후보, RECHECK VIEW 후 정지 판독 | MC-017/020, view_pose/PICK |
+| IC-PICK-01 | manager↔servo, `/voss/servo/track_and_grasp` TrackAndGrasp | goal1/box, servo 최대 3회 attempt, phase/reason·LIFT/VERIFY 인계, 정상 cancel/실패구분 | MC-005/006/012/014 |
+| IC-ROBOT-01 | servo→gateway, `/voss/robot/servo_cmd` TwistStamped 30Hz·best_effort/volatile/1 | 실제 TCP 속도 base_link, m/s·rad/s, 각속도 0(G0), latest 목표·stop 우선 | MC-010/011/014, 실제 stream |
+| IC-ROBOT-02 | gateway→vision/servo, `/voss/robot/pose` PoseStamped ~50Hz | 실제 TCP m/quaternion, stamp=get_current_posx 응답 수신 | MC-004/010, RTT/50Hz |
+| IC-ROBOT-03 | manager/servo↔gateway, `/voss/robot/move_to_zone`·`/voss/robot/gripper`·`/voss/robot/stop`(미반영)·`/voss/robot/state`(미반영) | PLACE/VIEW/PICK·placed_stamp, servo goal 내 gripper 단독·async 닫힘, stop Trigger | MC-012~019, 그리퍼/state/stop IDL 후속 |
+| IC-CMD-01 | voice/HMI→manager, `/voss/voice/intent` Intent·`/voss/sort/command` Command | canonical 소문자 type·arg·answer 원래 box_id/HOLD, 접수≠완료, 조회 REST | MC-023/024/026, Intent 추가 |
+| IC-VOICE-01 | manager/intent_parser→speech_out, `/voss/voice/say` String | 발행자별 중복 억제·FIFO, 질문 30 초는 say 발행기준 | MC-024/025, B 회차 상세 |
+| IC-STATE-01 | manager/gateway/logger→소비자, `/voss/sort/state`·`/voss/robot/state`(미반영)·`/voss/log/status` | SortState6 상태+ready/not_ready·state≥2Hz; RobotState4 상태·UNKNOWN; logger4 상태 | MC-015/019/026, RobotState/session_id 추가 |
+| IC-RESULT-01 | manager→logger/HMI, `/voss/sort/result` SortResult | box/session/track·started/stamp·원문/후보/rule/reason/attempts·대문자 enum·최종 1 건 | MC-003/016/020, 부분 실패 업무 분류 |
+| IC-CONFIG-01 | YAML/manager→소비자, params·`/voss/sort/zone_map` ZoneMap(transient_local) | snapshot/version/hash, 단위/유효성, writer1 개, code/aliases | MC-009/019/034, PR #64 |
 | IC-STATS-01 | DB→SpringREST→음성/HMI | GET /api/stats, DB 유일원천·현재 session·FAILED 포함/PASSED 제외 | MC-021/022; 기존 Stats.srv 삭제 |
-| IC-MQTT-01 | bridge↔Spring↔React | 6 토픽 QoS/retain·command_id/TTL/ack·ISO 시각·SSE·로컬 운전 제한 | MC-026/029, mqtt JSON/ACL 후속 |
+| IC-MQTT-01 | bridge↔Spring↔React, MQTT `voss/*` | 6 토픽 QoS/retain·command_id/TTL/ack·ISO 시각·SSE·로컬 운전 제한 | MC-026/029, mqtt JSON/ACL 후속 |
 | IC-DB-01 | logger→PostgreSQL→Spring | PK box_id, DO NOTHING·commit 로그+조회·스풀/누락구분 | MC-003/020/027, DDL/장애 시험 |
-| IC-DEVICE-01 | gateway↔두산/RG2 | Doosan 서비스 단일 직렬 경로·stream 별도·RG2 Modbus 자원 분리·Quickstop | MC-010~014, 지원/동시성 실측 |
-| IC-OPTION-01 | 선택명령↔manager/gateway | C 채택 보류·G0 후 결정, 채택 시  writer/rule/교시 반환 정합 | MC-033 |
+| IC-DEVICE-01 | gateway↔두산 `/dsr01/*`·RG2 Modbus | Doosan 서비스 단일 직렬 경로·stream 별도·RG2 Modbus 자원 분리·Quickstop | MC-010~014, 지원/동시성 실측 |
+| IC-OPTION-01 | 선택명령↔manager/gateway, `/voss/sort/update_zone_map`·`/voss/robot/teach_zone` | C 채택 보류·G0 후 결정, 채택 시  writer/rule/교시 반환 정합 | MC-033 |
 
 ### 5.3 규약·IDL·런타임 변경 관리
 
 합의→docs/interfaces→voss_msgs/구현→소비자 동시 rebuild/배포→시험 순서로 이행한다. 필드 추가만으로 wire 호환이 보장되지 않는다. 기존 18IC ID를 유지하며 IC-STATS-01은 삭제된 ROS 서비스의 이름이 아니라 업무 집계 연결을 가리킨다. 미반영 IDL을 실행 가능한 계약으로 표시하지 않는다.
 
-현재 main 에는 BoxTrack/LabelCrop/LabelRead/ReadLabel/ZoneMap/TrackAndGrasp/SortResult/SortState ready/MoveToZone mode·placed_stamp/Command 정정과 Stats 삭제가 확인된다. Intent.box_id는 PR #73, SortState.session_id·RobotState·Gripper 피드백·stop·RETURN_FAILED 문서는 후속 반영이다. 부록 C에 기준 commit과 상태를 기록한다.
+현재 main 에는 BoxTrack/LabelCrop/LabelRead/ReadLabel/ZoneMap/TrackAndGrasp/SortResult/SortState ready/MoveToZone mode·placed_stamp/Command 정정과 Stats 삭제가 확인된다. Intent.box_id는 PR #73, SortState.session_id·RobotState·Gripper 피드백·stop·RETURN_FAILED 문서는 후속 반영이다. MQTT JSON(main mqtt.md는 초안)·view_pose·direction_base도 main에 없다. 부록 C에 기준 commit과 상태를 기록한다.
 
 ### 5.4 영상·좌표·시각 계약
 
 픽셀→베이스 좌표 변환은 비전에서만 수행한다. `BoxTrack.position_base`는 촬영 시각에 관측한 박스 윗면 중심이며, `base_link` 좌표와 m 단위를 사용한다. servo는 이 관측값에 지연·벨트 속도 예측·파지 높이와 오프셋을 적용해 TCP 목표·오차·속도를 계산한다. 비전 변환을 가져다 쓰거나 중복 구현하지 않는다.
 
-BoxTrack은 기존 `track_id/u/v/bbox(x,y,w,h)/stamp`에 `position_base/position_valid/position_source/calib_version`을 추가했다. source 상수는 NONE=0, OBSERVE_HOMOGRAPHY=1, HAND_EYE=2다. 소비자는 msg 상수로 비교한다. 미검출 프레임에는 발행하지 않으며, `position_valid=false`는 검출됐지만 좌표를 신뢰할 수 없을 때 사용한다.
+BoxTrack은 기존 `track_id/u/v/bbox(x,y,w,h)/stamp`에 `position_base/position_valid/position_source/calib_version`을 추가했다. source 상수는 SOURCE_NONE=0, SOURCE_OBSERVE_HOMOGRAPHY=1, SOURCE_HAND_EYE=2다. 소비자는 msg 상수로 비교한다. 미검출 프레임에는 발행하지 않으며, `position_valid=false`는 검출됐지만 좌표를 신뢰할 수 없을 때 사용한다.
 
 ```yaml
 # 형식 예시. 현재 촬영 시각의 박스 윗면이며 TCP 목표가 아니다.
@@ -735,9 +736,9 @@ position_source: 2
 calib_version: "handeye-v1-example"
 ```
 
-고정 observe 호모그래피는 카메라가 관측 자세에 정지한 경우에만 사용한다. 이동 중에는 촬영 시각의 TCP pose 이력, `T_tcp→camera`, 알려진 박스 윗면 평면을 사용한다. 이동 중 위치 갱신은 G0 필수이며 동적 변환 검증 전에는 valid=true를 발행하지 않는다. 이력 범위·보간 간격·미래 시각·캘리브레이션 유효 조건은 F-01에서 검증한다. pose 약50Hz, 이력1초, 보간 간격50ms는 실측·검토 대상이다.
+고정 observe 호모그래피는 카메라가 관측 자세에 정지한 경우에만 사용한다. 호모그래피 파일(`config/belt_homography.yaml`)과 position_valid=false 조건은 열린 PR #48 calibration.md에서 정한다. 이동 중에는 촬영 시각의 TCP pose 이력, `T_tcp→camera`, 알려진 박스 윗면 평면을 사용한다. 이동 중 위치 갱신은 G0 필수이며 동적 변환 검증 전에는 valid=true를 발행하지 않는다. 이력 범위·보간 간격·미래 시각·캘리브레이션 유효 조건은 F-01에서 검증한다. pose 약50Hz, 이력1초, 보간 간격50ms는 실측·검토 대상이다.
 
-track_id는 실행 중 새 트랙마다 증가하고 재사용하지 않는다. tracker 재기동 시 초기화되므로 실행 전후 식별자로 사용하지 않는다. 미검출15프레임(30Hz에서0.5초)은 만료 후보이며, 현재 PICKING 트랙은 파지 중 가림에 따른 폐기를 보류한다. 원본 촬영 시각은 `LabelCrop.header.stamp`와 `LabelRead.stamp`까지 보존한다. manager는 현재 트랙과 단계 시작 이후의 결과만 채택한다.
+track_id는 실행 중 새 트랙마다 증가하고 재사용하지 않는다. tracker 재기동 시 초기화되므로 실행 전후 식별자로 사용하지 않는다. 미검출15프레임(30Hz에서0.5초)은 만료 후보이며, 현재 PICKING 트랙은 파지 중 가림에 따른 폐기를 보류한다. 원본 촬영 시각은 `LabelCrop.header.stamp`와 `LabelRead.stamp`까지 보존한다. manager는 현재 트랙과 단계 시작 이후의 결과만 채택한다. 열린 PR #76은 min_hits=5(약 0.17 s) 검출된 확정 트랙만 발행하고 발행 ID가 건너뛸 수 있다고 정한다. 머지되면 첫 BoxTrack 촬영 시각(started_at·t_detect)이 그만큼 늦어지므로 cycle 정의(TBD-025)와 함께 확인한다.
 
 2차 OCR은 비전이 PICKING 영상에서 선명도·가림·송장 크기로 프레임을 선택한다. GRASP 닫힘 중에도 추종하므로 GRASP 진입만으로 마감하거나 phase 문자열에 의존하지 않는다. action result까지 품질 조건에 따라 선택한다. 별도 servo 수렴 신호를 필수 인터페이스로 추가하지 않는다.
 
@@ -767,17 +768,17 @@ phase는 PREPARE/TRACK/DESCEND/GRASP/LIFT/VERIFY다. `err_u/v`는 px이며 manag
 
 GRASP→LIFT 전환은 정상 통신의 닫힘 완료 응답, `grip_detected`, 검증된 보고 폭 범위를 모두 만족해야 한다. 이후 안전 높이로 상승해 VERIFY까지 마쳐야 `grasped=true`다. `grasped=false`는 인계 미완료를 뜻하며 빈손이라는 뜻이 아니다. 보유 박스를 자동 개방하지 않는다.
 
-goal 중 PREPARE 개방·GRASP 닫힘·VERIFY 확인의 Gripper 호출자는 servo 하나다. manager는 동시에 호출하지 않는다. `call_async`로 닫힘 응답을 기다리는 동안 추종을 유지한다. 같은 RG2 자원의 중복 요청은 BUSY로 거부하며, 이전 goal/attempt의 늦은 응답은 해당 future를 식별해 버린다. 요청에 attempt 필드를 추가하지 않는다.
+goal 중 PREPARE 개방·GRASP 닫힘·VERIFY 확인의 Gripper 호출자는 servo 하나다. manager는 동시에 호출하지 않는다. `call_async`로 닫힘 응답을 기다리는 동안 추종을 유지한다. 같은 RG2 자원의 중복 요청은 BUSY로 거부하며, 이전 goal/attempt의 늦은 응답은 해당 future를 식별해 버린다. 요청에 attempt 필드를 추가하지 않는다. 늦은 응답을 버리는 것과 별개로 gateway에서 진행 중인 동작의 종료·자원 해제를 확인한다.
 
 31mm 면 선택은 #51 최종 회신과 열린 PR #70에서 보고됐다. 목표39mm·14N, 보고 폭39.5~41.5mm, TCP z=윗면−19mm의 승인·시험 범위는 F-03에서 확인한다. 실제 간격≈보고 폭−10mm는 관측 특성이며 모든 폭에 적용되는 정밀 보정식으로 보장하지 않는다. 안전 인계 높이·놓기 높이·작업대 재픽업 높이는 구분한다.
 
 ### 5.6 장비·적재·정지 계약
 
-ROS pose와 servo_cmd는 실제 TCP 기준이다. pose는 `base_link`·m·quaternion, Twist는 m/s·rad/s를 사용한다. zones/observe_pose는 플랜지 mm·deg 원본을 유지한다. 등록 TCP와 두산 ZYZ/native 단위 변환은 gateway만 수행하며 servo가 TCP 오프셋을 중복 적용하지 않는다. G0는 고정 파지 자세·각속도0을 사용한다.
+ROS pose(`/voss/robot/pose`)와 servo_cmd(`/voss/robot/servo_cmd`)는 실제 TCP 기준이다. pose는 `base_link`·m·quaternion, Twist는 m/s·rad/s를 사용한다. zones/observe_pose는 플랜지 mm·deg 원본을 유지한다. 등록 TCP와 두산 ZYZ/native 단위 변환은 gateway만 수행하며 servo가 TCP 오프셋을 중복 적용하지 않는다. G0는 고정 파지 자세·각속도0을 사용한다. 회전 명령을 쓰면 TCP 선속도가 servo 명령값과 맞도록 보정하는 책임은 gateway다. `base_link`와 두산 Base 원점·축의 일치는 T32(김학민)에서 검증한다.
 
-두산 서비스 조회·명령은 gateway의 단일 직렬 경로를 사용한다. 스트리밍은 서비스 큐 밖에서 최신 목표 하나만 유지하고 옛 목표를 누적하지 않는다. RG2 자원은 로봇 모션과 분리하며 stop을 우선 처리한다. 실제 제어 경로·타입·지원 버전·주기·적용 proxy·동시성은 F-02에서 검증한다.
+두산 서비스 조회·명령은 gateway의 단일 직렬 경로를 사용한다. 스트리밍은 서비스 큐 밖에서 최신 목표 하나만 유지하고 옛 목표를 누적하지 않는다. RG2 자원은 로봇 모션과 분리하며 stop을 우선 처리한다. 모션 자원은 한 번에 하나만 소유한다. servo_cmd 추종과 MoveToZone을 동시에 실행하지 않으며, 같은 자원의 두 번째 명령(예: MoveToZone 중 servo_cmd, 닫는 중 다시 닫기)은 BUSY로 거부한다(#53 MC-013). 실제 제어 경로·타입·지원 버전·주기·적용 proxy·동시성은 F-02에서 검증한다.
 
-MoveToZone 요청은 zone/slot/mode다. zone은 A/B/C/RECHECK/HOLD/OBSERVE이며 빈 mode는 PLACE다. PLACE는 놓기→상승→OBSERVE 복귀 후 응답한다. VIEW는 해당 view_pose로 이동만 하고, PICK은 해당 slot에서 확보한 뒤 안전 높이로 상승만 한다. OBSERVE는 observe_pose를 사용하며 slot을 무시한다.
+MoveToZone 요청은 zone/slot/mode다. zone은 A/B/C/RECHECK/HOLD/OBSERVE이며 빈 mode는 PLACE다. PLACE는 놓기→상승→OBSERVE 복귀 후 응답한다. VIEW는 해당 view_pose로 이동만 하고, PICK은 해당 slot에서 확보한 뒤 안전 높이로 상승만 한다. OBSERVE는 observe_pose를 사용한다. VIEW·OBSERVE는 slot을 무시한다. 서비스는 `/voss/robot/move_to_zone`이다. view_pose(`zones.recheck.view_pose`)는 아직 voss_config 스키마에 없고 교시 전이다(main 미반영, F-10). 작업대 PICK 높이는 놓기 높이(박스 밑면 +5mm)가 아니라 파지 높이(핑거 끝 = 박스 밑면 +8mm)이며, PICK 성공 판정은 MC-012와 같은 피드백(grip_detected+보고 폭)이다. 재확인 경로에서 VIEW·ReadLabel이 실패하면 질문 경로로, PICK이 실패하면 HELD(박스는 재확인 구역에 남기고 사람 확인)로 간다(#51 MC-017). MoveToZone은 항상 현재 x,y에서 플랜지 z≥446.6mm까지 수직 상승한 뒤 수평 이동한다(#51 MC-015, T35).
 
 ```yaml
 request: {zone: B, slot: 0, mode: PLACE}
@@ -788,23 +789,23 @@ response:
 # 형식 예시. 응답 수신과 실제 관측 자세 도달 시각은 별도 기록한다.
 ```
 
-`placed_stamp`는 개방 명령 후 RG2 busy가 해제되고 개방 폭에 도달한 것을 확인한 호스트 시각이다. 올바른 물리 적재의 proxy이므로 영상/사진으로 대조한다. 개방 후 복귀 실패는 gateway `ok=false/message=RETURN_FAILED`와 placed_stamp 유지로 구분한다. 개방 전 실패는 placed_stamp=0이다. 이때 manager의 최종 업무 outcome/reason과 slot 점유는 TBD-007/016에서 정합한다. 응답 유실 시 상태 확인 없이 자동 재호출하지 않는다.
+`placed_stamp`는 개방 명령 후 RG2 busy가 해제되고 개방 폭에 도달한 것을 확인한 호스트 시각이다. 올바른 물리 적재의 proxy이므로 영상/사진으로 대조한다. 개방 후 복귀 실패는 gateway `ok=false/message=RETURN_FAILED`와 placed_stamp 유지로 구분한다. 개방 전 실패는 placed_stamp=0이다. 이때 manager의 최종 업무 outcome/reason과 slot 점유는 TBD-007/016에서 정합한다. 응답 유실 시 상태 확인 없이 자동 재호출하지 않는다. RETURN_FAILED와 개방 전 실패의 placed_stamp=0 의미는 main MoveToZone.srv 주석에 아직 없다(김학민 T32 후속 PR).
 
-최신 grid는 X방향 한 줄로 ABC3×1(중심−60/0/+60mm), RECHECK/HOLD2×1(X±30mm), pitch60mm다. manager가 적재 성공 확인 후 카운터를 증가한다. RETURN_FAILED와 확인 불가 실패의 슬롯 재사용/점유 처리는 F-06/07에서 정한다. 가득 찬 구역은 PAUSED→사람이 비움 확인→reset_zone→resume이다. 물리 2칸과 최종 회신의 구역별 누적3 표기는 TBD-016에서 정합하며 범위 밖 slot을 사용하지 않는다.
+최신 grid는 X방향 한 줄로 ABC3×1(중심−60/0/+60mm), RECHECK/HOLD2×1(X±30mm), pitch60mm다. manager가 slot 카운터를 소유하며 PLACED 성공 응답 후에만 증가한다. 개방 전 실패(placed_stamp=0)이면 같은 slot을 재사용하고, 카운터는 IDLE에서 start(새 session)할 때 0으로 초기화한다(#51 MC-018). RETURN_FAILED와 확인 불가 실패의 슬롯 재사용/점유 처리는 F-06/07에서 정한다. 가득 찬 구역은 PAUSED→사람이 비움 확인→reset_zone→resume이다. 물리 2칸과 최종 회신의 구역별 누적3 표기는 TBD-016에서 정합하며 범위 밖 slot을 사용하지 않는다.
 
 Gripper 합의 응답은 ok/width_actual/grip_detected/message다. message는 OK/TIMEOUT/INVALID/BUSY/COMM_ERROR, 응답은 동작 busy 해제 후 반환한다. main에는 ok/width_actual만 있어 후속 IDL 반영이 필요하다.
 
-stop은 `std_srvs/Trigger`다. gateway가 신규 작업·servo_cmd를 막고 두산 move_stop(Quick stop)을 요청한다. 정상 응답은 success=true, 응답 없음/오류는 false와 TIMEOUT/DEVICE_ERROR다. 별도 STOP_UNCONFIRMED enum·자동 정지 판별을 추가하지 않는 최종 최소안이다. 요청 정상 응답을 물리 정지 지연·거리의 보장으로 사용하지 않는다.
+stop은 `/voss/robot/stop`(`std_srvs/srv/Trigger`, robot_gateway 제공)이다. main topics.md·IDL에는 아직 없다(김학민 T32 후속 PR). gateway가 신규 작업·servo_cmd를 막고 두산 move_stop(Quick stop)을 요청한다. 정상 응답은 success=true, 응답 없음/오류는 false와 TIMEOUT/DEVICE_ERROR다. 별도 STOP_UNCONFIRMED enum·자동 정지 판별을 추가하지 않는 최종 최소안이다. 요청 정상 응답을 물리 정지 지연·거리의 보장으로 사용하지 않는다. 호출 순서는 #50에서 manager가 stop 호출→action cancel→PAUSED로, #53에서 servo가 cancel 때 gateway에 정지를 요청하고 정상 응답 뒤 CANCELED를 반환하는 것으로 회신됐다. manager·servo가 모두 부를 때의 중복 호출 허용과 순서는 TBD-017/F-04에서 확정한다.
 
-servo는 cancel 때 명령 발행을 멈춘다. gateway의 독립 명령 만료 감시는 실측·검토한 설정값을 사용한다. watchdog200ms·최대 정지 지연/거리·gateway 종료 시 동작은 F-04 시험 대상이다. 정지 요청 실패는 action ABORTED+DEVICE_ERROR·상세 로그·manager PAUSED로 연결하며 사람이 로봇을 확인한 뒤 수동 재개한다. 보유 박스 자동 개방은 금지한다.
+servo는 cancel 때 명령 발행을 멈춘다. gateway의 독립 servo_cmd 명령 만료 watchdog은 실측·검토한 설정값을 사용한다. watchdog 200ms(제안값, 100ms 관측 지연 목표와 별개)·최대 정지 지연/거리·gateway 종료 시 동작은 F-04 시험 대상이다. 정지 요청 실패는 action ABORTED+DEVICE_ERROR·상세 로그·manager PAUSED로 연결하며 사람이 로봇을 확인한 뒤 수동 재개한다. 보유 박스 자동 개방은 금지한다.
 
 ### 5.7 준비·명령·질문·HMI 계약
 
-manager가 ROBOT/SERVO/VISION/OCR/LOG의 준비를 모아 판단한다. 서비스/서버 존재만으로 준비를 단정하지 않고 실제 처리 가능성·설정/calib 유효성·상태 신선도를 확인한다. 박스 미검출과 비전 장애를 구분한다. 미준비 start는 ready/not_ready와 거부 사유를 제공한다. A 단계에서 음성 준비를 필수 start 조건으로 추가하지 않는다.
+manager가 ROBOT/SERVO/VISION/OCR/LOG의 준비를 모아 판단한다. 서비스/서버 존재만으로 준비를 단정하지 않고 실제 처리 가능성·설정/calib 유효성·상태 신선도를 확인한다. 박스 미검출과 비전 장애를 구분한다. 미준비 start는 ready/not_ready와 거부 사유를 제공한다. A 단계에서 음성 준비를 필수 start 조건으로 추가하지 않는다. main voss_msgs.md의 ROBOT 임시 판정("pose 0.5 s 이내 + move_to_zone 서비스 존재")은 RobotState가 main에 들어오기 전까지만 쓰는 과도 조건이며, RobotState 반영 때 이 기준으로 바꾼다(남현지·김학민).
 
-RobotState는 header/connected/state/action/gripper_width_mm/error_code/detail이다. state는 READY/BUSY/STOPPED/ERROR, 상태 변경 때와2Hz로 reliable/transient_local/depth1 발행한다. hmi_bridge가 직접 구독해 MQTT robot으로 전달한다. 미수신 또는3초 이상 무갱신이면 HMI는 UNKNOWN을 표시한다. ESTOP는 ERROR+error_code=ESTOP다. 그리퍼 폭은 보고값으로 표시한다.
+RobotState(`/voss/robot/state`)는 header/connected/state/action/gripper_width_mm/error_code/detail이다(#55 합의, main 문서·IDL·QoS 표 미반영, 김학민 T32 PR). state는 READY/BUSY/STOPPED/ERROR, 상태 변경 때와2Hz로 reliable/transient_local/depth1 발행한다. hmi_bridge가 직접 구독해 MQTT robot으로 전달한다. 미수신 또는3초 이상 무갱신이면 HMI는 UNKNOWN을 표시한다. ESTOP는 ERROR+error_code=ESTOP다. 그리퍼 폭은 보고값으로 표시한다.
 
-logger 상태는 STARTING/OK/DB_ERROR/SPOOL_FULL, 1Hz reliable/depth1이다. STARTING 또는3초 무수신이면 LOG 미준비다. 운전 중 DB_ERROR/SPOOL_FULL은 경고하고 manager 운전은 비차단으로 유지한다. 자동 PAUSED로 바꾸지 않는다. 정상 G0의 DB commit·조회 성공은 별도 수락 조건이다.
+logger 상태(`/voss/log/status`)는 STARTING/OK/DB_ERROR/SPOOL_FULL, 1Hz reliable/depth1이다. STARTING 또는3초 무수신이면 LOG 미준비다. 운전 중 DB_ERROR/SPOOL_FULL은 경고하고 manager 운전은 비차단으로 유지한다. 자동 PAUSED로 바꾸지 않는다. 정상 G0의 DB commit·조회 성공은 별도 수락 조건이다.
 
 | command | arg | 허용 상태·효과 |
 |---|---|---|
@@ -815,13 +816,13 @@ logger 상태는 STARTING/OK/DB_ERROR/SPOOL_FULL, 1Hz reliable/depth1이다. STA
 | answer | box_id\|후보동/HOLD | 현재 ASKING·ID·후보 검증 |
 | reset_zone | 구역 | PAUSED에서 작업자 비움 확인 |
 
-Command 응답은 접수/거부다. 실제 완료는 SortState/SortResult로 확인한다. Intent.type은 소문자, zone/result 값은 대문자다. Intent.box_id는 원래 투입 ID이며 answer에 사용한다. 음성은 발화 시작 시점의 질문과 box_id를 연결한다. query_history는 manager를 거치지 않고 intent_parser/웹→Spring REST로 직접 보낸다.
+Command(`/voss/sort/command`) 응답은 접수/거부다. 실제 완료는 SortState/SortResult로 확인한다. Intent.type은 소문자, zone/result 값은 대문자다. Intent.box_id는 원래 투입 ID이며 answer에 사용한다. 음성은 발화 시작 시점의 질문과 box_id를 연결한다. query_history는 manager를 거치지 않고 intent_parser/웹→Spring REST로 직접 보낸다. 음성 stop은 LLM 호출 전 로컬 키워드 매칭으로 바로 발행하며 FastAPI·zone_map 수신을 기다리지 않는다(PR #73). 경계별 필드 이름은 Command.srv `command`/`arg`(문자열), Intent `type`, MQTT/REST `type`/`args`(객체, PR #68)이며, bridge의 args→arg 변환(answer는 `<box_id>|<동 또는 HOLD>`)은 F-11에서 확정한다.
 
 기본 질문 ID는 box_id다. 현재 ASKING·같은 ID·후보2동 또는 HOLD만 수용한다. 30초 타이머는 manager say 발행부터 시작한다. 무효 답은1회 재안내하고 타이머를 유지한다. TTS가 실패해도 HMI 질문을 표시하며 타이머는 진행한다. stop에서 멈추고 resume은 재발화와30초 재시작이다. 종료된 같은 box의 질문 회차·늦은 답 수락 창 전달은 B 상세로 남긴다. box_id#회차를 원래 투입 ID에 혼합하지 않는다. human_wait는 say→유효 답 또는timeout 구간으로 별도 기록한다.
 
-say(String) 발행자는 manager와 intent_parser다. 각자가 자기 이벤트의 중복을 억제하며 다른 박스의 같은 문장은 각각 발행한다. speech_out은 FIFO, G0에는 끼어들기 없음이다. TTS 엔진·우선 재생·half-duplex는 B 후속이며 발행 시각과 실제 재생 시작/완료 로그를 구분한다.
+say(`/voss/voice/say`, String) 발행자는 manager와 intent_parser다. 각자가 자기 이벤트의 중복을 억제하며 다른 박스의 같은 문장은 각각 발행한다. speech_out은 FIFO, G0에는 끼어들기 없음이다. TTS 엔진·우선 재생·half-duplex는 B 후속이며 발행 시각과 실제 재생 시작/완료 로그를 구분한다.
 
-MQTT state/result/command/ack는 QoS1 비retained, zone_map은 QoS1 retained, robot은 QoS0 비retained다. command JSON은 command_id/type/args/raw_text/sent_at이며 bridge가 canonical Command로 변환한다. ack는 command_id/ok/message/acked_at이다. 같은 ID는10분간 중복 실행을 억제하며30초 지난 명령은 EXPIRED로 거부한다. 시각은 ISO8601+09:00이다.
+MQTT state/result/command/ack는 QoS1 비retained, zone_map은 QoS1 retained, robot은 QoS0 비retained다. command JSON은 command_id/type/args/raw_text/sent_at이며 bridge가 canonical Command로 변환한다. ack는 command_id/ok/message/acked_at이다. 같은 ID는10분간 중복 실행을 억제하며30초 지난 명령은 EXPIRED로 거부한다. 시각은 ISO8601+09:00이다. 이 값은 MC-026 합의이며 main mqtt.md는 아직 초안(토픽 4개·`{"command","arg"}`)이다. 최종 JSON·ACL·Mosquitto 위치는 정의석 #20(10/08)에서 확정한다.
 
 Spring이 MQTT 클라이언트이며 브라우저는 HTTP/SSE를 사용한다. HTTP202/브로커 발행·manager 접수 ack·실제 완료를 구분한다. 움직임 명령 start/resume/priority/answer/reset_zone은 공용 PC 로컬 HMI에서만 받고 원격 stop/조회/SSE는 허용한다. 최종 JSON·ACL·로그 상태 전달은 F-11과 PR #68/#20에서 확인한다.
 
@@ -839,7 +840,7 @@ session_id는 `YYYYMMDDTHHMMSS-xxxx`(랜덤4hex,20자), box_id는 `<session>-<3�
 | attempts | attempts, retries=max(attempts−1,0). PASSED attempts=0 |
 | DB inserted_at | 삽입 트랜잭션 now(), commit 완료 시각으로 사용하지 않음 |
 
-빈값은 빈 문자열/0 또는 DB NULL로 명시하고 추정하지 않는다. started_at의 영 시각은 NULL이다. finished_at 미상 처리와 제안 DDL의 NOT NULL 제약은 F-08에서 정합한다. NO_ANSWER는 NONE/HELD, 비대상 PASSED는 처리 수에서 제외한다.
+빈값은 빈 문자열/0 또는 DB NULL로 명시하고 추정하지 않는다. started_at의 영 시각은 NULL이다. finished_at 미상 처리와 제안 DDL의 NOT NULL 제약은 F-08에서 정합한다. NO_ANSWER는 NONE/HELD, 비대상 PASSED는 처리 수에서 제외한다. reason 허용값은 main SortResult.msg 주석("" / LOW_CONF / NO_ANSWER / NON_TARGET / STOPPED / DEVICE_ERROR / TrackAndGrasp reason)을 따른다.
 
 ```json
 {"box_id":"20261010T143012-a3f9-004","session_id":"20261010T143012-a3f9","track_id":7,"code":"S07-02","dong":"대치동","confidence":0.93,"decided_by":"OCR","zone":"B","outcome":"PLACED","rule_version":"1","reason":"","attempts":1}
@@ -847,7 +848,7 @@ session_id는 `YYYYMMDDTHHMMSS-xxxx`(랜덤4hex,20자), box_id는 `<session>-<3�
 
 위 JSON은 주요 필드 형식 예시다. 원문/시각 등 전체 필드는 표에 따라 전달한다. 실측 결과가 아니다.
 
-manager는 PLACE 응답 후 box_id당 최종 SortResult1건을 발행하며 DB commit을 기다리지 않는다. logger는 commit 성공 반환 직후 event=db_committed/box_id/committed_at/rows 로그를 남긴다. 동일 box_id를 별도 SELECT하고 필드·물리 적재·복귀를 대조해야 G0다. commit 로그는 호스트에서 관측한 확인 시각이며 DB 내부 commit의 정밀 시각을 보장하지 않는다.
+manager는 PLACE 응답 후 box_id당 최종 SortResult1건을 `/voss/sort/result`로 발행하며 DB commit을 기다리지 않는다. logger는 commit 성공 반환 직후 event=db_committed/box_id/committed_at/rows 로그를 남긴다. 동일 box_id를 별도 SELECT하고 필드·물리 적재·복귀를 대조해야 G0다. commit 로그는 호스트에서 관측한 확인 시각이며 DB 내부 commit의 정밀 시각을 보장하지 않는다.
 
 공식 조회는 Spring `GET /api/stats` 한 곳이다. query_kind=count_by_dong/held_count/remaining_count, dong, session_id를 받아 ok/count/as_of를 반환한다. DB가 유일 원천이며 manager Stats와 ROS log-query는 없다. 남은 수는 현재 세션의 `max(planned−(PLACED+HELD+FAILED),0)`, PASSED는 제외한다. FAILED 운영 처리 수와 물리 적재 성공률은 구분한다. session_plan은 Spring이 저장하며 sort_log writer는 logger만이다. 수용된 SortState.session_id는 main 미반영이므로 첫 결과 전·재기동 시 현재 세션 전달을 F-11에서 정합한다. DB 오류는 조회 불가로 답하고 메모리 집계를 공식 이력으로 대체하지 않는다.
 
@@ -855,9 +856,9 @@ manager는 PLACE 응답 후 box_id당 최종 SortResult1건을 발행하며 DB c
 
 ### 5.9 설정·배포 계약
 
-공유 원본은 config/voss_config.yaml 하나이며 runtime writer는 manager다. bringup launch가 같은 snapshot을 파라미터로 전달하고 각 소비자가 version/sha256을 기록한다. 벨트 설정은 speed_cmps=4.8, direction_base=[0.99992,-0.01292,0.0]이다. zones/observe는 플랜지 mm/deg, tcp_offset은 툴 좌표 mm다. 소비자는 로드 때 SI 변환·유효성 검사를 수행한다.
+공유 원본은 config/voss_config.yaml 하나이며 runtime writer는 manager다. bringup launch가 같은 snapshot을 파라미터로 전달하고 각 소비자가 version/sha256을 기록한다(PR #64 머지 후 계약). 비전 컨테이너 노드는 읽기 전용으로 마운트한 파일을 직접 읽어 sha256을 계산하고, null 키는 파라미터로 넘기지 않는다(미선언=미측정). 공유 설정은 정지 상태에서만 바꾸며 같은 버전을 다시 적용하고 ready를 확인한 뒤 재개한다(#53 MC-009). 벨트 설정은 speed_cmps=4.8이다. 방향은 열린 PR #64가 direction_base=[0.99992,-0.01292,0.0] 단위벡터를 제안하며 main은 아직 `direction_axis: "x"`다. zones/observe는 플랜지 mm/deg, tcp_offset은 툴 좌표 mm다. 소비자는 로드 때 SI 변환·유효성 검사를 수행한다.
 
-servo 전용 Kp/높이/age/watchdog은 servo YAML로 관리한다. null은 미측정이며 필요한 값이 null인 기능은 미준비다. 의미 있는0은 유효하며 latency_offset_ms=0은 보정 없음이다. TCP 등록값과 설정을 기동 때 대조한다. main의 direction_axis 잔존과 열린 PR #64의 direction_base/null 규약 차이는 부록 C에서 추적한다.
+servo 전용 Kp/높이/오프셋/age/watchdog(servo 입력 상실 판단)은 servo YAML로 관리하며 gateway의 servo_cmd 만료 watchdog(§5.6)과 별개다. null은 미측정이며 필요한 값이 null인 기능은 미준비다. 의미 있는0은 유효하며 latency_offset_ms=0은 보정 없음이다. TCP 등록값과 설정을 기동 때 대조한다. main의 direction_axis 잔존과 열린 PR #64의 direction_base/null 규약 차이는 부록 C에서 추적한다. main conventions.md의 "좌표계·단위는 두산 posx 기준 (mm, deg)" 문장도 ROS SI 규약과 충돌하므로 PR #64에서 함께 정정한다.
 
 
 ## 6. 비기능 요구사항
@@ -893,7 +894,7 @@ servo 전용 Kp/높이/age/watchdog은 servo YAML로 관리한다. null은 미�
 - 출처: NFR-03
 - 검증 VT-047: 운전·분류·이력·예외 4 종×5 문장 중 19 개 이상.
 - 후속 추적: TBD-009, TBD-022
-- v0.3 합의 반영: 전체 20건 중 19건 이상이며 API 오류/timeout도 전체 분모에 남긴다. API 정상 응답에 한정한 조건부 정확도는 별도다. 실패/무효/재시험 원본을 보존한다.
+- v0.3 합의 반영: 전체 20건 중 19건 이상이며 API 오류/timeout도 전체 분모에 남긴다. API 정상 응답에 한정한 조건부 정확도는 별도다. 허용 외 입력 거부 100%도 함께 판정한다(#54). "API 오류 2건 이상이면 그 회차 무효·전체 재시험" 규칙이 #54 11:41 정정 뒤에도 유효한지는 정의석 확인 대기다. 실패/무효/재시험 원본을 보존한다.
 - 합의 근거: MC-031 (02 합의 종합의 최종 댓글).
 - 이행·검증: 계약 반영과 구현/실측 수락을 구분한다. VT 별 상태는 04 검증 추적표 참조.
 
@@ -901,7 +902,7 @@ servo 전용 Kp/높이/age/watchdog은 servo YAML로 관리한다. null은 미�
 
 시스템은 정상 자동 처리에서 박스 감지부터 적재 완료까지 사이클 시간 30 초 이하를 달성해야 한다.
 
-- 출처: NFR-04; 병후님 측정 정책
+- 출처: NFR-04; #53·#54 측정 회신(MC-030/031)
 - 검증 VT-048: 정상 자동·예외 처리 세트를 분리. 예외 처리의 전체 시간과 작업자 대기는 별도 기록하며 30 초 목표를 그대로 적용하지 않음. 시작/종료 이벤트·재시도 분류는 TBD-025.
 - 후속 추적: TBD-025
 - v0.3 합의 반영: 정상은 attempts=1·decided_by=OCR·outcome=PLACED다. 첫 유효 촬영→개방 완료 proxy를 실제 적재와 대조한다. 박스별 30초 이하와 평균/최대를 기록하며 재시도/재확인/작업자 개입·human_wait는 별도다.
@@ -948,7 +949,7 @@ servo 전용 Kp/높이/age/watchdog은 servo YAML로 관리한다. null은 미�
 - 출처: 기존 SRD 제안 → MC-031 상호 확인에서 목표 수용
 - 검증 VT-052: 상태 변경 시각과 화면 반영 시각 비교. 상호 확인 수용 목표이며 v0.3 전체 수락은 별도. 전체/부분 구간과 각 회차 상한을 구분.
 - 후속 추적: TBD-011, TBD-022
-- v0.3 합의 반영: 상호 확인에서 HMI 1초 목표를 수용했다. manager 변경→DOM 전체와 bridge→DOM 부분을 구분한다. 시계를 보정하고 각 회차 상한·p95/최대를 기록하며 실측/수락은 별도다.
+- v0.3 합의 반영: 상호 확인에서 HMI 1초 목표를 수용했다. manager 변경→DOM 전체와 bridge→DOM 부분을 구분한다. HMI 측정 브라우저는 공용 PC에서 띄워 같은 시스템 시계를 쓰고(개인 PC 브라우저 수치는 참고용) 증거에 시계 원천을 적는다. 각 회차 상한·p95/최대를 기록하며 실측/수락은 별도다.
 - 합의 근거: MC-019, MC-026, MC-031 (02 합의 종합의 최종 댓글).
 - 이행·검증: 계약 반영과 구현/실측 수락을 구분한다. VT 별 상태는 04 검증 추적표 참조.
 
@@ -969,11 +970,13 @@ servo 전용 Kp/높이/age/watchdog은 servo YAML로 관리한다. null은 미�
 |---|---|---|
 | 이동 중 파지 | 재시도 포함 20 사례≥14(70%) | 사전 20 사례 고정, goal/attempt/물리 box/투입 ID 구분·실패 포함 |
 | OCR | 전체≥90%, 흐린 송장 제외≥95% | 정지 50(흐린 5 포함)·추종 50을 구분, 모집단별 정답/분모·단계별/최종 결과 |
-| intent | 전체 20(4 종×5)≥19 | API 오류/timeout 도 전체 분모, 조건부 정확도 별도 |
+| intent | 전체 20(4 종×5)≥19 | API 오류/timeout 도 전체 분모, 조건부 정확도 별도. 허용 외 입력 거부 100%(#54) |
+| STT | 녹음 20개 중 정확≥18(90%) | 정답표 먼저 커밋, 녹음은 커밋 금지·경로만(#54 제안 분모) |
 | 정상 cycle | 첫 유효 촬영 t_detect→placed_stamp t_placed, 각 박스≤30 초 | attempts1/OCR/PLACED 고정 필터·적재 proxy 영상 대조·평균/최대/원본 |
 | 예외/human_wait | retry/recheck/operator/held/failed 별도 | 전체 시간/사람 대기/자동 구간 별도, 대기를 뺀 예외를 정상으로 재분류 금지 |
-| TTS | 발화 종료→TTS 시작 각 회차≤3 초 | 전 구간·실패/timeout 보존, p95/최대·재생 시작/완료 로그 |
-| HMI | manager 상태 변경→DOM 각 회차≤1 초 | bridge→DOM은 부분 측정, 브라우저 시계 보정·전체 구간 증거 필요 |
+| TTS | 발화 종료→TTS 시작 각 회차≤3 초 | 20회(#54), 전 구간·실패/timeout 보존, p95/최대. 로그: speech_out say_received/tts_start/tts_end, intent_parser utterance_end/intent_published(monotonic+wall, 공용 PC 시계) |
+| HMI | manager 상태 변경→DOM 각 회차≤1 초 | 상태 변경 20회+result 20회(#54). bridge→DOM은 부분 측정. 브라우저는 공용 PC에서 같은 시계를 쓰고 개인 PC 수치는 참고, 전체 구간 증거 필요 |
+| DB 저장 | 정상 10·중복 5·장애 3·재기동 3 | 1:1·행 수 불변·DB_ERROR 표시·행 유지. 정상 commit·조회는 G0 전, 장애 시험은 10/09~11(#54 제안 분모) |
 | 서보 | 목표 30Hz | 발행/수신/실제 적용 또는 명시한 proxy·주기/지터/누락·통합 부하 |
 | 관측 지연 | 목표 capture→servo 소비≤100ms | capture→비전 발행도 별도, 평균/p95/최대/초과수·비율; p95 단독 합격 변경은 미승인 |
 | 검출/1 차 OCR | BRD30Hz/≤300ms | 공용 PC 통합 부하 측정. 내부 20ms 검출/100ms 크롭 예산은 새 SYS 요구로 추가하지 않음 |
@@ -995,7 +998,7 @@ servo 전용 Kp/높이/age/watchdog은 servo YAML로 관리한다. null은 미�
 - 출처: TR-VOICE-05; NFR-09에서 파생
 - 검증 VT-053: 진행 단계별 stop/cancel/입력 상실 시험. 최대 정지 지연과 정책은 TBD-017.
 - 후속 추적: TBD-017, TBD-020
-- v0.3 합의 반영: Trigger+move_stop 최소안과 DEVICE_ERROR/PAUSED·사람 확인을 적용한다. 별도 STOP_UNCONFIRMED/자동 정지 판별은 추가하지 않는다. watchdog·최대 정지 지연/거리·gateway 종료는 실측 대기이며 요청 응답을 물리 정지 보장으로 쓰지 않는다.
+- v0.3 합의 반영: Trigger+move_stop 최소안과 DEVICE_ERROR/PAUSED·사람 확인을 적용한다. 별도 STOP_UNCONFIRMED/자동 정지 판별은 추가하지 않는다. 음성 stop은 LLM을 거치지 않는 로컬 경로다(PR #73). watchdog·최대 정지 지연/거리·gateway 종료는 실측 대기이며 요청 응답을 물리 정지 보장으로 쓰지 않는다.
 - 합의 근거: MC-014 (02 합의 종합의 최종 댓글).
 - 이행·검증: 계약 반영과 구현/실측 수락을 구분한다. VT 별 상태는 04 검증 추적표 참조.
 
@@ -1006,7 +1009,7 @@ servo 전용 Kp/높이/age/watchdog은 servo YAML로 관리한다. null은 미�
 - 출처: NFR-09; 저장소 robot_gateway 규칙
 - 검증 VT-054: 경계 밖 좌표·속도 초과 입력의 거부/제한 동작 검토·시험. 제한값은 실측 후 확정.
 - 후속 추적: TBD-017
-- v0.3 합의 반영: gateway가 제한을 강제한다. 플랜지/TCP 단위·수직 상승 후 수평 이동·작업대 변경 후 간섭/영역을 검증한다. 정지 200ms·상승 z446.6 등은 조건/배치 검증과 함께 관리한다.
+- v0.3 합의 반영: gateway가 제한을 강제한다. 플랜지/TCP 단위·수직 상승 후 수평 이동·작업대 변경 후 간섭/영역을 검증한다. servo_cmd 만료 watchdog 200ms(제안)·플랜지 z≥446.6mm 수직 상승 등은 조건/배치 검증과 함께 관리한다.
 - 합의 근거: MC-009, MC-010, MC-014 (02 합의 종합의 최종 댓글).
 - 이행·검증: 계약 반영과 구현/실측 수락을 구분한다. VT 별 상태는 04 검증 추적표 참조.
 
@@ -1078,7 +1081,7 @@ servo 전용 Kp/높이/age/watchdog은 servo YAML로 관리한다. null은 미�
 - 출처: BRD 6.1
 - 검증 VT-060: 실제 장비·OS·드라이버·DDS 버전과 호환 경로 확인.
 - 후속 추적: TBD-013, TBD-026
-- v0.3 합의 반영: PC/OS/GPU/USB/NIC 원본은 main 측정 기록에서 확인했다. 설치 컨트롤러/DRCF/DRFL 호환·GPU 컨테이너·동시 부하의 통과는 별도다.
+- v0.3 합의 반영: PC/OS/GPU/NIC 사양 원본은 main 측정 기록(#60)에서 확인했다. USB 포트 육안·GPU 컨테이너 확인은 measurements #5 미완료다. 설치 컨트롤러/DRCF/DRFL 호환·GPU 컨테이너·동시 부하의 통과는 별도다.
 - 합의 근거: MC-028, MC-029 (02 합의 종합의 최종 댓글).
 - 이행·검증: 계약 반영과 구현/실측 수락을 구분한다. VT 별 상태는 04 검증 추적표 참조.
 
@@ -1154,6 +1157,8 @@ servo 전용 Kp/높이/age/watchdog은 servo YAML로 관리한다. null은 미�
 
 운영 환경은 실내 강의실·탁상 작업대다. 아래 환경 제약에도 SYS-ID·VT-ID·담당자·취합 경로를 부여한다. 목표·후보와 실제 설치값을 구분하고, 온도·습도·외부 인증 수치를 임의로 추가하지 않는다. 장비 사양의 제한이 있다면 R-01 에 기재한다.
 
+장비 또는 서비스 미가용 시의 제한 운전·복구·표시 조건은 TBD-005/012/017/018과 §5 장의 최종 합의로 관리한다. 수치·절차의 남은 검증은 후속 대장에 연결한다.
+
 #### SYS-EN-001 — A / 남현지
 
 시스템은 RGB 송장 관측에 수동 노출 5~8 ms와 고정 화이트밸런스를 적용하고 판독에 필요한 글자 대비를 확보해야 한다.
@@ -1183,8 +1188,6 @@ servo 전용 Kp/높이/age/watchdog은 servo YAML로 관리한다. null은 미�
 - 출처: BRD 6.2; 물리 간섭 제약
 - 검증 VT-070: 케이블 여유·그리퍼/벨트/가이드 간섭을 동작 범위별 검사. 가이드 사용 시 BRD의 높이≤15mm 조건도 확인.
 - 후속 추적: TBD-013, TBD-017
-
-장비 또는 서비스 미가용 시의 제한 운전·복구·표시 조건은 TBD-005/012/017/018과 §5 장의 최종 합의로 관리한다. 수치·절차의 남은 검증은 후속 대장에 연결한다.
 - v0.3 합의 반영: 최신 X 한 줄 트레이에서 pre_open 보고 폭 90mm의 벽 간섭·수직 상승 경로·케이블을 배치 조건별로 검증한다. 모든 동작의 무간섭이 이미 검증됐다고 표시하지 않는다.
 - 합의 근거: MC-010, MC-018, MC-032 (02 합의 종합의 최종 댓글).
 - 이행·검증: 계약 반영과 구현/실측 수락을 구분한다. VT 별 상태는 04 검증 추적표 참조.
@@ -1219,9 +1222,9 @@ Nginx80·Mosquitto1883은 wlo1에서 관리하고 Spring8080/FastAPI8000/Postgre
 | G2 최종 필수 수락 | B 음성/HMI/다단 OCR/예외/보류/이력/정지·재개·성능·컨테이너와 10 물리 box≥8 올바른 적재 | 전체 시나리오·DB/HMI/음성대조·SYS/VT 별 하위 판정·성능표 |
 | G3 선택 기능 | G0 후 채택된 C만 별도 검증, 필수 수락유지 | 채택/미채택·원자변경/교시/회귀 증거 |
 
-첫 실기 실험/실측 10/07 목표와 G0 통과 10/10 목표는 서로 다르다. 6 개 회신 이슈는 10/07 닫혔고 과거 상호 확인 마감은 10/06(KST, 시간 지정 없음)이다. 10/13 통합·10/15 시연·10/16 발표는 기존 계획이며 장비 슬롯/수락자/실적은 별도 기록한다.
+첫 실기 실험/실측 10/07 목표와 G0 통과 10/10 목표는 서로 다르다. 6 개 회신 이슈는 10/07 닫혔고 과거 상호 확인 마감은 10/06(KST, 시간 지정 없음)이다. 10/13 통합·10/15 시연·10/16 발표는 기존 계획이며 장비 슬롯/수락자/실적은 별도 기록한다. docs/plan.md는 아직 10/13을 전체 루프 첫 완주로 두고 G0 10/10을 담지 않으므로 PL이 plan.md에서 정합한다(F-15).
 
-정상 G0와 DB 장애/스풀 복구 시험은 분리한다. DB 오류 회차를 분모/기록에서 지우지 않고 실패/복구 증거를 모두 남긴다. 스풀 시험 10/09~11 계획이 정상 G0 저장 연결을 10/10 이후로 미루는 허가는 아니다.
+정상 G0와 DB 장애/스풀 복구 시험은 분리한다. DB 오류 회차를 분모/기록에서 지우지 않고 실패/복구 증거를 모두 남긴다. 스풀 시험 10/09~11 계획이 정상 G0 저장 연결을 10/10 이후로 미루는 허가는 아니다. "G0 중 `/voss/log/status`가 한 번이라도 DB_ERROR면 그 회차를 G0 증거로 쓰지 않는다"는 #54 정의석 제안은 PL 정합 대기다.
 
 최종 필수: 호출/시작→특정 동 우선/비대상 PASSED→전체 분류/재투입→흐린 송장 재확인/질문/유효 답 적재→무응답 HOLD→동별/보류/남은 수 조회→정지/재개→종료/최종 집계. 흐린 송장의 정지 OCR가 모두 읽혔다는 보고만으로 질문/보류 경로 통과로 표시하지 않는다. 규칙변경/교시는 C 채택 시 에만추가한다.
 
@@ -1286,7 +1289,7 @@ Nginx80·Mosquitto1883은 wlo1에서 관리하고 Spring8080/FastAPI8000/Postgre
 | SYS-PF-001 / B | NFR-01 | 박병후 / VT-045 | TBD-021, TBD-022 | MC-008, MC-031 |
 | SYS-PF-002 / B | NFR-02 | 남현지 / VT-046 | TBD-022 | MC-007, MC-031 |
 | SYS-PF-003 / B | NFR-03 | 정의석 / VT-047 | TBD-009, TBD-022 | MC-031 |
-| SYS-PF-004 / B | NFR-04; 병후님 측정 정책 | 박병후 / VT-048 | TBD-025 | MC-016, MC-024, MC-030, MC-031 |
+| SYS-PF-004 / B | NFR-04; #53·#54 측정 회신(MC-030/031) | 박병후 / VT-048 | TBD-025 | MC-016, MC-024, MC-030, MC-031 |
 | SYS-PF-005 / B | NFR-05 | 정의석 / VT-049 | TBD-010, TBD-022 | MC-025, MC-028, MC-031 |
 | SYS-PF-006 / B | NFR-06 | 박병후 / VT-050 | TBD-020 | MC-011, MC-028, MC-031 |
 | SYS-PF-007 / B | TR-PICK-03; NFR-06 | 박병후 / VT-051 | TBD-003, TBD-020 | MC-004, MC-011, MC-031 |
@@ -1318,7 +1321,7 @@ Nginx80·Mosquitto1883은 wlo1에서 관리하고 Spring8080/FastAPI8000/Postgre
 | BRD 판 | PL이 v1.2 확인, Word #66. 기존 TR/NFR ID 유지 | Word v1.1↔v1.2 TR/NFR 45 행 동일·본문 중복 정리 확인(05). Markdown/후속 파지 정정은 F-15 |
 | 매핑 변경/교시 | SYS-OP-001/002 C 선택, G0 이후 채택 | 사용자 지침·MC-033, 10/11 이후 |
 | 사이클 NFR-04 | 정상 30 초·재시도/예외/human_wait 별도 | MC-016/030/031, placed proxy 영상 대조 |
-| 파지 방향 TR-PICK-06 | 31mm 면 선택 보고를 수록; 벨트 방향 여유는 추종이 담당 | #51/열린 PR #70; PL/ADR·BRD 정정/수치의 T34 확인 F-03 |
+| 파지 방향 TR-PICK-06 | 31mm 면 선택 보고를 수록(PR #70, main pending #16 미정). 채택하면 사전 개방 여유는 벨트 가로 방향이고 벨트 방향 타이밍 오차는 추종이 맡으며, 46mm 면 기준 ±22mm 여유를 가정하지 않는다 | #51·#53/열린 PR #70; ADR-0009(김학민)·BRD 정정/수치의 T34 확인 F-03 |
 | 준비/집계/HMI 파생 요구 | manager 준비 주담당·REST DB 원천·HMI1 초 목표 수용 | MC-019/021/022/031, 실제 구현·검증 별도 |
 | 제어 전환 | 14/20 미달만으로 자동 전환 없음 | 승인 ADR-0002·MC-008 |
 
@@ -1342,7 +1345,7 @@ Nginx80·Mosquitto1883은 wlo1에서 관리하고 Spring8080/FastAPI8000/Postgre
 
 | TBD-ID | 원 질문 | 상태 | 채운 내용 / 남은 확인 | 근거 |
 |---|---|---|---|---|
-| TBD-001 | 영상·검출 / V-01 | 설정 확정 / 성능 대기 | 1080p/30fps/rgb8·6ms/WB4600 적용. 실제 FPS/지연·분할/YOLO 비교·정답 검증 F-13/14 | MC-028·031·032 |
+| TBD-001 | 영상·검출 / V-01 | 관측·설정 반영(최종 T33) / 성능 대기 | 1080p/30fps/rgb8·6ms/WB4600 적용. 실제 FPS/지연·분할/YOLO 비교·정답 검증 F-13/14 | MC-028·031·032 |
 | TBD-002 | 좌표·캘리브레이션 / V-02 | 규약 확정 / 동적 검증 대기 | 비전윗면 m/TCP 소비·G0 HAND_EYE. 파일/촬영 pose 정합·상류외삽·≤5mm 제안/오차 F-01 | MC-001·002·004·010 |
 | TBD-003 | 식별·시각·OCR 연결 / V-03 | 규약 반영 / 세부 검증 | box/session/track·LabelCrop/ReadLabel/ZoneMap·원본 stamp·PICKING 가림 확정. 시계매핑·이력/만료후보·난수충돌 대응 F-01/08 | MC-003·004·007·020·034 |
 | TBD-004 | OCR 판정·후보 / V-04 | 필드/흐름 확정 / 튜닝 대기 | 원문/2위 후보·촬영 stamp·현재단계판독·confidence0.6 설정. 2 차품질·다수결/임계값·재확인 검증 F-10/14 | MC-007·017·020·024 |
@@ -1351,14 +1354,14 @@ Nginx80·Mosquitto1883은 wlo1에서 관리하고 Spring8080/FastAPI8000/Postgre
 | TBD-007 | 결과·업무 ID / V-07 | 기본 계약 확정 / 부분 실패 상세 | PKbox/session24·final1 건·enum 필드·attempts. RETURN_FAILED outcome/reason·키충돌·시각누락 F-06/08 | MC-003·016·020·021 |
 | TBD-008 | 이력·남은수 / E-05 | 집계규약 확정 / 구현 대기 | Spring REST·DB 원천·현재 session·FAILED 포함/PASSED 제외/clamp. 현재 세션 전달·session_plan·API F-11 | MC-021·022 |
 | TBD-009 | 명령 schema / E-01 | canonical 확정 / IDL/B 상세 | Command type/arg/허용상태·query_history REST·HOLD·Intent.box_id. PR #73·TTL/원격제한·질문수락 창 F-09/11 | MC-023·024·026 |
-| TBD-010 | 음성 / E-02 | 기본역할 확정 / 선택·시험 | say 발행기준·발행자별 dedupe/FIFO. TTS 엔진/Whisper 모델·VAD/wake/마이크 1m·duplex·지연 F-11/13/14 | MC-024·025·028·031 |
+| TBD-010 | 음성 / E-02 | 기본역할 확정 / 선택·시험 | say 발행기준·발행자별 dedupe/FIFO. 호출어 ADR-0007 제안(PR #72, pending #5)·Whisper 크기(pending #6)·TTS(pending #12)는 10/08 정의석. VAD/마이크 1m·duplex·지연 F-11/13/14 | MC-024·025·028·031 |
 | TBD-011 | HMI/MQTT / E-03 | 원칙 확정 / schema·구현 대기 | RobotState/UNKNOWN·명령 ID/TTL/ack·QoS/retain·React/Spring/SSE/로컬제한. JSON/ACL/로그상태전달·DOM 시계 F-11/13/14 | MC-019·026·029·031 |
 | TBD-012 | DB / E-04 | 저장계약 확정 / migration·시험 | PostgreSQL·sort_log PK/필드·commit 로그+SELECT·스풀재시도·보존. DDLnullable 정합/볼륨·manager 로그·장애각 3 회 F-08/12 | MC-003·016·020·027·029 |
-| TBD-013 | 장비/벨트/환경 / R-01 | 관측·설정 반영 / 환경 검증 | 벨트표/4.8cmps·단위벡터·RGB 노출/트레이/TCP 관측. 작업대치수·드라이버버전·변경후간섭 F-01/13 | MC-009·028·032 |
-| TBD-014 | robot API/큐 / R-02 | TCP/자원규약 확정 / 실측 | pose 응답 수신·SI/native·stream latest/직렬서비스·RG2 분리. 실제 path/type/DRCF/적용·RTT/stop 경쟁 F-02/04 | MC-004·010·011·013·014 |
-| TBD-015 | gripper / R-03 | 판정 원칙 확정 / 수치·IDL 대기 | 닫힘완료+grip_detected+검증보고 폭·async/latefuture. Gripper 확장·힘/폭/높이 T34·31mm 면승인 F-03/04 | MC-012·013 |
-| TBD-016 | pose/grid/적재 / R-04 | 기본 규약 확정 / 부분 실패·용량 | 플랜지설정/TCPpose·PLACE 복귀응답/placed_stamp·최신 3/2 칸. 2 칸 vs 누적 3·recheck 점유/view_pose·RETURN_FAILED F-06/07/10 | MC-010·016·017·018·019·032 |
-| TBD-017 | stop/limits/recovery / R-05 | 최소정지 규약 확정 / 실측 | Trigger/move_stop·DEVICE_ERROR/PAUSED·수동확인·개방금지. watchdog/영역/속도/정지 거리·배치재검증 F-04 | MC-009·014·015·032 |
+| TBD-013 | 장비/벨트/환경 / R-01 | 관측·설정 반영 / 환경 검증 | 벨트표/4.8cmps·단위벡터·RGB 노출/트레이/TCP 관측. 드라이버버전·변경후간섭 F-01/13. 작업대 치수는 생략(measurements #6, 배치 변경 시 재교시) | MC-009·028·032 |
+| TBD-014 | robot API/큐 / R-02 | TCP/자원규약 확정 / 실측 | pose 응답 수신·SI/native·stream latest/직렬서비스·RG2 분리. 실제 path/type/DRCF/적용·RTT/stop 경쟁 F-02/04. 제어 경로 결정은 pending #8(박병후, 미정)·measurements #3 | MC-004·010·011·013·014 |
+| TBD-015 | gripper / R-03 | 판정 원칙 확정 / 수치·IDL 대기 | 닫힘완료+grip_detected+검증보고 폭·async/latefuture. Gripper 확장·힘/폭/높이 T34·31mm 면승인 F-03/04. 파지 방향 pending #16(PR #70) | MC-012·013 |
+| TBD-016 | pose/grid/적재 / R-04 | 기본 규약 확정 / 부분 실패·용량 | 플랜지설정/TCPpose·PLACE 복귀응답/placed_stamp·최신 3/2 칸·slot은 PLACED 후 증가/개방 전 실패 재사용/start에서 0. 2 칸 vs 누적 3·recheck 점유/view_pose·RETURN_FAILED F-06/07/10 | MC-010·016·017·018·019·032 |
+| TBD-017 | stop/limits/recovery / R-05 | 최소정지 규약 확정 / 실측 | Trigger/move_stop·DEVICE_ERROR/PAUSED·수동확인·개방금지. watchdog/영역/속도/정지 거리·배치재검증·/voss/robot/stop 호출 주체(manager·servo)/순서/중복 호출 F-04 | MC-009·014·015·032 |
 | TBD-018 | 배포/READY / R-06 | 할당·기동 확정 / 구현 검증 | manager 통합 ready·RobotState/logger 신선도·logger 선기동·tool 등록·컨테이너할당. IDL/ready 자세/heartbeat F-05/13 | MC-009·019·029 |
 | TBD-019 | 픽업 action / B-01 | 기본 계약 확정 / 파지 상세 | phase/reason/status·LIFT/VERIFY·servo3 회/goal1 개·gripper 단독·최소 cancel. 높이/자세/timeout·수치 F-03/04 | MC-005·006·012·013·014 |
 | TBD-020 | 주기/age/상실 / B-02 | 측정/실행원칙 확정 / 값 대기 | 100ms 성능과유효성/워치독분리·capture→consume/실제 적용. age/상실/지터값·이력/시계·정지실측 F-01/02/04/14 | MC-004·009·011·014·031 |
@@ -1367,7 +1370,7 @@ Nginx80·Mosquitto1883은 wlo1에서 관리하고 Spring8080/FastAPI8000/Postgre
 | TBD-023 | 선택매핑 / V-08 | C 채택 보류 | G0 후 10/11 채택판단·채택 시 원자 swap/다음 결정 box/rule_version/rollback F-16 | MC-033 |
 | TBD-024 | 선택 teach / R-07 | C 채택 보류 | 채택 시 플랜지/TCP/pose 반환·writer·등록/취소/회귀 F-16 | MC-033 |
 | TBD-025 | 사이클 / B-05 | 측정 규약 확정 / 계측 대기 | t_detect 유효촬영→t_placed proxy·attempts1/OCR/PLACED 각 30 초·예외/human_wait 별도. 영상/시각/manager 로그 F-08/14 | MC-016·024·030·031 |
-| TBD-026 | PC/GPU/resources / E-06 | 사양 근거 확인 / 부하 대기 | PC/GPU/RAM/USB/NIC 원본 확인·ADR 스택/포트. GPU 컨테이너/DMIC/Whisper 비전부하·DDS/wlo1/AP/ACL F-13 | MC-028·029 |
+| TBD-026 | PC/GPU/resources / E-06 | 사양 근거 확인 / 부하 대기 | PC/GPU/RAM/NIC 원본 확인(USB 육안은 measurements #5 미완료)·ADR 스택/포트. GPU 컨테이너/DMIC/Whisper 비전부하·DDS/wlo1/AP/ACL F-13 | MC-028·029 |
 
 정적 설정·관측값을 반영해도 전체 동작의 성능/안전 수락을 확정하지 않는다. 특히 31mm 파지의 승인 범위/수치, HOLD2 칸과 누적 3, RETURN_FAILED 업무 분류, 같은 box 질문 수락 창, manager 결과 로그 및 미반영 IDL은 별도 확인이 필요하다.
 
@@ -1385,7 +1388,7 @@ ID / 상태 / A·B·C / 책임 / 조건 / 해야 할 동작 / 측정 가능한 �
 
 ## 부록 C. 합의 근거와 구현 동기화 상태
 
-문서/IDL 대조 기준은 main@`fff112116bef3992d27a094456b055f647ed61a8`다. 검토 당시 열린 PR은 병합된 것으로 표시하지 않는다. 6 개 이슈 댓글 원문과 경로/commit/hash는 sources와 manifest 에 보존했다.
+문서/IDL 대조 기준은 main@`fff112116bef3992d27a094456b055f647ed61a8`다. 검토 당시 열린 PR은 병합된 것으로 표시하지 않는다. r1 재검토 시점 main@`a4d33ef`는 fff1121 이후 ADR-0004 보강과 pending #17 추가만 있어 계약 영향이 없다. `sources/current_main/`의 pending-decisions.md는 fff1121 사본이다. 6 개 이슈 댓글 원문과 경로/commit/hash는 sources와 manifest 에 보존했다.
 
 | 항목 | 현재 확인 | 잔여 |
 |---|---|---|
@@ -1393,12 +1396,19 @@ ID / 상태 / A·B·C / 책임 / 조건 / 해야 할 동작 / 측정 가능한 �
 | TrackAndGrasp·SortResult·Command | main 확장/정정 확인 | 런타임/파지/정지·업무 부분 실패 |
 | MoveToZone mode/placed_stamp·SortState ready | main IDL 확인 | 실제 gateway/manager·복귀 사건 계측 |
 | Stats.srv | main 삭제 확인 | SpringREST 계약/구현 PR #68 |
-| Intent.box_id·intent_json | #52 수용·PR #73 open | PL 승인/머지·consumer rebuild |
+| Intent.box_id·intent_json | #52 수용·PR #73 open | 머지 전 "늦은 답이 와도 같은 박스의 답이라 해가 없고" 문장을 #54 최종 정정에 맞게 고치기(정의석)·PL 승인/머지·consumer rebuild |
 | SortState.session_id | #52 최종 수용 보고 | main 미반영·현재 세션 전달 |
 | RobotState/Gripperfeedback/stop/RETURN_FAILED | #53/#55 합의 | 김학민 후속 문서/IDL/구현·리뷰 |
 | config direction_base/null/0 | #51/PR #64 합의 방향 | main direction_axis 잔존·PR #64 open |
 | BRD v1.2 | PL 확인·Word #66 | Word 판 비교 완료(05), Markdown 갱신·파지 정정 |
 | 31mm 면/힘/폭/높이 | #51 선택 보고·PR #70 open | PL/ADR·T34 검증/승인 범위 |
 | PC/벨트/카메라/TCP/트레이 | main 측정/설정 근거 | 전체 성능·동적간섭·부하 수락과 별도 |
+| stop 서비스 `/voss/robot/stop` | #51·#53 합의(Trigger), main topics.md에 없음 | 김학민 T32 PR·호출 주체/순서 F-04 |
+| 열린 PR #48·#76 | 호모그래피 파일·valid 조건 / BoxTrack 확정 발행(min_hits, ID 건너뜀) | 머지 때 §5.4·TBD-025 갱신 |
+| mqtt.md | main 초안: 토픽 4개·`{"command","arg"}` | MC-026 형식·ack·robot 토픽 반영, 정의석 #20(10/08) |
+| view_pose·PICK 높이 | MoveToZone mode만 main 반영 | voss_config 스키마·교시(김학민 T35, F-10) |
+| voss_msgs.md ROBOT 임시 ready | pose 0.5 s 이내 + move_to_zone 서비스 존재 | RobotState 반영 때 §5.7 기준으로 교체(남현지·김학민) |
+| conventions.md 단위 | "좌표계·단위는 두산 posx 기준 (mm, deg)" | ROS SI 규약과 충돌, PR #64에서 정정 |
+| topics.md 지난 표기 | robot_gateway `/dsr01/servol_stream (10/06 확인)`, sort_manager `/voss/robot/gripper` 호출 | MC-011 실측 대기·MC-013 goal 중 gripper 단독 호출자와 정합(김학민·남현지) |
 
 이 문서 작성 중 장비를 작동하거나 실측하지 않았다. 실측 근거를 확인한 항목과 아직 수행/승인이 남은 항목을 분리했다. G0/G2 통과는 실제 증거/확인자 없이 선언하지 않는다.
