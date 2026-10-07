@@ -17,6 +17,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/BoxTrack.msg"
   "msg/LabelRead.msg"
   "msg/LabelCrop.msg"
+  "msg/RobotState.msg"
   "srv/Command.srv"
   "srv/UpdateZoneMap.srv"
   "srv/MoveToZone.srv"
