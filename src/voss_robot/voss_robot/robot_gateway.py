@@ -28,6 +28,7 @@ class RobotGatewayNode(Node):
         prefix = self.declare_parameter("dsr_prefix", DEFAULT_PREFIX).value
         rate = self.declare_parameter("pose_rate_hz", 50.0).value
         timeout = self.declare_parameter("call_timeout_s", 0.5).value
+        max_misses = self.declare_parameter("max_call_misses", 3).value  # 연속 응답 없음 → FAULT
         # voss_config 값은 launch 가 넘긴다(config_params.py). 빈 배열 = 미측정
         self.tcp = list(self.declare_parameter("tcp_offset_mm", [0.0]).value)
         observe = list(self.declare_parameter("observe_pose", [0.0]).value)
@@ -47,7 +48,7 @@ class RobotGatewayNode(Node):
         else:
             from voss_robot.doosan import RosDoosan  # dsr_msgs2 는 실기·에뮬레이터에서만
 
-            self.dsr = RosDoosan(self, prefix, timeout)
+            self.dsr = RosDoosan(self, prefix, timeout, max_misses)
             if not self.dsr.wait_ready(5.0):
                 self.get_logger().error(f"두산 서비스가 안 보인다: {prefix} — 브링업 확인")
 
@@ -82,7 +83,10 @@ class RobotGatewayNode(Node):
             stamp, flange, rtt, wait = fut.result()
         except DoosanError as e:
             self._stats["fail"] += 1  # 실패 주기는 발행하지 않는다(옛 값 재발행 금지)
-            self.get_logger().warn(f"pose 조회 실패: {e}", throttle_duration_sec=2.0)
+            if str(e).startswith("FAULT"):
+                self.get_logger().error(f"두산 호출 중단: {e}", throttle_duration_sec=5.0)
+            else:
+                self.get_logger().warn(f"pose 조회 실패: {e}", throttle_duration_sec=2.0)
             return
         except Exception as e:  # 큐 종료 등
             self.get_logger().debug(f"pose 작업 종료: {e}")
