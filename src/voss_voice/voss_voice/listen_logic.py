@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import io
 import math
+import queue
 import re
 import wave
 from dataclasses import dataclass
@@ -138,3 +139,23 @@ def to_wav(pcm: np.ndarray, sample_rate: int = 16000) -> bytes:
         w.setframerate(sample_rate)
         w.writeframes(pcm.astype("<i2").tobytes())
     return out.getvalue()
+
+
+def put_drop_oldest(q: queue.Queue, item) -> bool:
+    """큐가 차 있으면 **가장 오래된** 항목을 버리고 새 항목을 넣는다. 버렸으면 True.
+
+    STT 를 기다리는 동안 큐가 차도 그 뒤에 한 말("멈춰")은 남긴다(#72 리뷰).
+    """
+    try:
+        q.put_nowait(item)
+        return False
+    except queue.Full:
+        try:
+            q.get_nowait()
+        except queue.Empty:
+            pass
+        try:
+            q.put_nowait(item)
+        except queue.Full:  # 다른 스레드가 그사이 채운 경우 — 이번 것은 버린다
+            pass
+        return True

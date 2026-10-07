@@ -1,7 +1,7 @@
 # ADR-0007: 호출어 — 에너지 VAD + Whisper 전사 문자열 매칭 (1안), 경량 모델은 2안
 
 - 날짜: 2026-10-07
-- 상태: 제안됨 (정의석. PL 승인 후 "승인됨", pending #5 갱신)
+- 상태: 승인됨 (2026-10-07, PL 남현지 — PR #72 리뷰)
 - 결정자: 정의석, 승인 남현지 (PL)
 - 관련: pending-decisions #5, BRD TR-VOICE-01, SR-SW-10, 이슈 #17, measurements #10, ADR-0006
 

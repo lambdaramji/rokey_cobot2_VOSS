@@ -1,11 +1,20 @@
 """listen_logic 단위 시험: 호출어 분리, WakeGate, 에너지 VAD, WAV (마이크·ROS 없이)."""
 
 import io
+import queue
 import wave
 
 import numpy as np
 import pytest
-from voss_voice.listen_logic import Segmenter, VadConfig, WakeGate, dbfs, split_wake, to_wav
+from voss_voice.listen_logic import (
+    Segmenter,
+    VadConfig,
+    WakeGate,
+    dbfs,
+    put_drop_oldest,
+    split_wake,
+    to_wav,
+)
 
 
 @pytest.mark.parametrize(
@@ -122,3 +131,10 @@ def test_to_wav_roundtrip():
             16000,
             N,
         )
+
+
+def test_full_queue_drops_oldest_keeps_newest():
+    q = queue.Queue(maxsize=3)
+    assert [put_drop_oldest(q, i) for i in range(3)] == [False, False, False]
+    assert put_drop_oldest(q, "멈춰") is True
+    assert [q.get_nowait() for _ in range(3)] == [1, 2, "멈춰"]

@@ -20,7 +20,7 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 from std_msgs.msg import String
 
 from voss_voice import http_client
-from voss_voice.listen_logic import Segmenter, VadConfig, WakeGate, to_wav
+from voss_voice.listen_logic import Segmenter, VadConfig, WakeGate, put_drop_oldest, to_wav
 
 QOS_EVENTS = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
 
@@ -65,7 +65,9 @@ class VoiceListenerNode(Node):
         try:
             import sounddevice as sd  # noqa: PLC0415 — 마이크 모드에서만 필요
         except ImportError:
-            self.get_logger().error("sounddevice 없음 → text 모드로 전환 (pip install sounddevice)")
+            self.get_logger().error(
+                "sounddevice 없음 → text 모드로 전환 (src/voss_voice/CLAUDE.md 설치 명령 참고)"
+            )
             return False
         cfg = VadConfig(
             threshold_db=float(self.get_parameter("vad_threshold_db").value),
@@ -74,6 +76,7 @@ class VoiceListenerNode(Node):
         self._cfg = cfg
         self._seg = Segmenter(cfg)
         self._frames: queue.Queue[np.ndarray] = queue.Queue(maxsize=200)
+        self._dropped = 0
         dev = self.get_parameter("device").value or None
         try:
             self._stream = sd.InputStream(
@@ -92,10 +95,8 @@ class VoiceListenerNode(Node):
         return True
 
     def _on_audio(self, indata, frames, t, status) -> None:  # sounddevice 콜백 스레드
-        try:
-            self._frames.put_nowait(indata[:, 0].copy())
-        except queue.Full:
-            pass  # 처리가 밀리면 오래된 소리는 버린다
+        if put_drop_oldest(self._frames, indata[:, 0].copy()):
+            self._dropped += 1  # 처리가 밀리면 오래된 소리부터 버린다 (새 "멈춰" 는 남김)
 
     def _mic_loop(self) -> None:
         while not self._stop.is_set():
@@ -113,6 +114,9 @@ class VoiceListenerNode(Node):
                 timeout_s=float(self.get_parameter("stt_timeout_s").value),
             )
             stt_ms = 1000 * (time.monotonic() - t0)
+            if self._dropped:
+                self.get_logger().warn(f"처리 지연으로 오래된 프레임 {self._dropped}개 버림")
+                self._dropped = 0
             if resp is None:
                 self.get_logger().warn(f"STT 실패 ({stt_ms:.0f} ms)")
                 continue
