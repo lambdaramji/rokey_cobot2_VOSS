@@ -1,4 +1,4 @@
-# docs/interfaces/voss_config.md 가 스키마. 값은 10/06 실측 후 채운다.
+# docs/interfaces/voss_config.md 가 스키마. 값의 출처는 docs/measurements-1006.md (10/06 실측).
 version: 1
 zone_map:
   역삼동: A
@@ -8,20 +8,22 @@ aliases:
   역삼동: [역삼, 역삼동]
   대치동: [대치, 대치동]
   청담동: [청담, 청담동]
-zones:
-  A:       {pose: [0, 0, 0, 0, 0, 0], grid: {cols: 2, rows: 2, pitch_mm: 60}}
-  B:       {pose: [0, 0, 0, 0, 0, 0], grid: {cols: 2, rows: 2, pitch_mm: 60}}
-  C:       {pose: [0, 0, 0, 0, 0, 0], grid: {cols: 2, rows: 2, pitch_mm: 60}}
-  recheck: {pose: [0, 0, 0, 0, 0, 0]}
-  hold:    {pose: [0, 0, 0, 0, 0, 0]}
-observe_pose: [0, 0, 0, 0, 0, 0]
+zones:   # 플랜지 기준 posx (TCP 미적용), 트레이 안쪽 바닥 중심, 박스 밑면 +5 mm (10/06 트레이 설치 후). grid: cols = X(벨트 방향), rows = Y
+  A:       {pose: [213.49, 165.23, 258.27, 35.36, -180.0, -54.64], grid: {cols: 3, rows: 1, pitch_mm: 60}}
+  B:       {pose: [446.08, 160.78, 258.94, 14.28, 180.0, -75.33], grid: {cols: 3, rows: 1, pitch_mm: 60}}
+  C:       {pose: [675.14, 158.69, 260.94, 159.7, -180.0, 70.28], grid: {cols: 3, rows: 1, pitch_mm: 60}}
+  recheck: {pose: [446.17, -69.04, 260.65, 169.44, -180.0, 79.38], grid: {cols: 2, rows: 1, pitch_mm: 60}}
+  hold:    {pose: [674.12, -71.37, 262.65, 168.88, -180.0, 78.38], grid: {cols: 2, rows: 1, pitch_mm: 60}}
+observe_pose: [-11.51, -271.11, 450.16, 85.25, -179.07, -6.03]   # 플랜지 기준. 홈과 같음
+robot:
+  tcp_offset_mm: [1.382, 2.684, 246.642]   # 플랜지 → 핑거 끝 TCP (툴 좌표). 펜던트 등록값 (measurements #6)
 belt:
-  speed_cmps: 0.0
+  speed_cmps: 4.8          # 아두이노 h250
   direction_axis: "x"
-gripper:
+gripper:   # 폭은 RG2 보고값 (실제 간격 ≈ 보고값 − 10 mm)
   pre_open_mm: 90
-  grasp_width_mm: 40
-  force_n: 0.0
+  grasp_width_mm: 39
+  force_n: 14.0
 ocr:
   confidence_min: 0.6
   codes: {"S07-01": "역삼동", "S07-02": "대치동", "S07-03": "청담동"}
