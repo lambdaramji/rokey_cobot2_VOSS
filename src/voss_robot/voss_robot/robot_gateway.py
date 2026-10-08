@@ -162,6 +162,7 @@ class RobotGatewayNode(Node):
         # [선 mm/s, 각 deg/s], [선 mm/s², 각 deg/s²]. 첫 실기는 낮게, 5구역 확인 뒤 올린다
         self.zone_vel = [float(v) for v in self.declare_parameter("zone_vel", [100.0, 45.0]).value]
         self.zone_acc = [float(v) for v in self.declare_parameter("zone_acc", [200.0, 90.0]).value]
+        self.servo_settle_s = float(self.declare_parameter("zone_servo_settle_s", 1.5).value)
         self._mlock = threading.Lock()  # 모션 자원(MoveToZone)
         self._zone_action = ""
         self._abort = threading.Event()  # /voss/robot/stop 이 세운다
@@ -390,10 +391,17 @@ class RobotGatewayNode(Node):
             return fail("BUSY: move_to_zone 진행 중")
         held = False
         try:
-            with self._glock:
-                if self.guard.active:
+            # belt_servo 는 goal 결과를 낸 뒤 0 을 zero_hold_s(0.5 s) 더 보내고 끊는다 → watchdog 200 ms 뒤 끝.
+            # 결과 직후 오는 PLACE 가 BUSY 로 튕기지 않게 그동안(최대 servo_settle_s) 기다린다(#109, 10/08)
+            deadline = time.monotonic() + self.servo_settle_s
+            while True:
+                with self._glock:
+                    if not self.guard.active:
+                        self.guard.motion_busy = True
+                        break
+                if time.monotonic() >= deadline:
                     return fail("BUSY: servo_cmd 추종 중")
-                self.guard.motion_busy = True
+                time.sleep(0.02)
             if place:
                 if not self.rg2.try_hold():
                     return fail("BUSY: gripper 동작 중")
