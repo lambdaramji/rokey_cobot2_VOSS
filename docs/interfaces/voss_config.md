@@ -31,7 +31,7 @@ robot:
 belt:
   speed_cmps: null       # 10/06 실측
   direction_base: [1.0, 0.0, 0.0]   # 벨트 진행 방향 단위벡터, 두산 베이스 기준(부호 포함). z = 0 = 수평 성분만 쓴다(벨트 기울기 0.18° 무시)
-gripper:                 # 폭은 RG2 보고값 (실제 핑거 간격 ≈ 보고값 − 10 mm, measurements #8)
+gripper:                 # 폭은 RG2 보고값. 실측 안쪽 간격: 보고 90 → 80 mm, 빈손 보고 39 → 28 mm(10/08), 박스 파지 보고 40.3 → 30 mm(10/06) — 차이 10~11 mm 의 관측 특성이라 보정식으로 쓰지 않는다 (measurements #8)
   pre_open_mm: 90
   grasp_width_mm: 39     # 파지 목표 폭 (예시 = 10/06 실측값). 박스보다 작아야 grip_detected 가 켜진다
   force_n: null          # 10/06 실측 (종이 박스 안 찌그러지는 값)
@@ -66,3 +66,4 @@ timing:
 - 2026-10-06: #64 리뷰 반영. 단위 규칙 범위(pose 배열 = 두산 mm·deg, 표준 geometry_msgs = SI, 커스텀 필드 = 주석 단위), 스키마 예시를 null 로, bringup 의 `config_version`·`config_sha256` 전달.
 - 2026-10-07: #64 를 main 위로 다시 쌓으며 #57 최종본과 합침. 박병후 리뷰 반영 — latency_offset_ms 0 = 보정 없음·양수 = 앞당김, null 키는 launch 로 넘기지 않음, pose·servo_cmd 기준점 TCP·base_link, direction_base 크기 검사·z = 0 의미.
 - 2026-10-07: SRD v1.0 정합 (#6). `zones.recheck.view_pose`(null, MC-017) 추가, 정지 상태에서만 정적 설정 변경(MC-009)·런타임 zone_map 은 IDLE·PAUSED 에서만(남현지 #84 리뷰)·서보 전용 값 위치·gateway watchdog 위치를 값 규칙에 추가.
+- 2026-10-08: gripper 주석의 "실제 간격 ≈ 보고값 − 10 mm" 를 실측표로 바꿈 — 보고 90 → 80, 빈손 보고 39 → 28 mm(김학민 10/08), 박스 40.3 → 30(10/06). 값·단위(보고값) 변경 없음 (#41).

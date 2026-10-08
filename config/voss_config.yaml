@@ -20,7 +20,7 @@ robot:
 belt:
   speed_cmps: 4.8          # 아두이노 h250
   direction_base: [0.99992, -0.01292, 0.0]   # 진행 방향 단위벡터(베이스 기준), +x 에서 −0.74°, z = 0 수평 성분만 (measurements #6, 김학민)
-gripper:   # 폭은 RG2 보고값 (실제 간격 ≈ 보고값 − 10 mm)
+gripper:   # 폭은 RG2 보고값. 실측 안쪽 간격: 보고 90 → 80 mm, 빈손 보고 39 → 28 mm(10/08), 박스 파지 보고 40.3 → 30 mm(10/06) — 차이 10~11 mm 의 관측 특성이라 보정식으로 쓰지 않는다 (measurements #8)
   pre_open_mm: 90
   grasp_width_mm: 39
   force_n: 14.0
