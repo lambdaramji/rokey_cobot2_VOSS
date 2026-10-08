@@ -1,0 +1,23 @@
+# VOSS MQTT ACL — docs/interfaces/mqtt.md #20.
+# 비밀번호는 이 파일에 적지 않는다.
+
+user web
+topic write voss/command
+topic read voss/state
+topic read voss/result
+topic read voss/zone_map
+topic read voss/robot
+topic read voss/command/ack
+topic read voss/log_status
+
+user bridge
+topic read voss/command
+topic write voss/state
+topic write voss/result
+topic write voss/zone_map
+topic write voss/robot
+topic write voss/command/ack
+topic write voss/log_status
+
+user debug
+topic read voss/#
