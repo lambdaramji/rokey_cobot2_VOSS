@@ -109,6 +109,9 @@ def test_interpolate_pose_midpoint_and_no_extrapolation() -> None:
     assert abs(rot_angle_deg(a[:3, :3], m[:3, :3]) - 10) < 1e-6
     assert interpolate_pose(0.03, [0.0, 0.02], [a, b]) is None  # 외삽 안 함
     assert interpolate_pose(0.05, [0.0, 0.1], [a, b]) is None  # 가까운 pose 가 50 ms 밖
+    assert (
+        interpolate_pose(0.03, [0.0, 0.5], [a, b]) is None
+    )  # 앞 pose 는 30 ms 지만 구간이 500 ms(큐 막힘)
 
 
 def test_pose_msg_and_posx_agree() -> None:

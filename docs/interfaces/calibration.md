@@ -21,7 +21,7 @@
 ## 쓰는 곳 (좌표 계약 — voss_msgs.md BoxTrack 과 같은 정의, #50 MC-001·002)
 - **변환은 비전 단일 책임.** box_tracker 가 `voss_vision.belt_plane.pixel_to_base_xy` (왜곡 보정 → H → 유효 영역 판정)로 박스 윗면 중심 픽셀을 바꿔 `BoxTrack.position_base` 에 싣는다. belt_servo 는 이 파일·변환 함수를 쓰지 않는다.
 - **출력의 뜻:** `position_base` = 촬영 시각(`stamp`)에 관측한 **박스 윗면 중심**, m, 베이스 축. x, y 는 H, z 는 `plane_z_mm`. **TCP 목표가 아니다** — 지연·벨트 속도 예측, 파지 높이·오프셋을 반영한 핑거 끝/TCP 목표는 belt_servo 가 계산한다.
-- **이 파일의 범위:** 관측 자세에서 정지해 있을 때의 **초기 위치 획득**(`position_source=OBSERVE_HOMOGRAPHY`)만. 현재 pose(`/voss/robot/pose`, TCP)가 `flange_to_tcp(observe_pose)` 와 1 mm / 0.5°(툴축 각) 넘게 다르거나, 픽셀이 `calib_hull_px` 밖이거나, `image_size` 가 카메라와 다르면 `position_valid=false`.
+- **이 파일의 범위:** 관측 자세에서 정지해 있을 때의 좌표. `hand_eye.yaml` 이 `moving_verified=true` 면 **기본 출처는 핸드아이**이고 이 파일은 같은 픽셀의 비교값(로그, 3 mm 경고)으로만 쓴다 — 한 트랙 안에서 출처가 바뀌어 좌표가 2~4 mm 튀지 않게, 그리고 이 파일의 유효 영역(x −100 ~ +3 mm, 박스당 약 2.1 s) 밖에서도 좌표가 이어지게(10/08 박병후 #90·#95 리뷰). 핸드아이가 없거나 미검증이면, 또는 box_tracker `observe_source: homography`(되돌림용, 게이트 측정 중 바꾸지 않음)면 `position_source=OBSERVE_HOMOGRAPHY` 로 쓴다. 이때 현재 pose(`/voss/robot/pose`, TCP)가 `flange_to_tcp(observe_pose)` 와 1 mm / 0.5°(**자세 전체 각** — 공구축 둘레 회전 포함: 카메라가 TCP 에서 떨어져 있어 rz 만 달라도 화면이 돈다) 넘게 다르거나, 픽셀이 `calib_hull_px` 밖이거나, `image_size` 가 카메라와 다르면 `position_valid=false`.
 - **이동 중 좌표는 G0 필수이며 이 파일이 대신하지 않는다** → 아래 `config/hand_eye.yaml`.
 - **기준점:** 이 파일의 observe_pose 는 플랜지, H·plane_z 는 접촉점(핑거 끝) 기준으로 이미 정규화돼 있다. 측정 입력이 플랜지였으면 도구가 터치 자세마다 `p_tcp = p_flange + R_zyz(rx, ry, rz)·tcp_offset` 으로 바꿔 계산한다. 툴이 수직이어도 오프셋 xy 가 약 3 mm 라 기준점을 섞으면 x, y 가 약 3 mm, z 가 약 247 mm 어긋난다.
 - 관측 자세가 바뀌면 다시 찍어야 한다.
@@ -50,10 +50,11 @@
 **합격 기준(제안값, SR-FN-02 의 5 mm 와 같은 축):** board_spread ≤ 2 mm·0.5°(보드 풀이 그대로의 값), method_spread ≤ 2 mm, t16_val_max ≤ 5 mm, touch_val_max ≤ 5 mm(터치를 쓴 경우), moving_spread·moving_spread_lag ≤ 5 mm. board_spread 는 보드 사진끼리 일관된지만 본다 — 그리퍼가 가는 TCP 좌표와 맞는지는 T16·터치·이동 중 검증이 본다. 10/08: board_spread 0.85 mm 였지만 T16·터치는 광축 방향으로 약 9 mm 어긋나 (보드 사진이 모두 ≤ 25° 기울기) 위치를 고쳤고, 고친 뒤 board_spread 는 4.1 mm(`board_spread_corrected_mm`)가 된다. 공구가 수직이면 "카메라 거리" 오차와 "평면(터치 z·TCP z) 높이" 오차는 효과가 같아 이 데이터로 가를 수 없다 — 보정은 TCP 좌표에 맞췄으므로 **수직 공구(G0 고정 파지 자세)에서 유효**하고, 공구를 기울여 쓰기 전에는 기울기 30° 이상 자세로 다시 찍어 가린다. T16 점만으로는 카메라 자세가 정해지지 않으므로(10/07: PnP 와 호모그래피 분해가 37 mm·7° 차이) 회전은 보드 풀이 그대로 두고 위치만 고친다.
 
 ## 쓰는 곳 (box_tracker, `voss_vision.hand_eye`)
-- 촬영 시각 `stamp` **+ `pose_lag_ms`** 의 TCP pose 를 `/voss/robot/pose` 이력에서 구한다(위치 선형, 자세 slerp). pose stamp 는 응답 수신 시각(MC-004 — 의미는 그대로)이라 실제 로봇 상태보다 늦다: 10/08 이동 중 검증에서 영상 시각보다 약 60 ms 뒤 stamp 의 pose 를 쓸 때 흔들림이 가장 작았다(2.55 → 1.13 mm). `pose_lag_ms`(기본 60)는 box_tracker 파라미터다. 그 시각이 이력 안이면 보간하되 가장 가까운 pose 가 40 ms(2 주기, 제안값) 넘게 떨어져 있으면 무효, **마지막 pose 보다 뒤면 최근 pose 5개의 속도로 `pose_max_extrap_ms`(80 ms, 제안값)까지만 앞으로 외삽**한다(그 pose 가 올 때까지 기다리면 BoxTrack 이 약 40 ms 늦어진다. 등속 추종에서는 외삽 오차가 1 mm 미만). 이력이 끊겼거나(간격 > 40 ms) 80 ms 를 넘으면 무효. 첫 pose 보다 앞은 외삽하지 않는다.
+- 촬영 시각 `stamp` **+ `pose_lag_ms`** 의 TCP pose 를 `/voss/robot/pose` 이력에서 구한다(위치 선형, 자세 slerp). pose stamp 는 응답 수신 시각(MC-004 — 의미는 그대로)이라 실제 로봇 상태보다 늦다: 10/08 이동 중 검증에서 영상 시각보다 약 60 ms 뒤 stamp 의 pose 를 쓸 때 흔들림이 가장 작았다(2.55 → 1.13 mm). `pose_lag_ms`(기본 60)는 box_tracker 파라미터다. 그 시각이 이력 안이면 보간하되 가장 가까운 pose 가 40 ms(2 주기, 제안값) 넘게 떨어져 있거나 **보간하는 앞뒤 pose 사이가 80 ms(2 × 40)를 넘으면** 무효(게이트웨이 호출 큐가 막혀 pose 가 끊긴 구간을 선형으로 메우지 않는다), **마지막 pose 보다 뒤면 최근 pose 5개의 속도로 `pose_max_extrap_ms`(80 ms, 제안값)까지만 앞으로 외삽**한다(그 pose 가 올 때까지 기다리면 BoxTrack 이 약 40 ms 늦어진다. 등속 추종에서는 외삽 오차가 1 mm 미만). 이력이 끊겼거나(간격 > 40 ms) 80 ms 를 넘으면 무효. 첫 pose 보다 앞은 외삽하지 않는다.
 - `T_base_camera(t) = T_base_tcp(t) · T_tcp_camera`, 왜곡 보정한 박스 윗면 중심 픽셀의 광선이 **박스 윗면 평면 z = `belt_homography.yaml` 의 `plane_z_mm`** 과 만나는 점이 `position_base`(m) — 평면 높이는 그 파일 하나에서만 읽는다. `position_source = SOURCE_HAND_EYE`.
-- 관측 자세에 정지해 있을 때는 지금처럼 `OBSERVE_HOMOGRAPHY` 를 쓰고, 그때 두 방식의 차이를 로그로 남긴다(3 mm 넘으면 경고). 관측 자세를 벗어나면 `HAND_EYE`.
-- `position_valid=false`: 파일 없음·`moving_verified=false`(이동 중일 때)·image_size 나 k(camera_factory) 불일치·pose 를 촬영 시각 + pose_lag 에서 보간·외삽할 수 없음·광선이 평면과 거의 평행(광선과 평면 법선 사이 75° 초과, 제안값).
+- 출처: **`moving_verified=true` 면 관측 자세에서도 `HAND_EYE`**(위 "이 파일의 범위"). 관측 자세에 정지해 있고 픽셀이 호모그래피 유효 영역 안이면 같은 픽셀의 호모그래피 값과의 차이를 로그로 남긴다(3 mm 넘으면 경고 — 10/08 A_MIX 재생 최대 2.2 mm). `observe_source: homography` 면 관측 자세 = `OBSERVE_HOMOGRAPHY`, 벗어나면 `HAND_EYE` 이고 출처가 바뀌는 순간 좌표가 튈 수 있다(belt_servo 는 `position_source` 가 바뀌면 예측·필터를 리셋).
+- `calib_version` = `<method> v<version> <created> sha256:<파일 sha256 앞 8자리>` (예 `hand_eye v1 2026-10-08T11:21:40 sha256:1a2b3c4d`) — 시도마다 어떤 캘리브레이션 파일이었는지 특정한다(belt_servo 틱 로그).
+- `position_valid=false`: 파일 없음·camera_info 로 해상도·k 를 확인하기 전(실시간)·`moving_verified=false`(이동 중일 때)·image_size 나 k(camera_factory) 불일치·pose 를 촬영 시각 + pose_lag 에서 보간·외삽할 수 없음·광선이 평면과 거의 평행(광선과 평면 법선 사이 75° 초과, 제안값).
 - 카메라를 다시 달거나 툴(TCP) 정의가 바뀌면 다시 찍는다. 그리퍼 공구 자세를 수직이 아니게 쓰려면 먼저 큰 기울기 자세로 다시 찍는다(위 합격 기준).
 
 ## 변경 이력
@@ -65,3 +66,4 @@
 - 2026-10-07: `config/hand_eye.yaml`(정식 핸드아이, 이동 중 좌표) 절 신설 — T_tcp_camera, 합격 기준, box_tracker 사용 규칙(pose 보간 40 ms, 평면 높이는 belt_homography 하나, `moving_verified`). 촬영은 `/voss/robot/pose` 구독(김학민 T32 ①, 두산 직접 호출 없음). 촬영 10/08 오전.
 
 - 2026-10-08: 핸드아이 확정(#25, 김학민 촬영·터치·이동 중 검증, 남현지 결정). `camera` 는 보드 재추정 k·d(좌표 계산용), `camera_factory` 신설(운용 중 camera_info 비교용), `touch_correction`(T16 15점 + 터치 5관측으로 위치만 보정, 광축 +9.2 mm) 신설, errors 에 터치·이동 중 검증 키. 합격 기준에 터치·이동 중(지연 보정 포함) 추가, board_spread 의 한계와 수직 공구 조건 명시. 사용 규칙: pose 는 촬영 시각 + `pose_lag_ms`(60), 마지막 pose 뒤는 80 ms 까지 앞으로 외삽(이전: 외삽 안 함) — `interface` 변경.
+- 2026-10-08 오후: #90·#95 박병후 리뷰 반영 — `moving_verified=true` 면 관측 자세에서도 `HAND_EYE`(트랙 안 출처 고정, 호모그래피는 비교 로그·`observe_source: homography` 되돌림), 관측 자세 판정은 자세 전체 각, 보간 앞뒤 pose 간격 ≤ 80 ms, camera_info 확인 전 무효, `calib_version` 형식 — `interface` 변경.

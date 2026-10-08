@@ -20,6 +20,9 @@
 | 토픽 | reliability | durability | depth |
 |---|---|---|---|
 | /voss/vision/box, /voss/robot/pose, /voss/robot/servo_cmd | best_effort | volatile | 1 |
+
+`/voss/vision/box` 는 **한 프레임의 트랙마다 한 건씩** 연달아 발행한다 → 구독 depth 1 이면 같은 프레임의 앞 트랙이 덮인다. **구독 depth ≥ 동시에 보이는 박스 수(제안 5)**, track_id 별 최신값을 보관한다(발행 depth 는 1 그대로, #95 박병후 리뷰).
+
 | /voss/sort/state, /voss/sort/result, /voss/vision/label, /voss/voice/* | reliable | volatile | 10 |
 | /voss/log/status | reliable | volatile | 1 |
 | /voss/robot/state | reliable | transient_local | 1 |
@@ -39,3 +42,4 @@
 - 2026-10-07: #65 리뷰(박병후 00:50) 반영. `/voss/robot/pose` stamp = **응답 수신 시각**(#53 MC-004, "중간값" 철회), 벨트 위 파지 높이 19 mm 는 31 mm 면 기준 후보로 표시.
 - 2026-10-07: SRD v1.0 정합 (#6). `/voss/robot/stop`(std_srvs/Trigger) 추가 — robot_gateway 제공, sort_manager·belt_servo 호출(순서·중복은 F-04). `/voss/robot/state` QoS 행(reliable·transient_local·1, 변경 때 + 2 Hz). robot_gateway 자원 규칙(MC-013), 스트리밍 실제 경로(#55), RG2 = Modbus 직접(ADR-0005). sort_manager 는 goal 중 gripper 를 부르지 않음. hmi_bridge 가 `/voss/log/status` 구독. 파지 높이 19 mm 는 31 mm 폭 파지 결정값(pending #16). #84 리뷰 반영: servo_cmd 는 BUSY 대신 무시·로그, PLACE·PICK 은 모션·RG2 함께 점유, 스트리밍은 존재 확인·speedl_stream 사용, stop 관련 F-04 제안.
 - 2026-10-07: `/voss/robot/pose` 조회 서비스를 `get_current_tool_flange_posx` 로 적음(TCP 는 `robot.tcp_offset_mm` 로 gateway 가 변환 — 펜던트 TCP 등록과 무관, 실기 오차 0.001 mm 이내). 의미·QoS 변화 없음 (#41).
+- 2026-10-08: `/voss/vision/box` 구독 depth ≥ 동시 박스 수(제안 5) 명시 — 트랙마다 발행이라 depth 1 이면 덮인다 (#95 리뷰, 필드·발행 QoS 변경 없음).
