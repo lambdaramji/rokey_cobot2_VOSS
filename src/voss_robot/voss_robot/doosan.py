@@ -64,6 +64,16 @@ class DryRunDoosan:
             self.stops += 1
         done(True, "OK")
 
+    # RobotState 용 (실기와 같은 이름)
+    faulted = False
+    disconnected = False
+    last_alarm = ""
+
+    def get_robot_state(self) -> int:
+        """두산 ROBOT_STATE: 움직이면 MOVING(2), 아니면 STANDBY(1)."""
+        with self._lock:
+            return 2 if any(abs(v) > 0 for v in self._vel) else 1
+
 
 class GuardedCaller:
     """서비스 호출 하나씩: 타임아웃 난 요청의 응답이 올 때까지 다음 요청을 보내지 않는다(ROS import 없음).
@@ -150,6 +160,41 @@ class RosDoosan:
             MoveStop, prefix + "motion/move_stop", callback_group=MutuallyExclusiveCallbackGroup()
         )
         self._stop_timeout = timeout_s
+
+        # RobotState 용: 컨트롤러 상태(서비스, 큐에서 1 Hz)와 알람·연결 끊김(토픽, 이벤트)
+        from dsr_msgs2.msg import RobotDisconnection, RobotError
+        from dsr_msgs2.srv import GetRobotState
+
+        self._state_srv = GetRobotState
+        self._state = node.create_client(
+            GetRobotState, prefix + "system/get_robot_state", callback_group=self._group
+        )
+        ns = (
+            prefix.split("dsr_controller2/")[0] or "/"
+        )  # "/dsr01/" — error 토픽은 노드 네임스페이스
+        self.last_alarm = ""
+        self.disconnected = False
+        node.create_subscription(RobotError, ns + "error", self._on_error, 100)
+        node.create_subscription(
+            RobotDisconnection, ns + "robot_disconnection", self._on_disconnect, 10
+        )
+        self._log = node.get_logger()
+
+    @property
+    def faulted(self) -> bool:
+        return self.caller.faulted
+
+    def _on_error(self, m) -> None:
+        self.last_alarm = f"{m.level}/{m.group}/{m.code} {m.msg1}".strip()
+        self._log.warn(f"두산 알람: {self.last_alarm}")
+
+    def _on_disconnect(self, _m) -> None:
+        self.disconnected = True  # 브링업·gateway 재시작으로만 푼다
+        self._log.error("두산 robot_disconnection 수신 — 브링업 확인")
+
+    def get_robot_state(self) -> int:
+        """두산 ROBOT_STATE (DRFC.h). 큐 작업 스레드에서만."""
+        return int(self.caller.call(self._state, self._state_srv.Request()).robot_state)
 
     def wait_ready(self, timeout_s: float) -> bool:
         """서비스가 보일 때까지 기다린다(브링업 확인)."""

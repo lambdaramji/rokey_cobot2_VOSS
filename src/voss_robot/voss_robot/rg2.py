@@ -77,6 +77,11 @@ class Rg2:
             raise OSError(f"레지스터 {addr} 읽기 실패: {r}")
         return r.registers[0]
 
+    @property
+    def busy(self) -> bool:
+        """명령 실행 중 (RobotState action GRIPPER)."""
+        return self._busy.locked()
+
     def status(self) -> tuple[float, bool, bool, bool]:
         """(폭 mm, busy, grip_detected, safety_err). 읽기만."""
         word = self._read(REG_STATUS)
@@ -133,6 +138,10 @@ class DryRunRg2:
         self.width = width_mm
         self.object_mm = object_mm
         self._busy = threading.Lock()
+
+    @property
+    def busy(self) -> bool:
+        return self._busy.locked()
 
     def status(self) -> tuple[float, bool, bool, bool]:
         return self.width, False, False, False

@@ -5,7 +5,7 @@
 
 지금 있는 것: /voss/robot/pose (TCP, base_link), /voss/robot/servo_cmd → speedl_stream(ADR-0010,
 만료 watchdog → 0 속도 + 항상 move_stop, TCP z 하한·x 범위·속도 상한), /voss/robot/stop,
-/voss/robot/gripper (RG2 Modbus 직접, ADR-0005). 다음 단계: move_to_zone → RobotState.
+/voss/robot/gripper (RG2 Modbus 직접, ADR-0005), /voss/robot/state (RobotState). 다음 단계: move_to_zone.
 """
 
 import threading
@@ -19,12 +19,14 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 from std_srvs.srv import Trigger
 
+from voss_msgs.msg import RobotState
 from voss_msgs.srv import Gripper
 from voss_robot.call_queue import SerialCallQueue
 from voss_robot.doosan import DEFAULT_PREFIX, DoosanError, DryRunDoosan
 from voss_robot.geometry import flange_to_ros_pose
 from voss_robot.rg2 import DryRunRg2, Rg2
 from voss_robot.servo_guard import ServoGuard, ServoParams
+from voss_robot.state_logic import Inputs, decide
 
 
 class RobotGatewayNode(Node):
@@ -91,6 +93,7 @@ class RobotGatewayNode(Node):
             TwistStamped, "/voss/robot/servo_cmd", self._on_servo_cmd, qos, callback_group=g_servo
         )
         self.create_timer(0.02, self._on_servo_tick, callback_group=g_servo)  # 50 Hz watchdog 점검
+        self._was_active = False  # RobotState 갱신용 (servo 시작·끝)
         self.create_service(
             Trigger, "/voss/robot/stop", self._on_stop, callback_group=ReentrantCallbackGroup()
         )
@@ -119,6 +122,27 @@ class RobotGatewayNode(Node):
             self._on_gripper,
             callback_group=ReentrantCallbackGroup(),
         )
+        # ---- /voss/robot/state: reliable·transient_local·depth 1, 바뀔 때 + 2 Hz (#55 MC-019) ----
+        from rclpy.qos import DurabilityPolicy
+
+        self.state_pub = self.create_publisher(
+            RobotState,
+            "/voss/robot/state",
+            QoSProfile(
+                depth=1,
+                reliability=ReliabilityPolicy.RELIABLE,
+                durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            ),
+        )
+        self._last_pose_t = -1e9  # 마지막 pose 발행 (monotonic)
+        self._ctrl = (None, -1e9)  # (두산 ROBOT_STATE, 읽은 시각)
+        self._ctrl_busy = False
+        self._rg2 = {"ok": False, "width": 0.0, "safety": False, "t": -1e9}
+        self.stopped = False  # /voss/robot/stop 뒤 새 모션 명령 전
+        self._state_key = None
+        self._slock = threading.Lock()
+        g_state = MutuallyExclusiveCallbackGroup()
+        self.create_timer(0.5, self._on_state_timer, callback_group=g_state)
         mode = "dry_run (두산·RG2 연결 안 함)" if self.dry_run else f"real {prefix}"
         self.get_logger().info(
             f"robot_gateway started: {mode}, pose {rate:.0f} Hz, servo watchdog "
@@ -163,6 +187,7 @@ class RobotGatewayNode(Node):
         o = msg.pose.orientation
         o.x, o.y, o.z, o.w = qx, qy, qz, qw
         self.pose_pub.publish(msg)
+        self._last_pose_t = time.monotonic()
         with self._glock:  # servo 작업 영역 판단용 (mm, 응답 수신 시각)
             self.guard.set_pose(stamp.nanoseconds * 1e-9, x * 1e3, y * 1e3, z * 1e3)
         s = self._stats
@@ -194,12 +219,82 @@ class RobotGatewayNode(Node):
             )
         self._sstats = self._empty_servo_stats()
 
+    # ---------------- /voss/robot/state (voss_msgs.md RobotState) ----------------
+    def _on_state_timer(self) -> None:
+        """2 Hz: RG2 상태 읽기, 두산 ROBOT_STATE 1 Hz 조회(큐), 판정해 발행."""
+        now = time.monotonic()
+        if not self.rg2.busy:  # 명령 중엔 command() 가 상태를 읽고 있다
+            try:
+                w, _b, _g, safety = self.rg2.status()
+                self._rg2 = {"ok": True, "width": w, "safety": safety, "t": now}
+            except Exception:
+                self._rg2 = {**self._rg2, "ok": False, "t": now}
+        if not self._ctrl_busy and now - self._ctrl[1] >= 1.0:
+            self._ctrl_busy = True
+            try:
+                self.queue.submit(self.dsr.get_robot_state).add_done_callback(self._ctrl_done)
+            except Exception:
+                self._ctrl_busy = False
+        self._update_state(force=True)
+
+    def _ctrl_done(self, fut) -> None:
+        self._ctrl_busy = False
+        try:
+            self._ctrl = (int(fut.result()), time.monotonic())
+        except Exception:
+            pass  # 실패는 값이 오래돼 None 이 되는 것으로 드러난다(dsr_ok·TIMEOUT)
+
+    def _update_state(self, force: bool = False) -> None:
+        """판정해서, 바뀌었거나 force 면 발행한다. 이벤트(stop·servo·gripper)에서도 부른다."""
+        now = time.monotonic()
+        ctrl, t_ctrl = self._ctrl
+        with self._glock:
+            servo_active = self.guard.active
+        i = Inputs(
+            dsr_ok=not self.dsr.faulted and now - self._last_pose_t < 0.5,
+            ctrl_state=ctrl if now - t_ctrl < 3.0 else None,
+            disconnected=self.dsr.disconnected,
+            rg2_ok=self._rg2["ok"] and now - self._rg2["t"] < 3.0,
+            rg2_safety=self._rg2["safety"],
+            servo_active=servo_active,
+            gripper_busy=self.rg2.busy,
+            stopped=self.stopped,
+            last_alarm=self.dsr.last_alarm,
+        )
+        st = decide(i)
+        with self._slock:
+            changed = st.key() != self._state_key
+            if not (changed or force):
+                return
+            self._state_key = st.key()
+        m = RobotState()
+        m.header.stamp = self.get_clock().now().to_msg()
+        m.header.frame_id = "base_link"
+        m.connected, m.state, m.action, m.error_code, m.detail = (
+            st.connected,
+            st.state,
+            st.action,
+            st.error_code,
+            st.detail,
+        )
+        m.gripper_width_mm = float(self._rg2["width"])
+        self.state_pub.publish(m)
+        if changed:
+            self.get_logger().info(
+                f"RobotState {st.state} connected={st.connected} action={st.action or '-'} "
+                f"error={st.error_code or '-'} ({st.detail})"
+            )
+
     # ---------------- RG2 gripper (ADR-0005) ----------------
     def _on_gripper(self, req, res):
         """응답은 RG2 busy 해제(동작 완료) 뒤. 동작 중 두 번째 요청은 BUSY (topics.md 자원 규칙)."""
         t0 = time.monotonic()
+        threading.Timer(0.05, self._update_state).start()  # action GRIPPER 를 바로 알린다
         r = self.rg2.command(float(req.width), float(req.force))
         dt = time.monotonic() - t0
+        if r.width_actual:
+            self._rg2 = {**self._rg2, "width": float(r.width_actual)}
+        self._update_state()
         res.ok, res.width_actual, res.grip_detected, res.message = (
             r.ok,
             float(r.width_actual),
@@ -251,6 +346,10 @@ class RobotGatewayNode(Node):
             self.get_logger().warn(f"servo_cmd 자름: {r.clamps}", throttle_duration_sec=2.0)
         self.dsr.speedl(r.vel_mm_s, self.servo_acc)
         ss["pub"] += 1
+        if self.stopped or not self._was_active:
+            self.stopped = False  # 새 모션 → STOPPED 해제
+            self._update_state()
+        self._was_active = True
 
     def _on_servo_tick(self) -> None:
         with self._glock:
@@ -259,6 +358,8 @@ class RobotGatewayNode(Node):
             self.dsr.speedl(vel, self.servo_acc)
             self._sstats["pub"] += 1
         elif action == "expire":
+            self._was_active = False
+            self._update_state()
             self._sstats["expire"] += 1
             self.get_logger().warn("servo_cmd 끊김(watchdog) → 0 속도 + move_stop")
             self._halt("watchdog")
@@ -281,6 +382,9 @@ class RobotGatewayNode(Node):
         success = move_stop 정상 응답, 아니면 message = TIMEOUT / DEVICE_ERROR (topics.md, #53 MC-014)."""
         with self._glock:
             self.guard.stop(self._now())
+        self._was_active = False
+        self.stopped = True
+        self._update_state()
         self._sstats["stop"] += 1
         ev, out = threading.Event(), {}
 
