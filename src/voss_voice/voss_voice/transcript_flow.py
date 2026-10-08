@@ -11,8 +11,8 @@ from __future__ import annotations
 import threading
 import time
 from collections.abc import Callable
-from voss_voice.http_client import IntentParseError
 
+from voss_voice.http_client import IntentParseError
 from voss_voice.intent_logic import (
     SAY_RETRY,
     SayDeduper,
@@ -50,7 +50,6 @@ class TranscriptFlow:
         self.view: ZoneMapView | None = None
         self.state = ""
         self.box_id = ""
-
 
     def handle(self, text: str) -> tuple[str, float]:
         """음성 문장 하나를 처리하고 결과 종류와 처리 시간을 반환한다."""
@@ -133,7 +132,6 @@ class TranscriptFlow:
         finally:
             # 오류가 발생해도 잠금은 반드시 해제한다.
             self._llm_lock.release()
-
 
     def _say(self, text: str) -> None:
         if text and self._dedup.allow(text, self._clock()):

@@ -1,4 +1,3 @@
-
 """T09 실제 Intent 평가 스크립트.
 입력: intent_cases.json의 20개 발화
 출력: Intent 정답 여부와 처리 시간
@@ -12,7 +11,6 @@ from voss_voice.http_client import post_intent
 from voss_voice.intent_logic import ZoneMapView
 from voss_voice.transcript_flow import TranscriptFlow
 
-
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "intent_cases.json"
 
 
@@ -22,20 +20,19 @@ def load_cases() -> list[dict]:
     return json.loads(fixture_text)["cases"]
 
 
-def create_test_flow() -> tuple[
-    TranscriptFlow, list[dict], list[dict], list[str]
-]:
+def create_test_flow() -> tuple[TranscriptFlow, list[dict], list[dict], list[str]]:
     """실제 LLM과 가짜 ROS·DB 출력을 연결한 평가 객체를 만든다."""
     published_intents = []
     stats_queries = []
     spoken_texts = []
 
-
-    zone_map = ZoneMapView.from_entries([
-        ("역삼동", "A", ["역삼"]),
-        ("대치동", "B", ["대치"]),
-        ("청담동", "C", ["청담"]),
-    ])
+    zone_map = ZoneMapView.from_entries(
+        [
+            ("역삼동", "A", ["역삼"]),
+            ("대치동", "B", ["대치"]),
+            ("청담동", "C", ["청담"]),
+        ]
+    )
 
     def fake_get_stats(query: dict) -> dict:
         """조회 조건을 기록하고 가짜 DB 결과를 반환한다."""
@@ -52,7 +49,6 @@ def create_test_flow() -> tuple[
     flow.view = zone_map
 
     return flow, published_intents, stats_queries, spoken_texts
-
 
 
 def evaluate_case(test_case: dict) -> tuple[bool, str, float]:
@@ -75,7 +71,6 @@ def evaluate_case(test_case: dict) -> tuple[bool, str, float]:
 
     if result_kind != expected["kind"]:
         return False, f"kind 불일치: {result_kind}", elapsed_ms
-
 
     if result_kind == "publish":
         if len(published_intents) != 1:
@@ -116,7 +111,6 @@ EXPECTED_CASE_COUNT = 20
 MIN_CORRECT_CASES = 19
 
 
-
 def main() -> None:
     """전체 20문장을 평가하고 정확도와 최종 판정을 출력한다."""
     test_cases = load_cases()
@@ -136,8 +130,7 @@ def main() -> None:
         status = "PASS" if passed else "FAIL"
 
         print(
-            f"{test_case['id']}: {status} | "
-            f"{detail} | {elapsed_ms:.0f}ms",
+            f"{test_case['id']}: {status} | {detail} | {elapsed_ms:.0f}ms",
             flush=True,
         )
 

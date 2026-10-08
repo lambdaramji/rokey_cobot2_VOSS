@@ -3,11 +3,9 @@
 import threading
 import time
 
-from voss_voice.intent_logic import ZoneMapView
-from voss_voice.transcript_flow import SAY_AI_DOWN, SAY_BUSY, TranscriptFlow
-
 from voss_voice.http_client import IntentParseError
-from voss_voice.intent_logic import SAY_RETRY
+from voss_voice.intent_logic import SAY_RETRY, ZoneMapView
+from voss_voice.transcript_flow import SAY_AI_DOWN, SAY_BUSY, TranscriptFlow
 
 VIEW = ZoneMapView.from_entries([("역삼동", "A", ["역삼"]), ("대치동", "B", [])])
 
@@ -135,6 +133,7 @@ def test_empty_text_ignored():
 
 def test_bare_dong_is_rejected_when_not_asking() -> None:
     """질문 중이 아니면 동 이름만으로 우선 분류를 시작하지 않는다."""
+
     def unexpected_llm(text: str, allowed: dict) -> dict:
         """로컬 판단 대상에서는 LLM 호출을 금지한다."""
         raise AssertionError("LLM이 호출되면 안 됩니다")
@@ -151,6 +150,7 @@ def test_bare_dong_is_rejected_when_not_asking() -> None:
 
 def test_bare_dong_becomes_answer_when_asking() -> None:
     """질문 중에는 동 이름을 현재 박스의 답변으로 처리한다."""
+
     def unexpected_llm(text: str, allowed: dict) -> dict:
         """로컬 답변 처리에서는 LLM 호출을 금지한다."""
         raise AssertionError("LLM이 호출되면 안 됩니다")
@@ -190,6 +190,7 @@ def test_parse_error_asks_user_to_repeat_without_publishing() -> None:
 
 def test_destination_answer_uses_current_box_id() -> None:
     """질문 중 목적지 발화를 현재 박스의 답변으로 처리한다."""
+
     def unexpected_llm(text: str, allowed: dict) -> dict:
         """로컬 답변 처리에서 LLM 호출을 금지한다."""
         raise AssertionError("LLM을 호출하면 안 됩니다")
@@ -209,6 +210,7 @@ def test_destination_answer_uses_current_box_id() -> None:
 
 def test_destination_answer_without_question_is_rejected() -> None:
     """질문 상태가 아니면 목적지 발화로 명령을 발행하지 않는다."""
+
     def unexpected_llm(text: str, allowed: dict) -> dict:
         """질문이 없는 목적지 발화를 LLM에 보내지 않는다."""
         raise AssertionError("LLM을 호출하면 안 됩니다")
@@ -225,6 +227,7 @@ def test_destination_answer_without_question_is_rejected() -> None:
 
 def test_explicit_priority_is_preserved_while_asking() -> None:
     """질문 중에도 명시적인 우선순위 지시는 유지한다."""
+
     def fake_llm(text: str, allowed: dict) -> dict:
         """명시적인 우선순위 명령을 반환한다."""
         return {"type": "priority", "dong": "역삼동"}
