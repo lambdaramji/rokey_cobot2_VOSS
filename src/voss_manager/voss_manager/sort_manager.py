@@ -76,7 +76,7 @@ class SortManagerNode(Node):
         self.move_timeout_s = p("move_timeout_s", 60.0).value
         self.goal_response_timeout_s = p("goal_response_timeout_s", 5.0).value
         self.goal_result_timeout_s = p("goal_result_timeout_s", 120.0).value
-        self.state_period_s = p("state_period_s", 0.5).value
+        self.state_period_s = p("state_period_s", 0.4).value
         self.limits = ReadyLimits(
             pose_max_age_s=p("pose_max_age_s", 0.5).value,
             robot_state_max_age_s=p("robot_state_max_age_s", 1.5).value,
@@ -141,10 +141,11 @@ class SortManagerNode(Node):
         self.pumping = False
         self.last_phase = ""
         self.last_pub_key: tuple = ()
-        self.last_state_pub = 0.0
 
         self._publish_zone_map()
         self.create_timer(0.1, self._tick)
+        # 상태 주기 발행은 전용 타이머로 (0.1 s tick 에 얹으면 0.5 s 가 0.6 s 로 밀려 2 Hz 미만이 된다)
+        self.create_timer(self.state_period_s, lambda: self._publish_state(force=True))
 
     # ------------------------------------------------------------ 시각·준비
 
@@ -416,9 +417,6 @@ class SortManagerNode(Node):
         for tid in [t for t, (_, rx) in self.tracks.items() if mono - rx > 10.0]:
             del self.tracks[tid]
 
-        if mono - self.last_state_pub >= self.state_period_s:
-            self._publish_state(force=True)
-
     # ------------------------------------------------------------ 발행
 
     def _publish_state(self, force: bool = False) -> None:
@@ -429,7 +427,7 @@ class SortManagerNode(Node):
         key = (c.state, box_id, track_id, c.session_id, tuple(nr))
         if not force and key == self.last_pub_key:
             return
-        self.last_pub_key, self.last_state_pub = key, time.monotonic()
+        self.last_pub_key = key
         self.state_pub.publish(
             SortState(
                 state=c.state,
