@@ -8,9 +8,12 @@
 | plan.md | 마일스톤, 파트별 작업, 게이트 기준 | PL (엑셀 일정표와 동기) |
 | pending-decisions.md | 팀이 정해야 할 항목 (SRD 16장) | 담당자가 결정 후 갱신 |
 | measurements-1006.md | 10/06 실측 체크리스트와 결과 | 측정한 사람 |
+| g0-runbook.md | 10/10 G0 실행 절차(전제·공용 PC 준비·기동 순서·확인·증거·문제 대응) | PL |
+| g1-gate.md | 10/10 G1 게이트: 사례·성공 정의, 20회 기록표, 원인 분류, 게이트 회의, ADR-0002 갱신 문구 | PL |
 | adr/ | 설계 결정 기록 | 결정한 사람 |
 | setup/ | 개발 환경 구성. `drive.md` = 팀 Google Drive 구조·규칙(원본·데이터셋·모델·결과 위치) | 김학민·남현지 / drive.md: PL |
 | requirements/ | BRD·SRD (Claude Docs에서 Markdown으로 내보낸 사본), 개발일정 xlsx, 시스템 아키텍처 그림 | BRD·개발일정: PL / SRD·`architecture/` 그림: 박병후 |
+| (Drive) `docs/presentations/` | 발표 자료 PDF — `1007_중간발표/`(#12), `1016_최종발표/`(#16). PDF 는 레포가 아니라 Drive 에 둔다(`setup/drive.md`) | 발표 담당 |
 
 규칙 두 가지.
 1. 코드와 문서가 다르면 **문서가 틀린 것**으로 보고 같은 PR에서 고친다.
