@@ -18,6 +18,7 @@
 - [6개 이슈 전체 회신·이전 SRD·main 계약/IDL·BRD 근거](sources/) — 기준판 BRD는 [docs/requirements/VOSS_BRD_v1.3.docx](../VOSS_BRD_v1.3.docx)(#79), v1.2 Word는 [git 기록 e8dd5e5](https://github.com/lambdaramji/rokey_cobot2_VOSS/blob/e8dd5e5/docs/requirements/VOSS_BRD_v1.2.docx)에 있다
 - [문서 검증 결과](문서검증결과.json) · [원본 파일 해시](파일해시_manifest.json) · [합의/출처 manifest](manifest.json)
 - [PR #56의 v0.2 자료 보관](archive/) — 이전 회신 원문·취합 양식·초안 등 45개 중 ZIP 2개를 뺀 43개 파일을 원본 그대로 보존(ZIP 2개는 PR #56 head 고정 링크)
+- 원본 보존 자료(`파일해시_manifest.json` 대장의 파일과 `archive/`)는 10/08 GitHub 아이디 변경(`yujh5537` → `lambdaramji`, #98) 뒤에도 **원문 그대로** 둔다. 옛 링크는 GitHub 가 새 주소로 넘겨 준다 — 고치면 대장 sha256 과 어긋난다.
 
 ## 현재 상태와 다음 작업
 

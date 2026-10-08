@@ -451,4 +451,4 @@ entries:
 - [x] 선택 기능을 기본 전체 흐름의 선행조건으로 넣지 않았습니다(V-08은 10/11 이후).
 - [x] 비밀번호·API 키 값·개인 연락처 등은 넣지 않았습니다.
 
-**증거 경로:** 레포 `lambdaramji/rokey_cobot2_VOSS` — 브랜치 `docs/10-interfaces-labelcrop-alias`(`docs/interfaces/*`, `src/voss_msgs/msg/LabelCrop.msg`, `srv/ReadLabel.srv`), 브랜치 `feat/25-vision-belt-homography`(`docs/adr/0003-belt-plane-homography.md`, `docs/interfaces/calibration.md`, `src/voss_vision/voss_vision/belt_plane.py`, `src/voss_vision/test/test_belt_plane.py`, `tools/calib/`).
+**증거 경로:** 레포 `yujh5537/rokey_cobot2_VOSS` — 브랜치 `docs/10-interfaces-labelcrop-alias`(`docs/interfaces/*`, `src/voss_msgs/msg/LabelCrop.msg`, `srv/ReadLabel.srv`), 브랜치 `feat/25-vision-belt-homography`(`docs/adr/0003-belt-plane-homography.md`, `docs/interfaces/calibration.md`, `src/voss_vision/voss_vision/belt_plane.py`, `src/voss_vision/test/test_belt_plane.py`, `tools/calib/`).
