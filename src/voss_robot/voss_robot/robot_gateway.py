@@ -461,6 +461,15 @@ class RobotGatewayNode(Node):
         zs = self._travel_z(stage, sol)
         return None if zi is None or zs is None else (zi, zs)
 
+    def _tray_stage(self, flange):
+        """flange x·y 가 들어 있는 구역 트레이(안쪽 215 × 145 mm, measurements #6)의 칸 0, 없으면 None."""
+        for zc in self.zones.values():
+            if zc["pose"] and zc["grid"]:
+                p = zc["pose"]
+                if abs(flange[0] - p[0]) <= 107.5 and abs(flange[1] - p[1]) <= 72.5:
+                    return slot_pose(p, zc["grid"], 0)
+        return None
+
     def _run_path(self, target_flange, stage=None) -> None:
         """현재 플랜지 → 목표: 수직 상승 → 수평 → 수직 하강, 단계마다 도착을 pose 로 확인.
         수평 이동 높이 = safe_z 와, 출발·도착 x·y 에서 닿는 최고 높이 중 낮은 것. 목표 자세 자체도 풀리는지
@@ -475,6 +484,8 @@ class RobotGatewayNode(Node):
             z0, z1 = self._travel_z(cur, sol), self._travel_z(target_flange, sol)
             pre, post = [], []
             start, end = cur, target_flange
+            if z0 is None and stage is None:
+                stage = self._tray_stage(cur)  # 트레이 안에 멈춘 뒤 OBSERVE 복귀 등
             if z0 is None and (t := self._in_tray(cur, stage, sol)) is not None:
                 zi, z0 = t  # 놓은 칸에서 트레이 안 높이로 올라가 칸 0 위로 옮긴 뒤 거기서 출발
                 low = [cur[0], cur[1], zi, *cur[3:]]
@@ -533,7 +544,8 @@ class RobotGatewayNode(Node):
             with self._glock:
                 p = self.guard._pose
             fresh = p is not None and self._now() - p[0] < 0.3
-            if fresh and sum((a - b) ** 2 for a, b in zip(p[1:], tcp_xyz, strict=True)) < 1.0:
+            # 3 mm: 팔을 거의 다 뻗은 자세(J3 ≈ 18°)에서 move_line 이 1.1 mm 덜 가고 멈췄다(10/08 HOLD 칸 1)
+            if fresh and sum((a - b) ** 2 for a, b in zip(p[1:], tcp_xyz, strict=True)) < 9.0:
                 still = still or time.monotonic()
                 if time.monotonic() - still > 0.3:
                     return
