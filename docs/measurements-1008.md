@@ -62,6 +62,12 @@
 - 로봇을 박스 위로 내려 터치하던 중 `usb 2-2 disconnect`. 케이블 당김·접점 의심. 카메라 노드만 다시 띄우자 box_tracker 는 그대로 30 Hz, 트랙은 새 번호로 다시 잡힘(정상), 좌표 같음. 10/07 의 "카메라 0 Hz 멈춤" 도 같은 원인일 수 있다.
 - 조치: 케이블을 손목에 여유 고리로 고정, `lsusb -t` 로 5000M(USB 3) 확인 — **완료(김학민 11:37: Bus 002 5000M, 팔에 고정)**. sort_manager 는 box_tracker 노드 존재만 보므로 카메라가 멈춰도 VISION 준비로 남는다 → box_tracker 가 25 Hz 밑이면 WARN(#95), G0 점검표에 5초 로그 Hz 확인.
 
+## 사건: MoveToZone OBSERVE 수직 하강 — 벨트 충돌 직전 비상정지 (18:26)
+- 상황: 브링업을 새로 켠 뒤(18:24) gateway(`zone_vel_mm_s:=30`)로 홈 자세에서 `OBSERVE` 이동 → 로봇이 x·y 그대로 **수직으로 계속 내려가** 벨트에 닿기 직전 비상정지(시작 후 5.9 s, ≈ 170 mm). gateway 로그는 `over 도착 안 함` TIMEOUT 뿐.
+- 원인: 툴·TCP 등록은 브링업마다 풀린다(`scripts/measure_1006/README.md`). gateway 는 OBSERVE(플랜지 z 450.2)를 TCP 좌표(z 203.6)로 바꿔 move_line 에 보내는데, 등록이 없으면 컨트롤러가 이를 **플랜지** 목표로 받아 246.6 mm 수직 하강이 된다. 도착 판정은 config 오프셋 TCP 로 봐서 목표에서 멀어지는 걸 모르고 기다렸고(제한 8 s → 비상정지 없으면 ≈ 240 mm), 실패해도 move_stop 을 보내지 않았다. 낮 동안은 펜던트에서 등록한 채 브링업을 유지해 드러나지 않았다.
+- 조치(#41, `fix/41-gateway-tcp-guard`): ① 기동 때와 MoveToZone 마다 `get_current_posx`(등록 TCP)와 플랜지 + `tcp_offset_mm` 비교, 3 mm 넘으면 `NOT_CONFIGURED`로 움직이지 않음 ② 이동 중 TCP 가 단계 직선에서 15 mm 벗어나면 move_stop + `LIMIT` ③ 이동 시작 뒤 실패·gateway 종료 때 move_stop. dry-run 재현: 등록 풀림 → `NOT_CONFIGURED … 247 mm`, 확인을 끄면 → `LIMIT: over 중 경로 이탈 15 mm` + move_stop.
+- 운영: 브링업 뒤 **펜던트에서 툴·TCP(GripperDA_v1) 선택**, gateway 기동 로그 `컨트롤러 TCP 등록 = voss_config tcp_offset_mm (차 x mm)` 확인. 실이동 첫 명령은 출발 자세를 눈으로 본 뒤.
+
 ## 기타
 - ros2 CLI 데몬이 오래된 그래프를 들고 있으면 토픽이 안 보인다 → 도메인·오버레이를 바꾼 뒤에는 `--no-daemon` 또는 `ros2 daemon stop`.
 - 공용 PC `~/voss_ws/install` 의 voss_msgs 는 #92(RobotState) 이전 — sort_manager 확인은 `~/voss_sm_ws` 오버레이(local_setup.bash)로 했다. 게이트웨이를 main 으로 다시 빌드할 때 함께 맞춘다.

@@ -26,7 +26,12 @@ from voss_msgs.srv import Gripper, MoveToZone
 from voss_robot.call_queue import SerialCallQueue
 from voss_robot.config_params import ZONES
 from voss_robot.doosan import DEFAULT_PREFIX, DoosanError, DryRunDoosan
-from voss_robot.geometry import flange_to_ros_pose, flange_to_tcp
+from voss_robot.geometry import (
+    flange_to_ros_pose,
+    flange_to_tcp,
+    segment_distance_mm,
+    tcp_mismatch_mm,
+)
 from voss_robot.rg2 import DryRunRg2, Rg2
 from voss_robot.servo_guard import ServoGuard, ServoParams
 from voss_robot.state_logic import Inputs, decide
@@ -62,6 +67,10 @@ class RobotGatewayNode(Node):
             if len(observe) != 6:
                 raise RuntimeError("dry_run 에는 observe_pose 가 필요하다(가짜 로봇 시작 자세)")
             self.dsr = DryRunDoosan(observe, self.tcp)
+            # false = 컨트롤러 TCP 등록이 풀린 상태를 흉내(TCP 확인 시험용, 10/08 18:26 사고)
+            self.dsr.tcp_registered = bool(
+                self.declare_parameter("dry_run_tcp_registered", True).value
+            )
         else:
             from voss_robot.doosan import RosDoosan  # dsr_msgs2 는 실기·에뮬레이터에서만
 
@@ -163,6 +172,11 @@ class RobotGatewayNode(Node):
         self.zone_vel = [float(v) for v in self.declare_parameter("zone_vel", [100.0, 45.0]).value]
         self.zone_acc = [float(v) for v in self.declare_parameter("zone_acc", [200.0, 90.0]).value]
         self.servo_settle_s = float(self.declare_parameter("zone_servo_settle_s", 1.5).value)
+        # move_line·ikin 은 컨트롤러 등록 TCP 기준인데 등록은 브링업마다 풀린다. 움직이기 전에 등록 TCP 위치와
+        # 플랜지 + tcp_offset_mm 이 이 거리 안인지 본다(10/08 18:26: 등록 없이 OBSERVE → 246 mm 수직 하강)
+        self.tcp_check_tol = float(self.declare_parameter("zone_tcp_check_tol_mm", 3.0).value)
+        # move_line 은 TCP 직선 이동 — 출발–목표 선분에서 이만큼 벗어나면 move_stop 하고 LIMIT
+        self.path_tol = float(self.declare_parameter("zone_path_tol_mm", 15.0).value)
         self._mlock = threading.Lock()  # 모션 자원(MoveToZone)
         self._zone_action = ""
         self._abort = threading.Event()  # /voss/robot/stop 이 세운다
@@ -204,6 +218,29 @@ class RobotGatewayNode(Node):
             f"{1e3 * sp.watchdog_s:.0f} ms, max {sp.max_speed_mm_s:.0f} mm/s, TCP z ≥ "
             f"{sp.z_min_mm:.1f} mm, x {sp.x_range_mm[0]:.0f}~{sp.x_range_mm[1]:.0f} mm, acc {self.servo_acc}"
         )
+        threading.Thread(target=self._startup_tcp_check, daemon=True).start()
+
+    def _tcp_mismatch(self):
+        """(컨트롤러 등록 TCP 와 플랜지 + tcp_offset_mm 의 차 mm, 플랜지, solution space). 큐 작업 스레드에서."""
+        flange = self.dsr.get_flange_posx()
+        ctrl, sol = self.dsr.current_posx()
+        return tcp_mismatch_mm(ctrl, flange, self.tcp), flange, sol
+
+    def _startup_tcp_check(self) -> None:
+        """기동 때 한 번: 펜던트 TCP 등록이 voss_config 와 맞는지 로그로 알린다(MoveToZone 은 매번 다시 본다)."""
+        time.sleep(1.0)  # executor 가 돌기 시작한 뒤
+        try:
+            d = self.queue.submit(self._tcp_mismatch).result(timeout=5.0)[0]
+        except Exception as e:  # 큐 응답 없음 — pose 쪽 로그가 따로 알린다
+            self.get_logger().warn(f"TCP 등록 확인 못 함: {e}")
+            return
+        if d <= self.tcp_check_tol:
+            self.get_logger().info(f"컨트롤러 TCP 등록 = voss_config tcp_offset_mm (차 {d:.1f} mm)")
+        else:
+            self.get_logger().error(
+                f"컨트롤러 TCP 등록이 voss_config tcp_offset_mm 과 {d:.0f} mm 다름 — 펜던트에서 툴·TCP "
+                "(GripperDA_v1) 선택 전에는 MoveToZone 을 거부한다(NOT_CONFIGURED)"
+            )
 
     # ---------------- pose ----------------
     def _on_pose_timer(self) -> None:
@@ -484,9 +521,12 @@ class RobotGatewayNode(Node):
         움직이기 전에 확인한다. 먼 칸(출발·도착) 위로 최저 이동 높이가 안 나오면 stage(같은 구역 칸 0) 를
         거쳐 트레이 안에서만 낮게 옆으로 간다. 자세는 늘 수직(구역 자세 그대로)."""
         try:
-            cur, sol = self.queue.submit(
-                lambda: (self.dsr.get_flange_posx(), self.dsr.current_solution_space())
-            ).result(timeout=5.0)
+            mis, cur, sol = self.queue.submit(self._tcp_mismatch).result(timeout=5.0)
+            if mis > self.tcp_check_tol:
+                raise _ZoneError(
+                    f"NOT_CONFIGURED: 컨트롤러 TCP 등록이 voss_config tcp_offset_mm 과 {mis:.0f} mm 다름"
+                    " — 펜던트에서 툴·TCP(GripperDA_v1) 선택 후 다시"
+                )
             if not self._ik_ok(flange_to_tcp(target_flange, self.tcp), sol):
                 raise _ZoneError("LIMIT: 목표 자세에 팔이 닿지 않음 (구역·칸 위치 확인)")
             z0, z1 = self._travel_z(cur, sol), self._travel_z(target_flange, sol)
@@ -530,18 +570,35 @@ class RobotGatewayNode(Node):
             tcp = flange_to_tcp(step, self.tcp)
             seq0 = self.dsr.alarm_seq
             try:
-                self.queue.submit(
-                    lambda t=tcp: self.dsr.move_line_async(t, self.zone_vel, self.zone_acc)
-                ).result(timeout=2.0)
-            except Exception as e:
-                raise _ZoneError(f"TIMEOUT: move_line({name}) {e}") from e
-            self._wait_arrive(name, tcp[:3], seq0)
+                try:
+                    self.queue.submit(
+                        lambda t=tcp: self.dsr.move_line_async(t, self.zone_vel, self.zone_acc)
+                    ).result(timeout=2.0)
+                except Exception as e:
+                    raise _ZoneError(f"TIMEOUT: move_line({name}) {e}") from e
+                self._wait_arrive(name, tcp[:3], seq0)
+            except _ZoneError as e:
+                if not str(e).startswith("STOPPED"):  # stop 은 이미 move_stop 을 보냈다
+                    self._zone_halt(f"{name}: {e}")
+                raise
+
+    def _zone_halt(self, why: str) -> None:
+        """MoveToZone 이동 중 실패: move_line 이 계속 가지 않게 move_stop (speedl 은 보내지 않는다)."""
+        self.get_logger().warn(f"MoveToZone 중단 → move_stop ({why})")
+
+        def done(ok: bool, message: str) -> None:
+            if not ok:
+                self.get_logger().error(f"move_stop 실패(MoveToZone): {message}")
+
+        self.dsr.move_stop_async(done)
 
     def _wait_arrive(self, name: str, tcp_xyz, seq0: int) -> None:
         with self._glock:
             p = self.guard._pose
         start = p[1:] if p else tcp_xyz
         dist = sum((a - b) ** 2 for a, b in zip(start, tcp_xyz, strict=True)) ** 0.5
+        # pose 는 config 오프셋으로 바꾼 TCP 라 등록 TCP 가 달라도(검사를 지나친 경우) 여기서 잡힌다
+        seg_a = p[1:] if p else None
         deadline = time.monotonic() + dist / max(self.zone_vel[0], 1.0) + 8.0
         still = None
         while time.monotonic() < deadline:
@@ -552,6 +609,12 @@ class RobotGatewayNode(Node):
             with self._glock:
                 p = self.guard._pose
             fresh = p is not None and self._now() - p[0] < 0.3
+            if fresh and seg_a is None:
+                seg_a = p[1:]  # 시작 때 pose 가 없었으면 처음 받은 pose 부터
+            if fresh and (off := segment_distance_mm(seg_a, tcp_xyz, p[1:])) > self.path_tol:
+                raise _ZoneError(
+                    f"LIMIT: {name} 중 경로 이탈 {off:.0f} mm (직선 이동이어야 함 — TCP 등록·충돌 확인)"
+                )
             # 3 mm: 팔을 거의 다 뻗은 자세(J3 ≈ 18°)에서 move_line 이 1.1 mm 덜 가고 멈췄다(10/08 HOLD 칸 1)
             if fresh and sum((a - b) ** 2 for a, b in zip(p[1:], tcp_xyz, strict=True)) < 9.0:
                 still = still or time.monotonic()
@@ -683,9 +746,9 @@ class RobotGatewayNode(Node):
         with self._glock:
             moving = self.guard.active
             self.guard.stop(self._now())
-        if not moving:
+        zone = self._zone_action  # MoveToZone 의 move_line 도 gateway 가 죽으면 계속 간다
+        if not moving and not zone:
             return None
-        self.get_logger().warn("종료 중 servo 활성 → 0 속도 + move_stop")
         ev = threading.Event()
 
         def done(ok: bool, message: str) -> None:
@@ -693,7 +756,13 @@ class RobotGatewayNode(Node):
                 self.get_logger().info("종료 정지: move_stop OK")
             ev.set()
 
-        self._halt("exit", done)
+        if moving:
+            self.get_logger().warn("종료 중 servo 활성 → 0 속도 + move_stop")
+            self._halt("exit", done)
+        else:
+            self.get_logger().warn(f"종료 중 {zone} 진행 → move_stop")
+            self._abort.set()
+            self.dsr.move_stop_async(done)
         return ev
 
     def destroy_node(self) -> None:

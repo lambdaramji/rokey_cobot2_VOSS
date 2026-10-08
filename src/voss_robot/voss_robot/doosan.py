@@ -41,6 +41,8 @@ class DryRunDoosan:
         self._t = time.monotonic()
         self._lock = threading.Lock()
         self.stops = 0  # move_stop 호출 수 (시험용)
+        # False = 컨트롤러 TCP 등록이 풀린 상태(브링업 직후): move_line·get_current_posx 가 플랜지 기준이 된다
+        self.tcp_registered = True
 
     def _advance(self) -> None:
         now = time.monotonic()
@@ -90,13 +92,23 @@ class DryRunDoosan:
         with self._lock:
             self._advance()
             self._vel = [0.0, 0.0, 0.0]
-            tgt = tcp_to_flange(tcp_posx, self._tcp)
+            off = self._tcp if self.tcp_registered else [0.0, 0.0, 0.0]
+            tgt = tcp_to_flange(tcp_posx, off)
             self._pose[3:] = tgt[3:]
             self._target = list(tgt)
             self._line_v = float(vel[0])
 
     def current_solution_space(self) -> int:
         return 2
+
+    def current_posx(self) -> tuple[list[float], int]:
+        """get_current_posx 대신: (등록 TCP 기준 posx, solution space)."""
+        from voss_robot.geometry import flange_to_tcp
+
+        with self._lock:
+            self._advance()
+            off = self._tcp if self.tcp_registered else [0.0, 0.0, 0.0]
+            return flange_to_tcp(self._pose, off), 2
 
     def ikin(self, tcp_posx: Sequence[float], sol: int) -> list[float] | None:
         """가짜: 10/08 실기 ikin 을 대충 흉내 — 손목 중심(플랜지에서 툴 축 위로 136 mm)의 수평 거리 r 에서
@@ -276,9 +288,15 @@ class RosDoosan:
 
     def current_solution_space(self) -> int:
         """현재 관절 배치(solution space 0~7). 큐 작업 스레드에서만."""
+        return self.current_posx()[1]
+
+    def current_posx(self) -> tuple[list[float], int]:
+        """get_current_posx: (컨트롤러 **등록 TCP** 기준 posx, solution space). 큐 작업 스레드에서만.
+        get_flange_posx 와 달리 펜던트 TCP 등록에 따라 바뀐다 — gateway 가 등록 확인에 쓴다."""
         r = self._posx_srv.Request()
         r.ref = 0
-        return int(self.caller.call(self._posx, r).task_pos_info[0].data[6])
+        d = self.caller.call(self._posx, r).task_pos_info[0].data
+        return [float(v) for v in d[:6]], int(d[6])
 
     def ikin(self, tcp_posx: Sequence[float], sol: int) -> list[float] | None:
         """TCP posx → 관절(deg). 못 풀면 None. 큐 작업 스레드에서만.
