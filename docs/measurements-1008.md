@@ -16,6 +16,7 @@
 | 9 | label_reader 공용 PC (PaddleOCR venv) | (예정) | | T19, TR-OCR-01 | ☐ |
 | 10 | 벨트 속도 (유효 좌표 x 기울기) | 김학민 11:37 | h250 **4.77 cm/s**(박스별 4.76~4.79), h500 2.38 cm/s — voss_config `belt.speed_cmps` 4.8 과 맞음 | measurements-1006 #1 | ✅ |
 | 11 | 관측 자세 유효 좌표 구간 (호모그래피 `calib_hull_px`) | 김학민 11:37 | 박스마다 유효 좌표 64~65 프레임(**약 2.1 s**), x −97 → +4 mm — 관측 자세에서 추종을 시작할 수 있는 시간 | belt_servo 참고 | 기록 |
+| 12 | MoveToZone 구역별 도달 (robot_gateway #41) | 김학민 오후 | A·B·C −60·C 0·HOLD ±30 놓기 실기 OK(50 mm/s). 두산 ikin 은 닿지 않는 자세에도 success 와 수렴 안 한 관절을 돌려줘 fkin 으로 검증. 최고 이동 TCP z(J3 ≥ 15°, 수직): C −60/−20/0/+20/+60 → 200/140/100/61/✗(+60 은 바닥에서도 해 없음), HOLD −30/0/+30 → 180/130/70. TCP 120 이 안 나오는 칸은 칸 0 위로 들어가 트레이 안에서 낮게 이동 | voss_config zones | C 칸 −80/−30/+20 (voss_config.md 변경 이력) |
 
 ## #1·#2 조건
 - `~/voss_bt` = feat/26 @ 5c333cc, 빌드 없이 PYTHONPATH. 카메라 `realsense2_camera_node` 1920×1080×30, 노출 60(6 ms), WB 4600.0, 카메라 노드 하나. 게이트웨이(feat/41) 켜짐, `/voss/robot/pose` 50 Hz. 로봇 관측 자세 (−14.49, −276.54, 203.58) TCP. 같이 돈 것: 브링업 rviz2 만.

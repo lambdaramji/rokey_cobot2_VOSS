@@ -51,10 +51,12 @@ def gateway_params(cfg: dict[str, Any], sha: str) -> dict[str, Any]:
             out[f"zones.{z}.pose"] = pose
         grid = zc.get("grid") or {}
         if all(isinstance(grid.get(k), int | float) for k in ("cols", "rows", "pitch_mm")):
+            off = grid.get("offset_mm", 0)  # 칸 줄 중심의 X 위치(트레이 중심 기준), 없으면 0
             out[f"zones.{z}.grid"] = [
                 float(grid["cols"]),
                 float(grid["rows"]),
                 float(grid["pitch_mm"]),
+                float(off) if isinstance(off, int | float) and not isinstance(off, bool) else 0.0,
             ]
         view = _floats(zc.get("view_pose"), 6)
         if view is not None:

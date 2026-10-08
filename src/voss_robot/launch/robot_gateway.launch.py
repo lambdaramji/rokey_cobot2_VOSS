@@ -1,7 +1,7 @@
 """robot_gateway 단독 기동. voss_config.yaml 을 읽어 파라미터로 넘긴다(voss_config.md 값 규칙).
 
 개인 PC (두산 없이):  ros2 launch voss_robot robot_gateway.launch.py
-실기 (사람이 비상정지 옆에서, 브링업 뒤):  ... dry_run:=false
+실기 (사람이 비상정지 옆에서, 브링업 뒤):  ... dry_run:=false [servo_z_min_mm:=<TCP z 하한 mm>]
 config 기본 = ~/voss_ws/config/voss_config.yaml (레포 config/ 를 복사한 호스트 사본).
 """
 
@@ -16,6 +16,12 @@ def _gateway(context):
     cfg, sha = load_config(LaunchConfiguration("config").perform(context))
     params = gateway_params(cfg, sha)
     params["dry_run"] = LaunchConfiguration("dry_run").perform(context).lower() == "true"
+    z_min = LaunchConfiguration("servo_z_min_mm").perform(context)
+    if z_min:  # 시험 때 하한을 높여 잡는다(F-04). 비우면 노드 기본값(78 mm)
+        params["servo_z_min_mm"] = float(z_min)
+    zone_vel = LaunchConfiguration("zone_vel_mm_s").perform(context)
+    if zone_vel:  # MoveToZone 선속도. 첫 실기는 낮게. 비우면 노드 기본값(100 mm/s, 45 deg/s)
+        params["zone_vel"] = [float(zone_vel), 45.0]
     return [
         Node(
             package="voss_robot",
@@ -31,6 +37,8 @@ def generate_launch_description() -> LaunchDescription:
     return LaunchDescription(
         [
             DeclareLaunchArgument("dry_run", default_value="true"),
+            DeclareLaunchArgument("servo_z_min_mm", default_value=""),
+            DeclareLaunchArgument("zone_vel_mm_s", default_value=""),
             DeclareLaunchArgument("config", default_value="~/voss_ws/config/voss_config.yaml"),
             OpaqueFunction(function=_gateway),
         ]
