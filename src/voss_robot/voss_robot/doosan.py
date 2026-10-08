@@ -1,6 +1,7 @@
 """두산 dsr_controller2 서비스 어댑터. 이 패키지 밖에서 /dsr01 을 부르지 않는다(절대 규칙 3).
 
-모든 메서드는 SerialCallQueue 작업 스레드 안에서만 부른다(동시 호출 금지).
+서비스 메서드는 SerialCallQueue 작업 스레드 안에서만 부른다(동시 호출 금지). 예외 둘:
+speedl(토픽 발행이라 큐와 무관)과 move_stop_async(정지는 큐를 기다리지 않는다 — 큐 밖 별도 경로).
 - DryRunDoosan: 두산 없이 개인 PC 개발용. dsr_msgs2 를 import 하지 않는다.
 - RosDoosan: 실제 서비스 호출. dsr_msgs2 는 생성할 때만 import 해서 드라이버가 없는 CI 에서도
   이 모듈을 import 할 수 있다.
@@ -19,16 +20,49 @@ class DoosanError(RuntimeError):
     """두산 서비스 실패(응답 없음·success=false·서비스 없음)."""
 
 
+# move_stop stop_mode: DR_QSTOP (Quick stop, Stop Category 2) — ADR-0010 "Quick stop"
+STOP_QSTOP = 1
+
+
 class DryRunDoosan:
-    """가짜 로봇: 주어진 플랜지 자세에 멈춰 있다."""
+    """가짜 로봇: 주어진 플랜지 자세에서 시작해, speedl 선속도를 적분해 움직인다(자세는 그대로).
+
+    실로봇처럼 스트림이 끊겨도 마지막 속도로 계속 간다(ADR-0010 실측) — gateway watchdog 시험용.
+    """
 
     def __init__(self, flange_pose: Sequence[float]) -> None:
         self._pose = [float(v) for v in flange_pose]
+        self._vel = [0.0, 0.0, 0.0]  # mm/s
+        self._t = time.monotonic()
+        self._lock = threading.Lock()
+        self.stops = 0  # move_stop 호출 수 (시험용)
+
+    def _advance(self) -> None:
+        now = time.monotonic()
+        dt, self._t = now - self._t, now
+        for i in range(3):
+            self._pose[i] += self._vel[i] * dt
 
     def get_flange_posx(self) -> list[float]:
         """현재 플랜지 posx (mm·deg). 실제처럼 아주 짧게 기다린다."""
         time.sleep(0.002)
-        return list(self._pose)
+        with self._lock:
+            self._advance()
+            return list(self._pose)
+
+    def speedl(self, vel_mm_s: Sequence[float], acc: Sequence[float]) -> None:
+        """speedl_stream 발행 대신: 선속도를 바로 바꾼다(가속 무시)."""
+        with self._lock:
+            self._advance()
+            self._vel = [float(v) for v in vel_mm_s[:3]]
+
+    def move_stop_async(self, done) -> None:
+        """move_stop 대신: 바로 멈추고 done(ok, message) 를 부른다."""
+        with self._lock:
+            self._advance()
+            self._vel = [0.0, 0.0, 0.0]
+            self.stops += 1
+        done(True, "OK")
 
 
 class GuardedCaller:
@@ -96,9 +130,66 @@ class RosDoosan:
             callback_group=self._group,
         )
 
+        # speedl_stream: 토픽이라 서비스 큐를 쓰지 않는다. 컨트롤러 구독이 reliable depth 10 이라
+        # best_effort 퍼블리셔는 연결되지 않는다(ADR-0010 조건 1)
+        from dsr_msgs2.msg import SpeedlStream
+        from dsr_msgs2.srv import MoveStop
+        from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+        from rclpy.qos import QoSProfile, ReliabilityPolicy
+
+        self._speedl_msg = SpeedlStream
+        self._speedl_pub = node.create_publisher(
+            SpeedlStream,
+            prefix + "speedl_stream",
+            QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE),
+        )
+        # move_stop: 큐 밖 별도 경로(컨트롤러도 별도 callback group, dsr_controller2.cpp move_stop).
+        # 큐에 걸린 pose 조회가 끝나길 기다리지 않고 바로 보낸다(CLAUDE.md voss_robot)
+        self._stop_srv = MoveStop
+        self._stop = node.create_client(
+            MoveStop, prefix + "motion/move_stop", callback_group=MutuallyExclusiveCallbackGroup()
+        )
+        self._stop_timeout = timeout_s
+
     def wait_ready(self, timeout_s: float) -> bool:
         """서비스가 보일 때까지 기다린다(브링업 확인)."""
-        return self._flange.wait_for_service(timeout_sec=timeout_s)
+        ok = self._flange.wait_for_service(timeout_sec=timeout_s)
+        return self._stop.wait_for_service(timeout_sec=timeout_s) and ok
+
+    def speedl(self, vel_mm_s: Sequence[float], acc: Sequence[float]) -> None:
+        """선속도(mm/s)만 있는 speedl. 각속도 0, time 0(acc 가 우선 — ADR-0010 조건 4)."""
+        m = self._speedl_msg()
+        m.vel = [float(v) for v in vel_mm_s[:3]] + [0.0, 0.0, 0.0]
+        m.acc = [float(a) for a in acc]
+        m.time = 0.0
+        self._speedl_pub.publish(m)
+
+    def move_stop_async(self, done) -> None:
+        """Quick stop 을 큐 밖에서 보낸다. 결과는 done(ok, message) — OK / TIMEOUT / DEVICE_ERROR."""
+        if not self._stop.service_is_ready():
+            done(False, "DEVICE_ERROR")
+            return
+        req = self._stop_srv.Request()
+        req.stop_mode = STOP_QSTOP
+        state = {"done": False}
+        lock = threading.Lock()
+
+        def finish(ok: bool, msg: str) -> None:
+            with lock:
+                if state["done"]:
+                    return
+                state["done"] = True
+            done(ok, msg)
+
+        def on_done(f) -> None:
+            r = f.result()
+            ok = bool(r is not None and r.success)
+            finish(ok, "OK" if ok else "DEVICE_ERROR")
+
+        self._stop.call_async(req).add_done_callback(on_done)
+        timer = threading.Timer(self._stop_timeout, lambda: finish(False, "TIMEOUT"))
+        timer.daemon = True
+        timer.start()
 
     def get_flange_posx(self) -> list[float]:
         """현재 플랜지 posx (Base, mm·deg). TCP 등록 여부와 상관없다."""
