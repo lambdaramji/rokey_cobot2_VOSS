@@ -185,8 +185,12 @@ class RosDoosan:
         return self.caller.faulted
 
     def _on_error(self, m) -> None:
-        self.last_alarm = f"{m.level}/{m.group}/{m.code} {m.msg1}".strip()
-        self._log.warn(f"두산 알람: {self.last_alarm}")
+        text = f"{m.level}/{m.group}/{m.code} {m.msg1}".strip()
+        if m.level < 2:  # INFO(예 1216 speedl 가속 한계로 time 자동 조정)는 안내라 detail 에 남기지 않는다
+            self._log.info(f"두산 안내: {text}")
+            return
+        self.last_alarm = text  # WARN·ERROR (예 1206 NOT REACHABLE)
+        self._log.warn(f"두산 알람: {text}")
 
     def _on_disconnect(self, _m) -> None:
         self.disconnected = True  # 브링업·gateway 재시작으로만 푼다
