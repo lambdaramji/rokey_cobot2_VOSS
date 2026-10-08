@@ -1,6 +1,8 @@
 """G0 모의 상대 — 로봇 없이 sort_manager 를 끝까지 돌려 보는 개발용. 아무 장비도 움직이지 않는다.
 
-진짜 노드가 아직 없는 쪽만 골라 띄운다. 같은 이름의 진짜 서버·발행자가 이미 있으면 그 부분은 띄우지 않고 끝낸다.
+진짜 노드가 아직 없는 쪽만 골라 띄운다. 같은 이름의 진짜 서버·발행자가 이미 있으면 그 부분은 띄우지 않는다.
+**ROS_DOMAIN_ID 30(공용 PC 로봇 도메인)에서는 기동을 거부한다** — 진짜 로봇 옆에 가짜 pose·응답을 섞지 않도록
+공용 PC 에서도 다른 도메인(예 77)에서만 쓴다.
   --servo   /voss/servo/track_and_grasp 액션 서버 (belt_servo 대역)
   --robot   /voss/robot/move_to_zone·/voss/robot/stop 서비스, /voss/robot/pose 50 Hz (robot_gateway 대역)
   --log     /voss/log/status 1 Hz (sort_logger 대역)
@@ -15,6 +17,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import time
 
 import rclpy
@@ -61,19 +64,27 @@ class G0Mock(Node):
             self.create_service(
                 MoveToZone, "/voss/robot/move_to_zone", self._move, callback_group=self.cb
             )
+            log.info(f"[robot] MoveToZone 모의: {a.place}, {a.place_s} s")
+        if a.robot and self._free_service("/voss/robot/stop"):
             self.create_service(Trigger, "/voss/robot/stop", self._stop, callback_group=self.cb)
+            log.info("[robot] stop 모의")
+        if a.robot and self._free_topic("/voss/robot/pose"):
             self.pose_pub = self.create_publisher(PoseStamped, "/voss/robot/pose", BEST_EFFORT)
             self.create_timer(0.02, self._pose, callback_group=self.cb)
-            log.info(f"[robot] MoveToZone 모의: {a.place}, {a.place_s} s · stop · pose 50 Hz")
+            log.info("[robot] pose 50 Hz 모의")
 
-        if a.log and self.count_publishers("/voss/log/status") == 0:
+        if a.log and self._free_topic("/voss/log/status"):
             self.log_pub = self.create_publisher(String, "/voss/log/status", QoSProfile(depth=1))
             self.create_timer(
                 1.0, lambda: self.log_pub.publish(String(data=a.log_status)), callback_group=self.cb
             )
             log.info(f"[log] /voss/log/status {a.log_status} 1 Hz")
 
-        if a.vision and self.count_publishers("/voss/vision/box") == 0:
+        if (
+            a.vision
+            and self._free_topic("/voss/vision/box")
+            and self._free_topic("/voss/vision/label")
+        ):
             self.box_pub = self.create_publisher(BoxTrack, "/voss/vision/box", BEST_EFFORT)
             self.label_pub = self.create_publisher(LabelRead, "/voss/vision/label", RELIABLE)
             self.vision_t0: float | None = None
@@ -89,11 +100,16 @@ class G0Mock(Node):
         return self._free_service(name + "/_action/send_goal")
 
     def _free_service(self, name: str) -> bool:
-        busy = (
-            self.count_services(name) > 0
-        )  # 서버만 센다(클라이언트만 있어도 이름 목록에는 보인다)
+        # 서버만 센다(클라이언트만 있어도 이름 목록에는 보인다)
+        busy = self.count_services(name) > 0
         if busy:
             self.get_logger().error(f"{name} 진짜 서비스가 이미 있다 — 모의를 띄우지 않는다")
+        return not busy
+
+    def _free_topic(self, name: str) -> bool:
+        busy = self.count_publishers(name) > 0
+        if busy:
+            self.get_logger().error(f"{name} 진짜 발행자가 이미 있다 — 모의를 띄우지 않는다")
         return not busy
 
     # belt_servo 대역
@@ -204,6 +220,9 @@ def main() -> None:
     a = ap.parse_args()
     if not (a.servo or a.robot or a.log or a.vision):
         ap.error("--servo/--robot/--log/--vision 중 하나 이상")
+
+    if os.environ.get("ROS_DOMAIN_ID", "0") == "30":
+        ap.error("ROS_DOMAIN_ID=30 은 공용 PC 로봇 도메인 — 다른 도메인(예 77)에서 실행")
 
     rclpy.init()
     node = G0Mock(a)
