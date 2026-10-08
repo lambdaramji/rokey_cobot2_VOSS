@@ -3,6 +3,8 @@
 import threading
 import time
 
+import pytest
+
 from voss_voice.http_client import IntentParseError
 from voss_voice.intent_logic import SAY_RETRY, ZoneMapView
 from voss_voice.transcript_flow import SAY_AI_DOWN, SAY_BUSY, TranscriptFlow
@@ -242,3 +244,49 @@ def test_explicit_priority_is_preserved_while_asking() -> None:
     assert len(published) == 1
     assert published[0]["type"] == "priority"
     assert published[0]["box_id"] == ""
+
+
+@pytest.mark.parametrize(
+    ("text", "dong"),
+    [
+        ("역삼으로 보내.", "역삼동"),
+        ("역삼으로, 보내", "역삼동"),
+        ("역삼으로 보내요", "역삼동"),
+        ("대치로 보내!", "대치동"),
+    ],
+)
+def test_destination_variations_do_not_call_llm(text: str, dong: str) -> None:
+    """ASKING 중 변형 목적지 답변은 LLM 전에 현재 박스로 발행한다."""
+
+    def unexpected_llm(raw_text: str, allowed: dict) -> dict:
+        """로컬 목적지 답변에서 LLM 호출을 금지한다."""
+        raise AssertionError("LLM을 호출하면 안 됩니다")
+
+    flow, published, spoken = _flow(unexpected_llm)
+    flow.state, flow.box_id = "ASKING", "box-12"
+
+    result_kind, _ = flow.handle(text)
+
+    assert result_kind == "publish"
+    assert len(published) == 1 and spoken == []
+    assert published[0]["type"] == "answer"
+    assert published[0]["dong"] == dong
+    assert published[0]["raw_text"] == text
+    assert published[0]["box_id"] == "box-12"
+
+
+def test_punctuated_destination_is_rejected_outside_asking() -> None:
+    """RUNNING에서도 문장부호를 이용한 로컬 차단 우회를 막는다."""
+
+    def unexpected_llm(raw_text: str, allowed: dict) -> dict:
+        """목적지 발화가 LLM으로 넘어가면 시험이 실패한다."""
+        raise AssertionError("LLM을 호출하면 안 됩니다")
+
+    flow, published, spoken = _flow(unexpected_llm)
+    flow.state, flow.box_id = "RUNNING", "box-12"
+
+    result_kind, _ = flow.handle("역삼으로 보내.")
+
+    assert result_kind == "say"
+    assert published == []
+    assert spoken == ["지금은 답할 질문이 없습니다."]

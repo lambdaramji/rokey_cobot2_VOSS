@@ -22,6 +22,7 @@ ROS_TYPES = (
 )  # Intent 로 보내는 것
 QUERY_KINDS = ("count_by_dong", "held_count", "remaining_count")
 HOLD = "HOLD"
+DESTINATION_ANSWER_RE = re.compile(r"(.+?)(?:으로|로)보내(?:줘|주세요|줘요|요)?")
 
 # 정지 키워드: 공백·문장부호를 지운 뒤 포함 여부로 본다. 오인식으로 멈추는 쪽은 허용한다.
 STOP_KEYWORDS = ("멈춰", "멈추", "정지", "스톱", "스탑", "그만", "stop")
@@ -163,8 +164,8 @@ def decide_destination_answer(
     if view is None:
         return None
 
-    pattern = r"(.+?)(?:으로|로)\s*보내(?:\s*줘|\s*주세요)?"
-    match = re.fullmatch(pattern, raw_text.strip())
+    # Whisper의 문장부호·띄어쓰기 차이를 단독 동 판정과 같이 정규화한다.
+    match = DESTINATION_ANSWER_RE.fullmatch(_squash(raw_text))
 
     if match is None:
         return None

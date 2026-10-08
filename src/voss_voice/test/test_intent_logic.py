@@ -17,6 +17,8 @@ from voss_voice.intent_logic import (
     SayDeduper,
     ZoneMapView,
     decide,
+    decide_bare_dong,
+    decide_destination_answer,
     is_stop,
     stats_sentence,
 )
@@ -154,3 +156,90 @@ def test_say_dedup_window():
     assert not d.allow("다시 말씀해 주세요.", 2.0)
     assert d.allow("다시 말씀해 주세요.", 5.1)
     assert d.allow("다른 문장", 2.0)
+
+
+@pytest.mark.parametrize(
+    ("text", "dong"),
+    [
+        ("대치동.", "대치동"),
+        ("대치동!", "대치동"),
+        ("역삼", "역삼동"),
+        ("청담동", "청담동"),
+    ],
+)
+def test_bare_dong_recognizes_punctuation_and_aliases(text: str, dong: str) -> None:
+    """문장부호·별칭이 있어도 등록된 동의 질문 답변으로 처리한다."""
+    decision = decide_bare_dong(text, VIEW, "ASKING", "box-12")
+    assert decision is not None and decision.kind == "publish"
+    assert decision.intent["type"] == "answer"
+    assert decision.intent["dong"] == dong
+    assert decision.intent["raw_text"] == text
+    assert decision.intent["box_id"] == "box-12"
+
+
+@pytest.mark.parametrize(
+    ("text", "dong"),
+    [
+        ("역삼으로 보내.", "역삼동"),
+        ("역삼으로, 보내", "역삼동"),
+        ("역삼으로 보내요", "역삼동"),
+        ("대치로 보내!", "대치동"),
+        ("역삼으로 보내 줘", "역삼동"),
+        ("역삼으로 보내주세요", "역삼동"),
+        ("역삼으로 보내줘요", "역삼동"),
+        ("대치동으로 보내?", "대치동"),
+        ("청담동으로 보내", "청담동"),
+    ],
+)
+def test_destination_answer_handles_whisper_variations(text: str, dong: str) -> None:
+    """공백·문장부호·어미를 허용하고 원문과 현재 박스 ID를 보존한다."""
+    decision = decide_destination_answer(text, VIEW, "ASKING", "box-12")
+    assert decision is not None and decision.kind == "publish"
+    assert decision.intent["type"] == "answer"
+    assert decision.intent["dong"] == dong
+    assert decision.intent["raw_text"] == text
+    assert decision.intent["box_id"] == "box-12"
+
+
+@pytest.mark.parametrize(
+    ("state", "box_id"),
+    [("RUNNING", "box-12"), ("IDLE", ""), ("ASKING", "")],
+)
+def test_destination_answer_requires_active_question(state: str, box_id: str) -> None:
+    """질문 상태·박스 ID가 없으면 목적지 지시를 발행하지 않는다."""
+    decision = decide_destination_answer("역삼으로 보내.", VIEW, state, box_id)
+    assert decision is not None and decision.kind == "say"
+    assert decision.say == SAY_NO_QUESTION
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "역삼 말고 대치로 보내",
+        "역삼으로 보내지 마",
+        "강남으로 보내.",
+        "역삼 쪽으로 보내",
+        "대치동이요",
+        "보류로 보내",
+    ],
+)
+def test_destination_rule_does_not_match_unknown_or_complex_phrases(text: str) -> None:
+    """복합·부정·미등록 목적지는 로컬 답변으로 취급하지 않는다."""
+    assert decide_destination_answer(text, VIEW, "ASKING", "box-12") is None
+
+
+def test_local_answers_require_zone_map() -> None:
+    """zone_map 수신 전에는 stop 외 로컬 답변을 만들지 않는다."""
+    assert decide_bare_dong("대치동.", None, "ASKING", "box-12") is None
+    assert decide_destination_answer("역삼으로 보내.", None, "ASKING", "box-12") is None
+
+
+@pytest.mark.parametrize(
+    ("state", "box_id"),
+    [("RUNNING", "box-12"), ("ASKING", "")],
+)
+def test_bare_dong_requires_active_question(state: str, box_id: str) -> None:
+    """단독 동 이름도 ASKING과 박스 ID가 있어야 발행한다."""
+    decision = decide_bare_dong("대치동.", VIEW, state, box_id)
+    assert decision is not None and decision.kind == "say"
+    assert decision.say == SAY_NO_QUESTION
