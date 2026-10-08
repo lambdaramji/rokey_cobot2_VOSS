@@ -26,6 +26,8 @@ from voss_voice.listen_logic import (
         ("hello rocky 몇 개 남았어?", "몇 개 남았어"),
         ("어 헬로 로키 다시 시작", "다시 시작"),
         ("헬로 로키", ""),
+        ("헬로 로키야, 작업 시작해", "작업 시작해"),
+        ("헬로우 로키야 역삼동부터", "역삼동부터"),
     ],
 )
 def test_split_wake_found(text, cmd):
