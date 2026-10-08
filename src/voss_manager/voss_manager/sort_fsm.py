@@ -2,11 +2,13 @@
 
 step(ctx, event) → Out(ctx', actions, reply). ctx 는 바꾸지 않고 새 값을 돌려준다.
 
-G0 최소 경로(T20 1차, docs/plan.md G0 준비):
-  IDLE —start→ RUNNING(OBSERVE 이동 → 입구 관측) —명확한 stage 1 판독→ PICKING(TrackAndGrasp → MoveToZone PLACE)
+6상태 (T20, docs/architecture.md):
+  IDLE —start→ RUNNING(OBSERVE 이동 → 입구 관측) —stage 1 판독→ PICKING(TrackAndGrasp → MoveToZone PLACE)
   → SortResult → RUNNING. stop/resume/reset_zone, 구역 가득 → PAUSED.
-RECHECK·ASKING 은 이름만 있고 아직 들어가지 않는다(T23 에서 재확인·질문·보류 흐름을 붙인다).
-여기서 정한 G0 임시 규칙은 src/voss_manager/CLAUDE.md "G0 임시 규칙" 에 적는다.
+  불확실(후보는 있는데 LOW_CONF·불일치)하면 PICKING 의 목적지가 재확인 구역 → RECHECK(VIEW → ReadLabel)
+  → 확정이면 PICK → 목적 구역 PLACE, 아니면 ASKING(질문 30 s) → 답 → PICK → PLACE / 무응답 → HOLD.
+  (SRD v1.0 §5.7 질문, voss_msgs.md MoveToZone 재확인 실패 분기·ReadLabel, #51 MC-017)
+여기서 정한 규칙은 src/voss_manager/CLAUDE.md "운용 규칙" 에 적는다.
 """
 
 from __future__ import annotations
@@ -28,6 +30,13 @@ SORT_ZONES = ("A", "B", "C")
 
 # 진행 중인 장비 호출 (한 번에 하나)
 PH_NONE, PH_HOME, PH_GOAL, PH_PLACE = "", "HOME", "GOAL", "PLACE"
+PH_VIEW, PH_READ, PH_PICK = (
+    "VIEW",
+    "READ",
+    "PICK",
+)  # 재확인: 구역 보기 → 다시 읽기 → 재확인 칸에서 집기
+HOLD_WORDS = ("HOLD", "보류")
+ASK_TIMEOUT_NS = 30_000_000_000  # 질문 발화부터 30 s (SRD §5.7)
 
 
 # ---------------------------------------------------------------- 설정
@@ -142,6 +151,20 @@ def resolve_label(code: str, dong: str, confidence: float, cfg: Config) -> tuple
     return d, cfg.zone_map[d], ""
 
 
+def label_candidates(cfg: Config, *names: str, codes: tuple[str, ...] = ()) -> tuple[str, ...]:
+    """질문 후보 정식 동(순서 유지, 중복 없음): 분류코드가 가리키는 동 → 읽은 동 이름·2위 후보."""
+    out: list[str] = []
+    for c in codes:
+        d = cfg.codes.get(c, "") if c else ""
+        if d and d not in out:
+            out.append(d)
+    for n in names:
+        d = cfg.dong_of(n) if n else ""
+        if d and d not in out:
+            out.append(d)
+    return tuple(out)
+
+
 # ---------------------------------------------------------------- 상태
 
 
@@ -157,9 +180,13 @@ class Box:
     confidence: float
     raw_text: str
     dong_alt: str
-    zone: str
+    zone: str  # 지금 놓으러 가는 구역 (재확인 경로면 처음엔 RECHECK, 판정 뒤 목적 구역)
     slot: int
     attempts: int = 0
+    decided_by: str = "OCR"  # OCR | RECHECK | OPERATOR | NONE
+    reason: str = ""  # 정상 끝의 SortResult.reason (무응답 보류 = NO_ANSWER)
+    recheck_slot: int = -1  # 재확인 구역에 놓인 칸, 없으면 -1
+    candidates: tuple[str, ...] = ()  # 질문 후보 정식 동
 
 
 @dataclass(frozen=True)
@@ -183,10 +210,23 @@ class Ctx:
         frozenset()
     )  # 이미 로그로 남긴 (track_id, 무시·대기 사유) — 2 Hz 반복 로그 방지
     home_first: bool = True  # start·resume 때 OBSERVE 로 먼저 이동
+    recheck_busy: frozenset[int] = frozenset()  # 재확인 구역에 박스가 있는 칸 (보류로 남은 것 포함)
+    question: str = ""  # ASKING 중 질문 문장 (SortState.pending_question)
+    ask_deadline_ns: int = 0  # 이 시각까지 답이 없으면 보류
+    ask_reprompted: bool = False  # 무효 답 재안내는 1회
+    ask_timeout_ns: int = ASK_TIMEOUT_NS
+    resume_to: str = (
+        ""  # PAUSED 에서 resume 할 때 이어 갈 재확인 단계: RECHECK | ASKING | PICK | PLACE
+    )
 
 
-def new_ctx(cfg: Config, home_first: bool = True) -> Ctx:
-    return Ctx(cfg=cfg, slots={z: 0 for z in ZONES}, home_first=home_first)
+def new_ctx(cfg: Config, home_first: bool = True, ask_timeout_s: float = 30.0) -> Ctx:
+    return Ctx(
+        cfg=cfg,
+        slots={z: 0 for z in ZONES},
+        home_first=home_first,
+        ask_timeout_ns=int(ask_timeout_s * 1e9),
+    )
 
 
 # ---------------------------------------------------------------- 이벤트
@@ -249,6 +289,27 @@ class StopDone:
     now_ns: int
 
 
+@dataclass(frozen=True)
+class ReadDone:
+    """/voss/vision/read_label 응답 (3단계 정지 재판독). 실패·시간 초과는 ok=false."""
+
+    ok: bool
+    code: str
+    dong: str
+    confidence: float
+    dong_alt: str
+    raw_text: str
+    message: str
+    now_ns: int
+
+
+@dataclass(frozen=True)
+class Tick:
+    """주기 시각 (질문 30 s 타이머)."""
+
+    now_ns: int
+
+
 # ---------------------------------------------------------------- 액션
 
 
@@ -272,6 +333,11 @@ class CallMove:
     zone: str
     slot: int
     mode: str = ""  # "" = PLACE
+
+
+@dataclass(frozen=True)
+class CallReadLabel:
+    track_id: int = -1  # -1 = 시야 안 박스 아무거나 (재확인 구역엔 하나뿐)
 
 
 @dataclass(frozen=True)
@@ -328,6 +394,10 @@ def step(ctx: Ctx, ev) -> Out:
         return _on_move(ctx, ev)
     if isinstance(ev, StopDone):
         return _on_stop_done(ctx, ev)
+    if isinstance(ev, ReadDone):
+        return _on_read(ctx, ev)
+    if isinstance(ev, Tick):
+        return _on_tick(ctx, ev)
     raise TypeError(f"모르는 이벤트 {type(ev).__name__}")
 
 
@@ -351,6 +421,9 @@ def _on_command(ctx: Ctx, ev: Command) -> Out:
         if ctx.phase == PH_GOAL:
             acts.append(CancelGoal())
         nxt = replace(ctx, stop_requested=ctx.box is not None)
+        if ctx.state == ASKING:
+            # 질문은 멈추고 타이머를 끈다 — resume 때 다시 묻고 30 s 를 새로 잰다 (SRD §5.7)
+            nxt = replace(nxt, resume_to="ASKING", ask_deadline_ns=0)
         if ctx.state == IDLE:
             # 세션이 없어 PAUSED 로 가면 resume 할 곳이 없다 → IDLE 유지 (G0 임시 규칙)
             return Out(nxt, tuple(acts), (True, "stop 접수 (IDLE 유지)"))
@@ -413,6 +486,8 @@ def _on_command(ctx: Ctx, ev: Command) -> Out:
         nr = not_ready_items(ctx, ev.not_ready)
         if nr:
             return _reject(ctx, "준비 안 됨: " + ", ".join(nr))
+        if ctx.box is not None and ctx.resume_to:
+            return _resume_recheck(ctx, ev.now_ns)
         nxt, acts = _enter_running(ctx, ev.now_ns, stop_requested=False)
         return Out(nxt, (*acts, Log("info", "resume")), (True, "resume 접수"))
 
@@ -422,17 +497,21 @@ def _on_command(ctx: Ctx, ev: Command) -> Out:
             return _reject(ctx, f"모르는 구역: {arg}")
         if ctx.state != PAUSED:
             return _reject(ctx, "reset_zone 은 PAUSED 에서만")
+        if zone == "RECHECK" and ctx.box is not None and ctx.box.recheck_slot >= 0:
+            return _reject(
+                ctx, f"{ctx.box.box_id} 가 재확인 구역에서 처리 중 — resume 으로 끝낸 뒤 비운다"
+            )
         slots = {**ctx.slots, zone: 0}
         full = "" if ctx.full_zone == zone else ctx.full_zone
+        busy = frozenset() if zone == "RECHECK" else ctx.recheck_busy
         return Out(
-            replace(ctx, slots=slots, full_zone=full),
+            replace(ctx, slots=slots, full_zone=full, recheck_busy=busy),
             (Log("info", f"{zone} 구역 비움 확인, 칸 0"),),
             (True, f"{zone} 비움"),
         )
 
     if cmd == "answer":
-        # 질문 경로(ASKING)는 T23 에서 붙인다. 지금은 ASKING 에 들어가지 않는다
-        return _reject(ctx, "ASKING 상태가 아님")
+        return _on_answer(ctx, arg, ev.now_ns)
 
     return _reject(ctx, f"모르는 명령: {ev.command}")
 
@@ -446,8 +525,10 @@ def not_ready_items(ctx: Ctx, base: tuple[str, ...] | list[str]) -> list[str]:
 
 
 def _on_label(ctx: Ctx, ev: LabelSeen) -> Out:
+    if ctx.state == PICKING and ev.stage == 2:
+        return _on_label_tracking(ctx, ev)
     if ctx.state != RUNNING or ctx.phase != PH_NONE:
-        return Out(ctx)  # 다른 상태의 판독은 지금 쓰지 않는다 (2·3단계는 T19·T23)
+        return Out(ctx)  # 그 밖의 상태·단계 판독은 쓰지 않는다 (3단계는 ReadLabel 응답으로 받는다)
     if ev.stage != 1 or ev.track_id in ctx.decided:
         return Out(ctx)
     if not ev.track_fresh:
@@ -456,17 +537,13 @@ def _on_label(ctx: Ctx, ev: LabelSeen) -> Out:
         return _note(ctx, ev.track_id, "STALE", "판독 무시: 관측 시작 전 촬영")
 
     dong, zone, why = resolve_label(ev.code, ev.dong, ev.confidence, ctx.cfg)
-    if why:
-        # G0 임시 규칙: 불확실하면 집지 않고 다음 판독을 기다린다 (재확인 구역 경로는 T23)
-        return _note(
-            ctx,
-            ev.track_id,
-            why,
-            f"대기 {why} code={ev.code!r} dong={ev.dong!r} conf={ev.confidence:.2f}",
-        )
+    cands = label_candidates(ctx.cfg, ev.dong, ev.dong_alt, codes=(ev.code,))
+    if why == "UNKNOWN":
+        # 후보가 하나도 없으면(글자를 못 읽음) 집지 않고 다음 판독을 기다린다
+        return _note(ctx, ev.track_id, why, f"대기 UNKNOWN raw={ev.raw_text!r}")
 
     decided = ctx.decided | {ev.track_id}
-    if ctx.priority and dong != ctx.priority:
+    if not why and ctx.priority and dong != ctx.priority:
         seq = ctx.seq + 1
         box = _box(ctx, ev, seq, dong, "", -1)
         res = _result(ctx, box, "PASSED", "", "NON_TARGET", ev.now_ns, 0)
@@ -475,14 +552,15 @@ def _on_label(ctx: Ctx, ev: LabelSeen) -> Out:
             (res, Log("info", f"{box.box_id} 비대상 통과 ({dong})")),
         )
 
-    if ctx.slots[zone] >= ctx.cfg.capacity[zone]:
-        return Out(
-            replace(ctx, state=PAUSED, full_zone=zone, decided=decided),
-            (
-                Log("warn", f"{zone} 구역 가득 참 ({ctx.cfg.capacity[zone]}칸) → PAUSED"),
-                Say(f"{zone} 구역이 가득 찼습니다. 비운 뒤 알려 주세요."),
-            ),
-        )
+    if why:
+        # 후보는 있는데 불확실(LOW_CONF·코드와 동 이름 불일치) → 집어서 재확인 구역으로 (SRD SYS-FR-012)
+        zone, slot = "RECHECK", _free_recheck_slot(ctx)
+        if slot < 0:
+            return _zone_full(ctx, "RECHECK", decided)
+    elif ctx.slots[zone] >= ctx.cfg.capacity[zone]:
+        return _zone_full(ctx, zone, decided)
+    else:
+        slot = ctx.slots[zone]
 
     missing = [k for k in ("ROBOT", "SERVO") if k in not_ready_items(ctx, ev.not_ready)]
     if missing:
@@ -491,7 +569,8 @@ def _on_label(ctx: Ctx, ev: LabelSeen) -> Out:
         )
 
     seq = ctx.seq + 1
-    box = _box(ctx, ev, seq, dong, zone, ctx.slots[zone])
+    box = replace(_box(ctx, ev, seq, dong, zone, slot), candidates=cands)
+    note = f" ({why} → 재확인)" if why else ""
     return Out(
         replace(
             ctx,
@@ -504,9 +583,61 @@ def _on_label(ctx: Ctx, ev: LabelSeen) -> Out:
         ),
         (
             SendGoal(ev.track_id),
-            Log("info", f"{box.box_id} track {ev.track_id} {dong}→{zone} 칸 {box.slot} 파지 시작"),
+            Log(
+                "info",
+                f"{box.box_id} track {ev.track_id} {dong or '?'}→{zone} 칸 {box.slot} 파지 시작{note}",
+            ),
         ),
     )
+
+
+def _on_label_tracking(ctx: Ctx, ev: LabelSeen) -> Out:
+    """추종 중(stage 2) 판독: 재확인 구역으로 가려던 박스가 확실해지면 목적 구역으로 바로 바꾼다."""
+    box = ctx.box
+    if box is None or ctx.phase != PH_GOAL or ev.track_id != box.track_id or box.zone != "RECHECK":
+        return Out(ctx)
+    dong, zone, why = resolve_label(ev.code, ev.dong, ev.confidence, ctx.cfg)
+    if why or ctx.slots[zone] >= ctx.cfg.capacity[zone]:
+        return Out(ctx)
+    nbox = replace(
+        box,
+        zone=zone,
+        slot=ctx.slots[zone],
+        code=ev.code,
+        dong=dong,
+        confidence=ev.confidence,
+        raw_text=ev.raw_text,
+        dong_alt=ev.dong_alt,
+    )
+    return Out(
+        replace(ctx, box=nbox),
+        (
+            Log(
+                "info", f"{box.box_id} 추종 중 판독 확정 {dong} → 재확인 대신 {zone} 칸 {nbox.slot}"
+            ),
+        ),
+    )
+
+
+def _free_recheck_slot(ctx: Ctx) -> int:
+    for k in range(ctx.cfg.capacity["RECHECK"]):
+        if k not in ctx.recheck_busy:
+            return k
+    return -1
+
+
+def _zone_full(ctx: Ctx, zone: str, decided: frozenset[int]) -> Out:
+    return Out(
+        replace(ctx, state=PAUSED, full_zone=zone, decided=decided),
+        (
+            Log("warn", f"{zone} 구역 가득 참 ({ctx.cfg.capacity[zone]}칸) → PAUSED"),
+            Say(f"{_zone_word(zone)} 구역이 가득 찼습니다. 비운 뒤 알려 주세요."),
+        ),
+    )
+
+
+def _zone_word(zone: str) -> str:
+    return {"RECHECK": "재확인", "HOLD": "보류"}.get(zone, zone)
 
 
 def _note(ctx: Ctx, track_id: int, why: str, text: str) -> Out:
@@ -540,7 +671,7 @@ def _result(
         code=box.code,
         dong=box.dong,
         confidence=box.confidence,
-        decided_by="OCR",
+        decided_by=box.decided_by,
         zone=zone,
         outcome=outcome,
         stamp_ns=stamp_ns,
@@ -622,31 +753,51 @@ def _on_move(ctx: Ctx, ev: MoveDone) -> Out:
                 (Log("info", "OBSERVE 도착, 관측 시작"),),
             )
         return Out(replace(ctx, phase=PH_NONE))  # 이동 중 stop → PAUSED 유지
-
-    if ctx.phase != PH_PLACE or ctx.box is None:
+    if ctx.box is None:
         return Out(ctx, (Log("warn", f"기다리지 않던 MoveToZone 응답 무시: {ev.message}"),))
+    if ctx.phase == PH_PLACE:
+        return (
+            _on_place(ctx, ev)
+            if ctx.box.zone != "RECHECK" or ctx.box.recheck_slot >= 0
+            else _on_place_recheck(ctx, ev)
+        )
+    if ctx.phase == PH_VIEW:
+        return _on_view(ctx, ev)
+    if ctx.phase == PH_PICK:
+        return _on_pick(ctx, ev)
+    return Out(ctx, (Log("warn", f"기다리지 않던 MoveToZone 응답 무시: {ev.message}"),))
 
+
+def _fail_reason(ctx: Ctx, ev: MoveDone) -> str:
+    if ev.ok:
+        return ""
+    if ctx.stop_requested or ev.message.strip().upper().startswith("STOPPED"):
+        # 게이트웨이가 stop 으로 끊었다(voss_msgs.md MoveToZone STOPPED, #100) — 누가 stop 을 불렀든 STOPPED
+        return "STOPPED"
+    return "DEVICE_ERROR"
+
+
+def _on_place(ctx: Ctx, ev: MoveDone) -> Out:
+    """목적 구역(A·B·C·HOLD)에 놓기 — 벨트에서 바로 또는 재확인 뒤."""
     box = ctx.box
     placed = ev.placed_stamp_ns != 0
-    if ev.ok:
-        reason = ""
-    elif ctx.stop_requested or ev.message.strip().upper().startswith("STOPPED"):
-        # 게이트웨이가 stop 으로 끊었다(voss_msgs.md MoveToZone STOPPED, #100) — 누가 stop 을 불렀든 STOPPED
-        reason = "STOPPED"
-    else:
-        reason = "DEVICE_ERROR"
+    reason = box.reason if ev.ok else _fail_reason(ctx, ev)
     slots = dict(ctx.slots)
     if placed:
         # 그 칸에서 개방했으면(RETURN_FAILED 포함) 칸을 쓴 것 (MC-018)
         slots[box.zone] += 1
-        res = _result(ctx, box, "PLACED", box.zone, reason, ev.placed_stamp_ns, box.attempts)
+        outcome = "HELD" if box.zone == "HOLD" else "PLACED"
+        res = _result(ctx, box, outcome, box.zone, reason, ev.placed_stamp_ns, box.attempts)
     else:
         res = _result(ctx, box, "FAILED", "", reason, ev.now_ns, box.attempts)
 
-    if ev.ok and ctx.state == PICKING:
+    if ev.ok and ctx.state in (PICKING, RECHECK):
         return Out(
             _done(ctx, state=RUNNING, slots=slots, stage_start_ns=ev.now_ns),
-            (res, Log("info", f"{box.box_id} {box.zone} 칸 {box.slot} 적재 완료")),
+            (
+                res,
+                Log("info", f"{box.box_id} {box.zone} 칸 {box.slot} 적재 완료 ({box.decided_by})"),
+            ),
         )
     acts: list = [
         res,
@@ -659,6 +810,219 @@ def _on_move(ctx: Ctx, ev: MoveDone) -> Out:
         # 응답 유실·실패는 상태 확인 없이 자동 재호출하지 않는다 (voss_msgs.md MoveToZone)
         acts.append(Say("적재 중 문제가 생겨 일시정지했습니다."))
     return Out(_done(ctx, state=PAUSED, slots=slots), tuple(acts))
+
+
+def _on_place_recheck(ctx: Ctx, ev: MoveDone) -> Out:
+    """벨트에서 집은 박스를 재확인 구역에 놓았다 → 구역을 보러 간다(VIEW)."""
+    box = ctx.box
+    if ev.placed_stamp_ns == 0:
+        # 개방 전 실패 — 박스는 그리퍼(또는 모름). 결과를 남기고 사람 확인
+        return _on_place(ctx, ev)
+    slots = {**ctx.slots, "RECHECK": ctx.slots["RECHECK"] + 1}
+    nbox = replace(box, recheck_slot=box.slot)
+    nxt = replace(ctx, box=nbox, slots=slots, recheck_busy=ctx.recheck_busy | {box.slot})
+    if ev.ok and ctx.state == PICKING:
+        return Out(
+            replace(nxt, state=RECHECK, phase=PH_VIEW),
+            (
+                CallMove("RECHECK", 0, "VIEW"),
+                Log("info", f"{box.box_id} 재확인 칸 {box.slot} 에 놓음 → 다시 읽기"),
+            ),
+        )
+    # 놓았지만 복귀 실패·정지 — 박스는 재확인 칸에 있다. resume 때 VIEW 부터 다시
+    acts: list = [
+        Log("warn", f"{box.box_id} 재확인 칸에 놓았으나 ok={ev.ok} {ev.message} → PAUSED")
+    ]
+    if ctx.state != PAUSED:
+        acts.append(Say("재확인 구역에 놓는 중 문제가 생겨 일시정지했습니다."))
+    return Out(replace(nxt, state=PAUSED, phase=PH_NONE, resume_to="RECHECK"), tuple(acts))
+
+
+def _on_view(ctx: Ctx, ev: MoveDone) -> Out:
+    box = ctx.box
+    if ctx.state == PAUSED:
+        return Out(replace(ctx, phase=PH_NONE, resume_to="RECHECK"))
+    if not ev.ok:
+        # VIEW 실패(view_pose 미교시 포함) → 질문 경로 (#51 MC-017)
+        return _ask(replace(ctx, phase=PH_NONE), ev.now_ns, f"구역 보기 실패 {ev.message}")
+    return Out(
+        replace(ctx, phase=PH_READ),
+        (CallReadLabel(-1), Log("info", f"{box.box_id} 재확인 구역 판독 요청")),
+    )
+
+
+def _on_read(ctx: Ctx, ev: ReadDone) -> Out:
+    if ctx.phase != PH_READ or ctx.box is None:
+        return Out(ctx, (Log("warn", f"기다리지 않던 ReadLabel 응답 무시: {ev.message}"),))
+    box = ctx.box
+    if ctx.state == PAUSED:
+        return Out(replace(ctx, phase=PH_NONE, resume_to="RECHECK"))
+    cands = label_candidates(ctx.cfg, ev.dong, ev.dong_alt, *box.candidates, codes=(ev.code,))
+    nbox = replace(box, candidates=cands)
+    if ev.ok:
+        dong, zone, why = resolve_label(ev.code, ev.dong, ev.confidence, ctx.cfg)
+        if not why:
+            nbox = replace(
+                nbox,
+                code=ev.code,
+                dong=dong,
+                confidence=ev.confidence,
+                raw_text=ev.raw_text,
+                dong_alt=ev.dong_alt,
+            )
+            return _decide(replace(ctx, box=nbox, phase=PH_NONE), zone, "RECHECK", "", ev.now_ns)
+        detail = f"{why} conf={ev.confidence:.2f}"
+    else:
+        detail = f"판독 실패 {ev.message}"
+    return _ask(replace(ctx, box=nbox, phase=PH_NONE), ev.now_ns, detail)
+
+
+def _ask(ctx: Ctx, now_ns: int, why: str) -> Out:
+    """작업자에게 묻는다. 30 s 타이머는 이 발화부터 (SRD §5.7)."""
+    box = ctx.box
+    cands = box.candidates[:2] or tuple(ctx.cfg.zone_map)
+    nbox = replace(box, candidates=cands)
+    if len(cands) == 1:
+        choice = f"{cands[0]}입니까?"
+    else:
+        choice = ", ".join(cands[:-1]) + f", {cands[-1]} 중 어디입니까?"
+    q = f"{box.box_id[-3:]}번 박스 송장을 확인하지 못했습니다. {choice} 보류하려면 보류라고 말해 주세요."
+    return Out(
+        replace(
+            ctx,
+            box=nbox,
+            state=ASKING,
+            question=q,
+            ask_deadline_ns=now_ns + ctx.ask_timeout_ns,
+            ask_reprompted=False,
+            resume_to="",
+        ),
+        (Say(q), Log("info", f"{box.box_id} 질문 ({why}): 후보 {', '.join(cands)}")),
+    )
+
+
+def _on_answer(ctx: Ctx, arg: str, now_ns: int) -> Out:
+    if ctx.state != ASKING or ctx.box is None:
+        return _reject(ctx, "ASKING 상태가 아님")
+    box_id, _, value = arg.partition("|")
+    if box_id.strip() != ctx.box.box_id:
+        return _reject(
+            ctx, f"지금 질문 중인 박스가 아님: {box_id.strip()} (질문 중 {ctx.box.box_id})"
+        )
+    value = value.strip()
+    if value.upper() in HOLD_WORDS:
+        out = _decide(ctx, "HOLD", "OPERATOR", "", now_ns)
+        return Out(out.ctx, out.actions, (True, "보류 접수"))
+    dong = ctx.cfg.dong_of(value)
+    if dong and dong in ctx.box.candidates:
+        code = ctx.box.code if ctx.cfg.codes.get(ctx.box.code) == dong else ""
+        nbox = replace(ctx.box, dong=dong, code=code)
+        out = _decide(replace(ctx, box=nbox), ctx.cfg.zone_map[dong], "OPERATOR", "", now_ns)
+        return Out(out.ctx, out.actions, (True, f"{dong} 접수"))
+    # 후보가 아닌 답: 1회만 다시 안내하고 타이머는 그대로 (SRD §5.7)
+    msg = f"후보가 아닌 답: {value}"
+    if ctx.ask_reprompted:
+        return _reject(ctx, msg)
+    again = f"다시 말씀해 주세요. {ctx.question}"
+    return Out(
+        replace(ctx, ask_reprompted=True),
+        (Say(again), Log("warn", f"{ctx.box.box_id} {msg} — 재안내")),
+        (False, msg + " — 재안내"),
+    )
+
+
+def _on_tick(ctx: Ctx, ev: Tick) -> Out:
+    if ctx.state != ASKING or not ctx.ask_deadline_ns or ev.now_ns < ctx.ask_deadline_ns:
+        return Out(ctx)
+    out = _decide(ctx, "HOLD", "NONE", "NO_ANSWER", ev.now_ns)
+    return Out(out.ctx, (Say("응답이 없어 보류 구역에 놓습니다."), *out.actions))
+
+
+def _decide(ctx: Ctx, zone: str, decided_by: str, reason: str, now_ns: int) -> Out:
+    """재확인·질문으로 목적 구역이 정해졌다 → 재확인 칸에서 집으러 간다(PICK)."""
+    box = ctx.box
+    nbox = replace(box, zone=zone, decided_by=decided_by, reason=reason)
+    base = replace(ctx, box=nbox, question="", ask_deadline_ns=0, ask_reprompted=False)
+    if ctx.slots[zone] >= ctx.cfg.capacity[zone]:
+        # 박스는 재확인 칸에 둔 채 멈춘다 — reset_zone 뒤 resume 하면 PICK 부터
+        out = _zone_full(base, zone, ctx.decided)
+        return Out(replace(out.ctx, phase=PH_NONE, resume_to="PICK"), out.actions)
+    nbox = replace(nbox, slot=ctx.slots[zone])
+    return Out(
+        replace(base, box=nbox, state=RECHECK, phase=PH_PICK, resume_to=""),
+        (
+            CallMove("RECHECK", box.recheck_slot, "PICK"),
+            Log(
+                "info",
+                f"{box.box_id} {decided_by} 판정 → {zone} 칸 {nbox.slot}, 재확인 칸 {box.recheck_slot} 에서 집기",
+            ),
+        ),
+    )
+
+
+def _on_pick(ctx: Ctx, ev: MoveDone) -> Out:
+    box = ctx.box
+    if ev.ok:
+        nbox = replace(box, recheck_slot=-1)
+        nxt = replace(ctx, box=nbox, recheck_busy=ctx.recheck_busy - {box.recheck_slot})
+        if ctx.state == PAUSED:
+            # 집어 든 채 멈췄다 — resume 때 목적 구역에 놓는다
+            return Out(replace(nxt, phase=PH_NONE, resume_to="PLACE"))
+        return Out(
+            replace(nxt, phase=PH_PLACE),
+            (
+                CallMove(box.zone, box.slot, ""),
+                Log("info", f"{box.box_id} 재확인 칸에서 집음 → {box.zone} 칸 {box.slot}"),
+            ),
+        )
+    # PICK 실패 → 박스는 재확인 칸에 둔 채 보류(HELD), 사람 확인 (#51 MC-017)
+    reason = _fail_reason(ctx, ev)
+    res = replace(
+        _result(ctx, box, "HELD", "RECHECK", reason, ev.now_ns, box.attempts),
+        decided_by=box.decided_by,
+    )
+    acts: list = [
+        res,
+        Log("error", f"{box.box_id} 재확인 칸에서 집기 실패 {ev.message} → 보류, PAUSED"),
+    ]
+    if ctx.state != PAUSED:
+        acts.append(Say("재확인 구역의 박스를 집지 못해 일시정지했습니다."))
+    return Out(_done(ctx, state=PAUSED, question=""), tuple(acts))
+
+
+def _resume_recheck(ctx: Ctx, now_ns: int) -> Out:
+    """재확인 흐름 중 멈췄던 박스를 이어 간다."""
+    box, to = ctx.box, ctx.resume_to
+    base = replace(ctx, stop_requested=False, resume_to="")
+    if to == "ASKING":
+        q = ctx.question
+        return Out(
+            replace(
+                base,
+                state=ASKING,
+                ask_deadline_ns=now_ns + ctx.ask_timeout_ns,
+                ask_reprompted=False,
+            ),
+            (Say(q), Log("info", f"{box.box_id} resume — 다시 질문")),
+            (True, "resume 접수 (다시 질문)"),
+        )
+    if to == "PICK":
+        out = _decide(base, box.zone, box.decided_by, box.reason, now_ns)
+        return Out(out.ctx, out.actions, (True, "resume 접수 (재확인 칸에서 집기)"))
+    if to == "PLACE":
+        return Out(
+            replace(base, state=RECHECK, phase=PH_PLACE),
+            (
+                CallMove(box.zone, box.slot, ""),
+                Log("info", f"{box.box_id} resume — {box.zone} 에 놓기"),
+            ),
+            (True, "resume 접수 (적재)"),
+        )
+    return Out(
+        replace(base, state=RECHECK, phase=PH_VIEW),
+        (CallMove("RECHECK", 0, "VIEW"), Log("info", f"{box.box_id} resume — 재확인 다시")),
+        (True, "resume 접수 (재확인 다시)"),
+    )
 
 
 def _on_stop_done(ctx: Ctx, ev: StopDone) -> Out:

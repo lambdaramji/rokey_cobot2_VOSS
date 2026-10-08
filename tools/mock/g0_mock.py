@@ -7,6 +7,7 @@
   --robot   /voss/robot/move_to_zone·/voss/robot/stop 서비스, /voss/robot/pose 50 Hz (robot_gateway 대역)
   --log     /voss/log/status 1 Hz (sort_logger 대역)
   --vision  /voss/vision/box 30 Hz + /voss/vision/label stage 1 (box_tracker·label_reader 대역, 박스 1개)
+  --read    /voss/vision/read_label 서비스 (label_reader 3단계 재판독 대역) — 재확인·질문 흐름 시험용
 
 예 (개인 PC, ROS_DOMAIN_ID=31, 터미널 두 개):
   python3 tools/mock/g0_mock.py --servo --robot --log --vision --code S07-02 --dong 대치동
@@ -27,12 +28,13 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
+from rclpy.signals import SignalHandlerOptions
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
 from voss_msgs.action import TrackAndGrasp
 from voss_msgs.msg import BoxTrack, LabelRead
-from voss_msgs.srv import MoveToZone
+from voss_msgs.srv import MoveToZone, ReadLabel
 
 BEST_EFFORT = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
 RELIABLE = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
@@ -65,6 +67,13 @@ class G0Mock(Node):
                 MoveToZone, "/voss/robot/move_to_zone", self._move, callback_group=self.cb
             )
             log.info(f"[robot] MoveToZone 모의: {a.place}, {a.place_s} s")
+        if a.read and self._free_service("/voss/vision/read_label"):
+            self.create_service(
+                ReadLabel, "/voss/vision/read_label", self._read, callback_group=self.cb
+            )
+            log.info(
+                f"[read] ReadLabel 모의: {a.read_result} {a.read_code}/{a.read_dong} conf {a.read_conf}"
+            )
         if a.robot and self._free_service("/voss/robot/stop"):
             self.create_service(Trigger, "/voss/robot/stop", self._stop, callback_group=self.cb)
             log.info("[robot] stop 모의")
@@ -138,13 +147,34 @@ class G0Mock(Node):
         a = self.a
         mode = "이동" if req.zone == "OBSERVE" else (req.mode or "PLACE")
         self.get_logger().info(f"[robot] MoveToZone {req.zone} 칸 {req.slot} {mode}")
-        time.sleep(a.place_s if req.zone != "OBSERVE" else 0.5)
+        time.sleep(a.place_s if mode in ("PLACE", "PICK") else 0.5)
+        if mode == "VIEW":  # 재확인 구역을 보는 자세로 이동만
+            res.ok, res.message = (False, "INVALID view_pose null") if a.view_fail else (True, "OK")
+            return res
+        if mode == "PICK":  # 재확인 칸에서 집어 안전 높이로 — placed_stamp 0
+            res.ok, res.message = (False, "GRIP_FAIL") if a.pick_fail else (True, "OK")
+            return res
         if req.zone == "OBSERVE" or a.place == "ok":
             res.ok, res.message = True, "OK"
         else:
             res.ok, res.message = False, a.place
         if mode == "PLACE" and req.zone != "OBSERVE" and a.place in ("ok", "RETURN_FAILED"):
             res.placed_stamp = self.get_clock().now().to_msg()
+        return res
+
+    def _read(self, req: ReadLabel.Request, res: ReadLabel.Response) -> ReadLabel.Response:
+        a = self.a
+        self.get_logger().info(f"[read] ReadLabel track {req.track_id} → {a.read_result}")
+        time.sleep(0.5)
+        if a.read_result == "fail":
+            res.ok, res.message = False, "no_text"
+            return res
+        res.ok, res.message = True, ""
+        res.label.track_id, res.label.stage = req.track_id, 3
+        res.label.code, res.label.dong, res.label.dong_alt = a.read_code, a.read_dong, a.read_alt
+        res.label.confidence = a.read_conf if a.read_result == "ok" else min(a.read_conf, 0.3)
+        res.label.raw_text = f"{a.read_code}\n{a.read_dong}"
+        res.label.stamp = self.get_clock().now().to_msg()
         return res
 
     def _stop(self, _req: Trigger.Request, res: Trigger.Response) -> Trigger.Response:
@@ -208,6 +238,20 @@ def main() -> None:
     ap.add_argument("--place", default="ok", help="ok | RETURN_FAILED | GRIP_FAIL | TIMEOUT")
     ap.add_argument("--place-s", type=float, default=2.0)
     ap.add_argument("--stop-fail", action="store_true", help="/voss/robot/stop 이 success=false")
+    ap.add_argument(
+        "--view-fail", action="store_true", help="MoveToZone VIEW 가 실패(view_pose 미교시 흉내)"
+    )
+    ap.add_argument(
+        "--pick-fail", action="store_true", help="MoveToZone PICK(재확인 칸에서 집기)이 실패"
+    )
+    ap.add_argument("--read", action="store_true")
+    ap.add_argument(
+        "--read-result", default="ok", help="ok(확실) | low(불확실 → 질문) | fail(판독 실패 → 질문)"
+    )
+    ap.add_argument("--read-code", default="S07-02")
+    ap.add_argument("--read-dong", default="대치동")
+    ap.add_argument("--read-alt", default="청담동")
+    ap.add_argument("--read-conf", type=float, default=0.95)
     ap.add_argument("--log-status", default="OK")
     ap.add_argument("--track-id", type=int, default=1)
     ap.add_argument("--code", default="S07-02")
@@ -216,13 +260,15 @@ def main() -> None:
     ap.add_argument("--label-after", type=float, default=1.0, help="트랙이 나타난 뒤 첫 판독까지 s")
     ap.add_argument("--box-s", type=float, default=20.0, help="박스 하나가 시야를 지나가는 주기 s")
     a = ap.parse_args()
-    if not (a.servo or a.robot or a.log or a.vision):
-        ap.error("--servo/--robot/--log/--vision 중 하나 이상")
+    if not (a.servo or a.robot or a.log or a.vision or a.read):
+        ap.error("--servo/--robot/--log/--vision/--read 중 하나 이상")
 
     if os.environ.get("ROS_DOMAIN_ID", "0") == "30":
         ap.error("ROS_DOMAIN_ID=30 은 공용 PC 로봇 도메인 — 다른 도메인(예 77)에서 실행")
 
-    rclpy.init()
+    rclpy.init(
+        signal_handler_options=SignalHandlerOptions.NO
+    )  # Ctrl+C 를 KeyboardInterrupt 로 받아 깔끔히 끈다
     node = G0Mock(a)
     ex = MultiThreadedExecutor(num_threads=4)
     ex.add_node(node)
