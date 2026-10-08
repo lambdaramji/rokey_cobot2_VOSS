@@ -43,7 +43,7 @@ flowchart LR
 | 위치 | 구성요소 | 이유 |
 |---|---|---|
 | 호스트 (공용 MSI 노트북) | 두산 브링업, robot_gateway, belt_servo(30 Hz), sort_manager, voice_listener/intent_parser/speech_out, hmi_bridge, sort_logger, Mosquitto(1883) | 서보 루프 지연을 컨테이너와 분리 |
-| 비전 컨테이너 (GPU, `ros:jazzy` 계열) | box_tracker(YOLO), label_reader(PaddleOCR) | GPU 의존성 격리. `--network host`, 같은 ROS_DOMAIN_ID, `config/` 읽기 전용 마운트 |
+| 비전 컨테이너 (GPU, `ros:jazzy` 계열) | box_tracker(OpenCV 분할, ADR-0011 — GPU 불필요), label_reader(PaddleOCR) | GPU 의존성 격리. `--network host`, 같은 ROS_DOMAIN_ID, `config/` 읽기 전용 마운트 |
 | DB 컨테이너 | PostgreSQL (`sort_log`) | 호스트 볼륨 마운트. writer = sort_logger, Spring Boot 는 읽기 전용 (ADR-0006) |
 | 웹 컨테이너 | Spring Boot(Java 21) + React·Nginx | REST·SSE·MQTT 클라이언트. `--network host` (ADR-0006) |
 | AI 컨테이너 (GPU) | FastAPI + Whisper + OpenAI API | STT·intent 전용. 음성 ROS 노드가 HTTP 로 호출 (ADR-0006) |
