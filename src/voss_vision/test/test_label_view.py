@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import pytest
 from voss_vision.label_match import Candidate
-from voss_vision.label_view import find_labels_in_view, read_view, sharpness
+from voss_vision.label_view import find_labels_in_view, parse_slot_rois, read_view, sharpness
 
 CANDS = [
     Candidate("역삼동", "S07-01", ("역삼",)),
@@ -51,6 +51,18 @@ def test_find_labels_slot_rois_pick_each_slot() -> None:
     assert abs(find_labels_in_view(img, roi=s0)[0][0][1] - 420) < 4
     assert abs(find_labels_in_view(img, roi=s1)[0][0][1] - 690) < 4
     assert len(find_labels_in_view(img, roi=(600, 150, 1360, 960))) == 2
+
+
+def test_parse_slot_rois_keeps_slot_numbers() -> None:
+    """전부 0 인 칸은 None 으로 자리를 지킨다 — 건너뛰면 뒤 칸 번호가 당겨진다 (#113 리뷰)."""
+    assert parse_slot_rois([600, 150, 1360, 555, 600, 555, 1360, 960]) == [
+        (600, 150, 1360, 555),
+        (600, 555, 1360, 960),
+    ]
+    assert parse_slot_rois([0, 0, 0, 0, 600, 555, 1360, 960]) == [None, (600, 555, 1360, 960)]
+    assert parse_slot_rois([0, 0, 0, 0]) == [None]
+    with pytest.raises(ValueError):
+        parse_slot_rois([600, 150, 1360])
 
 
 class Fake:

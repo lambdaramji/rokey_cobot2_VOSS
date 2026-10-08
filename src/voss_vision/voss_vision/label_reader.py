@@ -41,7 +41,7 @@ from voss_msgs.msg import LabelCrop, LabelRead, ZoneMap
 from voss_msgs.srv import ReadLabel
 from voss_vision.label_match import Candidate, Match
 from voss_vision.label_preprocess import crop_upright, find_label_in_crop
-from voss_vision.label_view import ViewResult, read_view
+from voss_vision.label_view import ViewResult, parse_slot_rois, read_view
 from voss_vision.label_vote import Read, TrackReads, Vote
 from voss_vision.ocr_engine import read_label
 
@@ -165,18 +165,25 @@ class LabelReaderNode(Node):
             "aspect_tol": p("view.aspect_tol", 0.5).value,
             "roi": tuple(roi) if any(roi) else None,
         }
-        # 칸별 화면 영역 [x0 y0 x1 y1] × 칸 수 (평평한 목록). ReadLabel.slot ≥ 0 이면 그 칸 영역만 본다
-        flat = list(p("view.slot_rois", [0, 0, 0, 0]).value)
-        self.slot_rois = [
-            tuple(flat[i : i + 4])
-            for i in range(0, len(flat) - len(flat) % 4, 4)
-            if any(flat[i : i + 4])
-        ]
+        # 칸별 화면 영역 [x0 y0 x1 y1] × 칸 수 (평평한 목록). ReadLabel.slot ≥ 0 이면 그 칸 영역만 본다.
+        # 칸 번호 = MoveToZone 과 같은 재확인 칸 번호(0 = −X 끝 = VIEW 화면 위). 전부 0 인 칸은 정의 안 됨(bad_slot)
+        try:
+            self.slot_rois = parse_slot_rois(p("view.slot_rois", [0, 0, 0, 0]).value)
+        except ValueError as e:
+            self.get_logger().error(f"{e} — 칸 지정 재판독은 모두 bad_slot")
+            self.slot_rois = []
 
         with open(self.config_path, "rb") as f:
             raw = f.read()
         cfg = yaml.safe_load(raw)
         self.conf_min = float(cfg["ocr"]["confidence_min"])  # 확실해진 트랙을 더 읽지 않는 기준
+        grid = ((cfg.get("zones") or {}).get("recheck") or {}).get("grid") or {}
+        n_slots = int(grid.get("cols") or 0) * int(grid.get("rows") or 0)
+        if n_slots and len(self.slot_rois) != n_slots:
+            self.get_logger().warn(
+                f"view.slot_rois 칸 수 {len(self.slot_rois)} ≠ zones.recheck.grid 칸 수 {n_slots} — "
+                "재확인 칸 지정 판독이 어긋날 수 있다(view_pose·트레이를 바꿨으면 다시 잰다)"
+            )
         self.get_logger().info(
             f"voss_config {self.config_path} version {cfg.get('version')} "
             f"sha256 {hashlib.sha256(raw).hexdigest()[:12]}, confidence_min {self.conf_min}, "
@@ -285,9 +292,9 @@ class LabelReaderNode(Node):
         """재확인 구역 위(VIEW)에서 정지 화면 몇 장 → 다수결. sort_manager 가 VIEW 이동 완료 뒤 부른다."""
         n = int(req.max_frames) or self.view_frames
         slot = int(req.slot)
-        if slot >= len(self.slot_rois) or slot < -1:
+        if slot < -1 or slot >= len(self.slot_rois) or (slot >= 0 and self.slot_rois[slot] is None):
             self.get_logger().error(
-                f"재판독 칸 {slot}: view.slot_rois 에 없음({len(self.slot_rois)}칸)"
+                f"재판독 칸 {slot}: view.slot_rois 에 정의되지 않음({len(self.slot_rois)}칸)"
             )
             res.ok, res.message = False, "bad_slot"
             res.label = LabelRead(track_id=req.track_id, stage=STAGE_RECHECK)

@@ -57,6 +57,19 @@ def find_labels_in_view(
     return [r for _, r in sorted(found, key=lambda t: t[0])]
 
 
+def parse_slot_rois(flat) -> list[tuple[int, int, int, int] | None]:
+    """`view.slot_rois` 평평한 목록 [x0 y0 x1 y1] × 칸 → 칸 번호 순서의 영역. 전부 0 인 칸은 None(정의 안 됨).
+
+    0 칸을 건너뛰면 뒤 칸 번호가 당겨져 엉뚱한 칸을 읽으므로 자리를 지킨다 — 그 칸 요청은 bad_slot (#113 리뷰).
+    4 개씩 나눠지지 않으면 ValueError.
+    """
+    vals = [int(v) for v in flat]
+    if len(vals) % 4:
+        raise ValueError(f"view.slot_rois 길이 {len(vals)} 가 4 의 배수가 아님")
+    rois = [tuple(vals[i : i + 4]) for i in range(0, len(vals), 4)]
+    return [r if any(r) else None for r in rois]
+
+
 def sharpness(gray: np.ndarray) -> float:
     """라플라시안 분산 — 흔들리거나 초점이 나가면 작다."""
     return float(cv2.Laplacian(gray, cv2.CV_64F).var())
