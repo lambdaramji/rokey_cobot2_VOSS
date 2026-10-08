@@ -1,6 +1,6 @@
 # VOSS 레포 스타터 키트 — 적용 순서
 
-레포: https://github.com/yujh5537/rokey_cobot2_VOSS (현재 README 하나)
+레포: https://github.com/lambdaramji/rokey_cobot2_VOSS (현재 README 하나)
 
 ## 0. 이 키트가 무엇을 담고 있나
 - `CLAUDE.md` — 팀 공유 지침. 모든 팀원의 Claude Code 가 자동으로 읽음 (절대 규칙 8개, 명령, 일정 핵심)
@@ -16,7 +16,7 @@
 
 ## 1. 레포에 넣기 — PL, 10/05 (30분)
 1. 키트 내용을 레포 루트에 복사 (기존 README.md 는 키트 것으로 교체). 첫 커밋: `chore: project skeleton, interfaces, docs (#1)`
-2. `.github/CODEOWNERS` 는 4명 GitHub 아이디로 채워져 있음 (yujh5537 / EuiseokJeongNZ / ok778ts123 / rokeyhak). 경로마다 2명 (작성자는 자기 PR을 승인할 수 없으므로, #2). 3명을 레포 Collaborator 로 초대
+2. `.github/CODEOWNERS` 는 4명 GitHub 아이디로 채워져 있음 (lambdaramji / EuiseokJeongNZ / ok778ts123 / rokeyhak). 경로마다 2명 (작성자는 자기 PR을 승인할 수 없으므로, #2). 3명을 레포 Collaborator 로 초대
 3. GitHub → Settings → Branches → `main` 보호 규칙 (CODEOWNERS 2인 구성이 main 에 들어간 뒤에 건다)
    - Require a pull request before merging (승인 1)
    - Require status checks: `build-test`
@@ -25,7 +25,7 @@
 4. Labels 추가: `interface`, `task`, `decision`, `bug`, `hardware`
 5. Claude Code GitHub Actions 설치 (PR 에서 `@claude` 리뷰, #8). 워크플로는 `.github/workflows/claude.yml`
    - Claude GitHub App 을 이 레포에만 설치: https://github.com/apps/claude
-   - 인증은 PL 구독 OAuth 토큰: 로컬 터미널에서 `claude setup-token` → `gh secret set CLAUDE_CODE_OAUTH_TOKEN -R yujh5537/rokey_cobot2_VOSS` 에 붙여넣기. 토큰은 채팅·파일에 남기지 않는다
+   - 인증은 PL 구독 OAuth 토큰: 로컬 터미널에서 `claude setup-token` → `gh secret set CLAUDE_CODE_OAUTH_TOKEN -R lambdaramji/rokey_cobot2_VOSS` 에 붙여넣기. 토큰은 채팅·파일에 남기지 않는다
    - 멘션할 때만 돈다(모든 PR 자동 리뷰 없음). 레포에 쓰기 권한이 있는 사람만 호출할 수 있다
 6. BRD 를 Markdown 으로 내보내 `docs/requirements/` 에, `VOSS_개발일정.xlsx` 도 같은 폴더에 (완료 #4). SRD 와 시스템 아키텍처 SVG 는 박병후 담당 (#6)
 
