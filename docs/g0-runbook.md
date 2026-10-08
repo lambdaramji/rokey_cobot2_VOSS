@@ -20,12 +20,14 @@ G0 = 실물 박스 **1개**를 인식 → 이동 중 픽업 → 기본 구역 �
 | main 머지: #90 → #95 (핸드아이·box_tracker) | 남현지 · 리뷰 학민·병후 | 리뷰 대기 | 〃 |
 | main 머지: #96 (sort_manager), #99 (ADR-0011·measurements-1008) | 남현지 · 리뷰 의석·학민 | 리뷰 대기 | 〃 |
 | main 머지: #94 (sort_logger·DB) | 정의석 | 승인됨, 머지 대기 | 〃 |
+| main 머지: #100 (MoveToZone STOPPED·OBSERVE 이동만, 문서·주석만 — 타입 해시 그대로) | 김학민 · 리뷰 남현지 | 리뷰 중 | 〃 |
 | robot_gateway `move_to_zone`(PLACE·OBSERVE, STOPPED 코드)·`gripper`·`stop`·`/voss/robot/state`·`servo_cmd` + 만료 watchdog | 김학민 (T32) | **pose 만 있음** (feat/41), STOPPED 문서 브랜치 있음 | `ros2 service list` 에 셋, watchdog 종료 시험(F-04) 기록 |
 | belt_servo `/voss/servo/track_and_grasp` 액션 | 박병후 (#36) | **설계 문서만** | `ros2 action list`, TrackAndGrasp 1회 인계(G0 리허설) 기록 |
-| 카메라 USB 케이블 손목에 여유 고리로 고정, `lsusb -t` 에서 RealSense 5000M | 김학민 | 10/08 끊김 1회 | 사진·명령 출력 |
+| 카메라 USB 케이블 손목에 여유 고리로 고정, `lsusb -t` 에서 RealSense 5000M | 김학민 | ✅ 10/08 (Bus 002 5000M, 팔에 고정) | G0 직전 `lsusb -t` 한 번 더 |
+| 아두이노가 레포 `conveyor_test`(h250) 스케치인지 | 김학민 | ✅ 10/08 다시 올림(전에는 h500 옛 스케치) | 벨트 4.8 cm/s 근처 |
 | 공용 PC PaddleOCR venv | 남현지 (아래 1-3) | 없음 | `label_reader` 가 "판독 준비 완료" |
 
-**머지 순서**(충돌 최소): #99 → #90 → #95(main 을 받아 맞춘 뒤) → #75 → #97(base 를 main 으로 바꾼 뒤) → #96 → #94 → 학민·병후 PR → #98(아이디 변경). 각 PR 은 CODEOWNERS 승인 뒤 squash. **G0 는 main 한 커밋에서 돌리고 그 해시를 기록한다.**
+**머지 순서**(충돌 최소): **#98(아이디 변경)을 먼저** — CODEOWNERS 가 옛 아이디라 지금은 리뷰어가 자동으로 붙지 않는다 → #99 → #90 → #95(main 을 받아 맞춘 뒤) → #75 → #97(base 를 main 으로 바꾼 뒤) → #100 → #96 → #94 → 학민·병후 PR. 각 PR 은 CODEOWNERS 승인 뒤 squash. **G0 는 main 한 커밋에서 돌리고 그 해시를 기록한다.**
 
 **10/08 저녁 리허설(로봇 시간 우선순위, plan.md):** ① gateway watchdog·종료 시험(학민) → ② TrackAndGrasp 1회 인계(병후·학민) → ③ 아래 2~4 를 박스 없이 start → OBSERVE → stop 까지.
 
@@ -96,7 +98,7 @@ ros2 topic echo --once /voss/log/status            # OK
 - [ ] T6 label_reader 에 "판독 준비 완료 — /voss/vision/label 발행 시작"
 - [ ] voss_config sha256 이 T2·T6·T8 로그에서 같다(T2 는 전체, T6·T8 은 앞 12자리 — 앞 12자리로 비교)
 - [ ] 트레이 A·B·C 비어 있음 (새 세션 start 때 칸 카운터가 0 이 된다)
-- [ ] 벨트 h250(4.89 cm/s), 벨트 위 비어 있음, 송장 박스 1개 준비(명확한 송장, 예 S07-02 대치동 → B)
+- [ ] 벨트 h250(10/08 실측 4.77 cm/s, measurements-1008 #10), 벨트 위 비어 있음, 송장 박스 1개 준비(명확한 송장, 예 S07-02 대치동 → B)
 - [ ] 비상정지 대기자 위치, 속도 제한·작업 영역 제한(TCP z 하한 등) 확인 — 학민
 - [ ] 증거 녹화 시작(아래), 휴대폰 촬영 시작
 ```bash
