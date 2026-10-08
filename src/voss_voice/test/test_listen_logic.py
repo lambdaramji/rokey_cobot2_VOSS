@@ -24,13 +24,29 @@ from voss_voice.listen_logic import (
         ("헬로우 로키 역삼동부터 분류해", "역삼동부터 분류해"),
         ("Hello, Rokey. 대치동 먼저", "대치동 먼저"),
         ("hello rocky 몇 개 남았어?", "몇 개 남았어"),
-        ("로키야, 보류 몇 개야", "보류 몇 개야"),
         ("어 헬로 로키 다시 시작", "다시 시작"),
         ("헬로 로키", ""),
+        ("헬로 로키야", ""),
+        ("헬로 로키야, 작업 시작해", "작업 시작해"),
+        ("헬로우 로키야 역삼동부터", "역삼동부터"),
     ],
 )
 def test_split_wake_found(text, cmd):
     assert split_wake(text) == (True, cmd)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "로키",
+        "로키야",
+        "로키야 작업 시작해",
+        "로키 작업 시작해",
+    ],
+)
+def test_legacy_wake_is_rejected(text: str) -> None:
+    """옛 호출어로는 일반 명령을 전달하지 않는다."""
+    assert WakeGate().on_text(text, 0.0) is None
 
 
 @pytest.mark.parametrize(
