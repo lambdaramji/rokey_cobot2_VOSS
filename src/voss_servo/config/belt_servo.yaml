@@ -1,0 +1,35 @@
+# belt_servo 전용 파라미터 (design/U1-dd.md 1절).
+# - belt.* · gripper.* · timing.* · config_version · config_sha256 은 이 파일에 쓰지 않는다.
+#   원본은 config/voss_config.yaml 이고 bringup launch 가 넘긴다 (CLAUDE.md 규칙 5).
+# - null = 미측정. launch 는 null 키를 넘기지 않고, 노드는 값이 안 온 필수 키가 있으면 READY 를 거부한다.
+#   (--params-file 로 직접 주면 null 이 문자열 "null" 로 들어오고, 노드는 그것도 미측정으로 보고 READY 를 거부한다.
+#    null 을 걸러 넘기는 launch 는 U3 sim.launch)
+# - 주석의 "제안" 값은 pending #4 승인 전 제안값이다. 실측 근거가 생기면 measurements 와 함께 채운다.
+belt_servo:
+  ros__parameters:
+    grasp:
+      tcp_z_below_top_mm: 19.0      # 파지 높이 TCP z = position_base.z − 19 mm (결정값, topics.md·pending #16)
+      hold_width_min_mm: null       # 쥔 폭 범위 하한 (RG2 보고값). 제안 39.5 (measurements #8, T34 후 확정)
+      hold_width_max_mm: null       # 쥔 폭 범위 상한. 제안 41.5
+    reach:
+      x_min_mm: -107.0              # 추종 가능 구간 TCP x (measurements #6, 748 mm)
+      x_max_mm: 638.0
+    control:
+      kp_per_s: null                # P 게인 (1/s). 0 = FF 만. U4 실기에서 정함
+    limits:
+      max_speed_mps: null           # TCP 선속도 상한. 제안 0.08
+      max_acc_mps2: null            # 가속 상한. 제안 0.1 (= 100 mm/s², measurements #3 acc 100)
+    z:
+      approach_above_top_mm: null   # 하강 전 대기 높이 (관측 박스 윗면 기준). cutoff + 5 보다 커야 함
+      lift_above_top_mm: null       # 들기 안전 높이 (관측 박스 윗면 기준)
+      vision_cutoff_above_top_mm: null  # 이 높이 아래는 비전 사각. 제안 10 (남현지 확인)
+    input:
+      stale_timeout_s: null         # position_valid=false·pose 끊김 지속 기준. 제안 0.3
+      lost_timeout_s: null          # 내 track_id 미수신 지속 기준. 제안 0.5 (트래커 15프레임)
+    retry:
+      max_attempts: 1               # 1~3. U9 에서 3 으로 켠다 (U5 지시서: 재시도 동작은 U9)
+    stop_timeout_s: 1.0             # stop 응답 기다리는 한계. 제안
+    rate_hz: 30.0                   # 서보 루프 (topics.md 계약)
+    zero_hold_s: 0.5                # goal 종료 뒤 0 속도 유지. 제안 (watchdog 200 ms + 정지 0.15~0.41 s 보다 길게)
+    log:
+      dir: data/servo               # 상대 경로는 실행 위치 기준. launch 는 절대 경로를 넘긴다

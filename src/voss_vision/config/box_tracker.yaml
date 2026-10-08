@@ -6,6 +6,20 @@ box_tracker:
     min_hits: 5              # 이만큼 검출돼야 트랙 확정·발행 (손으로 올리는 순간의 짧은 트랙 억제)
     max_missed: 15           # 연속 미검출 폐기 프레임 (PICKING 중 현재 트랙은 보류) — voss_msgs.md BoxTrack
     gate_px: 120.0           # 트랙 연결 거리 (등속 예측 위치 기준)
+    # 좌표 (calibration.md): 관측 자세 판정·pose 보간
+    pose_max_gap_s: 0.04     # 보간할 때 가장 가까운 pose 가 이보다 멀면(또는 외삽용 이력이 이보다 끊기면) position_valid=false
+    pose_lag_ms: 60.0        # pose stamp(게이트웨이 수신 시각)가 실제보다 늦은 만큼 — 촬영 시각 + 이 값의 pose 를 쓴다 (10/08 he_moving_01, measurements-1008)
+    pose_max_extrap_ms: 80.0 # 그 pose 가 아직 없으면 최근 속도로 이만큼까지만 앞으로 외삽 (calibration.md, 제안값)
+    hz_warn: 25.0            # 실시간 영상이 이 Hz 밑이면 WARN (카메라 USB 끊김 확인용)
+    observe_tol_mm: 1.0      # TCP 가 관측 자세에서 이 안이면 호모그래피, 밖이면 핸드아이
+    observe_tol_deg: 0.5     # 자세 전체 각(공구축 둘레 회전 포함)
+    observe_source: hand_eye # hand_eye: 검증된 핸드아이를 관측 자세에서도 / homography: 되돌림용(게이트 측정 중 바꾸지 않음)
+    # LabelCrop (voss_msgs.md): 박스 영역 크롭(원본 색), 송장 찾기·펴기는 label_reader
+    crop_margin: 0.15        # 박스 bbox 를 사방으로 15% 넓혀 자른다
+    crop_period_s: 0.2       # 트랙·단계별 최소 간격(5 Hz)
+    crop_max_stage1: 10      # 입구 관측(stage 1) 트랙당 최대 장수
+    crop_min_sharpness: 0.0  # 라플라시안 분산 하한 (공용 PC 영상으로 정한다, 그 전엔 0)
+    stats_period_s: 5.0      # Hz·검출·루프·지연 로그 주기
     seg:
       downscale: 2           # 계산 해상도 1/2
       v_min: 200             # 송장 밝기 하한 (HSV V)
