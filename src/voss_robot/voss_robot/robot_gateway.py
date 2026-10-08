@@ -4,8 +4,8 @@
 연결하지 않고 관측 자세에서 시작하는 가짜 로봇을 쓴다(개인 PC 개발용, speedl 을 적분해 움직인다).
 
 지금 있는 것: /voss/robot/pose (TCP, base_link), /voss/robot/servo_cmd → speedl_stream(ADR-0010,
-만료 watchdog → 0 속도 + 항상 move_stop, TCP z 하한·x 범위·속도 상한), /voss/robot/stop.
-다음 단계: gripper → move_to_zone → RobotState.
+만료 watchdog → 0 속도 + 항상 move_stop, TCP z 하한·x 범위·속도 상한), /voss/robot/stop,
+/voss/robot/gripper (RG2 Modbus 직접, ADR-0005). 다음 단계: move_to_zone → RobotState.
 """
 
 import threading
@@ -19,9 +19,11 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 from std_srvs.srv import Trigger
 
+from voss_msgs.srv import Gripper
 from voss_robot.call_queue import SerialCallQueue
 from voss_robot.doosan import DEFAULT_PREFIX, DoosanError, DryRunDoosan
 from voss_robot.geometry import flange_to_ros_pose
+from voss_robot.rg2 import DryRunRg2, Rg2
 from voss_robot.servo_guard import ServoGuard, ServoParams
 
 
@@ -91,6 +93,31 @@ class RobotGatewayNode(Node):
         self.create_timer(0.02, self._on_servo_tick, callback_group=g_servo)  # 50 Hz watchdog 점검
         self.create_service(
             Trigger, "/voss/robot/stop", self._on_stop, callback_group=ReentrantCallbackGroup()
+        )
+        # ---- RG2: Compute Box Modbus TCP 직접 (ADR-0005). 모션과 다른 자원, 동시에 하나 ----
+        host = self.declare_parameter("rg2_host", "192.168.1.1").value
+        port = int(self.declare_parameter("rg2_port", 502).value)
+        rg2_timeout = float(self.declare_parameter("rg2_timeout_s", 6.0).value)
+        if self.dry_run:
+            self.rg2 = DryRunRg2()
+        else:
+            from pymodbus.client import ModbusTcpClient
+
+            self.rg2 = Rg2(ModbusTcpClient(host, port=port, timeout=1.0), timeout_s=rg2_timeout)
+            try:
+                w, _busy, grip, safety = self.rg2.status()
+                self.get_logger().info(
+                    f"RG2 {host}:{port} 폭 {w:.1f} mm, grip {grip}, safety_err {safety}"
+                )
+            except Exception as e:  # 연결 실패여도 노드는 뜬다(호출 때 COMM_ERROR)
+                self.get_logger().error(
+                    f"RG2 {host}:{port} 연결 실패: {e} — 툴체인저 전원·유선 확인"
+                )
+        self.create_service(
+            Gripper,
+            "/voss/robot/gripper",
+            self._on_gripper,
+            callback_group=ReentrantCallbackGroup(),
         )
         mode = "dry_run (두산·RG2 연결 안 함)" if self.dry_run else f"real {prefix}"
         self.get_logger().info(
@@ -166,6 +193,29 @@ class RobotGatewayNode(Node):
                 f"stop {ss['stop']}, move_stop {ss['ms_ok']} ok / {ss['ms_fail']} fail"
             )
         self._sstats = self._empty_servo_stats()
+
+    # ---------------- RG2 gripper (ADR-0005) ----------------
+    def _on_gripper(self, req, res):
+        """응답은 RG2 busy 해제(동작 완료) 뒤. 동작 중 두 번째 요청은 BUSY (topics.md 자원 규칙)."""
+        t0 = time.monotonic()
+        r = self.rg2.command(float(req.width), float(req.force))
+        dt = time.monotonic() - t0
+        res.ok, res.width_actual, res.grip_detected, res.message = (
+            r.ok,
+            float(r.width_actual),
+            r.grip_detected,
+            r.message,
+        )
+        line = (
+            f"gripper 요청 {req.width:.1f} mm·{req.force:.1f} N → {r.message}, "
+            f"폭 {r.width_actual:.1f} mm, grip {r.grip_detected}, {1e3 * dt:.0f} ms"
+        )
+        # rclpy 는 같은 호출 위치에서 로그 단계를 바꾸면 예외를 낸다 → 호출을 나눈다
+        if r.ok:
+            self.get_logger().info(line)
+        else:
+            self.get_logger().warn(line)
+        return res
 
     # ---------------- servo_cmd → speedl (ADR-0010) ----------------
     @staticmethod
@@ -266,6 +316,7 @@ class RobotGatewayNode(Node):
 
     def destroy_node(self) -> None:
         self.queue.close()  # 대기 작업을 버리고 작업 스레드를 끝낸다
+        self.rg2.close()
         super().destroy_node()
 
 
