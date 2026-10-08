@@ -38,7 +38,9 @@ rokey_cobot2_VOSS/
 | `tools/colab/t17_yolo_train.ipynb` | 입력 `datasets/t17_yolo_v1/t17_yolo_v1.zip`·`check.csv`, 체크포인트 `colab/t17/runs/`, 출력 `models/` |
 | box_tracker `detector: yolo` (10/08 이후) | `models/box_yolo11n_v<N>.onnx` 를 공용 PC `~/voss_ws/models/` 로 내려받아 쓴다 |
 | T16 재측정 절차서, 현장 업로드 | `raw/<MMDD>/` |
+| 중간 점검 발표 #12 (10/07) · 최종 발표 #16 | `docs/presentations/1007_중간발표/`, `docs/presentations/1016_최종발표/` — 발표 뒤 바뀐 내용은 #12 댓글 표 |
 
 ## 변경 이력
 - 2026-10-07: 신설. 사람 이름 폴더(`현지/`)·`project/reference/` 를 이 구조로 정리, 옛 판은 `reference/_archive/` (남현지).
 - 2026-10-07: 팀 공용 계정 기준으로 고침 — 공유·바로가기 규칙 삭제, 올린 사람 기록·Colab GPU 할당량·15 GB 용량 규칙 추가.
+- 2026-10-08: "레포에서 가리키는 경로" 에 발표 자료(`docs/presentations/`) 행 추가, `1007_중간발표/` 폴더 생성 (#12, 김학민).
