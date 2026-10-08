@@ -19,6 +19,7 @@ from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallb
 from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
+from rclpy.time import Time
 from std_srvs.srv import Trigger
 
 from voss_msgs.msg import RobotState
@@ -26,7 +27,8 @@ from voss_msgs.srv import Gripper, MoveToZone
 from voss_robot.call_queue import SerialCallQueue
 from voss_robot.config_params import ZONES
 from voss_robot.doosan import DEFAULT_PREFIX, DoosanError, DryRunDoosan
-from voss_robot.geometry import flange_to_ros_pose, flange_to_tcp
+from voss_robot.geometry import flange_to_ros_pose, flange_to_tcp, tcp_to_flange
+from voss_robot.pose_source import StartupCheck, fresh
 from voss_robot.rg2 import DryRunRg2, Rg2
 from voss_robot.servo_guard import ServoGuard, ServoParams
 from voss_robot.state_logic import Inputs, decide
@@ -44,6 +46,12 @@ class RobotGatewayNode(Node):
         self.dry_run = self.declare_parameter("dry_run", True).value
         prefix = self.declare_parameter("dsr_prefix", DEFAULT_PREFIX).value
         rate = self.declare_parameter("pose_rate_hz", 50.0).value
+        # service(기본) = get_current_tool_flange_posx(응답 수신 시각 stamp). joint_states = /dsr01/joint_states 최신
+        # 관절 → fkin(stamp = joint_states 시각) — 10/08 오후 service 값이 0.1 s 마다만 바뀌었다. stamp 의미가 달라
+        # box_tracker pose_lag_ms 를 다시 잰 뒤 기본으로 바꾼다(#118 리뷰). 켜도 기동 교차 검사를 통과해야 쓴다
+        self.pose_source = str(self.declare_parameter("pose_source", "service").value)
+        self._js_check = StartupCheck() if self.pose_source == "joint_states" else None
+        self._last_stamp_ns = None  # 같은 stamp 재발행 금지(#118 🟡3)
         timeout = self.declare_parameter("call_timeout_s", 0.5).value
         max_misses = self.declare_parameter("max_call_misses", 3).value  # 연속 응답 없음 → FAULT
         # voss_config 값은 launch 가 넘긴다(config_params.py). 빈 배열 = 미측정
@@ -90,6 +98,11 @@ class RobotGatewayNode(Node):
             x_range_mm=tuple(self.declare_parameter("servo_x_range_mm", [-107.0, 638.0]).value),
             pose_max_age_s=float(self.declare_parameter("servo_pose_max_age_s", 0.1).value),
             pose_latency_s=float(self.declare_parameter("servo_pose_latency_s", 0.06).value),
+        )
+        # joint_states 소스는 stamp 가 관절 읽은 시각이라 응답 지연(60 ms)을 다시 더하지 않는다. belt_servo 하강 상한과
+        # 같이 정할 값(#118 리뷰 박병후) — 확인 통과 뒤 이 값으로 바꾼다
+        self.servo_latency_js_s = float(
+            self.declare_parameter("servo_pose_latency_js_s", 0.02).value
         )
         self.guard = ServoGuard(sp)
         # guard 는 servo 콜백·watchdog 타이머·pose 완료(큐 스레드)가 같이 쓴다
@@ -216,14 +229,52 @@ class RobotGatewayNode(Node):
     def _read_pose(self):
         """큐 작업: 플랜지 posx 를 읽어 (응답 수신 시각, 값, RTT) 를 돌려준다."""
         t0 = time.monotonic()
+        if self.pose_source == "joint_states" and not self.dry_run:
+            js = self.dsr.latest_joints()
+            now = self.get_clock().now()
+            if js is None or not fresh(now.nanoseconds, js[1], 0.1):
+                raise DoosanError("joint_states 없음·0.1 s 넘게 오래됨")
+            js_flange = tcp_to_flange(self.dsr.fkin_tcp(js[0]), self.tcp)
+            if self._js_check is not None:  # 기동 교차 검사 중: 서비스 플랜지를 내고 비교만 한다
+                flange = self.dsr.get_flange_posx()
+                self._judge_js(self._js_check.feed(js_flange, flange))
+                return self.get_clock().now(), flange, time.monotonic() - t0, self.queue.last_wait_s
+            if js[1] == self._last_stamp_ns:
+                return None  # 새 관절 값이 아직 없다 → 같은 stamp 재발행 금지
+            self._last_stamp_ns = js[1]
+            stamp = Time(nanoseconds=js[1], clock_type=now.clock_type)  # joint_states 측정 시각
+            return stamp, js_flange, time.monotonic() - t0, self.queue.last_wait_s
         flange = self.dsr.get_flange_posx()
         stamp = self.get_clock().now()  # MC-004: 응답 수신 시각 (측정 시각 아님)
         return stamp, flange, time.monotonic() - t0, self.queue.last_wait_s
 
+    def _judge_js(self, verdict: str) -> None:
+        """기동 교차 검사 결과: 통과면 joint_states 로, 실패면 service 로 되돌리고 ERROR."""
+        c = self._js_check
+        if verdict == "pass":
+            self._js_check = None
+            with self._glock:
+                self.guard.p.pose_latency_s = self.servo_latency_js_s
+            self.get_logger().info(
+                f"pose_source joint_states 확인: 서비스 플랜지와 {c.last_diff_mm:.2f} mm → 사용 "
+                f"(guard pose 지연 {self.servo_latency_js_s * 1e3:.0f} ms)"
+            )
+        elif verdict == "fail":
+            self._js_check = None
+            self.pose_source = "service"
+            self.get_logger().error(
+                f"pose_source joint_states 거부: 서비스 플랜지와 {c.last_diff_mm:.1f} mm 차이가 {c.fails}번 연속 "
+                "— 펜던트 등록 TCP 가 voss_config robot.tcp_offset_mm 과 다를 수 있다. service 로 되돌림"
+            )
+
     def _pose_done(self, fut) -> None:
         self._pose_busy = False
         try:
-            stamp, flange, rtt, wait = fut.result()
+            r = fut.result()
+            if r is None:
+                self._stats["skip"] += 1  # 같은 joint_states stamp — 발행하지 않는다
+                return
+            stamp, flange, rtt, wait = r
         except DoosanError as e:
             self._stats["fail"] += 1  # 실패 주기는 발행하지 않는다(옛 값 재발행 금지)
             if str(e).startswith("FAULT"):
