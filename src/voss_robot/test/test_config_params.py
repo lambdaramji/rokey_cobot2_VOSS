@@ -14,7 +14,7 @@ def test_repo_config_values():
     assert p["tcp_offset_mm"] == pytest.approx([1.382, 2.684, 246.642])
     assert p["observe_pose"][:3] == pytest.approx([-11.51, -271.11, 450.16])
     assert p["zones.A.grid"] == [3.0, 1.0, 60.0, 0.0]
-    assert p["zones.HOLD.grid"] == [2.0, 1.0, 60.0, -30.0]  # config 키 hold → 대문자 HOLD, 칸 −60/0
+    assert p["zones.HOLD.grid"] == [2.0, 1.0, 60.0, 0.0]  # config 키 hold → 대문자 HOLD
     assert p["gripper.force_n"] == 14.0
     assert len(p["config_sha256"]) == 12
 

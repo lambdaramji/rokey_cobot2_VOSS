@@ -150,6 +150,12 @@ class RobotGatewayNode(Node):
         self.min_travel_tcp_z = float(
             self.declare_parameter("zone_min_travel_tcp_z_mm", 120.0).value
         )
+        # 트레이 안 이동: 먼 칸 위로 TCP 120 이 안 나오면 같은 구역 칸 0(−X 끝) 위까지 높게 와서 내려간 뒤
+        # 트레이 안에서만 낮게 옆으로 간다(수직 자세 그대로). 이 높이 = 박스 밑면이 이미 놓인 박스(위면 ≈
+        # TCP 28)·자기 트레이 테두리(≈ TCP 41)보다 위 — 10/08 ikin: 옛 C 중앙 100, 보류 +30 은 70
+        self.min_in_tray_tcp_z = float(
+            self.declare_parameter("zone_min_in_tray_tcp_z_mm", 70.0).value
+        )
         self.min_j3_deg = float(
             self.declare_parameter("zone_min_j3_deg", 15.0).value
         )  # 팔꿈치 특이점 여유
@@ -358,6 +364,7 @@ class RobotGatewayNode(Node):
         if mode == "PICK":
             return fail("NOT_CONFIGURED: PICK 은 아직 구현 전 (10/13 재확인 흐름)")
         place = mode in ("", "PLACE") and zone != "OBSERVE"
+        stage = None
         label = "PLACE" if place else (mode or "MOVE")
         if zone == "OBSERVE":
             if len(self.observe) != 6:
@@ -375,6 +382,7 @@ class RobotGatewayNode(Node):
                 return fail(f"NOT_CONFIGURED: zones.{zone}.pose·grid")
             try:
                 target = slot_pose(zc["pose"], zc["grid"], int(req.slot))
+                stage = slot_pose(zc["pose"], zc["grid"], 0)  # 트레이 안 이동의 출입구(−X 끝 칸)
             except ValueError as e:
                 return fail(f"INVALID: {e}")
         # 자원: 모션(servo·MoveToZone)과 RG2(PLACE 는 함께 점유). 같은 자원 두 번째 요청은 BUSY
@@ -397,7 +405,7 @@ class RobotGatewayNode(Node):
             self.get_logger().info(f"move_to_zone {zone} 칸 {req.slot} {label} 시작")
             placed = None
             try:
-                self._run_path(target)
+                self._run_path(target, stage)
                 if place:
                     g = self.rg2.command_held(self.pre_open, self.grip_force)
                     if not g.ok:
@@ -405,7 +413,7 @@ class RobotGatewayNode(Node):
                     placed = self.get_clock().now()
                     res.placed_stamp = placed.to_msg()
                     try:
-                        self._run_path(list(self.observe))
+                        self._run_path(list(self.observe), stage)
                     except _ZoneError as e:
                         return fail(f"RETURN_FAILED: {e}")
             except _ZoneError as e:
@@ -424,14 +432,15 @@ class RobotGatewayNode(Node):
             self._mlock.release()
             self._update_state()
 
-    def _travel_z(self, xy_pose, sol: int) -> float | None:
+    def _travel_z(self, xy_pose, sol: int, min_tcp_z: float | None = None) -> float | None:
         """xy_pose(플랜지) 의 x·y 위에서 safe_z 부터 10 mm 씩 내려가며, 지금 관절 배치로 풀리고 J3 여유가 있는
-        가장 높은 플랜지 z. TCP z 가 최저 이동 높이보다 낮아지면 None. ikin 은 한 번씩 큐로 보낸다(그 사이
-        pose 읽기가 끊기지 않게)."""
+        가장 높은 플랜지 z. TCP z 가 min_tcp_z(기본 최저 이동 높이)보다 낮아지면 None. ikin 은 한 번씩 큐로
+        보낸다(그 사이 pose 읽기가 끊기지 않게)."""
+        floor = self.min_travel_tcp_z if min_tcp_z is None else min_tcp_z
         z = self.safe_z
         while True:
             tcp = flange_to_tcp([xy_pose[0], xy_pose[1], z, *xy_pose[3:]], self.tcp)
-            if tcp[2] < self.min_travel_tcp_z - 1e-6:
+            if tcp[2] < floor - 1e-6:
                 return None
             if self._ik_ok(tcp, sol):
                 return z
@@ -442,32 +451,63 @@ class RobotGatewayNode(Node):
         j = self.queue.submit(lambda: self.dsr.ikin(tcp, sol)).result(timeout=3.0)
         return j is not None and abs(j[2]) >= self.min_j3_deg
 
-    def _run_path(self, target_flange) -> None:
+    def _in_tray(self, slot_flange, stage, sol: int):
+        """slot 위로 TCP ≥ 최저 이동 높이가 안 나올 때: (트레이 안 높이 플랜지 z, 칸 0 위 이동 높이) 또는 None."""
+        if stage is None or all(
+            abs(a - b) < 0.5 for a, b in zip(slot_flange[:2], stage[:2], strict=True)
+        ):
+            return None
+        zi = self._travel_z(slot_flange, sol, self.min_in_tray_tcp_z)
+        zs = self._travel_z(stage, sol)
+        return None if zi is None or zs is None else (zi, zs)
+
+    def _run_path(self, target_flange, stage=None) -> None:
         """현재 플랜지 → 목표: 수직 상승 → 수평 → 수직 하강, 단계마다 도착을 pose 로 확인.
         수평 이동 높이 = safe_z 와, 출발·도착 x·y 에서 닿는 최고 높이 중 낮은 것. 목표 자세 자체도 풀리는지
-        움직이기 전에 확인한다."""
+        움직이기 전에 확인한다. 먼 칸(출발·도착) 위로 최저 이동 높이가 안 나오면 stage(같은 구역 칸 0) 를
+        거쳐 트레이 안에서만 낮게 옆으로 간다. 자세는 늘 수직(구역 자세 그대로)."""
         try:
             cur, sol = self.queue.submit(
                 lambda: (self.dsr.get_flange_posx(), self.dsr.current_solution_space())
             ).result(timeout=5.0)
-            zs = [self._travel_z(cur, sol), self._travel_z(target_flange, sol)]
-            reach = self._ik_ok(flange_to_tcp(target_flange, self.tcp), sol)
+            if not self._ik_ok(flange_to_tcp(target_flange, self.tcp), sol):
+                raise _ZoneError("LIMIT: 목표 자세에 팔이 닿지 않음 (구역·칸 위치 확인)")
+            z0, z1 = self._travel_z(cur, sol), self._travel_z(target_flange, sol)
+            pre, post = [], []
+            start, end = cur, target_flange
+            if z0 is None and (t := self._in_tray(cur, stage, sol)) is not None:
+                zi, z0 = t  # 놓은 칸에서 트레이 안 높이로 올라가 칸 0 위로 옮긴 뒤 거기서 출발
+                low = [cur[0], cur[1], zi, *cur[3:]]
+                start = [stage[0], stage[1], zi, *cur[3:]]
+                pre = [("rise_in_tray", low)] if cur[2] < zi - 0.5 else []
+                pre.append(("to_stage", start))
+            if z1 is None and (t := self._in_tray(target_flange, stage, sol)) is not None:
+                zi, z1 = t  # 칸 0 위로 내려와 트레이 안 높이로 목표 칸 위까지 옮긴 뒤 하강
+                end = [stage[0], stage[1], zi, *target_flange[3:]]
+                post = [("in_tray", [target_flange[0], target_flange[1], zi, *target_flange[3:]])]
+                post.append(("descend", list(target_flange)))
+        except _ZoneError:
+            raise
         except Exception as e:  # 큐 응답 없음
             raise _ZoneError(f"TIMEOUT: 경로 계산 {e}") from e
-        if not reach:
-            raise _ZoneError("LIMIT: 목표 자세에 팔이 닿지 않음 (구역·칸 위치 확인)")
-        if None in zs:
-            where = "출발" if zs[0] is None else "도착"
+        if z0 is None or z1 is None:
+            where = "출발" if z0 is None else "도착"
             raise _ZoneError(
                 f"LIMIT: {where} 위에서 TCP z ≥ {self.min_travel_tcp_z:.0f} mm 로 수평 이동할 수 없다"
-                " (팔이 닿지 않음 — 구역·칸 위치 확인)"
+                f" (트레이 안 TCP ≥ {self.min_in_tray_tcp_z:.0f} 도 안 됨 — 팔이 닿지 않음)"
             )
-        hz = min(zs)
+        hz = min(z0, z1)
         if hz < self.safe_z - 0.5:
             self.get_logger().info(
                 f"수평 이동 높이 플랜지 z {hz:.1f} (TCP {hz - self.safe_z + 200:.0f}) — safe_z 에서 안 닿음"
             )
-        for name, step in plan_move(cur, target_flange, hz):
+        if pre or post:
+            zi = (post or pre)[0][1][2]
+            self.get_logger().info(
+                f"트레이 안 이동: 칸 0 위 거쳐 TCP {zi - self.safe_z + 200:.0f} 높이로 옆으로"
+            )
+        steps = pre + plan_move(start, end, hz) + post
+        for name, step in steps:
             tcp = flange_to_tcp(step, self.tcp)
             seq0 = self.dsr.alarm_seq
             try:
