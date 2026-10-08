@@ -630,8 +630,11 @@ def _on_move(ctx: Ctx, ev: MoveDone) -> Out:
     placed = ev.placed_stamp_ns != 0
     if ev.ok:
         reason = ""
+    elif ctx.stop_requested or ev.message.strip().upper().startswith("STOPPED"):
+        # 게이트웨이가 stop 으로 끊었다(voss_msgs.md MoveToZone STOPPED, #100) — 누가 stop 을 불렀든 STOPPED
+        reason = "STOPPED"
     else:
-        reason = "STOPPED" if ctx.stop_requested else "DEVICE_ERROR"
+        reason = "DEVICE_ERROR"
     slots = dict(ctx.slots)
     if placed:
         # 그 칸에서 개방했으면(RETURN_FAILED 포함) 칸을 쓴 것 (MC-018)

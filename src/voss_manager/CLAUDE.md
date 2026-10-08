@@ -16,7 +16,7 @@
 - **불확실(LOW_CONF·UNKNOWN·불일치)은 집지 않고 다음 판독을 기다린다.** box_id·SortResult 없음. 재확인 구역 → 질문 → 보류는 T23.
 - **start·resume 은 먼저 `MoveToZone(OBSERVE)`**(`home_first`), 도착 시각부터의 판독만 쓴다. PLACE 응답 뒤에도 그 시각부터 다시 관측.
 - **파지 실패(GRASP_FAILED·LOST·OUT_OF_REACH·STALE_INPUT·DEVICE_ERROR)·goal 거부·적재 실패 → FAILED + PAUSED.** 자동 복귀·자동 개방 없음, 사람이 확인하고 resume(OBSERVE 로 이동). goal 거부는 reason DEVICE_ERROR·attempts 0.
-- **적재:** `placed_stamp ≠ 0` 이면 PLACED + 칸 증가(ok=false 면 reason DEVICE_ERROR, stop 뒤면 STOPPED — RETURN_FAILED 의 outcome 은 F-06 제안). `placed_stamp = 0` 이면 FAILED, 같은 칸 재사용.
+- **적재:** `placed_stamp ≠ 0` 이면 PLACED + 칸 증가(ok=false 면 reason DEVICE_ERROR, 우리가 stop 했거나 응답 코드가 `STOPPED` 면 STOPPED — #100. RETURN_FAILED 의 outcome 은 F-06 제안). `placed_stamp = 0` 이면 FAILED, 같은 칸 재사용.
 - **stop:** `/voss/robot/stop` 먼저 → goal 취소 → PAUSED. 취소된 박스는 FAILED·STOPPED. stop 이 false·시간 초과면 not_ready 에 ROBOT, **stop 을 다시 보내 성공해야 resume**. **IDLE 에서 stop 은 IDLE 유지**(세션이 없어 resume 할 곳이 없음 — SRD 표 "모든 상태 → PAUSED" 와 다름, F-04 에 제안).
 - **구역 가득:** 다음 박스 구역의 칸 = grid 칸 수면 PAUSED(그 박스는 box_id 없이 통과), `reset_zone` 전 resume 거부. ZONE_FULL 결과 기록은 F-07 제안 상태라 아직 안 한다.
 - **priority:** 비대상은 PASSED·NON_TARGET·attempts 0. IDLE 에서 저장한 우선은 start 뒤에도 유지, 운전 중 start(ALL) 는 전체로 전환. PAUSED 에서는 거부.

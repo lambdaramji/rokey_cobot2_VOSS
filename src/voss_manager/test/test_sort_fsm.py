@@ -313,6 +313,22 @@ def test_stop_during_place(cfg: f.Config) -> None:
     assert ctx.slots["B"] == 1 and ctx.state == f.PAUSED
 
 
+@pytest.mark.parametrize(
+    "placed_ns, outcome, zone, slot", [(8000 * MS, "PLACED", "B", 1), (0, "FAILED", "", 0)]
+)
+def test_gateway_stopped_code_without_our_stop(
+    cfg: f.Config, placed_ns: int, outcome: str, zone: str, slot: int
+) -> None:
+    """다른 경로의 stop(belt_servo·HMI 등)이 PLACE 를 끊어도 응답 코드 STOPPED 면 STOPPED 로 남긴다 (#100)."""
+    ctx = running(cfg)
+    ctx, _, _ = run(ctx, label(5), f.GoalDone(True, True, "OK", 1, 5000 * MS))
+    ctx, acts, _ = run(ctx, f.MoveDone(False, "STOPPED", placed_ns, 9000 * MS))
+    (res,) = of(acts, f.Result)
+    assert (res.outcome, res.zone, res.reason) == (outcome, zone, "STOPPED")
+    assert ctx.slots["B"] == slot and ctx.state == f.PAUSED
+    assert not [m for m in of(acts, f.CallMove)]  # 자동 재호출·개방 없음
+
+
 def test_stop_failure_blocks_resume_until_stop_succeeds(cfg: f.Config) -> None:
     ctx = running(cfg)
     ctx, _, _ = run(ctx, cmd("stop"), f.StopDone(False, "TIMEOUT", 0))
