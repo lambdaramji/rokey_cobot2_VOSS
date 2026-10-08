@@ -67,6 +67,7 @@
 - 원인: 컨트롤러 툴·TCP 등록이 **비어 있었다**(`tcp/get_current_tcp` info='', gateway 측정 247 mm 차). gateway 는 OBSERVE(플랜지 z 450.2)를 TCP 좌표(z 203.6)로 바꿔 move_line 에 보내는데, 등록이 없으면 컨트롤러가 이를 **플랜지** 목표로 받아 246.6 mm 수직 하강이 된다. 도착 판정은 config 오프셋 TCP 로 봐서 목표에서 멀어지는 걸 모르고 기다렸고(제한 8 s → 비상정지 없으면 ≈ 240 mm), 실패해도 move_stop 을 보내지 않았다.
 - 등록이 언제 풀렸나: **확인 필요.** 15:52·17:26·18:01 브링업 뒤에는 MoveToZone 이 정상(등록 유지)이었고 브링업 로그(권한·상태)는 18:24 와 같다 → 브링업 재시작 자체가 아니라 18:01~18:24 사이 다른 일(컨트롤러 재부팅·펜던트 조작 등). ROS `tcp/set_current_tcp`(GripperDA_v1)·`tcp/config_create_tcp` 는 자동 모드에서 `success=False`.
 - 조치(#41, PR #121): ① MoveToZone 마다 `get_current_posx`(등록 TCP)를 플랜지와 비교 — 등록 = `tcp_offset_mm` 이면 TCP 좌표, **등록 없음이면 플랜지 좌표로 명령**, 둘 다 아니면 `NOT_CONFIGURED` ② 이동 중 TCP 가 단계 직선에서 15 mm 벗어나면 move_stop + `LIMIT` ③ 이동 시작 뒤 실패·gateway 종료 때 move_stop. 실기(19:26, 등록 없음): 기동 ERROR 로그·OBSERVE `NOT_CONFIGURED … 247 mm`, 로봇 정지 그대로(①의 첫 판, 거부만 하던 버전).
+- 복구 확인(20:03): 펜던트 강제회수 → 툴·TCP GripperDA_v1 선택 → 제어권 반환 → `tcp/get_current_tcp` = `'GripperDA_v1'`, gateway 기동 `컨트롤러 TCP 등록 voss_config 와 같음 (차 0.0 mm)`, OBSERVE OK·**A 칸 1 PLACE OK 47.5 s**(30 mm/s), pose (−14.49, −276.54, 203.58) mm. 브링업 재시작 없이 제어권이 돌아왔다. 등록 없음 상태(19:39 플랜지 모드, A 칸 1 47.0 s)와 같은 결과.
 - **남은 위험 — 펜던트 공간 제한:** 제한은 등록 TCP 기준이라 등록이 없으면 플랜지를 막는다(핑거 끝은 247 mm 아래). G0 공간 제한(#119)을 믿으려면 컨트롤러 TCP 를 GripperDA_v1 로 되돌리고, 제한 근처로 jog 해 핑거 끝 높이에서 서는지 확인해야 한다.
 
 ## 기타
