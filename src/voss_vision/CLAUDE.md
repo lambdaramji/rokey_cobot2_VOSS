@@ -14,4 +14,11 @@
 - 후보는 `/voss/sort/zone_map` 에서만. 발행자는 엔진 예열 + zone_map 수신 뒤에 만든다(sort_manager 의 OCR 준비 = 발행자 존재).
 - OCR 은 작업 스레드 하나, 트랙마다 최신 크롭 1장만 대기, 같은 동 2장 + confidence_min 이상이면 그 트랙은 더 안 읽는다.
 - 호스트 G0 는 PaddleOCR venv(`--system-site-packages`)로: `ros2 launch voss_vision label_reader.launch.py python:=<venv>/bin/python`. GPU·컨테이너는 T22.
-- 아직 없음: stage 2(추종 중, 선명도 가중) — T19 2차, stage 3·`/voss/vision/read_label` — T23.
+- 아직 없음: stage 2(추종 중, 선명도 가중) — T19 2차.
+
+## label_reader 재판독 (stage 3, T23 #32)
+- `/voss/vision/read_label`: 요청 동안만 `/camera/color/image_raw` 구독 → max_frames 장(기본 5)을 timeout_s(기본 2 s) 안에 모음 → 해제. 재확인 트레이는 초록 벨트가 아니라 box_tracker 크롭이 없다 → `label_view.find_labels_in_view`(전체 화면 흰 송장, `view.roi` 중심에 가까운 순) → 선명도 순으로 최대 `view.max_ocr` 장 OCR, 같은 동 `view.min_agree` 장 + confidence_min 이면 조기 종료.
+- 작업 스레드는 재판독을 크롭보다 먼저 처리. 서비스 콜백은 결과를 기다리므로 MultiThreadedExecutor(4) + 서비스·카메라 콜백 그룹 분리.
+- 실패 사유: timeout(프레임 0장·OCR 대기 초과) / no_box / no_text. 낮은 신뢰도는 ok=true 로 돌려주고 질문 여부는 sort_manager 가 정한다.
+- `view.area_*`·`roi` 는 재확인 VIEW 자세 사진(학민 촬영, Drive raw/1008/recheck_view) 전까지 넓은 값. `debug_save_dir` 를 주면 요청마다 첫 프레임을 `view_s3_<stamp>.png` 로 남긴다(튜닝용, 커밋 금지).
+- 트레이 2박스(보류로 남은 박스) 때 칸 지정은 미정 — VIEW 사진 뒤 slot 필드 추가 또는 칸별 VIEW 자세 중 결정.

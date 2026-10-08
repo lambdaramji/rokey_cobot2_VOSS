@@ -12,3 +12,14 @@ label_reader:
     track_forget_s: 30.0       # 이만큼 크롭이 안 온 트랙의 판독 기록을 지운다
     stats_period_s: 5.0        # 입력·판독·OCR 지연 로그 주기
     debug_save_dir: ""         # 지정하면 펴진 송장 크롭을 png 로 남긴다(현장 확인·T19 데이터용, 커밋 금지)
+    view:                      # 재판독 /voss/vision/read_label (stage 3, T23). 송장 크기·영역은 재확인 VIEW 자세 사진으로 정한다
+      image_topic: /camera/color/image_raw   # 요청 동안만 구독
+      max_frames: 5            # 요청 max_frames=0 일 때 모을 장수
+      timeout_s: 2.0           # 요청 timeout_s=0 일 때 프레임 모으는 시간 한도
+      max_ocr: 3               # 모은 것 중 선명한 순으로 OCR 할 최대 장수 (CPU 장당 약 1.7 s)
+      min_agree: 2             # 같은 동 이만큼 + confidence_min 이상이면 남은 프레임은 안 읽는다
+      ocr_wait_s: 10.0         # 프레임 모은 뒤 OCR 결과를 기다리는 한도 → 넘으면 message timeout
+      area_min_px: 4000        # 송장 면적(px) 범위. 관측 자세 송장 ≈ 172×106 px ≈ 18000 px. VIEW 사진으로 좁힌다
+      area_max_px: 300000
+      fill_min: 0.75           # 회전 사각형 대비 채움 (흰 띠·얼룩 거르기)
+      roi: [0, 0, 0, 0]        # x0 y0 x1 y1 (px). 전부 0 = 전체 화면. 이 영역 중심에 가장 가까운 송장을 읽는다
