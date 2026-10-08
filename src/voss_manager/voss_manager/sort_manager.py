@@ -336,7 +336,7 @@ class SortManagerNode(Node):
         if phase != self.last_phase:
             self.last_phase = phase
             self.get_logger().info(
-                f"servo {phase} err=({fb.feedback.err_u:.0f}, {fb.feedback.err_v:.0f}) px"
+                f"servo {phase}"  # feedback 은 phase 만 (#102·#103, 오차는 belt_servo 로그)
             )
 
     def _cancel_goal(self) -> None:

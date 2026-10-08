@@ -124,9 +124,7 @@ class G0Mock(Node):
                 res.grasped, res.reason, res.attempts = False, "CANCELED", 1
                 return res
             k = int((1 - (t_end - time.monotonic()) / a.grasp_s) * len(phases))
-            gh.publish_feedback(
-                TrackAndGrasp.Feedback(err_u=3.0, err_v=-2.0, phase=phases[min(k, 5)])
-            )
+            gh.publish_feedback(TrackAndGrasp.Feedback(phase=phases[min(k, 5)]))
             time.sleep(0.1)
         res.grasped, res.reason, res.attempts = a.grasp == "OK", a.grasp, a.attempts
         if a.grasp == "OK":
