@@ -31,6 +31,7 @@ from voss_voice.listen_logic import (
 def test_split_wake_found(text, cmd):
     assert split_wake(text) == (True, cmd)
 
+
 @pytest.mark.parametrize(
     "text",
     [
@@ -43,6 +44,7 @@ def test_split_wake_found(text, cmd):
 def test_legacy_wake_is_rejected(text: str) -> None:
     """옛 호출어로는 일반 명령을 전달하지 않는다."""
     assert WakeGate().on_text(text, 0.0) is None
+
 
 @pytest.mark.parametrize(
     "text", ["작업 시작", "역삼동부터 분류해 헬로 로키", "헬로", "블로키 작업", ""]
