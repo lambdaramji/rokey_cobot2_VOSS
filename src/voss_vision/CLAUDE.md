@@ -21,4 +21,4 @@
 - 작업 스레드는 재판독을 크롭보다 먼저 처리. 서비스 콜백은 결과를 기다리므로 MultiThreadedExecutor(4) + 서비스·카메라 콜백 그룹 분리.
 - 실패 사유: timeout(프레임 0장·OCR 대기 초과) / no_box / no_text. 낮은 신뢰도는 ok=true 로 돌려주고 질문 여부는 sort_manager 가 정한다.
 - `view.area_*`·`aspect_tol`·`roi` 는 10/08 VIEW 자세(view_pose #116) 사진 11장으로 정한 값(송장 174~177 px, 칸 0 y ≈ 420·칸 1 ≈ 690). view_pose 를 바꾸면 다시 잰다. 사진 판독(프레임 1장씩, 개인 PC CPU): 칸 0·1 단독 6장·BOTH 칸별·R180·TILT 20° 모두 1.00, 흐린 송장은 코드만 0.63, EMPTY no_box. `debug_save_dir` 를 주면 요청마다 첫 프레임을 `view_s3_<stamp>.png` 로 남긴다(튜닝용, 커밋 금지).
-- 트레이 2박스(보류로 남은 박스) 때 칸 지정은 미정 — VIEW 사진 뒤 slot 필드 추가 또는 칸별 VIEW 자세 중 결정.
+- **칸 지정**(10/08 결정): `ReadLabel.slot`(기본 -1) — sort_manager 가 그 박스의 재확인 칸을 보내면 `view.slot_rois` 의 그 칸 영역만 본다(칸 0 = 화면 위, 1 = 아래). -1 은 `view.roi` 중심(박스 1개일 때만 안전 — BOTH 에서는 중심이 두 칸 가운데). 없는 칸 번호는 `bad_slot`.

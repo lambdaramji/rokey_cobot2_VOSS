@@ -44,6 +44,15 @@ def test_find_labels_roi_and_filters() -> None:
     assert find_labels_in_view(tray()) == []
 
 
+def test_find_labels_slot_rois_pick_each_slot() -> None:
+    """VIEW 자세: 칸 0 = 화면 위, 칸 1 = 아래. 트레이 중심은 두 칸의 가운데라 칸 영역으로만 가른다 (ReadLabel.slot)."""
+    img = tray((980, 420, 90), (988, 690, 90))
+    s0, s1 = (600, 150, 1360, 555), (600, 555, 1360, 960)
+    assert abs(find_labels_in_view(img, roi=s0)[0][0][1] - 420) < 4
+    assert abs(find_labels_in_view(img, roi=s1)[0][0][1] - 690) < 4
+    assert len(find_labels_in_view(img, roi=(600, 150, 1360, 960))) == 2
+
+
 class Fake:
     """크롭을 받을 때마다 기록하고 정해 둔 줄을 돌려주는 엔진."""
 

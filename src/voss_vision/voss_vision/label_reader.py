@@ -126,6 +126,7 @@ class ViewJob:
 
     frames: list
     max_ocr: int
+    finder: dict  # find_labels_in_view 인자 (칸을 지정하면 그 칸의 roi)
     done: threading.Event = field(default_factory=threading.Event)
     result: ViewResult | None = None
     cancelled: bool = False  # 서비스가 기다리다 포기함 → 작업 스레드는 건너뛴다
@@ -164,6 +165,13 @@ class LabelReaderNode(Node):
             "aspect_tol": p("view.aspect_tol", 0.5).value,
             "roi": tuple(roi) if any(roi) else None,
         }
+        # 칸별 화면 영역 [x0 y0 x1 y1] × 칸 수 (평평한 목록). ReadLabel.slot ≥ 0 이면 그 칸 영역만 본다
+        flat = list(p("view.slot_rois", [0, 0, 0, 0]).value)
+        self.slot_rois = [
+            tuple(flat[i : i + 4])
+            for i in range(0, len(flat) - len(flat) % 4, 4)
+            if any(flat[i : i + 4])
+        ]
 
         with open(self.config_path, "rb") as f:
             raw = f.read()
@@ -276,6 +284,15 @@ class LabelReaderNode(Node):
     def _on_read_label(self, req: ReadLabel.Request, res: ReadLabel.Response) -> ReadLabel.Response:
         """재확인 구역 위(VIEW)에서 정지 화면 몇 장 → 다수결. sort_manager 가 VIEW 이동 완료 뒤 부른다."""
         n = int(req.max_frames) or self.view_frames
+        slot = int(req.slot)
+        if slot >= len(self.slot_rois) or slot < -1:
+            self.get_logger().error(
+                f"재판독 칸 {slot}: view.slot_rois 에 없음({len(self.slot_rois)}칸)"
+            )
+            res.ok, res.message = False, "bad_slot"
+            res.label = LabelRead(track_id=req.track_id, stage=STAGE_RECHECK)
+            return res
+        finder = self.view_finder if slot < 0 else {**self.view_finder, "roi": self.slot_rois[slot]}
         window = float(req.timeout_s) or self.view_window_s
         t0 = time.perf_counter()
         grab = Grab(n)
@@ -295,7 +312,7 @@ class LabelReaderNode(Node):
         t_grab = time.perf_counter() - t0
         if bad and not frames:
             self.get_logger().error(f"재판독 영상 변환 실패: {bad}")
-        job = ViewJob(frames, min(self.view_max_ocr, n))
+        job = ViewJob(frames, min(self.view_max_ocr, n), finder)
         with self.cv:
             self.stats.crops[STAGE_RECHECK] += 1
             self.jobs.append(job)
@@ -318,7 +335,7 @@ class LabelReaderNode(Node):
             self.pub.publish(res.label)
         lb = res.label
         self.get_logger().info(
-            f"재판독 track {req.track_id}: ok={res.ok} {r.reason or '-'} {lb.code or '-'} {lb.dong or '-'} "
+            f"재판독 track {req.track_id} 칸 {slot}: ok={res.ok} {r.reason or '-'} {lb.code or '-'} {lb.dong or '-'} "
             f"{lb.confidence:.2f} (alt {lb.dong_alt or '-'} {lb.confidence_alt:.2f}) — 프레임 {len(frames)}/{n} "
             f"{t_grab:.1f} s, {note}, 전체 {time.perf_counter() - t0:.1f} s"
         )
@@ -331,7 +348,7 @@ class LabelReaderNode(Node):
                 eng,
                 job.frames,
                 cands,
-                finder=self.view_finder,
+                finder=job.finder,
                 scale=self.scale,
                 max_ocr=job.max_ocr,
                 conf_min=self.conf_min,
