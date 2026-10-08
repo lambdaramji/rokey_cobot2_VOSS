@@ -254,12 +254,13 @@ class RosDoosan:
         self._log = node.get_logger()
 
     def _on_js(self, m) -> None:
-        import math
+        from voss_robot.pose_source import joints_deg
 
-        try:
-            pos = dict(zip(m.name, m.position, strict=False))
-            j = [math.degrees(pos[f"joint_{i}"]) for i in range(1, 7)]
-        except KeyError:
+        j = joints_deg(m.name, m.position)
+        if j is None:
+            if not getattr(self, "_js_name_logged", False):
+                self._js_name_logged = True
+                self._log.error(f"joint_states 이름이 joint_1..6 이 아님: {list(m.name)}")
             return
         stamp = m.header.stamp.sec * 1_000_000_000 + m.header.stamp.nanosec
         with self._js_lock:

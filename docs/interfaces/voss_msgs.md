@@ -51,7 +51,7 @@
   - `LabelRead` 끝에 `stamp`·`raw_text`·`dong_alt`·`confidence_alt` 추가 (SRD 회신 NEW-V-01: 오래된 결과 판정, OCR 원문, 1·2위 후보 질문).
   - `BoxTrack.track_id` 부여 규칙 명시 — 증가·재사용 금지·15프레임 폐기·재시작 시 초기화 (#49 박병후 리뷰 🟡3, 필드 변경 없음).
 - 2026-10-07: #65 리뷰(김학민 01:23, 박병후) 반영.
-  - `/voss/robot/pose` = **TCP** pose (#53 MC-010). pose stamp = 응답 수신 시각(#53 MC-004)으로 topics.md·BoxTrack 비고 통일(22:01 박병후 🔴2·01:23 김학민 리뷰의 "중간값" 철회).
+  - `/voss/robot/pose` = **TCP** pose (#53 MC-010). pose stamp = 응답 수신 시각(#53 MC-004)으로 topics.md·BoxTrack 비고 통일(22:01 박병후 🔴2·01:23 김학민 리뷰의 "중간값" 철회). 10/08: gateway `pose_source: joint_states` 이면 관절 읽은 시각(기본은 `service` 그대로, #118).
   - `TrackAndGrasp` 비고에 GRASP → LIFT 전환 조건(닫힘 완료 + `grip_detected` + 보고폭 범위, 늦은 Gripper 응답 버림) 추가 (#65 박병후 00:50, #53 MC-012·013).
   - `TrackAndGrasp.reason` 최종 목록: `STOP_UNCONFIRMED` 삭제(#53 박병후 최소안), `OUT_OF_REACH` 추가, status 대응·정지 요청 실패 처리(ABORTED + DEVICE_ERROR)·reason 분기·자동 개방 금지 명시.
   - `BoxTrack.position_source` 를 msg 상수(`SOURCE_*`)로 정의 — 필드·값은 그대로.
