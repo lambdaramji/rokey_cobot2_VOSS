@@ -43,7 +43,7 @@ flowchart LR
 | 위치 | 구성요소 | 이유 |
 |---|---|---|
 | 호스트 (공용 MSI 노트북) | 두산 브링업, robot_gateway, belt_servo(30 Hz), sort_manager, voice_listener/intent_parser/speech_out, hmi_bridge, sort_logger, Mosquitto(1883) | 서보 루프 지연을 컨테이너와 분리 |
-| 비전 컨테이너 (GPU, `ros:jazzy` 계열) | box_tracker(YOLO), label_reader(PaddleOCR) | GPU 의존성 격리. `--network host`, 같은 ROS_DOMAIN_ID, `config/` 읽기 전용 마운트 |
+| 비전 컨테이너 (GPU, `ros:jazzy` 계열) | box_tracker(OpenCV 분할, ADR-0011 — GPU 불필요), label_reader(PaddleOCR) | GPU 의존성 격리. `--network host`, 같은 ROS_DOMAIN_ID, `config/` 읽기 전용 마운트 |
 | DB 컨테이너 | PostgreSQL (`sort_log`) | 호스트 볼륨 마운트. writer = sort_logger, Spring Boot 는 읽기 전용 (ADR-0006) |
 | 웹 컨테이너 | Spring Boot(Java 21) + React·Nginx | REST·SSE·MQTT 클라이언트. `--network host` (ADR-0006) |
 | AI 컨테이너 (GPU) | FastAPI + Whisper + OpenAI API | STT·intent 전용. 음성 ROS 노드가 HTTP 로 호출 (ADR-0006) |
@@ -58,7 +58,7 @@ flowchart LR
 - A안(기본): 폐루프 비주얼 서보 (픽셀 오차 → 속도 명령 + 벨트 속도 피드포워드), 30 Hz.
 - B안(폴백): 개루프 동기 추종 (벨트 속도 알고 그 속도로 이동하며 하강).
 - **10/10 게이트**: A안 추종 파지 20회 중 14회(70%) 점검. 미달이어도 자동 전환하지 않고 게이트 회의에서 ① B안 ② 범위 축소 ③ A안 10/12 연장 중 정한다. 결정은 ADR-0002에 남긴다.
-- 그리퍼: **31 mm 면**을 잡는다(46 mm 변 = 벨트 방향, 닫힘축이 벨트를 가로지름, pending #16 10/07 결정). 사전 개방 90 mm(보고값, 실제 약 80 mm) → 벨트 가로 방향 양쪽 약 24.5 mm 여유. 벨트 방향 타이밍 오차는 그리퍼가 흡수하지 못하므로 추종이 맡는다.
+- 그리퍼: **31 mm 폭**을 잡는다(핑거 간격 31 mm, 46×27 mm 긴 옆면 두 개, 46 mm 변 = 벨트 방향, 닫힘축이 벨트를 가로지름, pending #16 10/07 결정, ADR-0009). 사전 개방 90 mm(보고값, 실제 약 80 mm) → 벨트 가로 방향 양쪽 약 24.5 mm 여유. 벨트 방향 타이밍 오차는 그리퍼가 흡수하지 못하므로 추종이 맡는다.
 - 두산 제어: `servol_stream` 계열 스트리밍 토픽이 있으면 사용, 없으면 짧은 상대 `move_line` ASYNC 큐 (10/06 확인).
 
 ## 핵심 수치 (SRD에서)
