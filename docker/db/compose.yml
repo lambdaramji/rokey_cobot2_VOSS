@@ -1,0 +1,20 @@
+# VOSS 작업 로그 DB (PostgreSQL 16). ADR-0006. 실행은 사람이 한다: docker compose up -d
+services:
+  db:
+    image: postgres:16
+    network_mode: host            # 호스트의 sort_logger 와 Spring Boot 가 127.0.0.1:5432 로 붙는다
+    # web_api.md 포트 표: 5432 는 localhost 에만 연다 (Wi-Fi 쪽으로 열지 않음)
+    command: ["postgres", "-c", "listen_addresses=localhost", "-c", "port=5432", "-c", "timezone=Asia/Seoul"]
+    env_file: .env
+    environment:
+      POSTGRES_DB: voss
+    volumes:
+      # 10/16 발표까지 전체 보존(SRD). 컨테이너를 지워도 데이터는 호스트에 남는다
+      - /var/lib/voss/pgdata:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d voss"]
+      interval: 5s
+      timeout: 3s
+      retries: 10

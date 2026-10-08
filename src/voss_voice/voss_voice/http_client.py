@@ -49,3 +49,30 @@ def get_stats(query: dict, base: str = API_BASE, timeout_s: float = 2.0) -> dict
         params["dong"] = query["dong"]
     url = f"{base}/api/stats?{urllib.parse.urlencode(params)}"
     return _request(urllib.request.Request(url, method="GET"), timeout_s)
+
+
+def post_stt(
+    wav: bytes, language: str = "ko", base: str = AI_BASE, timeout_s: float = 5.0
+) -> dict | None:
+    """POST /ai/stt (multipart: audio WAV) → {"ok": true, "text": ..., "stt_ms": ...} 또는 None."""
+    boundary = "vossboundary7e3f"
+    parts = [
+        f'--{boundary}\r\nContent-Disposition: form-data; name="language"\r\n\r\n{language}\r\n'.encode(),
+        (
+            f'--{boundary}\r\nContent-Disposition: form-data; name="audio"; filename="seg.wav"\r\n'
+            "Content-Type: audio/wav\r\n\r\n"
+        ).encode()
+        + wav
+        + b"\r\n",
+        f"--{boundary}--\r\n".encode(),
+    ]
+    req = urllib.request.Request(
+        f"{base}/ai/stt",
+        data=b"".join(parts),
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+        method="POST",
+    )
+    resp = _request(req, timeout_s)
+    if not resp or not resp.get("ok") or not isinstance(resp.get("text"), str):
+        return None
+    return resp

@@ -1,6 +1,6 @@
 uint8 SOURCE_NONE=0
-uint8 SOURCE_OBSERVE_HOMOGRAPHY=1   # 관측 자세 정지
-uint8 SOURCE_HAND_EYE=2             # 이동 중, 촬영 시각 pose
+uint8 SOURCE_OBSERVE_HOMOGRAPHY=1   # 관측 자세 정지 — 핸드아이 미검증이거나 observe_source: homography 일 때
+uint8 SOURCE_HAND_EYE=2             # 핸드아이 + 촬영 시각 pose. moving_verified 면 관측 자세도 (트랙 안 출처 고정, calibration.md)
 
 int32 track_id           # 새 박스마다 +1, 재사용 안 함. 15프레임 미검출 시 폐기, PICKING 중인 트랙은 보류 (voss_msgs.md BoxTrack 규칙)
 float32 u                # 픽셀 x
