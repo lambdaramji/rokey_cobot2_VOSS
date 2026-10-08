@@ -13,4 +13,4 @@
 | 기타 설명/리스크·출처 | 출처 E번호·안전/키 관리 절 참조·시연 설명 정리 | 제품 수치/수락에 새 보장값을 추가하지 않음 |
 | VOSS_BRD.md | #51 최종 회신 때 v1.1 사본 | #79에서 v1.3 사본으로 교체 완료 |
 
-v1.1 원본 Word와 v1.2 추출 텍스트·전문 diff·요구사항 행 비교JSON은 sources/BRD_comparison에 포함했다. v1.2 Word는 main에서 v1.3으로 교체돼 git 기록([e8dd5e5](https://github.com/yujh5537/rokey_cobot2_VOSS/blob/e8dd5e5/docs/requirements/VOSS_BRD_v1.2.docx))에만 있다. v1.3 비교는 #79의 v1.2·v1.3 docx 단락·표 텍스트를 직접 대조했다. 요구사항 행이 동일하다는 사실은 최신 공동 계약 정정이나 사용자 지침을 무효화하지 않는다.
+v1.1 원본 Word와 v1.2 추출 텍스트·전문 diff·요구사항 행 비교JSON은 sources/BRD_comparison에 포함했다. v1.2 Word는 main에서 v1.3으로 교체돼 git 기록([e8dd5e5](https://github.com/lambdaramji/rokey_cobot2_VOSS/blob/e8dd5e5/docs/requirements/VOSS_BRD_v1.2.docx))에만 있다. v1.3 비교는 #79의 v1.2·v1.3 docx 단락·표 텍스트를 직접 대조했다. 요구사항 행이 동일하다는 사실은 최신 공동 계약 정정이나 사용자 지침을 무효화하지 않는다.

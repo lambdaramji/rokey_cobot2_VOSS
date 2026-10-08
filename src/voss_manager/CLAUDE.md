@@ -1,4 +1,4 @@
-# voss_manager — 남현지 (@yujh5537)
+# voss_manager — 남현지 (@lambdaramji)
 노드: sort_manager. 상태 IDLE → RUNNING → PICKING → RECHECK → ASKING → PAUSED (docs/architecture.md).
 - voss_config.yaml 을 읽고 쓰는 **유일한** 노드. 바뀌면 /voss/sort/zone_map 재발행 (transient_local).
 - 상태 전이는 순수 함수 (상태, 이벤트) → (다음 상태, 액션) 로 두고 pytest 로 6상태 전이를 시험한다.

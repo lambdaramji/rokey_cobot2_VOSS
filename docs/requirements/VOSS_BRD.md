@@ -493,7 +493,7 @@
 | **E2**   | [<u>경기일보, 택배노동자 (2020-09-21)</u>](https://www.kyeonggi.com/article/202009211138955) — 분류작업 하루 6~8시간                                                                                  | 1.1, 1.5      |
 | **E3**   | [<u>뉴시스, 택배 사회적합의기구 가합의 (2021-06-16)</u>](https://www.newsis.com/view/NISX20210616_0001478871) — 택배기사 분류작업 배제 합의                                                           | 1.1, 1.5      |
 | **E4**   | [<u>세계일보, 택배기사 수입 감소 추산 (2026-08-19)</u>](https://www.segye.com/newsView/20260819503819) — 하루 평균 업무시간 9시간 10분                                                                | 1.5           |
-| **E5**   | [<u>전 프로젝트 레포 rokey_cobot1_Weld-Made</u>](https://github.com/yujh5537/rokey_cobot1_Weld-Made) — ROS 2 Jazzy 환경, DRCF 버전, 서비스 호출 특성(docs/env/api-check-log.md, docs/env/versions.md) | 6.1, 6.2, 7장 |
+| **E5**   | [<u>전 프로젝트 레포 rokey_cobot1_Weld-Made</u>](https://github.com/lambdaramji/rokey_cobot1_Weld-Made) — ROS 2 Jazzy 환경, DRCF 버전, 서비스 호출 특성(docs/env/api-check-log.md, docs/env/versions.md) | 6.1, 6.2, 7장 |
 | **E6**   | [<u>매일노동뉴스, 2022년 민간택배 노동자 분류작업 족쇄 벗는다 (2021-06-17)</u>](https://www.labortoday.co.kr/news/articleView.html?idxno=203378) — 박스당 170원 인상 요인                             | 1.5           |
 | **E7**   | [<u>국가물류통합정보센터, 택배 단가 추이</u>](https://www.nlic.go.kr/nlic/parcelServiceAvgCost.action) — 평균 단가 2,366원                                                                            | 1.5           |
 | **E8**   | [<u>CJ대한통운, 휠소터 전국 173개 터미널 설치 완료 (2020-01-28)</u>](https://cjlogistics.com/ko/newsroom/latest/LT_00000060) — 1,227억 원 투자                                                        | 1.1, 1.5      |

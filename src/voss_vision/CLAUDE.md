@@ -1,4 +1,4 @@
-# voss_vision — 남현지 (@yujh5537, 비전 컨테이너에서 실행)
+# voss_vision — 남현지 (@lambdaramji, 비전 컨테이너에서 실행)
 노드: box_tracker (/camera/color/image_raw → /voss/vision/box 30 Hz + /voss/vision/label_crop 선명 프레임), label_reader (크롭 → PaddleOCR → 퍼지 매칭 → /voss/vision/label, stage 1·2·3).
 - 깊이 사용 금지. RGB + 박스 높이 27 mm. 픽셀 → 베이스 변환은 비전 단일 책임 → `BoxTrack.position_base`(관측 박스 윗면 중심, m. TCP 목표 아님 — 서보가 계산).
   - 관측 자세 정지: `belt_plane.pixel_to_base_xy` + `config/belt_homography.yaml` (ADR-0003, `calib_hull_px` 밖은 무효).
