@@ -76,9 +76,8 @@ class SortManagerNode(Node):
         self.move_timeout_s = p("move_timeout_s", 60.0).value
         self.goal_response_timeout_s = p("goal_response_timeout_s", 5.0).value
         self.goal_result_timeout_s = p("goal_result_timeout_s", 120.0).value
-        self.read_timeout_s = p(
-            "read_timeout_s", 5.0
-        ).value  # ReadLabel 응답 (label_reader 기본 판독 2 s + 여유)
+        # ReadLabel 응답: label_reader 프레임 모으기 2 s + OCR 대기 상한 10 s(view.ocr_wait_s) + 여유
+        self.read_timeout_s = p("read_timeout_s", 15.0).value
         ask_timeout_s = p("ask_timeout_s", 30.0).value  # 질문 발화부터 무응답 보류까지 (SRD §5.7)
         self.state_period_s = p("state_period_s", 0.4).value
         self.limits = ReadyLimits(

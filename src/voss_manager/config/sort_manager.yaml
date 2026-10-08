@@ -11,6 +11,6 @@ sort_manager:
     move_timeout_s: 60.0          # MoveToZone(PLACE 는 놓기 + OBSERVE 복귀까지) 응답 없음 → DEVICE_ERROR, PAUSED
     goal_response_timeout_s: 5.0  # TrackAndGrasp 수락 응답
     goal_result_timeout_s: 120.0  # TrackAndGrasp 결과 (servo 가 죽은 경우만 걸리게 넉넉히)
-    read_timeout_s: 5.0           # /voss/vision/read_label 응답 (재확인 구역 정지 재판독). 없거나 시간 초과면 질문으로
+    read_timeout_s: 15.0          # /voss/vision/read_label 응답. label_reader 최악 = 프레임 2 s + OCR 대기 10 s(CPU 장당 ~1.7 s). 없거나 시간 초과면 질문으로
     ask_timeout_s: 30.0           # 질문 발화부터 무응답 보류까지 (SRD §5.7)
     state_period_s: 0.4           # /voss/sort/state 주기 발행 2.5 Hz (계약 ≥ 2 Hz, MC-026 — 여유를 둔다)
