@@ -7,14 +7,14 @@
 | 항목 | 내용 |
 |---|---|
 | 기간 | 2026-10-05 ~ 10-16 (시연 10/15, 발표 10/16) |
-| 팀 | C-3조: 남현지(@yujh5537, PL) · 정의석(@EuiseokJeongNZ) · 박병후(@ok778ts123) · 김학민(@rokeyhak) |
+| 팀 | C-3조: 남현지(@lambdaramji, PL) · 정의석(@EuiseokJeongNZ) · 박병후(@ok778ts123) · 김학민(@rokeyhak) |
 | 환경 | Ubuntu 24.04 · ROS 2 Jazzy · CycloneDDS · Python 3.12 · doosan-robot2 |
 | 문서 | `docs/` (BRD·SRD 요약, 인터페이스 계약, 일정, 결정 기록) |
 
 ## 빠른 시작
 ```bash
 # 개발 환경: docs/setup/dev-environment.md
-cd ~/voss_ws && git clone https://github.com/yujh5537/rokey_cobot2_VOSS.git src/rokey_cobot2_VOSS
+cd ~/voss_ws && git clone https://github.com/lambdaramji/rokey_cobot2_VOSS.git src/rokey_cobot2_VOSS
 colcon build --symlink-install && source install/setup.bash
 ```
 

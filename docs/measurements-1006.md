@@ -146,7 +146,7 @@ belt_servo 의 `/voss/robot/servo_cmd`(TwistStamped, TCP 선속도 m/s) 를 robo
 - 1번 CycloneDDS: **해결.** `lo` 옆에 `wlo1`을 추가했다(`enp4s0`은 넣지 않음). 교육장 AP가 단말 간 멀티캐스트를 막아서, 개인 PC 쪽 설정에 공용 PC `wlo1` IP를 유니캐스트 peer로 둔다. 개인 PC `listener`가 공용 PC `/chatter` 수신 확인. 도메인 30의 DDS 포트는 14900–15149/udp다.
 - 3번 유선 게이트웨이: **해결.** `Wired connection 1·2`의 게이트웨이를 비우고 `ipv4.never-default yes`로 바꿨다. 기본 경로는 `wlo1` 하나다. 로봇·RG2 ping 정상, OpenAI 도달(HTTP 401) 확인.
 - ufw를 켰다: 들어오는 연결은 기본 차단, `wlo1`에서 80/tcp·1883/tcp·14900–15149/udp만 허용. 적용 후 브링업·RG2 정상.
-- 결과와 원본 출력: [#55 댓글](https://github.com/yujh5537/rokey_cobot2_VOSS/issues/55#issuecomment-6031848319)
+- 결과와 원본 출력: [#55 댓글](https://github.com/lambdaramji/rokey_cobot2_VOSS/issues/55#issuecomment-6031848319)
 
 9. 기타
    - `nvidia-driver-595`, `docker-ce`, `docker-ce-cli`, `containerd.io`가 apt hold 상태다. 일부러 고정한 것으로 보이니 그대로 둔다.
