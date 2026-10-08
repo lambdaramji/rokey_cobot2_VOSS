@@ -7,6 +7,7 @@ RG2 만 움직인다(/voss/robot/gripper — robot_gateway 경유, 두산·RG2 �
     python3 grip_check.py                       # 10회, 39 mm·14 N (ADR-0009 값), 각도 0
     python3 grip_check.py --angle 15 --n 5      # 핑거 닫힘축에 대해 박스를 15° 돌려 둔 회차
     python3 grip_check.py --angle 30 --n 5
+    python3 grip_check.py --offset 10 --n 3    # 박스 중심을 핑거 중심에서 벨트 방향(X)으로 10 mm 어긋나게 둔 회차
 
 회차마다: Enter → 닫기(width·force) → 보고 폭·grip_detected → 사람이 찌그러짐·미끄러짐 입력 → 90 mm 열기.
 기록: ~/voss_data/1009/grip/grip_HHMMSS.csv. 판정 기준(ADR-0009·measurements #8): grip_detected=True,
@@ -45,6 +46,12 @@ def main() -> None:
     ap.add_argument(
         "--angle", type=float, default=0.0, help="박스를 닫힘축에 대해 돌린 각도(기록용)"
     )
+    ap.add_argument(
+        "--offset",
+        type=float,
+        default=0.0,
+        help="박스 중심의 벨트 방향 어긋남 mm(기록용, ADR-0009)",
+    )
     a = ap.parse_args()
     if not 5.0 <= a.force <= 20.0:
         raise SystemExit("힘은 5~20 N (종이 박스, measurements #8)")
@@ -61,12 +68,12 @@ def main() -> None:
     good = done = 0
     with path.open("w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["trial", "angle_deg", "width_cmd", "force", "ok", "message", "width_actual",
+        w.writerow(["trial", "angle_deg", "offset_mm", "width_cmd", "force", "ok", "message", "width_actual",
                     "grip_detected", "close_s", "dent", "slip", "note"])  # fmt: skip
         for i in range(1, a.n + 1):
             if (
                 input(
-                    f"\n[{i}/{a.n}] 박스를 {a.angle:.0f}° 로 두고 손을 뺀 뒤 Enter (q 끝): "
+                    f"\n[{i}/{a.n}] 박스를 {a.angle:.0f}°·벨트 방향 {a.offset:+.0f} mm 로 두고 손을 뺀 뒤 Enter (q 끝): "
                 ).strip()
                 == "q"
             ):
@@ -88,11 +95,11 @@ def main() -> None:
             ok = r.ok and r.grip_detected and in_range and not dent and not slip
             good += ok
             done += 1
-            w.writerow([i, a.angle, a.width, a.force, r.ok, r.message, f"{r.width_actual:.1f}",
+            w.writerow([i, a.angle, a.offset, a.width, a.force, r.ok, r.message, f"{r.width_actual:.1f}",
                         r.grip_detected, f"{dt:.2f}", dent, slip, note])  # fmt: skip
             f.flush()
     print(
-        f"\n요약: 각도 {a.angle:.0f}°, 성공 {good}/{done} (grip_detected·폭 범위·찌그러짐 없음·미끄러짐 없음)"
+        f"\n요약: 각도 {a.angle:.0f}°·어긋남 {a.offset:+.0f} mm, 성공 {good}/{done} (grip_detected·폭 범위·찌그러짐 없음·미끄러짐 없음)"
     )
     print(f"기록: {path}")
     node.destroy_node()
