@@ -5,9 +5,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest
-
 from voss_hmi.mqtt_logic import CommandError, parse_command_json
-
 
 NOW = datetime(2026, 10, 8, 14, 0, tzinfo=timezone(timedelta(hours=9)))
 

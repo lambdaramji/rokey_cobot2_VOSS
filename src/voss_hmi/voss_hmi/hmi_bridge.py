@@ -26,7 +26,6 @@ from voss_hmi.mqtt_logic import CommandError, parse_command_json
 from voss_msgs.msg import RobotState, SortResult, SortState, ZoneMap
 from voss_msgs.srv import Command
 
-
 MQTT_HOST = "127.0.0.1"
 MQTT_PORT = 1883
 MQTT_USERNAME = "bridge"
