@@ -11,14 +11,14 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
   | 포트 | 바인드 | `wlo1` 개방 |
   |---|---|---|
   | 80 Nginx | 0.0.0.0 | ✅ |
-  | 1883 Mosquitto | 0.0.0.0 (아래 ACL 적용) | ✅ 디버그 읽기용. 시연 때 닫을지는 #20 에서 결정 |
+  | 1883 Mosquitto | 0.0.0.0 (아래 ACL 적용) | 개발 중 디버그 필요 시에만 임시 개방, **시연 때 ❌** (#20) |
   | 8080 Spring Boot (`server.address=127.0.0.1`) · 8000 FastAPI · 5432 PostgreSQL (`listen_addresses=localhost`) | 127.0.0.1 | ❌ |
 
   로봇망 `enp4s0` 에는 어떤 웹·MQTT 포트도 열지 않는다.
 - **로봇을 움직이는 명령의 접근 제한 (안전, #68 남현지 🔴):** `POST /api/commands` 의 `start`·`resume`·`priority`·`answer`·`reset_zone` 은 **공용 PC 로컬 접속(공용 PC 화면의 HMI)** 에서만 받는다. 그 밖은 `403 {"ok": false, "message": "FORBIDDEN_REMOTE"}`. **`stop` 은 어디서든 받는다**(멈추는 쪽은 막지 않는다). 조회(`GET`)·SSE 는 `wlo1` 허용.
   - 원격 판정은 Nginx 가 넣는 `X-Real-IP $remote_addr` 로만 한다. 클라이언트가 보낸 `X-Forwarded-For` 는 믿지 않는다(Nginx 뒤에서는 모든 요청이 127.0.0.1 로 보이므로).
   - 판정은 Spring Boot 한 곳에서만 한다. hmi_bridge(ROS) 는 원격 여부를 다시 판단하지 않는다.
-- **Mosquitto ACL:** `voss/command` 쓰기는 Spring Boot 계정(`web`)만. 개인 PC 디버그 계정(`debug`)은 `voss/#` 읽기만. hmi_bridge 계정(`bridge`)은 `voss/command` 읽기, 나머지 `voss/#` 쓰기. 비밀번호는 `.env`(gitignore). 상세 설정은 #20 mqtt.md.
+- **Mosquitto ACL:** `voss/command` 쓰기는 Spring Boot 계정(`web`)만. 개인 PC 디버그 계정(`debug`)은 `voss/#` 읽기만. hmi_bridge 계정(`bridge`)은 `voss/command` 읽기, 나머지 `voss/#` 쓰기. 비밀번호는 Git에 넣지 않는다. 브로커는 공용 PC 호스트 1883이며 시연 때 `wlo1`의 1883은 닫는다. 상세는 #20 `mqtt.md`.
 - 그 밖의 인증은 없다(교육장 LAN, 시연 2주). 원격 HMI 시작이 필요해지면 `.env` 공유 토큰 헤더로 바꾼다.
 - **집계의 유일한 원천은 PostgreSQL `sort_log`**(#52 MC-022). Spring Boot 는 읽기 전용 계정으로만 조회한다. 쓰기는 sort_logger(ROS) 하나.
 - 현재 세션 = **`SortState.session_id`**(#78). sort_manager 가 `start` 때 만들고 다음 `start` 까지 유지한다(IDLE·PAUSED 에서도 유지). Spring Boot 는 hmi_bridge 가 MQTT 로 넘기는 SortState 에서 이 값을 받는다(#20 mqtt.md).
@@ -108,6 +108,7 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 - **intent_parser 가 응답을 다시 검증**한다(허용 목록·필수 필드). FastAPI 응답을 그대로 믿지 않는다.
 
 ## 변경 이력
+- 2026-10-08: #20 MQTT 계약 확정에 맞춰 1883/wlo1은 개발 디버그 때만 임시 개방하고 시연 때 차단하도록 정합.
 - 2026-10-07: `SortState.session_id`(#78) 머지에 맞춰 "현재 세션" 확정 — 임시 규칙(최근 `sort_log` 행) 삭제, `session_id == ""` 이면 `NO_SESSION`(#78 김학민 🟢, `/api/sessions/current` 는 예정 수량만), `next` 예정 수량은 첫 결과가 아니라 `start` 때 붙임. "의존" 절 삭제.
 - 2026-10-07: 리뷰 반영(#68 남현지·김학민) — 움직이는 명령은 공용 PC 로컬만·`stop` 은 어디서든, 원격 판정은 Nginx `X-Real-IP`, 포트 바인드 표, Mosquitto ACL, Nginx `/ai` 제거, SortState.session_id 수용.
 - 2026-10-06: 초안 (#22, ADR-0006, SRD 상호확인 #52 MC-020·021·022·026·027, #54 MC-030·031). 제안 상태 — mqtt.md(10/08, #20) 확정 때 SSE `data` 형식을 함께 맞춘다.
