@@ -5,13 +5,15 @@
 
 지금 있는 것: /voss/robot/pose (TCP, base_link), /voss/robot/servo_cmd → speedl_stream(ADR-0010,
 만료 watchdog → 0 속도 + 항상 move_stop, TCP z 하한·x 범위·속도 상한), /voss/robot/stop,
-/voss/robot/gripper (RG2 Modbus 직접, ADR-0005), /voss/robot/state (RobotState). 다음 단계: move_to_zone.
+/voss/robot/gripper (RG2 Modbus 직접, ADR-0005), /voss/robot/state (RobotState),
+/voss/robot/move_to_zone (PLACE·OBSERVE·VIEW, PICK 은 10/13).
 """
 
 import threading
 import time
 
 import rclpy
+from builtin_interfaces.msg import Time as TimeMsg
 from geometry_msgs.msg import PoseStamped, TwistStamped
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
 from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
@@ -20,13 +22,19 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 from std_srvs.srv import Trigger
 
 from voss_msgs.msg import RobotState
-from voss_msgs.srv import Gripper
+from voss_msgs.srv import Gripper, MoveToZone
 from voss_robot.call_queue import SerialCallQueue
+from voss_robot.config_params import ZONES
 from voss_robot.doosan import DEFAULT_PREFIX, DoosanError, DryRunDoosan
-from voss_robot.geometry import flange_to_ros_pose
+from voss_robot.geometry import flange_to_ros_pose, flange_to_tcp
 from voss_robot.rg2 import DryRunRg2, Rg2
 from voss_robot.servo_guard import ServoGuard, ServoParams
 from voss_robot.state_logic import Inputs, decide
+from voss_robot.zone_motion import SAFE_Z_MM, plan_move, slot_pose
+
+
+class _ZoneError(RuntimeError):
+    """MoveToZone 단계 실패. 메시지가 대문자 코드로 시작한다."""
 
 
 class RobotGatewayNode(Node):
@@ -53,7 +61,7 @@ class RobotGatewayNode(Node):
         if self.dry_run:
             if len(observe) != 6:
                 raise RuntimeError("dry_run 에는 observe_pose 가 필요하다(가짜 로봇 시작 자세)")
-            self.dsr = DryRunDoosan(observe)
+            self.dsr = DryRunDoosan(observe, self.tcp)
         else:
             from voss_robot.doosan import RosDoosan  # dsr_msgs2 는 실기·에뮬레이터에서만
 
@@ -122,6 +130,38 @@ class RobotGatewayNode(Node):
             self._on_gripper,
             callback_group=ReentrantCallbackGroup(),
         )
+        # ---- MoveToZone: voss_config zones·observe_pose(플랜지), 경로는 수직 상승 → 수평 → 수직 하강 ----
+        self.observe = observe
+        self.zones = {}
+        for z in ZONES:
+            pose = list(self.declare_parameter(f"zones.{z}.pose", [0.0]).value)
+            grid = list(self.declare_parameter(f"zones.{z}.grid", [0.0]).value)
+            view = list(self.declare_parameter(f"zones.{z}.view_pose", [0.0]).value)
+            self.zones[z] = {
+                "pose": pose if len(pose) == 6 else None,
+                "grid": grid if len(grid) == 3 else None,
+                "view": view if len(view) == 6 else None,
+            }
+        self.pre_open = float(self.declare_parameter("gripper.pre_open_mm", 90.0).value)
+        self.grip_force = float(self.declare_parameter("gripper.force_n", 14.0).value)
+        self.safe_z = float(self.declare_parameter("zone_safe_z_mm", SAFE_Z_MM).value)
+        # [선 mm/s, 각 deg/s], [선 mm/s², 각 deg/s²]. 첫 실기는 낮게, 5구역 확인 뒤 올린다
+        self.zone_vel = [float(v) for v in self.declare_parameter("zone_vel", [100.0, 45.0]).value]
+        self.zone_acc = [float(v) for v in self.declare_parameter("zone_acc", [200.0, 90.0]).value]
+        self._mlock = threading.Lock()  # 모션 자원(MoveToZone)
+        self._zone_action = ""
+        self._abort = threading.Event()  # /voss/robot/stop 이 세운다
+        self.create_service(
+            MoveToZone,
+            "/voss/robot/move_to_zone",
+            self._on_move_to_zone,
+            callback_group=ReentrantCallbackGroup(),
+        )
+        ready = [z for z, c in self.zones.items() if c["pose"] and c["grid"]]
+        self.get_logger().info(
+            f"MoveToZone 구역 {ready}, safe z {self.safe_z} mm(플랜지), vel {self.zone_vel}, acc {self.zone_acc}"
+        )
+
         # ---- /voss/robot/state: reliable·transient_local·depth 1, 바뀔 때 + 2 Hz (#55 MC-019) ----
         from rclpy.qos import DurabilityPolicy
 
@@ -223,7 +263,9 @@ class RobotGatewayNode(Node):
     def _on_state_timer(self) -> None:
         """2 Hz: RG2 상태 읽기, 두산 ROBOT_STATE 1 Hz 조회(큐), 판정해 발행."""
         now = time.monotonic()
-        if not self.rg2.busy:  # 명령 중엔 command() 가 상태를 읽고 있다
+        if self.rg2.busy:  # 명령·MoveToZone 점유 중엔 그쪽이 상태를 읽는다 → 연결은 정상으로 유지
+            self._rg2 = {**self._rg2, "t": now}
+        else:
             try:
                 w, _b, _g, safety = self.rg2.status()
                 self._rg2 = {"ok": True, "width": w, "safety": safety, "t": now}
@@ -258,6 +300,7 @@ class RobotGatewayNode(Node):
             rg2_safety=self._rg2["safety"],
             servo_active=servo_active,
             gripper_busy=self.rg2.busy,
+            zone_action=self._zone_action,
             stopped=self.stopped,
             last_alarm=self.dsr.last_alarm,
         )
@@ -284,6 +327,130 @@ class RobotGatewayNode(Node):
                 f"RobotState {st.state} connected={st.connected} action={st.action or '-'} "
                 f"error={st.error_code or '-'} ({st.detail})"
             )
+
+    # ---------------- MoveToZone (voss_msgs.md) ----------------
+    def _on_move_to_zone(self, req, res):
+        """PLACE: 구역 칸에 놓고 OBSERVE 로 돌아온 뒤 응답(placed_stamp = RG2 개방 완료). OBSERVE·VIEW: 이동만.
+        실패 message: BUSY / INVALID / NOT_CONFIGURED / LIMIT(컨트롤러 알람) / TIMEOUT / GRIP_FAIL /
+        RETURN_FAILED(개방 후 복귀 실패, placed_stamp 채움) / STOPPED(stop 이 끊음, 개방 후면 placed_stamp 채움)."""
+        zone, mode = req.zone.strip().upper(), req.mode.strip().upper()
+        res.placed_stamp = TimeMsg()
+        t0 = time.monotonic()
+
+        def fail(msg: str):
+            res.ok, res.message = False, msg
+            kind = "PLACE" if mode in ("", "PLACE") and zone != "OBSERVE" else (mode or "MOVE")
+            self.get_logger().warn(f"move_to_zone {zone} 칸 {req.slot} {kind} → {msg}")
+            return res
+
+        if mode not in ("", "PLACE", "VIEW", "PICK"):
+            return fail(f"INVALID: mode {req.mode}")
+        if mode == "PICK":
+            return fail("NOT_CONFIGURED: PICK 은 아직 구현 전 (10/13 재확인 흐름)")
+        place = mode in ("", "PLACE") and zone != "OBSERVE"
+        label = "PLACE" if place else (mode or "MOVE")
+        if zone == "OBSERVE":
+            if len(self.observe) != 6:
+                return fail("NOT_CONFIGURED: observe_pose 없음")
+            target = list(self.observe)
+        elif zone not in self.zones:
+            return fail(f"INVALID: zone {req.zone}")
+        elif mode == "VIEW":
+            if self.zones[zone]["view"] is None:
+                return fail(f"NOT_CONFIGURED: zones.{zone}.view_pose 가 null")
+            target = list(self.zones[zone]["view"])
+        else:
+            zc = self.zones[zone]
+            if zc["pose"] is None or zc["grid"] is None:
+                return fail(f"NOT_CONFIGURED: zones.{zone}.pose·grid")
+            try:
+                target = slot_pose(zc["pose"], zc["grid"], int(req.slot))
+            except ValueError as e:
+                return fail(f"INVALID: {e}")
+        # 자원: 모션(servo·MoveToZone)과 RG2(PLACE 는 함께 점유). 같은 자원 두 번째 요청은 BUSY
+        if not self._mlock.acquire(blocking=False):
+            return fail("BUSY: move_to_zone 진행 중")
+        held = False
+        try:
+            with self._glock:
+                if self.guard.active:
+                    return fail("BUSY: servo_cmd 추종 중")
+                self.guard.motion_busy = True
+            if place:
+                if not self.rg2.try_hold():
+                    return fail("BUSY: gripper 동작 중")
+                held = True
+            self._abort.clear()
+            self.stopped = False
+            self._zone_action = f"MOVE_TO_ZONE:{zone}"
+            self._update_state()
+            self.get_logger().info(f"move_to_zone {zone} 칸 {req.slot} {label} 시작")
+            placed = None
+            try:
+                self._run_path(target)
+                if place:
+                    g = self.rg2.command_held(self.pre_open, self.grip_force)
+                    if not g.ok:
+                        return fail(f"GRIP_FAIL: 개방 {g.message}")
+                    placed = self.get_clock().now()
+                    res.placed_stamp = placed.to_msg()
+                    try:
+                        self._run_path(list(self.observe))
+                    except _ZoneError as e:
+                        return fail(f"RETURN_FAILED: {e}")
+            except _ZoneError as e:
+                return fail(str(e))
+            res.ok, res.message = True, "OK"
+            self.get_logger().info(
+                f"move_to_zone {zone} 칸 {req.slot} {label} → OK, {time.monotonic() - t0:.1f} s"
+            )
+            return res
+        finally:
+            if held:
+                self.rg2.release()
+            with self._glock:
+                self.guard.motion_busy = False
+            self._zone_action = ""
+            self._mlock.release()
+            self._update_state()
+
+    def _run_path(self, target_flange) -> None:
+        """현재 플랜지 → 목표: 수직 상승 → 수평 → 수직 하강, 단계마다 도착을 pose 로 확인."""
+        cur = self.queue.submit(self.dsr.get_flange_posx).result(timeout=2.0)
+        for name, step in plan_move(cur, target_flange, self.safe_z):
+            tcp = flange_to_tcp(step, self.tcp)
+            seq0 = self.dsr.alarm_seq
+            try:
+                self.queue.submit(
+                    lambda t=tcp: self.dsr.move_line_async(t, self.zone_vel, self.zone_acc)
+                ).result(timeout=2.0)
+            except Exception as e:
+                raise _ZoneError(f"TIMEOUT: move_line({name}) {e}") from e
+            self._wait_arrive(name, tcp[:3], seq0)
+
+    def _wait_arrive(self, name: str, tcp_xyz, seq0: int) -> None:
+        with self._glock:
+            p = self.guard._pose
+        start = p[1:] if p else tcp_xyz
+        dist = sum((a - b) ** 2 for a, b in zip(start, tcp_xyz, strict=True)) ** 0.5
+        deadline = time.monotonic() + dist / max(self.zone_vel[0], 1.0) + 8.0
+        still = None
+        while time.monotonic() < deadline:
+            if self._abort.is_set():
+                raise _ZoneError(f"STOPPED: {name} 중 stop")
+            if self.dsr.alarm_seq != seq0:
+                raise _ZoneError(f"LIMIT: {name} 중 알람 {self.dsr.last_alarm}")
+            with self._glock:
+                p = self.guard._pose
+            fresh = p is not None and self._now() - p[0] < 0.3
+            if fresh and sum((a - b) ** 2 for a, b in zip(p[1:], tcp_xyz, strict=True)) < 1.0:
+                still = still or time.monotonic()
+                if time.monotonic() - still > 0.3:
+                    return
+            else:
+                still = None
+            time.sleep(0.02)
+        raise _ZoneError(f"TIMEOUT: {name} 도착 안 함")
 
     # ---------------- RG2 gripper (ADR-0005) ----------------
     def _on_gripper(self, req, res):
@@ -384,6 +551,7 @@ class RobotGatewayNode(Node):
             self.guard.stop(self._now())
         self._was_active = False
         self.stopped = True
+        self._abort.set()  # 진행 중 MoveToZone 을 끊는다 → STOPPED
         self._update_state()
         self._sstats["stop"] += 1
         ev, out = threading.Event(), {}
@@ -429,7 +597,9 @@ def main(args=None) -> None:
     # 그래서 SIGINT 는 KeyboardInterrupt 로 받고, 정지 명령을 보낸 뒤 직접 내린다.
     rclpy.init(args=args, signal_handler_options=rclpy.signals.SignalHandlerOptions.NO)
     node = RobotGatewayNode()
-    executor = MultiThreadedExecutor(num_threads=4)  # 두산 응답 콜백이 따로 돌아야 한다
+    executor = MultiThreadedExecutor(
+        num_threads=6
+    )  # 두산 응답 콜백·긴 서비스(MoveToZone)가 따로 돌아야 한다
     executor.add_node(node)
     try:
         executor.spin()

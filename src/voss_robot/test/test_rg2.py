@@ -106,3 +106,12 @@ def test_dry_run_grips_object_between():
     r = g.command(39.0, 14.0)
     assert r.ok and r.grip_detected and r.width_actual == 40.2
     assert g.command(90.0, 14.0).width_actual == 90.0
+
+
+def test_hold_blocks_external_command_and_allows_held():
+    rg = Rg2(FakeModbus(), poll_s=0.0)
+    assert rg.try_hold()
+    assert rg.command(39.0, 14.0).message == "BUSY"  # MoveToZone 이 점유 중
+    assert rg.command_held(90.0, 14.0).ok
+    rg.release()
+    assert rg.command(39.0, 14.0).ok

@@ -93,12 +93,28 @@ class Rg2:
             bool(word >> BIT_SAFETY & 1),
         )
 
+    def try_hold(self) -> bool:
+        """RG2 자원을 잡는다(MoveToZone PLACE·PICK 이 모션과 함께 점유 — 그동안 외부 Gripper 는 BUSY)."""
+        return self._busy.acquire(blocking=False)
+
+    def release(self) -> None:
+        self._busy.release()
+
     def command(self, width_mm: float, force_n: float) -> GripResult:
         """폭·힘으로 움직이고 busy 가 풀린 뒤 결과를 돌려준다. 동작 중이면 바로 BUSY."""
         if (why := validate(width_mm, force_n)) is not None:
             return GripResult(False, message=f"INVALID: {why}")
-        if not self._busy.acquire(blocking=False):
+        if not self.try_hold():
             return GripResult(False, message="BUSY")
+        try:
+            return self.command_held(width_mm, force_n)
+        finally:
+            self.release()
+
+    def command_held(self, width_mm: float, force_n: float) -> GripResult:
+        """try_hold 로 자원을 이미 잡은 호출자용."""
+        if (why := validate(width_mm, force_n)) is not None:
+            return GripResult(False, message=f"INVALID: {why}")
         try:
             if not self._connected():
                 return GripResult(False, message="COMM_ERROR: 연결 안 됨")
@@ -123,8 +139,6 @@ class Rg2:
                 time.sleep(self._poll)
         except Exception as e:  # 소켓 오류·pymodbus 예외(ConnectionException 등)
             return GripResult(False, message=f"COMM_ERROR: {e}")
-        finally:
-            self._busy.release()
 
     def close(self) -> None:
         with self._io:
@@ -146,18 +160,29 @@ class DryRunRg2:
     def status(self) -> tuple[float, bool, bool, bool]:
         return self.width, False, False, False
 
+    def try_hold(self) -> bool:
+        return self._busy.acquire(blocking=False)
+
+    def release(self) -> None:
+        self._busy.release()
+
     def command(self, width_mm: float, force_n: float) -> GripResult:
         if (why := validate(width_mm, force_n)) is not None:
             return GripResult(False, message=f"INVALID: {why}")
-        if not self._busy.acquire(blocking=False):
+        if not self.try_hold():
             return GripResult(False, message="BUSY")
         try:
-            time.sleep(0.3)
-            grip = self.object_mm is not None and width_mm < self.object_mm < self.width
-            self.width = self.object_mm if grip else width_mm
-            return GripResult(True, self.width, grip, "OK")
+            return self.command_held(width_mm, force_n)
         finally:
-            self._busy.release()
+            self.release()
+
+    def command_held(self, width_mm: float, force_n: float) -> GripResult:
+        if (why := validate(width_mm, force_n)) is not None:
+            return GripResult(False, message=f"INVALID: {why}")
+        time.sleep(0.3)
+        grip = self.object_mm is not None and width_mm < self.object_mm < self.width
+        self.width = self.object_mm if grip else width_mm
+        return GripResult(True, self.width, grip, "OK")
 
     def close(self) -> None:
         pass

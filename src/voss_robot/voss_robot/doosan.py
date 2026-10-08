@@ -30,9 +30,14 @@ class DryRunDoosan:
     실로봇처럼 스트림이 끊겨도 마지막 속도로 계속 간다(ADR-0010 실측) — gateway watchdog 시험용.
     """
 
-    def __init__(self, flange_pose: Sequence[float]) -> None:
+    def __init__(
+        self, flange_pose: Sequence[float], tcp_offset_mm: Sequence[float] = (0, 0, 0)
+    ) -> None:
         self._pose = [float(v) for v in flange_pose]
         self._vel = [0.0, 0.0, 0.0]  # mm/s
+        self._tcp = [float(v) for v in tcp_offset_mm]
+        self._target: list[float] | None = None  # move_line 목표 (플랜지)
+        self._line_v = 0.0
         self._t = time.monotonic()
         self._lock = threading.Lock()
         self.stops = 0  # move_stop 호출 수 (시험용)
@@ -40,6 +45,17 @@ class DryRunDoosan:
     def _advance(self) -> None:
         now = time.monotonic()
         dt, self._t = now - self._t, now
+        if self._target is not None:  # move_line: 목표까지 직선 등속
+            d = [self._target[i] - self._pose[i] for i in range(3)]
+            n = sum(c * c for c in d) ** 0.5
+            step = self._line_v * dt
+            if n <= step:
+                self._pose = list(self._target)
+                self._target = None
+            else:
+                for i in range(3):
+                    self._pose[i] += d[i] / n * step
+            return
         for i in range(3):
             self._pose[i] += self._vel[i] * dt
 
@@ -61,13 +77,29 @@ class DryRunDoosan:
         with self._lock:
             self._advance()
             self._vel = [0.0, 0.0, 0.0]
+            self._target = None
             self.stops += 1
         done(True, "OK")
 
-    # RobotState 용 (실기와 같은 이름)
+    def move_line_async(
+        self, tcp_posx: Sequence[float], vel: Sequence[float], acc: Sequence[float]
+    ) -> None:
+        """두산 move_line ASYNC 대신: TCP 목표를 플랜지로 바꿔 등속으로 다가간다(자세는 바로 바꿈)."""
+        from voss_robot.geometry import tcp_to_flange
+
+        with self._lock:
+            self._advance()
+            self._vel = [0.0, 0.0, 0.0]
+            tgt = tcp_to_flange(tcp_posx, self._tcp)
+            self._pose[3:] = tgt[3:]
+            self._target = list(tgt)
+            self._line_v = float(vel[0])
+
+    # RobotState·MoveToZone 용 (실기와 같은 이름)
     faulted = False
     disconnected = False
     last_alarm = ""
+    alarm_seq = 0
 
     def get_robot_state(self) -> int:
         """두산 ROBOT_STATE: 움직이면 MOVING(2), 아니면 STANDBY(1)."""
@@ -173,7 +205,14 @@ class RosDoosan:
             prefix.split("dsr_controller2/")[0] or "/"
         )  # "/dsr01/" — error 토픽은 노드 네임스페이스
         self.last_alarm = ""
+        self.alarm_seq = 0  # WARN·ERROR 알람 수 (MoveToZone 이 이동 중 새 알람을 본다)
         self.disconnected = False
+        from dsr_msgs2.srv import MoveLine
+
+        self._line_srv = MoveLine
+        self._line = node.create_client(
+            MoveLine, prefix + "motion/move_line", callback_group=self._group
+        )
         node.create_subscription(RobotError, ns + "error", self._on_error, 100)
         node.create_subscription(
             RobotDisconnection, ns + "robot_disconnection", self._on_disconnect, 10
@@ -192,11 +231,24 @@ class RosDoosan:
             self._log.info(f"두산 안내: {text}")
             return
         self.last_alarm = text  # WARN·ERROR (예 1206 NOT REACHABLE)
+        self.alarm_seq += 1
         self._log.warn(f"두산 알람: {text}")
 
     def _on_disconnect(self, _m) -> None:
         self.disconnected = True  # 브링업·gateway 재시작으로만 푼다
         self._log.error("두산 robot_disconnection 수신 — 브링업 확인")
+
+    def move_line_async(
+        self, tcp_posx: Sequence[float], vel: Sequence[float], acc: Sequence[float]
+    ) -> None:
+        """move_line ASYNC(sync_type 1, BASE, 절대) — 도착은 호출자가 pose 로 확인한다. 큐 작업 스레드에서만.
+        SYNC 는 이동 내내 컨트롤러 서비스가 묶여 pose 조회가 멈춘다(10/07 조그 시험)."""
+        r = self._line_srv.Request()
+        r.pos = [float(v) for v in tcp_posx]
+        r.vel = [float(v) for v in vel]
+        r.acc = [float(v) for v in acc]
+        r.ref, r.mode, r.sync_type = 0, 0, 1
+        self.caller.call(self._line, r)
 
     def get_robot_state(self) -> int:
         """두산 ROBOT_STATE (DRFC.h). 큐 작업 스레드에서만."""
