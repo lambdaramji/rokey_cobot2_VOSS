@@ -78,3 +78,16 @@ def test_loop_stats_summary() -> None:
     s.add_box("none", False)
     text = s.summary(5.0)
     assert text.startswith("30.0 Hz") and "무효 1" and "homography 1" in text
+
+
+def test_loop_stats_pose_lookup_counts() -> None:
+    s = LoopStats()
+    s.add_frame(2.0, 5.0, 40.0)
+    s.add_pose(0.0)  # 보간
+    s.add_pose(35.0)  # 35 ms 외삽
+    s.add_pose(None)  # 실패
+    text = s.summary(5.0)
+    assert "pose 2·외삽 1(최대 35 ms)·실패 1" in text
+    s.reset()
+    s.add_frame(2.0, 5.0, 40.0)
+    assert "pose" not in s.summary(5.0)  # pose 이력이 없으면(재생·관측 가정) 표시 안 함

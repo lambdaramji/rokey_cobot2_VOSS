@@ -116,6 +116,9 @@ class LoopStats:
         self.sources: dict[str, int] = {}
         self.invalid = 0
         self.homo_vs_he_mm = 0.0
+        self.pose_n = 0  # pose 를 찾은 프레임 (이력이 있을 때)
+        self.pose_fail = 0  # 촬영 시각 + lag 의 pose 를 보간·외삽 못 함
+        self.extrap_ms: list[float] = []  # 외삽한 길이 (보간이면 넣지 않음)
 
     def add_frame(self, det_ms: float, loop_ms: float, age_ms: float | None) -> None:
         self.frames += 1
@@ -123,6 +126,15 @@ class LoopStats:
         self.loop_ms.append(loop_ms)
         if age_ms is not None:
             self.age_ms.append(age_ms)
+
+    def add_pose(self, extrap_ms: float | None) -> None:
+        """None = pose 를 못 구함, 0 = 보간, 양수 = 그만큼 앞으로 외삽."""
+        if extrap_ms is None:
+            self.pose_fail += 1
+            return
+        self.pose_n += 1
+        if extrap_ms > 0:
+            self.extrap_ms.append(extrap_ms)
 
     def add_box(self, source: str, valid: bool) -> None:
         self.boxes += 1
@@ -141,6 +153,11 @@ class LoopStats:
         diff = (
             f", 호모그래피↔핸드아이 최대 {self.homo_vs_he_mm:.1f} mm" if self.homo_vs_he_mm else ""
         )
+        if self.pose_n or self.pose_fail:
+            ex = f"외삽 {len(self.extrap_ms)}"
+            if self.extrap_ms:
+                ex += f"(최대 {max(self.extrap_ms):.0f} ms)"
+            diff += f", pose {self.pose_n}·{ex}·실패 {self.pose_fail}"
         return (
             f"{self.frames / period_s:.1f} Hz, 검출 평균 {np.mean(self.det_ms):.1f}·p95 {p95(self.det_ms):.1f} ms, "
             f"루프 p95 {p95(self.loop_ms):.1f} ms{age}, box {self.boxes}(무효 {self.invalid}; {src}), "

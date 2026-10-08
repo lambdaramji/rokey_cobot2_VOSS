@@ -7,7 +7,10 @@ box_tracker:
     max_missed: 15           # 연속 미검출 폐기 프레임 (PICKING 중 현재 트랙은 보류) — voss_msgs.md BoxTrack
     gate_px: 120.0           # 트랙 연결 거리 (등속 예측 위치 기준)
     # 좌표 (calibration.md): 관측 자세 판정·pose 보간
-    pose_max_gap_s: 0.04     # 촬영 시각에서 가장 가까운 pose 가 이보다 멀면 외삽하지 않고 position_valid=false
+    pose_max_gap_s: 0.04     # 보간할 때 가장 가까운 pose 가 이보다 멀면(또는 외삽용 이력이 이보다 끊기면) position_valid=false
+    pose_lag_ms: 60.0        # pose stamp(게이트웨이 수신 시각)가 실제보다 늦은 만큼 — 촬영 시각 + 이 값의 pose 를 쓴다 (10/08 he_moving_01, measurements-1008)
+    pose_max_extrap_ms: 80.0 # 그 pose 가 아직 없으면 최근 속도로 이만큼까지만 앞으로 외삽 (calibration.md, 제안값)
+    hz_warn: 25.0            # 실시간 영상이 이 Hz 밑이면 WARN (카메라 USB 끊김 확인용)
     observe_tol_mm: 1.0      # TCP 가 관측 자세에서 이 안이면 호모그래피, 밖이면 핸드아이
     observe_tol_deg: 0.5     # 공구축 각
     # LabelCrop (voss_msgs.md): 박스 영역 크롭(원본 색), 송장 찾기·펴기는 label_reader

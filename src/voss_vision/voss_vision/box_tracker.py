@@ -23,9 +23,10 @@ import rclpy
 import yaml
 from geometry_msgs.msg import PoseStamped
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
-from rclpy.executors import MultiThreadedExecutor
+from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, qos_profile_sensor_data
+from rclpy.signals import SignalHandlerOptions
 from sensor_msgs.msg import CameraInfo, CompressedImage, Image
 
 from voss_msgs.msg import BoxTrack, LabelCrop, SortState
@@ -100,6 +101,11 @@ class BoxTrackerNode(Node):
         self.playback_rate = float(p("playback_rate", 1.0).value)
         self.assume_observe = bool(p("assume_observe", bool(self.playback)).value)
         self.pose_max_gap = float(p("pose_max_gap_s", 0.04).value)
+        # /voss/robot/pose stamp 는 실제 로봇 상태보다 늦다(10/08 약 60 ms) → 촬영 시각 + lag 의 pose 를 쓴다.
+        # 그 pose 가 아직 없으면 최근 속도로 max_extrap 까지만 앞으로 외삽(calibration.md)
+        self.pose_lag = float(p("pose_lag_ms", 60.0).value) / 1000.0
+        self.pose_max_extrap = float(p("pose_max_extrap_ms", 80.0).value) / 1000.0
+        self.hz_warn = float(p("hz_warn", 25.0).value)
         self.obs_tol_mm = float(p("observe_tol_mm", 1.0).value)
         self.obs_tol_deg = float(p("observe_tol_deg", 0.5).value)
         self.crop_margin = float(p("crop_margin", 0.15).value)
@@ -137,6 +143,10 @@ class BoxTrackerNode(Node):
         self.stats = tl.LoopStats()
         self._stats_lock = threading.Lock()  # 영상 스레드·로그 타이머가 같이 쓴다
         self.done = False
+        self.stopping = (
+            False  # 종료 때 재생 스레드를 먼저 멈춘다(bag 리더가 살아 있으면 프로세스가 죽는다)
+        )
+        self.player: threading.Thread | None = None
 
         self.pub_box = self.create_publisher(BoxTrack, "/voss/vision/box", QOS_BOX)
         self.pub_crop = self.create_publisher(LabelCrop, "/voss/vision/label_crop", QOS_CROP)
@@ -151,7 +161,8 @@ class BoxTrackerNode(Node):
         )
         self.create_timer(self.stats_period, self._log_stats, callback_group=side)
         if self.playback:
-            threading.Thread(target=self._run_playback, daemon=True).start()
+            self.player = threading.Thread(target=self._run_playback, daemon=True)
+            self.player.start()
         else:
             self.create_subscription(CameraInfo, "/camera/color/camera_info", self._on_info,
                                      qos_profile_sensor_data, callback_group=side)  # fmt: skip
@@ -160,7 +171,7 @@ class BoxTrackerNode(Node):
         self.get_logger().info(
             f"box_tracker started: detector={self.detector} min_hits={self.tracker.min_hits} "
             f"homography={'v' + str(self.homo.get('created')) if self.homo else '없음'} "
-            f"hand_eye={self._he_label()} "
+            f"hand_eye={self._he_label()} pose_lag={self.pose_lag * 1000:.0f} ms "
             f"input={'playback ' + self.playback if self.playback else image_topic}"
         )
 
@@ -215,7 +226,7 @@ class BoxTrackerNode(Node):
         types = {t.name: t.type for t in reader.get_all_topics_and_types()}
         t_wall0 = t_bag0 = None
         n = 0
-        while rclpy.ok() and reader.has_next():
+        while rclpy.ok() and not self.stopping and reader.has_next():
             topic, data, t_bag = reader.read_next()
             kind = types.get(topic, "")
             if kind == "geometry_msgs/msg/PoseStamped" and topic.endswith("/voss/robot/pose"):
@@ -282,7 +293,13 @@ class BoxTrackerNode(Node):
                 if self.assume_observe and self.T_obs is not None
                 else (None, False)
             )
-        t = interpolate_pose(ts, [h[0] for h in hist], [h[1] for h in hist], self.pose_max_gap)
+        tq = ts + self.pose_lag
+        stamps = [h[0] for h in hist]
+        t = interpolate_pose(
+            tq, stamps, [h[1] for h in hist], self.pose_max_gap, self.pose_max_extrap
+        )
+        with self._stats_lock:
+            self.stats.add_pose(None if t is None else max(0.0, tq - stamps[-1]) * 1000)
         if t is None:
             return None, False
         at_obs = self.T_obs is not None and tl.near_observe(
@@ -341,8 +358,14 @@ class BoxTrackerNode(Node):
         with self._stats_lock:
             text = self.stats.summary(self.stats_period)
             diff = self.stats.homo_vs_he_mm
+            hz = self.stats.frames / self.stats_period
             self.stats.reset()
         self.get_logger().info(text)
+        if not self.playback and hz < self.hz_warn:
+            # sort_manager 는 노드 존재만 보므로 카메라가 멈춰도 VISION 준비로 남는다 → 사람이 보게 경고
+            self.get_logger().warn(
+                f"영상 {hz:.1f} Hz < {self.hz_warn:.0f} — 카메라 USB·카메라 노드 확인 (10/08 USB 끊김 사례)"
+            )
         if diff > HOMO_HE_WARN_MM:
             self.get_logger().warn(
                 f"관측 자세에서 호모그래피와 핸드아이가 {diff:.1f} mm 다르다 (> {HOMO_HE_WARN_MM} mm)"
@@ -350,16 +373,20 @@ class BoxTrackerNode(Node):
 
 
 def main(args=None) -> None:
-    rclpy.init(args=args)
+    # Ctrl+C 를 파이썬 KeyboardInterrupt 로 받아, 재생 스레드를 멈춘 뒤 닫는다
+    rclpy.init(args=args, signal_handler_options=SignalHandlerOptions.NO)
     node = BoxTrackerNode()
     executor = MultiThreadedExecutor(num_threads=2)  # 영상 1 + pose·state·통계 1
     executor.add_node(node)
     try:
         while rclpy.ok() and not node.done:
             executor.spin_once(timeout_sec=0.1)
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
+        node.stopping = True
+        if node.player is not None:
+            node.player.join(timeout=2.0)
         executor.shutdown(timeout_sec=1.0)
         node.destroy_node()
         rclpy.try_shutdown()
