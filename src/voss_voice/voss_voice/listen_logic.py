@@ -21,7 +21,7 @@ from voss_voice.intent_logic import is_stop
 
 # 공백·문장부호를 뺀 소문자 기준. Whisper 가 한글·영문 어느 쪽으로 적어도 잡는다.
 _WAKE_RE = re.compile(
-    r"(?:헬로우?|헤로|할로|핼로|hello|helo)?(?:로키|록키|로끼|rokey|rocky|roky)(?:야|아)?"
+    r"(?:헬로우?|헤로|할로|핼로|hello|helo)(?:로키|록키|로끼|rokey|rocky|roky)(?:야|아)?"
 )
 _PUNCT = re.compile(r"[\s\.,!?~·\-]+")
 

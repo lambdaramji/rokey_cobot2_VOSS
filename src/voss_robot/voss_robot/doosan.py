@@ -255,7 +255,44 @@ class RosDoosan:
         node.create_subscription(
             RobotDisconnection, ns + "robot_disconnection", self._on_disconnect, 10
         )
+        # pose 소스 후보: 컨트롤러 joint_states(100 Hz, 값이 10 ms 마다 바뀜). get_current_tool_flange_posx 는
+        # 10/08 오후 값이 0.1 s 마다만 바뀌었다(50 Hz 로 물어도 같은 값 5번)
+        from rclpy.qos import qos_profile_sensor_data
+        from sensor_msgs.msg import JointState
+
+        self._js = None  # (관절 deg 6개, header stamp ns)
+        self._js_lock = threading.Lock()
+        node.create_subscription(
+            JointState, ns + "joint_states", self._on_js, qos_profile_sensor_data
+        )
         self._log = node.get_logger()
+
+    def _on_js(self, m) -> None:
+        from voss_robot.pose_source import joints_deg
+
+        j = joints_deg(m.name, m.position)
+        if j is None:
+            if not getattr(self, "_js_name_logged", False):
+                self._js_name_logged = True
+                self._log.error(f"joint_states 이름이 joint_1..6 이 아님: {list(m.name)}")
+            return
+        stamp = m.header.stamp.sec * 1_000_000_000 + m.header.stamp.nanosec
+        with self._js_lock:
+            self._js = (j, stamp)
+
+    def latest_joints(self):
+        """(관절 deg 6개, joint_states header stamp ns) 또는 None."""
+        with self._js_lock:
+            return self._js
+
+    def fkin_tcp(self, joints_deg: Sequence[float]) -> list[float]:
+        """관절(deg) → TCP posx (Base, 등록된 TCP 기준 — 10/08 ikin 검증에서 확인). 큐 작업 스레드에서만."""
+        f = self._fk_srv.Request()
+        f.pos, f.ref = [float(v) for v in joints_deg], 0
+        r = self.caller.call(self._fk, f)
+        if not r.success:
+            raise DoosanError("fkin 실패")
+        return [float(v) for v in r.conv_posx]
 
     @property
     def faulted(self) -> bool:
