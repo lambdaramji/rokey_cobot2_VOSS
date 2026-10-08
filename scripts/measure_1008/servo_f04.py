@@ -11,6 +11,8 @@ belt_servo 대신 /voss/robot/servo_cmd(TwistStamped, m/s, base_link)를 30 Hz �
     python3 servo_f04.py zmin   # −z 5 mm/s 최대 4 s (gateway servo_z_min_mm 에서 멈춰야. 하한은 gateway 파라미터로 정함)
     python3 servo_f04.py exit   # +x 스트리밍 중 사람이 gateway 를 Ctrl-C → 종료 정지까지 시간·초과 이동
     공통: --speed 5 (≤ 10 mm/s) --secs 2 (이동 ≤ 10 mm) --axis x|y|z  · 결과 CSV·요약은 ~/voss_data/1008/f04/
+    --fast: 추종 속도 확인용(cut·zero 만) — 속도 ≤ 50 mm/s, 스트리밍 이동 ≤ 40 mm, 이탈 한도 80 mm.
+      예) python3 servo_f04.py cut --fast --speed 48 --secs 1.0   (가속 0.48 s + 정속, 끊긴 뒤 약 21 mm 예상)
 안전: 시작점에서 20 mm 넘게 벗어나면 /voss/robot/stop 을 부르고 끝낸다. 각 시나리오 뒤 반대로 되돌리지 않는다
 (다음 시나리오 전에 사람이 touch_verify.py obs 로 관측 자세 복귀).
 """
@@ -112,8 +114,9 @@ def stopped_after(node: F04, t_from: float, timeout: float = 3.0):
         return None, None
     base = ps[0]
     for i in range(len(ps)):
-        win = [q for q in ps[i:] if q[0] - ps[i][0] <= 0.1]
-        if len(win) >= 3 and win[-1][0] > win[0][0]:
+        win = [q for q in ps[i:] if q[0] - ps[i][0] <= 0.25]
+        # 창 0.2 s 이상: pose 값이 0.1 s 마다만 바뀌는 때가 있어(같은 값 5번, 10/08 오후) 짧은 창은 '멈춤'으로 보인다
+        if len(win) >= 3 and win[-1][0] - win[0][0] >= 0.2:
             spd = math.dist(win[-1][1:], win[0][1:]) / (win[-1][0] - win[0][0])
             if spd < STILL_MM_S:
                 return ps[i][0] - t_from, math.dist(ps[i][1:], base[1:])
@@ -127,7 +130,13 @@ def main() -> int:
     ap.add_argument("--secs", type=float, default=2.0)
     ap.add_argument("--axis", choices=["x", "y", "z"], default="x")
     ap.add_argument("--yes", action="store_true")
+    ap.add_argument("--fast", action="store_true", help="추종 속도(≤ 50 mm/s) cut·zero")
     a = ap.parse_args()
+    global MAX_SPEED, MAX_TRAVEL, ABORT_DEV
+    if a.fast:
+        if a.scenario not in ("cut", "zero"):
+            sys.exit("--fast 는 cut·zero 만")
+        MAX_SPEED, MAX_TRAVEL, ABORT_DEV = 50.0, 40.0, 80.0
     if not 0 < a.speed <= MAX_SPEED or a.speed * a.secs > MAX_TRAVEL:
         sys.exit(f"속도 ≤ {MAX_SPEED} mm/s, 이동(속도×시간) ≤ {MAX_TRAVEL} mm")
     axis = {"x": 0, "y": 1, "z": 2}["z" if a.scenario == "zmin" else a.axis]
@@ -160,7 +169,7 @@ def main() -> int:
         return 1
     global T0
     T0 = time.monotonic()
-    res: dict = {"scenario": a.scenario, "speed": a.speed, "axis": "xyz"[axis]}
+    res: dict = {"scenario": a.scenario, "speed": a.speed, "axis": "xyz"[axis], "fast": a.fast}
 
     if a.scenario in ("cut", "zero"):
         node.ev(f"스트리밍 시작 {v} mm/s")
