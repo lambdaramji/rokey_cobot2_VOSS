@@ -9,22 +9,22 @@
 
 from __future__ import annotations
 
-from collections import OrderedDict
-from datetime import datetime, timedelta, timezone
 import json
 import os
 import queue
 import time
+from collections import OrderedDict
+from datetime import datetime, timedelta, timezone
 
 import paho.mqtt.client as mqtt
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from std_msgs.msg import String
+
+from voss_hmi.mqtt_logic import CommandError, parse_command_json
 from voss_msgs.msg import RobotState, SortResult, SortState, ZoneMap
 from voss_msgs.srv import Command
-
-from voss_hmi.mqtt_logic import CommandError, ParsedCommand, parse_command_json
 
 
 MQTT_HOST = "127.0.0.1"
@@ -114,7 +114,8 @@ class HmiBridgeNode(Node):
             self._mqtt.disconnect()
             self._mqtt.loop_stop()
         finally:
-            return super().destroy_node()
+            destroy_result = super().destroy_node()
+        return destroy_result
 
     def _create_mqtt_client(self) -> mqtt.Client:
         """bridge 전용 계정으로 Mosquitto 클라이언트를 만든다."""
