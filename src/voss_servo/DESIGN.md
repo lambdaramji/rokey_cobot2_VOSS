@@ -1,7 +1,7 @@
 # VOSS 추종·파지 설계 노트 (박병후)
 
 - 문서 ID: VOSS-BH-DECISION-001 · 버전 r6 · 2026-10-08 (KST) · 결정자: 박병후
-- 기준 커밋: main `13947a5` (#109 U1 머지본). r5 · r5.1 은 `e8dd5e5` 기준이라 낡았다. 열린 PR(#95 box_tracker, #104 robot_gateway)은 "PR #n, 머지 전"으로 구분해 적는다.
+- 기준 커밋: main `13947a5` (#109 U1 머지본). r5 · r5.1 은 `e8dd5e5` 기준이라 낡았다. #95 box_tracker · #104 robot_gateway 는 10/08 머지됐다(r6.1 반영).
 - 성격: 박병후 개인 설계 노트. **팀 계약은 docs/interfaces 가 우선**이고, 이 문서는 "왜 이렇게 골랐나 · 무엇을 유보했나"를 남긴다. 팀 결정이 필요한 항목은 pending-decisions / ADR 로 올리고 여기서는 가리키기만 한다.
 - 읽는 법 (초급 개발자 기준): §2 대조표에서 r4 와 레포의 차이를 먼저 보고, §5 카드에서 이유를 읽는다. 처음 나오는 용어는 그 자리에서 한 줄로 풀었다. 수치는 모두 레포 문서에서 가져왔고, 레포에서 못 찾은 것은 "확인 필요"로 적었다.
 - 출처 약어: topics.md = docs/interfaces/topics.md, voss_msgs.md = docs/interfaces/voss_msgs.md, calibration.md = docs/interfaces/calibration.md, measurements #n = docs/measurements-1006.md 의 n 번 항목, measurements-1008 #n = docs/measurements-1008.md 의 n 번, pending #n = docs/pending-decisions.md 의 n 번, MC-nnn = SRD 상호확인 합의 번호(#50 · #51 · #52 · #53), PR #n = GitHub PR, U1 = belt_servo 첫 구현 단위(뼈대, design/U1-*.md).
@@ -27,7 +27,7 @@ r4 에서 "미확인 · 후보"였다가 레포에서 확정된 것, r4 와 반�
 | DEC-13 스택 | rclpy · NumPy · 명시적 FSM | U1(#109): 순수 모듈(params · fsm · log_schema) + 노드. package.xml 에 geometry_msgs · std_srvs · python3-numpy 추가 | 확정 |
 | DEC-14 비동기 · 장비 | 실행 구조 미정 | goal 실행 중 gripper 는 belt_servo 만 호출, 비동기, 응답 = RG2 동작 완료 또는 timeout (topics.md). 두산 서비스는 gateway 단일 큐만 (CLAUDE.md 규칙 3). U1(#109): 30 Hz 타이머 한 곳에서 판단 · 발행 · 로그, 내부 예외 = ABORTED + DEVICE_ERROR(cause `INTERNAL_EXCEPTION`), box 구독 depth 5(소비자 재량) | 확정 (원칙 · U1) |
 | DEC-15 QoS | best_effort · depth 1 은 후보 | box · pose · servo_cmd = best_effort · volatile · depth 1 (topics.md QoS 표, pending #1 수용) | 확정 |
-| DEC-16 watchdog | 수치 · 정지 수단 미정 | ADR-0010 조건 2: 끊기면 gateway 가 0 속도 speedl + **항상** move_stop (정지 판별 없음). gateway(PR #104, F-04 실기, 머지 전): watchdog 200 ms, `servo_max_speed_mm_s` 100, `servo_acc` 100 mm/s². belt_servo(U1): goal 이 어떻게 끝나든 마지막 cmd 0 + `zero_hold_s`(0.5 s 제안). 펜던트 공간 제한은 ADR-0010 리스크 대책. "0 이 아닌 명령 뒤에만 무장"은 확인 필요 | 확정 (방식) / 무장 조건 확인 필요 |
+| DEC-16 watchdog | 수치 · 정지 수단 미정 | ADR-0010 조건 2: 끊기면 gateway 가 0 속도 speedl + **항상** move_stop (정지 판별 없음). gateway(#104, main, F-04 실기): watchdog 200 ms, `servo_max_speed_mm_s` 100, `servo_acc` 100 mm/s². belt_servo(U1): goal 이 어떻게 끝나든 마지막 cmd 0 + `zero_hold_s`(0.5 s 제안). 펜던트 공간 제한은 ADR-0010 리스크 대책. "0 이 아닌 명령 뒤에만 무장"은 확인 필요 | 확정 (방식) / 무장 조건 확인 필요 |
 | DEC-17 파지 면 · 자세 | 고정 자세, 27 mm 높이 가정 | pending #16 **결정(10/07)**: 31 mm 폭 파지(핑거 간격 31 mm — 46 × 27 mm 긴 옆면 두 개, 닫힘축 벨트 가로, 46 mm 변 = 벨트 방향), 목표 폭 39 mm(보고값) · 14 N, 파지 높이 TCP z = position_base.z − 19 mm. 근거 기록 ADR-0009(#88). 고정 자세 · 각속도 0 (MC-010). 박스 27 mm. BRD TR-PICK-06 은 v1.3 으로 정정됨(#79) | 확정 |
 | DEC-18 배포 | host 실행 | architecture.md 호스트 배포 유지. 공용 PC 사양 measurements #5 (CycloneDDS lo 전용 → 개인 PC 에서 토픽 안 보임) | 확정 (방향) |
 
@@ -44,7 +44,7 @@ r4 에서 "미확인 · 후보"였다가 레포에서 확정된 것, r4 와 반�
 9. 추정기: 초기 칼만 필터 미도입, 실측 벨트 속도로 일정 속도 예측.
 10. 공통 기록 기준: 칼만 · PID · speedl 등 모든 선택을 같은 8칸 카드로 기록 (r4).
 11. 레포 대조(r5): #50 · #53 · #57 · #63 · #65 · PR #64 와 대조해 확정 · 정정 · 미정을 나눔. 실험 · 회의 · 합의는 레포에 있는 것만 적는다.
-12. 레포 대조(r6): ADR-0009 · 0010, measurements #3 2부 · measurements-1008, #92 · #103 · #109(머지)와 #95 · #104(머지 전)를 반영. G0 행을 §7 에 복원.
+12. 레포 대조(r6): ADR-0009 · 0010, measurements #3 2부 · measurements-1008, #92 · #103 · #109 · #95 · #104(모두 main)를 반영. G0 행을 §7 에 복원.
 
 ## 4. 우선순위와 기준선
 
@@ -79,7 +79,7 @@ r4 에서 "미확인 · 후보"였다가 레포에서 확정된 것, r4 와 반�
 - **대안과 미채택 이유:** servol_stream(위치 스트리밍)은 **대안**으로 둔다. 끊기면 마지막 목표점에서 멈추는 장점이 있지만 `vel` · `acc` 가 상한이라 gateway 가 다음 위치를 만들어야 하고 실로봇 시작 지연이 205 ms 다. 짧은 상대 move_line ASYNC(짧은 직선 이동을 기다리지 않고 큐에 넣는 방식)는 매 틱 서비스 호출로 단일 큐를 30 Hz 로 점유해 **쓰지 않는다**(ADR-0010). 속도 값을 servol 의 위치 필드에 그대로 넣을 수는 없다.
 - **한계 · 성립 조건:** 실로봇 speedl 은 스트림이 **끊겨도 마지막 속도로 계속 간다**(1.0 s 에 +5 mm, 알람 1215 없음 — 에뮬레이터의 0.1 s 타임아웃과 반대) → 정지 책임은 gateway 에 있다(DEC-16). `time` 보다 `acc` 가 우선하므로(`time` 은 0) 반응 속도는 `acc` 로 정한다. 위치 오차는 적분돼 쌓이므로 폐루프가 보정해야 한다. 실측은 5 mm/s · ±10 mm 조건이다.
 - **레포 확정 사항:** `servo_cmd` = geometry_msgs/TwistStamped, TCP 기준점 선속도 m/s · 각속도 rad/s, frame_id base_link, G0 추종은 고정 자세 · 각속도 0(topics.md, MC-010). 경로 `/dsr01/dsr_controller2/speedl_stream`(SpeedlStream, 컨트롤러 구독 reliable · depth 10). 실로봇 2부(10/07, DRCF `GF02120100`, measurements #3): 30 Hz 수용 · 지령 이동 100 % · 시작 지연 113.5 ms(acc 20) / 61.8 ms(acc 100) · 끊겨도 계속 감 · 속도 0 재전송 뒤 정지 ≈ 0.41 s(acc 20) / 0.15 s(acc 100). gateway 적용 조건(ADR-0010 결과 절): 두산 퍼블리셔 reliable, 끊김 시 0 속도 + 항상 move_stop, `acc` 우선(`time` 0), 스트리밍 중 `get_current_posx` 자제, TCP z 하한 강제.
-- **남은 결정 · 실측:** 추종 속도(48 mm/s)에서의 `acc` 값(T26 #35 · T27 #36, pending #4 전 제안값). belt_servo 가 의도적으로 멈출 때 마지막 명령은 속도 0(ADR-0010 조건 2, DEC-16).
+- **남은 결정 · 실측:** 추종 속도(48 mm/s)에서의 `acc` 값 — 제안값, T26 #35 · T27 #36 실기에서 정함(pending #4 는 ADR-0012(PR #117, 리뷰 중)로 결정됐으나 `acc` · 하강 속도는 ADR-0012 범위 밖, 김학민 #114 리뷰). belt_servo 가 의도적으로 멈출 때 마지막 명령은 속도 0(ADR-0010 조건 2, DEC-16).
 - **연결:** DEC-04 · 07 · 15 · 16. ADR-0010, PR #87. 김학민 robot_gateway(#41). 내 이슈 T25 #34. (IC-ROBOT-01 / DEVICE-01, TBD-014 / 017 / 020, NEW-B-02, VT-BH-02 / 04)
 
 ### BH-DEC-03 — 관측 시각·일정 속도 예측·ID
@@ -213,13 +213,13 @@ r4 에서 "미확인 · 후보"였다가 레포에서 확정된 것, r4 와 반�
 - **연결:** DEC-01 · 03 · 07 · 11 · 14. 전원. (SYS-IF-008, IC-VISION / ROBOT / PICK, TBD-003 / 014 / 019 / 020, VT-BH-01 / 04)
 
 ### BH-DEC-16 — 속도·가속·영역 제한과 독립 watchdog
-- **상태:** 채택(원칙) → 레포 확정(방식: ADR-0010 조건 2, F-04 실기 PR #104). #104 는 머지 전이고 watchdog 무장 조건은 확인 필요.
+- **상태:** 채택(원칙) → 레포 확정(방식: ADR-0010 조건 2, F-04 실기 PR #104). #104 는 main 에 머지됐고(10/08 08:21) 무장 조건은 아래 "레포 확정 사항"에 확정.
 - **문제:** 오류 · 지연 · 소실로 계산값이 급변하거나 마지막 속도 명령이 남을 수 있다. servo 프로세스가 죽어도 장비 쪽에서 멈춰야 한다.
 - **선택과 이유:** 두 층 — belt_servo 의 입력 검사 · 목표 clamp(한계값으로 자르기)와 gateway 의 최종 한계 · watchdog(= 일정 시간 새 명령이 없으면 스스로 멈추는 감시 타이머). speedl 은 끊겨도 마지막 속도로 계속 가므로(DEC-02) gateway watchdog 이 필수다. 속도 0 을 한 번 발행하는 것과 실제 정지 확인은 다르다.
 - **대안과 미채택 이유:** 소실 시 마지막 명령 무기한 유지, 무제한 예측, 재접속 자동 재개는 미채택. 자동 개루프 전환도 미채택(DEC-08).
 - **한계 · 성립 조건:** watchdog 이 있어도 실제 정지 · 보유 박스 안전을 보장하지 않는다. 비상정지(하드웨어)와 소프트웨어 정지("멈춰", SR-NF-09)는 역할이 다르다. robot_gateway 가 강제로 죽으면 0 속도를 보낼 주체가 없어 로봇은 마지막 속도로 간다 — 대책은 사람이 비상정지 옆에서 실행, 컨트롤러 공간 제한(펜던트, TCP z 하한 · 추종 구간 x)(ADR-0010 리스크).
 - **레포 확정 사항:** ADR-0010 조건 2: watchdog 이 끊김을 감지하면 ① 즉시 속도 0 speedl ② 이어서 **항상** move_stop, 정지 판별 없음(#53 MC-014). belt_servo 가 의도적으로 멈출 때도 마지막 명령은 속도 0. gateway(PR #104, F-04 실기 10/08 김학민, 머지 전): watchdog 200 ms, 상한 `servo_max_speed_mm_s` 100 mm/s · `servo_acc` 100 mm/s², TCP z 하한 · 추종 구간 x 자르기(감속 거리 · pose 지연 60 ms 반영). belt_servo(U1, #109): goal 이 어떻게 끝나든 마지막 cmd 를 0 으로 `zero_hold_s`(0.5 s 제안) 동안 보내고, IDLE 에서는 보내지 않는다. 속도 한계 · 작업 영역은 gateway 가 강제하지만 belt_servo 도 clamp(src/voss_servo/CLAUDE.md, U1 `limits.*` 는 null). 추종 가능 구간 748 mm(TCP x −107 → 638, measurements #6) → OUT_OF_REACH 근거. RobotState msg 는 #92 로 정의됨.
-- **남은 결정 · 실측:** ① watchdog 무장 조건 — #109 는 "0 이 아닌 명령 뒤에만 무장"을 요청했지만 #104 의 servo_guard 는 받아들인 명령마다(0 포함) 무장하므로 확인 필요(김학민 #41). ② 48 mm/s 추종에서 watchdog 초과 거리(약 21 mm 추정, 미측정). ③ x 범위를 한 곳에서 받고 belt_servo 가 OUT_OF_REACH 를 먼저 내기(#104 리뷰). ④ z 하한 자르기에 맞춘 하강 최종 접근 속도. belt_servo clamp 값(제안 0.08 m/s · 0.1 m/s²)은 실측 후.
+- **남은 결정 · 실측:** ① watchdog 무장 조건(확정, #104 main · 김학민 #114 리뷰): `servo_guard.on_cmd` 는 **0 명령에도 무장**한다. goal 이 끝나면 zero hold 0.5 s 뒤 watchdog 200 ms 만료로 goal 마다 0 speedl + move_stop 이 한 번 나간다. 그 사이 오는 MoveToZone 은 `guard.active` 가 풀릴 때까지 최대 `zone_servo_settle_s` 1.5 s 기다렸다가 받으므로 PLACE 가 BUSY 로 튕기지 않고 약 0.7 s 늦어진다. RobotState 는 그동안 SERVO BUSY 이고 sort_manager 는 `robot_busy_grace_s` 1.5 s 로 준비로 본다(#111). "0 명령은 무장하지 않음·자원 즉시 해제"는 사이클 0.7 s 단축 개선안으로 G0 뒤(interfaces PR 로 알림). ② 48 mm/s 추종에서 watchdog 초과 거리(약 21 mm 추정, 미측정). ③ x 범위를 한 곳에서 받고 belt_servo 가 OUT_OF_REACH 를 먼저 내기(#104 리뷰). ④ z 하한 자르기에 맞춘 하강 최종 접근 속도. belt_servo clamp 값(제안 0.08 m/s · 0.1 m/s²)은 실측 후.
 - **연결:** DEC-02 · 04 · 06 · 07 · 10. ADR-0010, PR #104 · #109. 김학민 gateway(#41). (SYS-SF-001 / 002, IC-ROBOT / DEVICE / CONFIG, TBD-017 / 020, VT-BH-02 / 04)
 
 ### BH-DEC-17 — XY 추종·Z 단계 계획·고정 자세·RGB 높이 가정
@@ -291,6 +291,7 @@ OCR 은 독립 (DEC-09) · 설정은 launch 파라미터 예정 (DEC-10) · 증�
 | r4 / 10/07 | 칼만을 예시로 한 공통 기록 요구 반영. PID · speedl 등 18개 항목을 같은 8항목 결정 카드로 재정리 |
 | r5 / 10/07 | 레포 main e8dd5e5(#63 · #65 · #57 · #70) 대조 반영, DEC-07 정정, pending #16 결정(31 mm 면) 반영, 가독성 재구성, 레포 번호 병기, src/voss_servo/DESIGN.md 로 이동 |
 | r5.1 / 10/07 | #64(`6302204`)·#79(`671c67f`) 머지 반영: DEC-04 방향 단위벡터 확정, DEC-10 값 규칙 확정, DEC-17 BRD v1.3. #64 작성자 표기 정정(남현지). 결정 내용은 그대로 (김학민 리뷰) |
+| r6.1 / 10/08 | 학민 #114 리뷰 반영: #95 · #104 머지 표기, watchdog 무장 조건 확정, acc 는 ADR-0012 범위 밖 제안값 |
 | r6 / 10/08 | main `13947a5` 대조. DEC-02 speedl_stream 결정(ADR-0010, measurements #3 2부), DEC-03 pose 지연 60 ms(measurements-1008), DEC-05 feedback phase 하나(#103), DEC-06 Gripper 필드 확정(#92), DEC-10 · 11 · 13 · 14 · 15 U1(#109), DEC-16 watchdog 방식(ADR-0010 · #104), DEC-17 ADR-0009 · "31 mm 폭 파지" 용어. §7 G0 행 복원 |
 
 ## 9. 미확정 경계
@@ -302,10 +303,10 @@ OCR 은 독립 (DEC-09) · 설정은 launch 파라미터 예정 (DEC-10) · 증�
 | 제어 | FF / P / PI / PD / PID, 이득 · 포화 · 잡음 · 지연 | 04 / 16 | 구조 확정, watchdog 방식 확정(ADR-0010), Kp · 한계 미정 |
 | 장비 목표 · 경로 | speedl_stream / servol_stream / move_line ASYNC, 단위 · 시간 · 갱신 · 정지 | 02 | 출력 · 경로 확정(speedl_stream, pending #8 결정 · ADR-0010) |
 | 픽업 작업 | 단계 전환 · 인계, 파지 피드백 · 폭 대안, 재시도 | 05 / 06 / 08 | phase · reason · attempts · grip_detected 확정, 전환 값 · 쥔 폭 범위 미정 |
-| ROS · 실행 | topic / service / action, QoS, 비동기 · 큐, watchdog | 07 / 14 / 15 / 16 | 계약 확정, executor 미정 · watchdog 무장 조건 확인 필요 |
+| ROS · 실행 | topic / service / action, QoS, 비동기 · 큐, watchdog | 07 / 14 / 15 / 16 | 계약 확정, executor 미정 · watchdog 무장 조건 확정(#104) |
 | 개발 · 배포 | Python / rclpy / NumPy / FSM, host / container | 13 / 18 | 방향 확정, NumPy 의존 추가(#109), 부하 성능 미확인 |
 | 통합 · 설정 · 증거 | OCR 독립, 설정 공급 경로 · READY, 전체 흐름 · 로그 | 09 / 10 / 11 | OCR 연동 방식 확정, 설정 규칙 확정(#64), 기동 검사 · 로그 U1 구현(#109) |
 
-**미확정 사항(레포에서 확인 안 됨):** 48 mm/s 추종에서의 `acc` 값 · watchdog 초과 거리, watchdog 무장 조건(#104 머지 전), belt_servo 의 TCP 외삽 상한 값, 구체 Kp · 안전 한계 · 단계 전환 값 · timeout · 쥔 폭 범위(T34), belt_servo READY 상태 토픽, 수치 목표 승인(pending #4). 이들은 확인 정보를 받아야 채울 수 있으며 문서 완성도를 위해 임의로 확정하지 않는다.
+**미확정 사항(레포에서 확인 안 됨):** 48 mm/s 추종에서의 `acc` 값 · watchdog 초과 거리, belt_servo 의 TCP 외삽 상한 값, 구체 Kp · 안전 한계 · 단계 전환 값 · timeout · 쥔 폭 범위(T34), belt_servo READY 상태 토픽, 수치 목표 승인(pending #4). 이들은 확인 정보를 받아야 채울 수 있으며 문서 완성도를 위해 임의로 확정하지 않는다.
 
 향후 수정은 문제 · 실측 근거 → 관련 결정 ID → 대안 비교 → 새 결과 · 미선택 이유 → docs/interfaces · measurements · pending · ADR 영향 → 회귀 검증 순서로 같은 양식에 남긴다.
