@@ -1,0 +1,14 @@
+# sort_manager 노드 파라미터 (voss_config.yaml 이 아니라 이 노드만 쓰는 값). 시간은 초.
+sort_manager:
+  ros__parameters:
+    home_first: true              # start·resume 때 MoveToZone(OBSERVE) 를 먼저 부르고, 도착 뒤부터 판독을 받는다
+    check_label_stamp: true       # LabelRead.stamp ≥ 관측 시작(OBSERVE 도착) 인 결과만 채택. 녹화 재생 시험에서만 false
+    track_fresh_s: 0.5            # 이 시간 안에 BoxTrack 이 온 트랙만 "시야에 있음"
+    pose_max_age_s: 0.5           # ROBOT 과도 규칙 (voss_msgs.md SortState)
+    robot_state_max_age_s: 1.5    # RobotState 규칙 (F-05 제안: 2 Hz 주기의 3배)
+    log_max_age_s: 3.0            # /voss/log/status 무수신 → LOG 미준비
+    stop_timeout_s: 3.0           # /voss/robot/stop 응답 없음 → 정지 미확인(ROBOT 미준비)
+    move_timeout_s: 60.0          # MoveToZone(PLACE 는 놓기 + OBSERVE 복귀까지) 응답 없음 → DEVICE_ERROR, PAUSED
+    goal_response_timeout_s: 5.0  # TrackAndGrasp 수락 응답
+    goal_result_timeout_s: 120.0  # TrackAndGrasp 결과 (servo 가 죽은 경우만 걸리게 넉넉히)
+    state_period_s: 0.5           # /voss/sort/state 주기 발행 (≥ 2 Hz, MC-026)
