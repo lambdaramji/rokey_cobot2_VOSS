@@ -17,7 +17,7 @@ aliases:             # 동 → 자연어 별칭 (BRD 2.4). zone_map 토픽의 al
   대치동: [대치, 대치동]
   청담동: [청담, 청담동]
 zones:               # 두산 posx: x y z rx ry rz, mm/deg. 플랜지 기준(TCP 미적용), 구역 중심, 박스 밑면 +5 mm.
-                     # grid: 같은 구역에 여러 개를 놓을 칸. cols = X(벨트 방향) 칸 수, rows = Y 칸 수, pitch_mm = 칸 간격. pose 가 격자 중심
+                     # grid: 같은 구역에 여러 개를 놓을 칸. cols = X(벨트 방향) 칸 수, rows = Y 칸 수, pitch_mm = 칸 간격, offset_mm(선택, 기본 0) = 칸 줄 중심의 X 위치(pose 기준). pose 는 트레이 중심
                      # 자세는 ry = ±180° 라 rx·rz 가 한 값으로 정해지지 않는다(rx − rz 만 의미). robot_gateway 가 정규화한다
   A:       {pose: null, grid: {cols: 3, rows: 1, pitch_mm: 60}}
   B:       {pose: null, grid: {cols: 3, rows: 1, pitch_mm: 60}}
@@ -67,3 +67,4 @@ timing:
 - 2026-10-07: #64 를 main 위로 다시 쌓으며 #57 최종본과 합침. 박병후 리뷰 반영 — latency_offset_ms 0 = 보정 없음·양수 = 앞당김, null 키는 launch 로 넘기지 않음, pose·servo_cmd 기준점 TCP·base_link, direction_base 크기 검사·z = 0 의미.
 - 2026-10-07: SRD v1.0 정합 (#6). `zones.recheck.view_pose`(null, MC-017) 추가, 정지 상태에서만 정적 설정 변경(MC-009)·런타임 zone_map 은 IDLE·PAUSED 에서만(남현지 #84 리뷰)·서보 전용 값 위치·gateway watchdog 위치를 값 규칙에 추가.
 - 2026-10-08: gripper 주석의 "실제 간격 ≈ 보고값 − 10 mm" 를 실측표로 바꿈 — 보고 90 → 80, 빈손 보고 39 → 28 mm(김학민 10/08), 박스 40.3 → 30(10/06). 값·단위(보고값) 변경 없음 (#41).
+- 2026-10-08: grid `offset_mm` 추가, **C 칸 −60/0/+60 → −80/−30/+20**(pitch 50, offset −30) (김학민 #41). 수직 놓기 자세로는 C 트레이(x ≈ 675)의 +X 쪽에 팔이 닿지 않는다 — fkin 으로 검증한 ikin(J3 ≥ 15°): +60 은 해 없음, 0 위 최고 TCP 100, +20 위 61. 트레이는 고정, 우선 트레이 안에 넣는 것이 목표라 칸을 −X 로 모았다(벽 4.5 mm·박스 사이 4 mm, 통합 뒤 조정). 칸 수 3 그대로라 sort_manager 영향 없음. 먼 칸은 robot_gateway 가 칸 0 위로 들어가 트레이 안에서 낮게(TCP ≥ 60) 옆으로 간다.

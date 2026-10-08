@@ -151,10 +151,10 @@ class RobotGatewayNode(Node):
             self.declare_parameter("zone_min_travel_tcp_z_mm", 120.0).value
         )
         # 트레이 안 이동: 먼 칸 위로 TCP 120 이 안 나오면 같은 구역 칸 0(−X 끝) 위까지 높게 와서 내려간 뒤
-        # 트레이 안에서만 낮게 옆으로 간다(수직 자세 그대로). 이 높이 = 박스 밑면이 이미 놓인 박스(위면 ≈
-        # TCP 28)·자기 트레이 테두리(≈ TCP 41)보다 위 — 10/08 ikin: 옛 C 중앙 100, 보류 +30 은 70
+        # 트레이 안에서만 낮게 옆으로 간다(수직 자세 그대로). 이 높이 = 들고 가는 박스 밑면(TCP − 8)이 이미
+        # 놓인 박스 윗면(≈ z 28)보다 약 24 mm 위 — 10/08 ikin: C 칸 2(+20) 61, 보류 +30 은 70
         self.min_in_tray_tcp_z = float(
-            self.declare_parameter("zone_min_in_tray_tcp_z_mm", 70.0).value
+            self.declare_parameter("zone_min_in_tray_tcp_z_mm", 60.0).value
         )
         self.min_j3_deg = float(
             self.declare_parameter("zone_min_j3_deg", 15.0).value
