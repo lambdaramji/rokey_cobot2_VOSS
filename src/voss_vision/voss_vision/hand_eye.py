@@ -165,14 +165,21 @@ def _slerp(qa: np.ndarray, qb: np.ndarray, a: float) -> np.ndarray:
     return (np.sin((1 - a) * th) * qa + np.sin(a * th) * qb) / np.sin(th)
 
 
-def interpolate_pose(t: float, stamps, poses: list[np.ndarray], max_gap_s: float = 0.04):
-    """촬영 시각 t 의 T_base_tcp — 위치 선형, 자세 slerp. 외삽하지 않는다.
+def interpolate_pose(
+    t: float, stamps, poses: list[np.ndarray], max_gap_s: float = 0.04, max_extrap_s: float = 0.0
+):
+    """시각 t 의 T_base_tcp — 위치 선형, 자세 slerp.
 
-    stamps 는 오름차순(초). t 가 범위 밖이거나 가장 가까운 pose 가 max_gap_s 보다 멀면 None.
+    stamps 는 오름차순(초). 범위 안이면 보간하되 가장 가까운 pose 가 max_gap_s 보다 멀면 None.
+    t 가 마지막 pose 보다 뒤면 max_extrap_s 까지만 **앞으로 외삽**한다(최근 pose 몇 개의 속도, 끊김 없을 때만).
+    마지막 pose 보다 max_extrap_s 넘게 뒤거나 첫 pose 보다 앞이면 None (calibration.md: pose_lag 때문에
+    촬영 시각 + 지연의 pose 가 아직 안 왔을 때 기다리지 않으려고 쓴다).
     """
     st = np.asarray(stamps, dtype=float)
-    if len(st) == 0 or t < st[0] or t > st[-1]:
+    if len(st) == 0 or t < st[0]:
         return None
+    if t > st[-1]:
+        return _extrapolate(t, st, poses, max_gap_s, max_extrap_s)
     i = int(np.searchsorted(st, t, side="right")) - 1
     i = min(i, len(st) - 2) if len(st) > 1 else 0
     if len(st) == 1:
@@ -184,3 +191,57 @@ def interpolate_pose(t: float, stamps, poses: list[np.ndarray], max_gap_s: float
     pa, pb = poses[i], poses[i + 1]
     q = _slerp(rot_to_quat(pa[:3, :3]), rot_to_quat(pb[:3, :3]), a)
     return make_t(quat_to_rot(*q), (1 - a) * pa[:3, 3] + a * pb[:3, 3])
+
+
+EXTRAP_SPAN = 5  # 외삽 속도를 재는 최근 pose 수 (50 Hz 면 80 ms)
+
+
+def _extrapolate(t: float, st: np.ndarray, poses, max_gap_s: float, max_extrap_s: float):
+    dt = t - st[-1]
+    if dt > max_extrap_s:
+        return None
+    if dt <= 1e-9 or len(st) == 1:
+        return poses[-1] if dt <= max_gap_s else None
+    k = min(EXTRAP_SPAN, len(st))
+    seg = st[-k:]
+    if np.max(np.diff(seg)) > max_gap_s:  # 끊긴 이력으로는 속도를 믿지 않는다
+        return None
+    ta, pa, pb = seg[0], poses[-k], poses[-1]
+    a = 1.0 + dt / (st[-1] - ta)  # pa→pb 를 같은 빠르기로 dt 만큼 더 간다
+    q = _slerp(rot_to_quat(pa[:3, :3]), rot_to_quat(pb[:3, :3]), a)
+    return make_t(quat_to_rot(*q), pb[:3, 3] + (pb[:3, 3] - pa[:3, 3]) * dt / (st[-1] - ta))
+
+
+def plane_errors(t_tcp_camera: np.ndarray, k, d, obs) -> np.ndarray:
+    """관측 [(T_base_tcp, (u, v), (x, y) 정답 mm, 평면 z mm)] 마다 픽셀→평면 점과 정답의 xy 거리(mm)."""
+    out = []
+    for t_base_tcp, px, xy, z in obs:
+        p, ok = pixel_to_plane(t_base_tcp @ t_tcp_camera, k, d, [list(px)], z)
+        out.append(float(np.hypot(p[0, 0] - xy[0], p[0, 1] - xy[1])) if ok[0] else np.inf)
+    return np.asarray(out)
+
+
+def correct_translation(t_tcp_camera: np.ndarray, k, d, obs, iters: int = 20) -> np.ndarray:
+    """회전은 두고 카메라 위치만 고쳐 관측(터치·T16 대응점)에 맞춘다 → 보정량(카메라 좌표 mm, 3).
+
+    보드 사진이 모두 아래를 보는 자세(≤ 25°)면 광축 방향 거리가 약하게 잡힌다(10/08: 약 10 mm).
+    그 거리는 보드 흩어짐(①)에 드러나지 않으므로 위치를 아는 점으로 고친다. 가우스-뉴턴, 수치 미분.
+    """
+
+    def resid(x: np.ndarray) -> np.ndarray:
+        t = t_tcp_camera @ make_t(np.eye(3), x)
+        r = []
+        for t_base_tcp, px, xy, z in obs:
+            p, _ = pixel_to_plane(t_base_tcp @ t, k, d, [list(px)], z, max_angle_deg=89.0)
+            r += [p[0, 0] - xy[0], p[0, 1] - xy[1]]
+        return np.asarray(r)
+
+    x = np.zeros(3)
+    for _ in range(iters):
+        r = resid(x)
+        jac = np.column_stack([(resid(x + h) - r) / 1e-3 for h in np.eye(3) * 1e-3])
+        step = np.linalg.lstsq(jac, -r, rcond=None)[0]
+        x = x + step
+        if np.linalg.norm(step) < 1e-4:
+            break
+    return x

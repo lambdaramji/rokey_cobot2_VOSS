@@ -7,9 +7,11 @@ from voss_vision.hand_eye import (
     board_in_base,
     board_object_points,
     board_pose,
+    correct_translation,
     interpolate_pose,
     make_t,
     pixel_to_plane,
+    plane_errors,
     pose_msg_to_t,
     posx_to_t,
     rot_angle_deg,
@@ -115,3 +117,36 @@ def test_pose_msg_and_posx_agree() -> None:
     q = rot_to_quat(t[:3, :3])
     m = pose_msg_to_t(np.asarray(posx[:3]) / 1000.0, q)
     assert np.allclose(m, t, atol=1e-9)
+
+
+def test_interpolate_pose_bounded_forward_extrapolation() -> None:
+    """pose_lag 때문에 촬영 시각 + 지연의 pose 가 아직 없으면 최근 속도로 max_extrap_s 까지만 앞으로."""
+    st = [i * 0.02 for i in range(6)]  # 50 Hz, 0~100 ms
+    poses = [make_t(rot_zyz_deg(0, 180, 0), [48.0 * t, 0.0, 300.0]) for t in st]  # 48 mm/s
+    m = interpolate_pose(0.16, st, poses, max_gap_s=0.04, max_extrap_s=0.08)
+    assert np.allclose(m[:3, 3], [48.0 * 0.16, 0, 300], atol=1e-9)  # 60 ms 앞, 등속이면 정확
+    assert rot_angle_deg(m[:3, :3], poses[-1][:3, :3]) < 1e-6
+    assert interpolate_pose(0.19, st, poses, max_extrap_s=0.08) is None  # 90 ms > 80 ms
+    assert interpolate_pose(0.12, st, poses) is None  # 기본은 외삽 안 함
+    assert interpolate_pose(-0.01, st, poses, max_extrap_s=0.08) is None  # 뒤로는 안 함
+    gap = st[:3] + [0.1, 0.12]  # 이력이 끊겼으면 속도를 믿지 않는다
+    assert interpolate_pose(0.15, gap, poses[:5], max_extrap_s=0.08) is None
+
+
+def test_correct_translation_recovers_optical_axis_offset() -> None:
+    """보드 풀이가 광축 방향으로 10 mm 틀린 경우: 위치를 아는 점(터치) 몇 개로 되찾는다."""
+    rng = np.random.default_rng(7)
+    shift = np.array([0.5, -1.5, 10.0])  # 카메라 좌표 mm (광축 = z)
+    wrong = T_TCP_CAM @ make_t(np.eye(3), -shift)
+    obs = []
+    for t_base_tcp in capture_poses(4, rng):
+        t_base_cam = t_base_tcp @ T_TCP_CAM
+        for _ in range(3):
+            p = T_BASE_BOARD[:3, 3] + [rng.uniform(-40, 40), rng.uniform(-40, 40), 0.0]
+            pc = np.linalg.inv(t_base_cam) @ np.append(p, 1.0)
+            u, v = (K @ (pc[:3] / pc[2]))[:2]
+            obs.append((t_base_tcp, (u, v), (p[0], p[1]), p[2]))
+    assert plane_errors(wrong, K, None, obs).max() > 1.0
+    x = correct_translation(wrong, K, None, obs)
+    assert np.allclose(x, shift, atol=0.01)
+    assert plane_errors(wrong @ make_t(np.eye(3), x), K, None, obs).max() < 1e-3
