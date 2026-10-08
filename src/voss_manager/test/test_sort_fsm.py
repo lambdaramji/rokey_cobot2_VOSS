@@ -1,6 +1,7 @@
 """sort_fsm — G0 최소 경로, stop·resume·reset_zone, 실패 분기, 구역 가득, 설정 검사."""
 
 import os
+from dataclasses import replace
 from datetime import datetime
 
 import pytest
@@ -188,20 +189,23 @@ def test_start_without_home(cfg: f.Config) -> None:
     assert ctx.stage_start_ns == 500 * MS
 
 
-def test_low_conf_waits_then_confident_label_picks(cfg: f.Config) -> None:
+def test_unknown_waits_but_low_conf_goes_to_recheck(cfg: f.Config) -> None:
+    """후보가 없으면(UNKNOWN) 기다리고, 후보는 있는데 불확실하면 집어서 재확인 구역으로."""
     ctx = running(cfg)
-    ctx, acts, _ = run(ctx, label(3, conf=0.4), label(3, code="S07-01", dong="대치동"))
+    ctx, acts, _ = run(ctx, label(3, code="", dong="", conf=0.0))
     assert ctx.state == f.RUNNING and not of(acts, f.SendGoal) and 3 not in ctx.decided
-    ctx, acts, _ = run(ctx, label(3, conf=0.8))
+    ctx, acts, _ = run(ctx, label(3, conf=0.4))
     assert ctx.state == f.PICKING and of(acts, f.SendGoal) == [f.SendGoal(3)]
+    assert (ctx.box.zone, ctx.box.slot, ctx.box.candidates) == ("RECHECK", 0, ("대치동",))
+    ctx2, _, _ = run(running(cfg), label(4, code="S07-01", dong="대치동"))  # 코드·동 불일치
+    assert ctx2.box.zone == "RECHECK" and ctx2.box.candidates == ("역삼동", "대치동")
 
 
 def test_waiting_log_once_per_track_and_reason(cfg: f.Config) -> None:
     ctx = running(cfg)
-    ctx, acts, _ = run(
-        ctx, label(3, conf=0.4), label(3, conf=0.4), label(3, conf=0.3), label(4, conf=0.4)
-    )
-    assert len(of(acts, f.Log)) == 2  # track 3 LOW_CONF 한 번, track 4 한 번
+    unk = dict(code="", dong="", conf=0.0)
+    ctx, acts, _ = run(ctx, label(3, **unk), label(3, **unk), label(3, **unk), label(4, **unk))
+    assert len(of(acts, f.Log)) == 2  # track 3 UNKNOWN 한 번, track 4 한 번
 
 
 def test_label_ignored_when_box_gone_or_not_stage1(cfg: f.Config) -> None:
@@ -465,3 +469,278 @@ def test_every_box_id_gets_one_result(cfg: f.Config) -> None:
     ids = [r.box_id for r in of(acts, f.Result)]
     assert ids == [f.make_box_id(SID, i) for i in (1, 2, 3)] and ctx.seq == 3
     assert all(r.stamp_ns > 0 for r in of(acts, f.Result))
+
+
+# ---------------------------------------------------------------- 재확인·질문 (RECHECK·ASKING)
+
+
+def to_recheck(
+    cfg: f.Config, track: int = 5, ctx: f.Ctx | None = None, t: int = 2000 * MS
+) -> f.Ctx:
+    """저신뢰 박스: 파지 → 재확인 칸에 놓음 → RECHECK(VIEW 요청)."""
+    ctx = ctx or running(cfg)
+    ctx, acts, _ = run(
+        ctx,
+        label(track, conf=0.4, dong_alt="청담동", t=t),
+        f.GoalDone(True, True, "OK", 1, t + 3000 * MS),
+    )
+    assert of(acts, f.CallMove)[-1] == f.CallMove("RECHECK", ctx.box.slot, "")
+    ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", t + 6000 * MS, t + 8000 * MS))
+    assert ctx.state == f.RECHECK and ctx.phase == f.PH_VIEW
+    assert of(acts, f.CallMove) == [f.CallMove("RECHECK", 0, "VIEW")]
+    return ctx
+
+
+def view_ok(ctx: f.Ctx, t: int = 11000 * MS) -> f.Ctx:
+    slot = ctx.box.recheck_slot
+    ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", 0, t))
+    assert ctx.phase == f.PH_READ and of(acts, f.CallReadLabel) == [f.CallReadLabel(-1, slot)]
+    return ctx
+
+
+def read(
+    ok: bool,
+    conf: float = 0.95,
+    dong: str = "대치동",
+    code: str = "S07-02",
+    t: int = 12000 * MS,
+    alt: str = "",
+) -> f.ReadDone:
+    return f.ReadDone(
+        ok,
+        code if ok else "",
+        dong if ok else "",
+        conf if ok else 0.0,
+        alt,
+        f"{code}\n{dong}",
+        "" if ok else "timeout",
+        t,
+    )
+
+
+def test_recheck_read_decides_then_pick_and_place(cfg: f.Config) -> None:
+    ctx = view_ok(to_recheck(cfg))
+    assert ctx.recheck_busy == frozenset({0}) and ctx.box.recheck_slot == 0
+    ctx, acts, _ = run(ctx, read(True))
+    assert ctx.phase == f.PH_PICK and of(acts, f.CallMove) == [f.CallMove("RECHECK", 0, "PICK")]
+    assert (ctx.box.zone, ctx.box.slot, ctx.box.decided_by) == ("B", 0, "RECHECK")
+    ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", 0, 15000 * MS))  # PICK 은 placed_stamp 0
+    assert ctx.phase == f.PH_PLACE and of(acts, f.CallMove) == [f.CallMove("B", 0, "")]
+    assert ctx.recheck_busy == frozenset()
+    ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", 18000 * MS, 20000 * MS))
+    (res,) = of(acts, f.Result)
+    assert (res.outcome, res.zone, res.decided_by, res.reason, res.confidence) == (
+        "PLACED",
+        "B",
+        "RECHECK",
+        "",
+        0.95,
+    )
+    assert ctx.state == f.RUNNING and ctx.box is None and ctx.slots["B"] == 1
+
+
+def test_unclear_read_asks_and_operator_answer_places(cfg: f.Config) -> None:
+    ctx = view_ok(to_recheck(cfg))
+    ctx, acts, _ = run(ctx, read(True, conf=0.3, alt="청담동"))
+    assert ctx.state == f.ASKING and ctx.ask_deadline_ns == 12000 * MS + 30_000 * MS
+    (say,) = of(acts, f.Say)
+    assert "대치동" in say.text and "청담동" in say.text and ctx.question == say.text
+    bid = ctx.box.box_id
+    ctx, acts, rep = run(
+        ctx, f.Command("answer", f"{bid}|청담", 20000 * MS)
+    )  # 별칭으로 답해도 된다
+    assert rep == [(True, "청담동 접수")] and ctx.state == f.RECHECK and ctx.phase == f.PH_PICK
+    assert (ctx.box.zone, ctx.box.decided_by, ctx.box.dong, ctx.box.code) == (
+        "C",
+        "OPERATOR",
+        "청담동",
+        "",
+    )
+    assert ctx.question == "" and ctx.ask_deadline_ns == 0
+    ctx, _, _ = run(ctx, f.MoveDone(True, "OK", 0, 23000 * MS))
+    ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", 26000 * MS, 28000 * MS))
+    (res,) = of(acts, f.Result)
+    assert (res.outcome, res.zone, res.decided_by, res.dong) == (
+        "PLACED",
+        "C",
+        "OPERATOR",
+        "청담동",
+    )
+
+
+def test_invalid_answer_reprompts_once_and_keeps_timer(cfg: f.Config) -> None:
+    ctx, _, _ = run(view_ok(to_recheck(cfg)), read(True, conf=0.3, alt="청담동"))
+    deadline, bid = ctx.ask_deadline_ns, ctx.box.box_id
+    ctx, acts, rep = run(ctx, f.Command("answer", f"{bid}|역삼동", 15000 * MS))
+    assert rep[0][0] is False and len(of(acts, f.Say)) == 1 and ctx.state == f.ASKING
+    ctx, acts, rep = run(ctx, f.Command("answer", f"{bid}|논현동", 16000 * MS))
+    assert rep[0][0] is False and not of(acts, f.Say)  # 재안내는 1회
+    assert ctx.ask_deadline_ns == deadline  # 타이머 유지
+    _, _, rep = run(ctx, f.Command("answer", f"{SID}-999|대치동", 17000 * MS))
+    assert rep[0] == (False, f"지금 질문 중인 박스가 아님: {SID}-999 (질문 중 {bid})")
+
+
+def test_no_answer_in_30s_holds(cfg: f.Config) -> None:
+    ctx, _, _ = run(view_ok(to_recheck(cfg)), read(False))
+    assert ctx.state == f.ASKING and ctx.box.candidates == (
+        "대치동",
+        "청담동",
+    )  # 1단계 후보로 묻는다
+    ctx, acts, _ = run(ctx, f.Tick(ctx.ask_deadline_ns - 1))
+    assert ctx.state == f.ASKING and not acts
+    ctx, acts, _ = run(ctx, f.Tick(ctx.ask_deadline_ns))
+    assert of(acts, f.Say)[0].text.startswith("응답이 없어") and ctx.phase == f.PH_PICK
+    assert (ctx.box.zone, ctx.box.decided_by, ctx.box.reason) == ("HOLD", "NONE", "NO_ANSWER")
+    ctx, _, _ = run(ctx, f.MoveDone(True, "OK", 0, 50000 * MS))
+    ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", 53000 * MS, 55000 * MS))
+    (res,) = of(acts, f.Result)
+    assert (res.outcome, res.zone, res.decided_by, res.reason) == (
+        "HELD",
+        "HOLD",
+        "NONE",
+        "NO_ANSWER",
+    )
+    assert ctx.slots["HOLD"] == 1 and ctx.state == f.RUNNING
+
+
+def test_operator_hold_answer(cfg: f.Config) -> None:
+    ctx, _, _ = run(view_ok(to_recheck(cfg)), read(False))
+    ctx, _, rep = run(ctx, f.Command("answer", f"{ctx.box.box_id}|HOLD", 20000 * MS))
+    assert rep == [(True, "보류 접수")] and (ctx.box.zone, ctx.box.decided_by) == (
+        "HOLD",
+        "OPERATOR",
+    )
+
+
+def test_view_failure_goes_to_question(cfg: f.Config) -> None:
+    ctx, acts, _ = run(to_recheck(cfg), f.MoveDone(False, "INVALID view_pose null", 0, 11000 * MS))
+    assert ctx.state == f.ASKING and of(acts, f.Say) and not of(acts, f.CallReadLabel)
+
+
+def test_pick_failure_holds_in_recheck_and_pauses(cfg: f.Config) -> None:
+    ctx, _, _ = run(view_ok(to_recheck(cfg)), read(True))
+    ctx, acts, _ = run(ctx, f.MoveDone(False, "GRIP_FAIL", 0, 15000 * MS))
+    (res,) = of(acts, f.Result)
+    assert (res.outcome, res.zone, res.reason, res.decided_by) == (
+        "HELD",
+        "RECHECK",
+        "DEVICE_ERROR",
+        "RECHECK",
+    )
+    assert (
+        ctx.state == f.PAUSED and ctx.box is None and ctx.recheck_busy == frozenset({0})
+    )  # 박스는 칸에 남음
+    # 다음 저신뢰 박스는 칸 1, 두 칸이 다 차면 구역 가득
+    ctx, _, _ = run(ctx, f.Command("resume", "", 16000 * MS), f.MoveDone(True, "OK", 0, 17000 * MS))
+    ctx = to_recheck(cfg, track=8, ctx=ctx, t=18000 * MS)
+    assert ctx.box.recheck_slot == 1 and ctx.recheck_busy == frozenset({0, 1})
+    # 칸 0 에 보류 박스가 남아 있으니 판독은 칸 1 만 (ReadLabel.slot, VIEW 사진 BOTH)
+    _, acts, _ = run(ctx, f.MoveDone(True, "OK", 0, 27000 * MS))
+    assert of(acts, f.CallReadLabel) == [f.CallReadLabel(-1, 1)]
+
+
+def test_recheck_zone_full_pauses_and_reset_clears(cfg: f.Config) -> None:
+    ctx = running(cfg)
+    ctx = replace(ctx, recheck_busy=frozenset({0, 1}))
+    ctx, acts, _ = run(ctx, label(5, conf=0.4))
+    assert ctx.state == f.PAUSED and ctx.full_zone == "RECHECK" and not of(acts, f.SendGoal)
+    assert "재확인 구역이 가득" in of(acts, f.Say)[0].text
+    ctx, _, rep = run(ctx, f.Command("reset_zone", "RECHECK", 0))
+    assert rep[0][0] and ctx.recheck_busy == frozenset() and ctx.full_zone == ""
+
+
+def test_reset_recheck_refused_while_box_waits_there(cfg: f.Config) -> None:
+    ctx, _, _ = run(
+        to_recheck(cfg), f.Command("stop", "", 9500 * MS), f.MoveDone(True, "OK", 0, 10000 * MS)
+    )
+    assert ctx.state == f.PAUSED and ctx.resume_to == "RECHECK"
+    _, _, rep = run(ctx, f.Command("reset_zone", "RECHECK", 0))
+    assert rep[0][0] is False
+
+
+def test_stop_while_asking_then_resume_asks_again(cfg: f.Config) -> None:
+    ctx, _, _ = run(view_ok(to_recheck(cfg)), read(False))
+    q = ctx.question
+    ctx, acts, _ = run(ctx, f.Command("stop", "", 20000 * MS))
+    assert ctx.state == f.PAUSED and ctx.ask_deadline_ns == 0 and ctx.resume_to == "ASKING"
+    ctx, acts, _ = run(ctx, f.Tick(10**15))  # 멈춘 동안 타이머 없음
+    assert ctx.state == f.PAUSED
+    ctx, acts, rep = run(ctx, f.StopDone(True, "", 0), f.Command("resume", "", 60000 * MS))
+    assert rep[1][0] and ctx.state == f.ASKING and of(acts, f.Say)[0].text == q
+    assert ctx.ask_deadline_ns == 60000 * MS + 30_000 * MS  # 30 s 다시
+
+
+def test_stop_during_view_resume_restarts_recheck(cfg: f.Config) -> None:
+    ctx, _, _ = run(to_recheck(cfg), f.Command("stop", "", 9500 * MS))
+    ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", 0, 10000 * MS))  # 멈춘 뒤 온 VIEW 응답
+    assert ctx.phase == f.PH_NONE and not of(acts, f.CallReadLabel)
+    ctx, acts, rep = run(ctx, f.StopDone(True, "", 0), f.Command("resume", "", 30000 * MS))
+    assert rep[1] == (True, "resume 접수 (재확인 다시)") and ctx.state == f.RECHECK
+    assert of(acts, f.CallMove) == [f.CallMove("RECHECK", 0, "VIEW")]
+
+
+def test_stop_after_pick_resume_places(cfg: f.Config) -> None:
+    ctx, _, _ = run(view_ok(to_recheck(cfg)), read(True))
+    ctx, _, _ = run(ctx, f.Command("stop", "", 14000 * MS), f.MoveDone(True, "OK", 0, 15000 * MS))
+    assert ctx.state == f.PAUSED and ctx.resume_to == "PLACE" and ctx.recheck_busy == frozenset()
+    ctx, acts, _ = run(ctx, f.StopDone(True, "", 0), f.Command("resume", "", 30000 * MS))
+    assert of(acts, f.CallMove) == [f.CallMove("B", 0, "")] and ctx.phase == f.PH_PLACE
+    ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", 33000 * MS, 35000 * MS))
+    assert of(acts, f.Result)[0].outcome == "PLACED" and ctx.state == f.RUNNING
+
+
+def test_tracking_read_upgrades_recheck_box(cfg: f.Config) -> None:
+    """추종 중(stage 2) 판독이 확실하면 재확인 구역을 거치지 않는다."""
+    ctx, _, _ = run(running(cfg), label(5, conf=0.4))
+    assert ctx.box.zone == "RECHECK"
+    ctx, acts, _ = run(ctx, label(5, conf=0.9, stage=2, t=3000 * MS))
+    assert (ctx.box.zone, ctx.box.slot, ctx.box.confidence) == ("B", 0, 0.9) and of(acts, f.Log)
+    ctx, acts, _ = run(ctx, f.GoalDone(True, True, "OK", 1, 6000 * MS))
+    assert of(acts, f.CallMove) == [f.CallMove("B", 0, "")]
+
+
+def test_target_full_after_recheck_waits_for_reset(cfg: f.Config) -> None:
+    ctx = running(cfg)
+    for i in range(3):
+        ctx, _ = placed(ctx, 10 + i, t=(20 + i * 20) * 1000 * MS)
+    ctx = view_ok(to_recheck(cfg, track=30, ctx=ctx, t=100_000 * MS), t=110_000 * MS)
+    ctx, acts, _ = run(ctx, read(True, t=111_000 * MS))  # 대치동 → B, 그런데 B 가 가득
+    assert ctx.state == f.PAUSED and ctx.full_zone == "B" and ctx.resume_to == "PICK"
+    assert not [m for m in of(acts, f.CallMove) if m.mode == "PICK"] and ctx.box.recheck_slot == 0
+    _, _, rep = run(ctx, f.Command("resume", "", 0))
+    assert rep[0][0] is False  # reset_zone 먼저
+    ctx, acts, rep = run(
+        ctx, f.Command("reset_zone", "B", 0), f.Command("resume", "", 120_000 * MS)
+    )
+    assert rep[1][0] and of(acts, f.CallMove) == [f.CallMove("RECHECK", 0, "PICK")]
+
+
+def test_six_states_single_run(cfg: f.Config) -> None:
+    """6상태 전이 단독 시험(T20 완료 기준): 한 세션 안에서 IDLE·RUNNING·PICKING·RECHECK·ASKING·PAUSED 를 모두 지난다."""
+    seen = []
+    ctx = f.new_ctx(cfg)
+    seen.append(ctx.state)
+    events = [
+        start(0),
+        f.MoveDone(True, "OK", 0, 1000 * MS),
+        label(5, conf=0.4, dong_alt="청담동"),
+        f.GoalDone(True, True, "OK", 1, 5000 * MS),
+        f.MoveDone(True, "OK", 8000 * MS, 9000 * MS),
+        f.MoveDone(True, "OK", 0, 11000 * MS),
+        read(False),
+        f.Command("stop", "", 13000 * MS),
+        f.StopDone(True, "", 0),
+        f.Command("resume", "", 20000 * MS),
+    ]
+    for ev in events:
+        ctx = f.step(ctx, ev).ctx
+        seen.append(ctx.state)
+    ctx = f.step(ctx, f.Command("answer", f"{ctx.box.box_id}|대치동", 25000 * MS)).ctx
+    for ev in (
+        f.MoveDone(True, "OK", 0, 28000 * MS),
+        f.MoveDone(True, "OK", 31000 * MS, 33000 * MS),
+    ):
+        ctx = f.step(ctx, ev).ctx
+        seen.append(ctx.state)
+    assert set(seen) == {f.IDLE, f.RUNNING, f.PICKING, f.RECHECK, f.ASKING, f.PAUSED}
+    assert seen[-1] == f.RUNNING

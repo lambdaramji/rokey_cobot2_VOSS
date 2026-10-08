@@ -3,6 +3,8 @@
 노드가 나이(초)·존재 여부를 모아 넘기고, 여기서 not_ready 목록을 만든다.
 - ROBOT: RobotState 를 한 번이라도 받았으면 RobotState 기준(나이 ≤ 1.5 s + connected + READY/STOPPED + 오류 없음),
   아직이면 과도 규칙(`/voss/robot/pose` 0.5 s 이내 + `/voss/robot/move_to_zone` 서비스 있음).
+  BUSY 는 sort_manager 가 보낸 동작(TrackAndGrasp goal·MoveToZone)이 진행 중이거나 끝난 직후(`own_motion`)에만
+  준비로 본다 — 운전 중 SortState.ready 가 꺼지지 않게. 남이 움직이는 BUSY(펜던트·다른 노드)는 미준비.
 - SERVO: `/voss/servo/track_and_grasp` 액션 서버 있음.
 - VISION·OCR: `/voss/vision/box`·`/voss/vision/label` 발행자가 있음. BoxTrack 은 박스가 없으면 나오지 않으므로
   메시지 나이로는 "박스 없음" 과 "비전 장애" 를 가를 수 없다 → 지금은 발행자 존재만 본다(한계, 아래 상태 신호 필요).
@@ -25,6 +27,9 @@ class ReadyInputs:
     robot_connected: bool = False
     robot_state: str = ""
     robot_error: str = ""
+    own_motion: bool = (
+        False  # sort_manager 가 보낸 로봇 동작 중이거나 끝난 지 유예 시간 안 → BUSY 허용
+    )
     servo_server: bool = False
     vision_pubs: int = 0
     ocr_pubs: int = 0
@@ -48,7 +53,8 @@ def not_ready(inp: ReadyInputs, lim: ReadyLimits = DEFAULT_LIMITS) -> list[str]:
         ok = (
             inp.robot_state_age_s <= lim.robot_state_max_age_s
             and inp.robot_connected
-            and inp.robot_state in ("READY", "STOPPED")
+            and inp.robot_state
+            in (("READY", "STOPPED", "BUSY") if inp.own_motion else ("READY", "STOPPED"))
             and not inp.robot_error
         )
     else:
