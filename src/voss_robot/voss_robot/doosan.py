@@ -95,6 +95,15 @@ class DryRunDoosan:
             self._target = list(tgt)
             self._line_v = float(vel[0])
 
+    def current_solution_space(self) -> int:
+        return 2
+
+    def ikin(self, tcp_posx: Sequence[float], sol: int) -> list[float] | None:
+        """가짜: 베이스에서 TCP 까지 거리가 700 mm 넘으면 못 감. 관절은 J3 만 의미 있게(여유 판단용)."""
+        x, y, z = (float(v) for v in tcp_posx[:3])
+        d = (x * x + y * y + z * z) ** 0.5
+        return None if d > 700 else [0.0, 0.0, 90.0 * (1 - d / 700) + 5.0, 0.0, 90.0, 0.0]
+
     # RobotState·MoveToZone 용 (실기와 같은 이름)
     faulted = False
     disconnected = False
@@ -207,8 +216,13 @@ class RosDoosan:
         self.last_alarm = ""
         self.alarm_seq = 0  # WARN·ERROR 알람 수 (MoveToZone 이 이동 중 새 알람을 본다)
         self.disconnected = False
-        from dsr_msgs2.srv import MoveLine
+        from dsr_msgs2.srv import GetCurrentPosx, Ikin, MoveLine
 
+        self._ik_srv, self._posx_srv = Ikin, GetCurrentPosx
+        self._ik = node.create_client(Ikin, prefix + "motion/ikin", callback_group=self._group)
+        self._posx = node.create_client(
+            GetCurrentPosx, prefix + "aux_control/get_current_posx", callback_group=self._group
+        )
         self._line_srv = MoveLine
         self._line = node.create_client(
             MoveLine, prefix + "motion/move_line", callback_group=self._group
@@ -249,6 +263,25 @@ class RosDoosan:
         r.acc = [float(v) for v in acc]
         r.ref, r.mode, r.sync_type = 0, 0, 1
         self.caller.call(self._line, r)
+
+    def current_solution_space(self) -> int:
+        """현재 관절 배치(solution space 0~7). 큐 작업 스레드에서만."""
+        r = self._posx_srv.Request()
+        r.ref = 0
+        return int(self.caller.call(self._posx, r).task_pos_info[0].data[6])
+
+    def ikin(self, tcp_posx: Sequence[float], sol: int) -> list[float] | None:
+        """TCP posx → 관절(deg). 못 풀면 None (엉터리 해 ±350° 초과도 None — 10/08 핸드아이 계획에서 확인).
+        큐 작업 스레드에서만."""
+        r = self._ik_srv.Request()
+        r.pos = [float(v) for v in tcp_posx]
+        r.sol_space, r.ref = int(sol), 0
+        try:
+            res = self.caller.call(self._ik, r)
+        except DoosanError:
+            return None
+        j = [float(v) for v in res.conv_posj]
+        return j if all(abs(v) < 350 for v in j) else None
 
     def get_robot_state(self) -> int:
         """두산 ROBOT_STATE (DRFC.h). 큐 작업 스레드에서만."""

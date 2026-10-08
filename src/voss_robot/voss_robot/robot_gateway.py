@@ -145,6 +145,14 @@ class RobotGatewayNode(Node):
         self.pre_open = float(self.declare_parameter("gripper.pre_open_mm", 90.0).value)
         self.grip_force = float(self.declare_parameter("gripper.force_n", 14.0).value)
         self.safe_z = float(self.declare_parameter("zone_safe_z_mm", SAFE_Z_MM).value)
+        # 먼 구역(C·HOLD)은 safe_z 에서 팔이 닿지 않는다(10/08 실기 1206). 수평 이동 높이를 구역마다 ikin 으로
+        # 낮추되, 이 TCP z 보다 낮아지면 거부한다(박스 밑면 = TCP − 8, 트레이 테두리 ≈ TCP 50 → 약 60 mm 여유)
+        self.min_travel_tcp_z = float(
+            self.declare_parameter("zone_min_travel_tcp_z_mm", 120.0).value
+        )
+        self.min_j3_deg = float(
+            self.declare_parameter("zone_min_j3_deg", 15.0).value
+        )  # 팔꿈치 특이점 여유
         # [선 mm/s, 각 deg/s], [선 mm/s², 각 deg/s²]. 첫 실기는 낮게, 5구역 확인 뒤 올린다
         self.zone_vel = [float(v) for v in self.declare_parameter("zone_vel", [100.0, 45.0]).value]
         self.zone_acc = [float(v) for v in self.declare_parameter("zone_acc", [200.0, 90.0]).value]
@@ -414,10 +422,45 @@ class RobotGatewayNode(Node):
             self._mlock.release()
             self._update_state()
 
+    def _travel_z(self, xy_pose, sol: int) -> float | None:
+        """xy_pose(플랜지) 의 x·y 위에서 safe_z 부터 10 mm 씩 내려가며, 지금 관절 배치로 풀리고 J3 여유가 있는
+        가장 높은 플랜지 z. 최저 이동 높이보다 낮아지면 None. 큐 작업 스레드에서."""
+        min_flange = self.min_travel_tcp_z + (
+            self.safe_z - 200.0
+        )  # safe_z 446.6 ↔ TCP 200 과 같은 차이
+        z = self.safe_z
+        while z >= min_flange - 1e-6:
+            j = self.dsr.ikin(
+                flange_to_tcp([xy_pose[0], xy_pose[1], z, *xy_pose[3:]], self.tcp), sol
+            )
+            if j is not None and abs(j[2]) >= self.min_j3_deg:
+                return z
+            z -= 10.0
+        return None
+
     def _run_path(self, target_flange) -> None:
-        """현재 플랜지 → 목표: 수직 상승 → 수평 → 수직 하강, 단계마다 도착을 pose 로 확인."""
-        cur = self.queue.submit(self.dsr.get_flange_posx).result(timeout=2.0)
-        for name, step in plan_move(cur, target_flange, self.safe_z):
+        """현재 플랜지 → 목표: 수직 상승 → 수평 → 수직 하강, 단계마다 도착을 pose 로 확인.
+        수평 이동 높이 = safe_z 와, 출발·도착 x·y 에서 닿는 최고 높이 중 낮은 것(움직이기 전에 정한다)."""
+
+        def plan():
+            cur = self.dsr.get_flange_posx()
+            sol = self.dsr.current_solution_space()
+            zs = [self._travel_z(cur, sol), self._travel_z(target_flange, sol)]
+            return cur, zs
+
+        cur, zs = self.queue.submit(plan).result(timeout=5.0)
+        if None in zs:
+            where = "출발" if zs[0] is None else "도착"
+            raise _ZoneError(
+                f"LIMIT: {where} 위에서 TCP z ≥ {self.min_travel_tcp_z:.0f} mm 로 수평 이동할 수 없다"
+                " (팔이 닿지 않음 — 구역·칸 위치 확인)"
+            )
+        hz = min(zs)
+        if hz < self.safe_z - 0.5:
+            self.get_logger().info(
+                f"수평 이동 높이 플랜지 z {hz:.1f} (TCP {hz - self.safe_z + 200:.0f}) — safe_z 에서 안 닿음"
+            )
+        for name, step in plan_move(cur, target_flange, hz):
             tcp = flange_to_tcp(step, self.tcp)
             seq0 = self.dsr.alarm_seq
             try:

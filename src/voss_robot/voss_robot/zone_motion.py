@@ -34,19 +34,23 @@ def slot_pose(zone_pose: Sequence[float], grid: Sequence[float], slot: int) -> l
 def plan_move(
     current: Sequence[float], target: Sequence[float], safe_z: float = SAFE_Z_MM, eps: float = 0.5
 ) -> list[tuple[str, list[float]]]:
-    """현재 → 목표 플랜지 posx 경유점 [(이름, posx)]. 이미 그 자리인 단계는 뺀다."""
+    """현재 → 목표 플랜지 posx 경유점 [(이름, posx)]. safe_z = 수평 이동 높이(먼 구역은 gateway 가 낮춰 넘김).
+
+    현재가 safe_z 보다 낮으면 그 x·y 에서 safe_z 까지만 수직 상승한다(목표가 더 높아도 — 먼 구역 위에서는
+    더 높이 못 간다, 10/08 실기). 목표가 safe_z 이상이면(관측 자세) 거기서 목표로 바로 간다(비스듬히 상승).
+    목표가 낮으면 safe_z 높이로 목표 위까지 수평 이동한 뒤 수직 하강한다. 이미 그 자리인 단계는 뺀다."""
     cur = [float(v) for v in current]
     tgt = [float(v) for v in target]
-    hz = max(safe_z, tgt[2])  # 수평 이동 높이
+    hz = float(safe_z)
     steps: list[tuple[str, list[float]]] = []
     if cur[2] < hz - eps:
         steps.append(("rise", [cur[0], cur[1], hz, *cur[3:]]))
-    over = [tgt[0], tgt[1], hz, *tgt[3:]]
     last = steps[-1][1] if steps else cur
-    if abs(last[0] - over[0]) > eps or abs(last[1] - over[1]) > eps or abs(last[2] - over[2]) > eps:
+    over = list(tgt) if tgt[2] >= hz - eps else [tgt[0], tgt[1], hz, *tgt[3:]]
+    moved = any(abs(a - b) > eps for a, b in zip(last[:3], over[:3], strict=True))
+    turned = any(abs(a - b) > 0.05 for a, b in zip(last[3:], over[3:], strict=True))
+    if moved or turned:
         steps.append(("over", over))
-    elif any(abs(a - b) > 0.05 for a, b in zip(last[3:], over[3:], strict=True)):
-        steps.append(("over", over))  # 같은 자리에서 자세만 바꿈
     if tgt[2] < hz - eps:
         steps.append(("descend", tgt))
     return steps
