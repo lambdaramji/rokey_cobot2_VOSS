@@ -1,8 +1,9 @@
 # sort_manager → label_reader. 재확인 구역 정지 재판독 (3단계)
-int32 track_id               # -1 = 시야 안 박스 아무거나 (재확인 구역에는 박스 1개뿐)
+int32 track_id               # -1 = 시야 안 박스 아무거나
 uint8 max_frames             # 다수결에 쓸 최대 프레임 수. 0 = 기본 5
-float32 timeout_s            # 0 = 기본 2.0
+float32 timeout_s            # 0 = 기본 2.0 (프레임 모으기 한도, OCR 시간 제외)
+int32 slot -1                # 재확인 칸 번호(zones.recheck.grid, 0부터). -1 = 칸 지정 없음(트레이 영역 중심에 가까운 송장)
 ---
 bool ok
 voss_msgs/LabelRead label    # stage = 3
-string message               # 실패 사유: timeout / no_box / no_text
+string message               # 실패 사유: timeout / no_box / no_text / bad_slot

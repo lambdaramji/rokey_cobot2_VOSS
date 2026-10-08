@@ -492,8 +492,9 @@ def to_recheck(
 
 
 def view_ok(ctx: f.Ctx, t: int = 11000 * MS) -> f.Ctx:
+    slot = ctx.box.recheck_slot
     ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", 0, t))
-    assert ctx.phase == f.PH_READ and of(acts, f.CallReadLabel) == [f.CallReadLabel(-1)]
+    assert ctx.phase == f.PH_READ and of(acts, f.CallReadLabel) == [f.CallReadLabel(-1, slot)]
     return ctx
 
 
@@ -633,6 +634,9 @@ def test_pick_failure_holds_in_recheck_and_pauses(cfg: f.Config) -> None:
     ctx, _, _ = run(ctx, f.Command("resume", "", 16000 * MS), f.MoveDone(True, "OK", 0, 17000 * MS))
     ctx = to_recheck(cfg, track=8, ctx=ctx, t=18000 * MS)
     assert ctx.box.recheck_slot == 1 and ctx.recheck_busy == frozenset({0, 1})
+    # 칸 0 에 보류 박스가 남아 있으니 판독은 칸 1 만 (ReadLabel.slot, VIEW 사진 BOTH)
+    _, acts, _ = run(ctx, f.MoveDone(True, "OK", 0, 27000 * MS))
+    assert of(acts, f.CallReadLabel) == [f.CallReadLabel(-1, 1)]
 
 
 def test_recheck_zone_full_pauses_and_reset_clears(cfg: f.Config) -> None:

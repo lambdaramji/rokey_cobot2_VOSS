@@ -288,7 +288,7 @@ class SortManagerNode(Node):
         elif isinstance(a, fsm.CallMove):
             self._call_move(a)
         elif isinstance(a, fsm.CallReadLabel):
-            self._call_read(a.track_id)
+            self._call_read(a.track_id, a.slot)
         elif isinstance(a, fsm.CallStop):
             self._call_stop()
         else:
@@ -388,13 +388,13 @@ class SortManagerNode(Node):
 
     # /voss/robot/stop
     # /voss/vision/read_label (재확인 구역 정지 재판독, stage 3)
-    def _call_read(self, track_id: int) -> None:
+    def _call_read(self, track_id: int, slot: int) -> None:
         if not self.read_cli.service_is_ready():
             self._post(fsm.ReadDone(False, "", "", 0.0, "", "", "NO_SERVICE", self._now_ns()))
             return
         op = self.dev = self._new_op("read", self.read_timeout_s)
         fut = self.read_cli.call_async(
-            ReadLabel.Request(track_id=track_id, max_frames=0, timeout_s=0.0)
+            ReadLabel.Request(track_id=track_id, max_frames=0, timeout_s=0.0, slot=slot)
         )
         fut.add_done_callback(lambda f, t=op["token"]: self._on_read_response(f, t))
 

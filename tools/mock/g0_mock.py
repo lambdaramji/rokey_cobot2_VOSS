@@ -222,7 +222,9 @@ class G0Mock(Node):
 
     def _read(self, req: ReadLabel.Request, res: ReadLabel.Response) -> ReadLabel.Response:
         a = self.a
-        self.get_logger().info(f"[read] ReadLabel track {req.track_id} → {a.read_result}")
+        self.get_logger().info(
+            f"[read] ReadLabel track {req.track_id} 칸 {req.slot} → {a.read_result}"
+        )
         time.sleep(0.5)
         if a.read_result == "fail":
             res.ok, res.message = False, "no_text"

@@ -337,7 +337,10 @@ class CallMove:
 
 @dataclass(frozen=True)
 class CallReadLabel:
-    track_id: int = -1  # -1 = 시야 안 박스 아무거나 (재확인 구역엔 하나뿐)
+    track_id: int = -1  # -1 = 시야 안 박스 아무거나
+    slot: int = (
+        -1
+    )  # 그 박스를 놓은 재확인 칸 (ReadLabel.slot) — 보류로 남은 다른 칸 박스를 읽지 않게
 
 
 @dataclass(frozen=True)
@@ -847,7 +850,10 @@ def _on_view(ctx: Ctx, ev: MoveDone) -> Out:
         return _ask(replace(ctx, phase=PH_NONE), ev.now_ns, f"구역 보기 실패 {ev.message}")
     return Out(
         replace(ctx, phase=PH_READ),
-        (CallReadLabel(-1), Log("info", f"{box.box_id} 재확인 구역 판독 요청")),
+        (
+            CallReadLabel(-1, box.recheck_slot),
+            Log("info", f"{box.box_id} 재확인 칸 {box.recheck_slot} 판독 요청"),
+        ),
     )
 
 
