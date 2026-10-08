@@ -1,11 +1,16 @@
 """tracker_logic — LabelCrop stage, 보류 트랙, 관측 자세 판정, 크롭 창, 전송 간격."""
 
 import numpy as np
+import pytest
 from voss_vision.belt_plane import rot_zyz_deg
 from voss_vision.hand_eye import make_t
 from voss_vision.tracker_logic import (
+    SRC_HAND_EYE,
+    SRC_HOMOGRAPHY,
+    SRC_NONE,
     CropGate,
     LoopStats,
+    choose_position,
     crop_window,
     hold_track_id,
     label_stage,
@@ -40,7 +45,11 @@ def test_near_observe_tolerances() -> None:
     tilted[:3, :3] = obs[:3, :3] @ rot_zyz_deg(0, 0.8, 0)  # 공구축 0.8°
     assert not near_observe(tilted, obs)
     spun = obs.copy()
-    spun[:3, :3] = obs[:3, :3] @ rot_zyz_deg(10, 0, 0)  # 공구축 둘레 회전은 축 방향 그대로
+    spun[:3, :3] = obs[:3, :3] @ rot_zyz_deg(
+        10, 0, 0
+    )  # 공구축 둘레 10° — 화면이 돌므로 관측 자세 아님
+    assert not near_observe(spun, obs)
+    spun[:3, :3] = obs[:3, :3] @ rot_zyz_deg(0.3, 0, 0)
     assert near_observe(spun, obs)
 
 
@@ -91,3 +100,54 @@ def test_loop_stats_pose_lookup_counts() -> None:
     s.reset()
     s.add_frame(2.0, 5.0, 40.0)
     assert "pose" not in s.summary(5.0)  # pose 이력이 없으면(재생·관측 가정) 표시 안 함
+
+
+H, E = (-12.2, -276.1, 100.8), (-13.4, -275.5, 100.8)  # 호모그래피·핸드아이 값 (mm)
+
+
+@pytest.mark.parametrize(
+    "case, kw, want",
+    [
+        ("pose 없음", dict(pose_ok=False), (SRC_NONE, False)),
+        ("관측 + 영역 안, 핸드아이 미검증", dict(he_verified=False), (SRC_HOMOGRAPHY, True)),
+        ("관측 + 영역 안, 핸드아이 검증 → 핸드아이(출처 고정)", {}, (SRC_HAND_EYE, True)),
+        (
+            "관측 + 영역 밖, 검증 → 핸드아이로 이어 감",
+            dict(homo_inside=False),
+            (SRC_HAND_EYE, True),
+        ),
+        (
+            "관측 + 영역 밖, 미검증 → 무효",
+            dict(homo_inside=False, he_verified=False),
+            (SRC_HOMOGRAPHY, False),
+        ),
+        ("되돌림 모드 + 관측 + 영역 안", dict(observe_source="homography"), (SRC_HOMOGRAPHY, True)),
+        (
+            "되돌림 모드 + 영역 밖 + 검증",
+            dict(observe_source="homography", homo_inside=False),
+            (SRC_HAND_EYE, True),
+        ),
+        (
+            "관측 밖 + 미검증",
+            dict(at_obs=False, homo_xyz=None, he_verified=False),
+            (SRC_HAND_EYE, False),
+        ),
+        ("관측 밖 + 검증", dict(at_obs=False, homo_xyz=None), (SRC_HAND_EYE, True)),
+        ("camera_info 불일치(관측)", dict(homo_ok=False, he_ok=False), (SRC_HOMOGRAPHY, False)),
+        (
+            "camera_info 불일치(이동)",
+            dict(at_obs=False, homo_xyz=None, he_ok=False),
+            (SRC_HAND_EYE, False),
+        ),
+        ("광선 무효(이동)", dict(at_obs=False, homo_xyz=None, he_xyz=None), (SRC_NONE, False)),
+    ],
+)
+def test_choose_position_table(case: str, kw: dict, want: tuple) -> None:
+    """belt_servo 가 가장 의존하는 position_valid 규칙 (#95 박병후 리뷰 🟡4)."""
+    args = dict(pose_ok=True, at_obs=True, homo_xyz=H, homo_inside=True, homo_ok=True,
+                he_xyz=E, he_ok=True, he_verified=True, observe_source="hand_eye")  # fmt: skip
+    args.update(kw)
+    src, valid, xyz = choose_position(**args)
+    assert (src, valid) == want, case
+    if src == SRC_HAND_EYE:
+        assert xyz == E

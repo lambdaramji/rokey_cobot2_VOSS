@@ -34,10 +34,54 @@ def hold_track_id(sort_state: str, sort_track_id: int) -> int:
 def near_observe(
     t_base_tcp: np.ndarray, t_observe: np.ndarray, tol_mm: float = 1.0, tol_deg: float = 0.5
 ) -> bool:
-    """TCP 가 관측 자세에 있는가: 위치 차 ≤ tol_mm, 공구 z 축 사이 각 ≤ tol_deg."""
+    """TCP 가 관측 자세에 있는가: 위치 차 ≤ tol_mm, **자세 전체 각** ≤ tol_deg.
+
+    공구축 둘레 회전도 본다 — 카메라가 TCP 에서 떨어져 있어 rz 만 달라도 화면 전체가 돈다(#95 리뷰).
+    """
     d = float(np.linalg.norm(t_base_tcp[:3, 3] - t_observe[:3, 3]))
-    c = float(np.clip(t_base_tcp[:3, 2] @ t_observe[:3, 2], -1.0, 1.0))
+    r = t_base_tcp[:3, :3].T @ t_observe[:3, :3]
+    c = float(np.clip((np.trace(r) - 1.0) / 2.0, -1.0, 1.0))
     return d <= tol_mm and math.degrees(math.acos(c)) <= tol_deg
+
+
+SRC_NONE, SRC_HOMOGRAPHY, SRC_HAND_EYE = 0, 1, 2  # BoxTrack.SOURCE_* 와 같은 값
+
+
+def choose_position(
+    pose_ok: bool,
+    at_obs: bool,
+    homo_xyz,
+    homo_inside: bool,
+    homo_ok: bool,
+    he_xyz,
+    he_ok: bool,
+    he_verified: bool,
+    observe_source: str = "hand_eye",
+) -> tuple[int, bool, tuple | None]:
+    """BoxTrack 의 (출처, position_valid, 좌표 mm) — calibration.md 규칙을 한곳에 모은다.
+
+    pose_ok: 촬영 시각 + lag 의 TCP pose 를 구했다 · at_obs: 관측 자세 · homo_xyz: 관측 자세 호모그래피 값(없으면 None),
+    homo_inside: 그 픽셀이 calib_hull_px 안 · homo_ok/he_ok: 파일 있음 + camera_info 확인됨 · he_xyz: 핸드아이 광선
+    교점(없으면 None) · he_verified: moving_verified · observe_source: hand_eye(기본) | homography(되돌림).
+    """
+    if not pose_ok:
+        return SRC_NONE, False, None
+    he_usable = he_xyz is not None and he_ok and he_verified
+    if observe_source != "homography" and he_usable:
+        return SRC_HAND_EYE, True, tuple(he_xyz)  # 검증됐으면 관측 자세에서도 — 트랙 안 출처 고정
+    if at_obs and homo_xyz is not None:
+        if homo_inside and homo_ok:
+            return SRC_HOMOGRAPHY, True, tuple(homo_xyz)
+        if he_usable:
+            return (
+                SRC_HAND_EYE,
+                True,
+                tuple(he_xyz),
+            )  # 호모그래피 유효 영역 밖은 핸드아이로 이어 간다
+        return SRC_HOMOGRAPHY, False, tuple(homo_xyz)
+    if he_xyz is not None:
+        return SRC_HAND_EYE, he_ok and he_verified, tuple(he_xyz)
+    return SRC_NONE, False, None
 
 
 def crop_window(

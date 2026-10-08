@@ -3,15 +3,19 @@
 계약: docs/interfaces/topics.md·voss_msgs.md(BoxTrack·LabelCrop), calibration.md(좌표).
 - 검출 detector=seg(voss_vision.box_detect, ADR-0004). yolo 는 pending #17 결정 뒤에 붙인다.
 - 추적 voss_vision.box_track: track_id 규칙, min_hits 확정, PICKING 중 현재 트랙 보류, 미검출 프레임은 발행 안 함.
-- 좌표: 관측 자세(1 mm·0.5°) = 호모그래피(SOURCE_OBSERVE_HOMOGRAPHY), 그 밖 = 핸드아이(SOURCE_HAND_EYE,
-  촬영 시각 pose 보간). 핸드아이는 moving_verified 전이면 position_valid=false. 깊이는 쓰지 않는다.
-- 재생: playback:=<bag 폴더> 면 카메라 대신 녹화를 읽는다(로봇 없이 개발). pose 토픽이 없는 녹화는
-  관측 자세에 멈춰 있던 것으로 본다(assume_observe).
+- 좌표(calibration.md, 판정은 tracker_logic.choose_position): 핸드아이가 moving_verified 면 관측 자세에서도
+  핸드아이(SOURCE_HAND_EYE, 촬영 시각 + pose_lag 의 pose) — 트랙 안에서 출처가 바뀌지 않는다. 호모그래피는 관측 자세
+  비교 로그, 핸드아이 미검증이거나 observe_source: homography 일 때만 출처. 깊이는 쓰지 않는다.
+- 재생: playback:=<bag 폴더> 면 카메라 대신 녹화를 읽는다(로봇 없이 개발). 녹화 좌표가 /voss/vision/box 로 나가므로
+  **운용 도메인(ROS_DOMAIN_ID 30)에서는 거부**하고, 실시간 /voss/robot/pose 는 받지 않는다(녹화 pose 와 섞이지 않게).
+  pose 토픽이 없는 녹화는 관측 자세에 멈춰 있던 것으로 본다(assume_observe).
 판단 로직은 tracker_logic.py(pytest), 이 파일은 ROS 입출력만 맡는다.
 """
 
 from __future__ import annotations
 
+import hashlib
+import os
 import threading
 import time
 from collections import deque
@@ -41,6 +45,7 @@ QOS_CROP = QoSProfile(depth=5, reliability=ReliabilityPolicy.RELIABLE)
 QOS_STATE = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
 # pose 는 depth 1 로 발행되지만, 영상 처리 중 밀린 것도 보간에 쓰려고 받는 쪽은 10 으로 둔다
 QOS_POSE = QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT)
+QOS_IMAGE = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
 
 SEG_KEYS = ("downscale", "v_min", "s_max", "close_px", "area_min", "area_max", "aspect_tol",
             "fill_min", "border_px", "belt_green_frac", "belt_margin_px")  # fmt: skip
@@ -74,9 +79,18 @@ def bgr_to_image(img: np.ndarray, header) -> Image:
     return m
 
 
-def load_yaml(path: str) -> dict | None:
+def load_calib(path: str) -> tuple[dict | None, str]:
+    """캘리브레이션 YAML 과 파일 sha256 앞 8자리(calib_version 에 싣는다). 없으면 (None, "")."""
     p = Path(path).expanduser()
-    return yaml.safe_load(p.read_text()) if path and p.is_file() else None
+    if not path or not p.is_file():
+        return None, ""
+    raw = p.read_bytes()
+    return yaml.safe_load(raw), hashlib.sha256(raw).hexdigest()[:8]
+
+
+def calib_label(kind: str, cal: dict, sha8: str) -> str:
+    """calibration.md calib_version 형식: <method> v<version> <created> sha256:<8자리>."""
+    return f"{kind} v{cal.get('version')} {cal.get('created')} sha256:{sha8}"
 
 
 class BoxTrackerNode(Node):
@@ -108,6 +122,14 @@ class BoxTrackerNode(Node):
         self.hz_warn = float(p("hz_warn", 25.0).value)
         self.obs_tol_mm = float(p("observe_tol_mm", 1.0).value)
         self.obs_tol_deg = float(p("observe_tol_deg", 0.5).value)
+        # hand_eye(기본): 검증된 핸드아이를 관측 자세에서도 쓴다 / homography: 되돌림용(게이트 측정 중 바꾸지 않음)
+        self.observe_source = p("observe_source", "hand_eye").value
+        if self.observe_source not in ("hand_eye", "homography"):
+            raise RuntimeError(f"observe_source={self.observe_source} — hand_eye | homography")
+        if self.playback and os.environ.get("ROS_DOMAIN_ID", "0") == "30":
+            raise RuntimeError(
+                "재생 모드는 운용 도메인(ROS_DOMAIN_ID 30)에서 띄우지 않는다 — 녹화 좌표가 /voss/vision/box 로 나간다"
+            )
         self.crop_margin = float(p("crop_margin", 0.15).value)
         self.gate = tl.CropGate(
             period_s=float(p("crop_period_s", 0.2).value),
@@ -119,8 +141,10 @@ class BoxTrackerNode(Node):
         self.frame_id = "camera_color_optical_frame"
 
         # 캘리브레이션 (읽기 전용 마운트 config/). 평면 높이는 호모그래피 파일 하나에서만 읽는다
-        self.homo = load_yaml(p("homography_path", "").value)
-        self.he = load_yaml(p("hand_eye_path", "").value)
+        self.homo, homo_sha = load_calib(p("homography_path", "").value)
+        self.he, he_sha = load_calib(p("hand_eye_path", "").value)
+        self.homo_label = calib_label("homography", self.homo, homo_sha) if self.homo else ""
+        self.he_label = calib_label("hand_eye", self.he, he_sha) if self.he else ""
         self.T_obs = None
         self.plane_z = None
         if self.homo:
@@ -134,8 +158,10 @@ class BoxTrackerNode(Node):
             self.he_k = np.asarray(self.he["camera"]["k"], float).reshape(3, 3)
             self.he_d = np.asarray(self.he["camera"].get("d") or [0.0] * 5, float)
             self.he_verified = bool(self.he.get("moving_verified", False))
-        self.homo_ok = self.homo is not None  # camera_info 로 다시 확인
-        self.he_ok = self.he is not None and self.plane_z is not None
+        # camera_info(실시간 토픽 또는 녹화)로 해상도·k 를 확인하기 전에는 좌표를 유효로 내지 않는다
+        self.homo_ok = False
+        self.he_ok = False
+        self._info_checked = False
 
         self._lock = threading.Lock()
         self._state, self._sort_track = "", -1
@@ -143,42 +169,45 @@ class BoxTrackerNode(Node):
         self.stats = tl.LoopStats()
         self._stats_lock = threading.Lock()  # 영상 스레드·로그 타이머가 같이 쓴다
         self.done = False
-        self.stopping = (
-            False  # 종료 때 재생 스레드를 먼저 멈춘다(bag 리더가 살아 있으면 프로세스가 죽는다)
-        )
+        # 종료 때 재생 스레드를 먼저 멈춘다(bag 리더가 살아 있으면 프로세스가 죽는다)
+        self.stopping = False
         self.player: threading.Thread | None = None
 
         self.pub_box = self.create_publisher(BoxTrack, "/voss/vision/box", QOS_BOX)
         self.pub_crop = self.create_publisher(LabelCrop, "/voss/vision/label_crop", QOS_CROP)
-        side = (
-            MutuallyExclusiveCallbackGroup()
-        )  # pose·state 는 영상 처리와 따로 돈다(보간 이력 유지)
-        self.create_subscription(
-            PoseStamped, "/voss/robot/pose", self._on_pose, QOS_POSE, callback_group=side
-        )
+        # pose·state 는 영상 처리와 따로 돈다(보간 이력 유지)
+        side = MutuallyExclusiveCallbackGroup()
         self.create_subscription(
             SortState, "/voss/sort/state", self._on_state, QOS_STATE, callback_group=side
         )
         self.create_timer(self.stats_period, self._log_stats, callback_group=side)
         if self.playback:
+            # 재생 중에는 실시간 pose 를 받지 않는다 — 녹화 pose(bag 안)와 섞이면 stamp 순서가 깨진다
+            self.get_logger().warn(
+                "재생 모드: 녹화 좌표가 /voss/vision/box 로 나간다 — 운용과 다른 ROS_DOMAIN_ID 에서만"
+            )
             self.player = threading.Thread(target=self._run_playback, daemon=True)
             self.player.start()
         else:
+            self.create_subscription(
+                PoseStamped, "/voss/robot/pose", self._on_pose, QOS_POSE, callback_group=side
+            )
             self.create_subscription(CameraInfo, "/camera/color/camera_info", self._on_info,
                                      qos_profile_sensor_data, callback_group=side)  # fmt: skip
-            self.create_subscription(Image, image_topic, self._on_image, qos_profile_sensor_data)
-        self._info_checked = False
+            # 영상은 최신 한 장만: 처리가 밀려도 오래된 프레임이 쌓여 지연이 늘지 않게 (#95 리뷰)
+            self.create_subscription(Image, image_topic, self._on_image, QOS_IMAGE)
         self.get_logger().info(
             f"box_tracker started: detector={self.detector} min_hits={self.tracker.min_hits} "
-            f"homography={'v' + str(self.homo.get('created')) if self.homo else '없음'} "
+            f"homography={self.homo_label or '없음'} "
             f"hand_eye={self._he_label()} pose_lag={self.pose_lag * 1000:.0f} ms "
+            f"observe_source={self.observe_source} "
             f"input={'playback ' + self.playback if self.playback else image_topic}"
         )
 
     def _he_label(self) -> str:
         if not self.he:
             return "없음"
-        return f"{self.he.get('created')} moving_verified={self.he_verified}"
+        return f"{self.he_label} moving_verified={self.he_verified}"
 
     # ---------------- 입력 ----------------
     def _on_pose(self, msg: PoseStamped) -> None:
@@ -196,21 +225,25 @@ class BoxTrackerNode(Node):
             return
         self._info_checked = True
         size = [msg.width, msg.height]
-        if self.homo and list(self.homo.get("image_size", size)) != size:
-            self.homo_ok = False
-            self.get_logger().error(
-                f"영상 {size} ≠ 호모그래피 {self.homo['image_size']} — 관측 좌표 무효"
-            )
-        if self.he:
-            ref = (self.he.get("camera_factory") or self.he["camera"])["k"]
-            if (
-                list(self.he.get("image_size", size)) != size
-                or np.max(np.abs(np.asarray(msg.k) - ref)) > 1.0
-            ):
-                self.he_ok = False
+        if self.homo:
+            self.homo_ok = list(self.homo.get("image_size", size)) == size
+            if not self.homo_ok:
                 self.get_logger().error(
-                    "camera_info 가 핸드아이 촬영 때와 다르다 — 이동 중 좌표 무효"
+                    f"영상 {size} ≠ 호모그래피 {self.homo['image_size']} — 관측 좌표 무효"
                 )
+        if self.he and self.plane_z is not None:
+            ref = (self.he.get("camera_factory") or self.he["camera"])["k"]
+            self.he_ok = (
+                list(self.he.get("image_size", size)) == size
+                and np.max(np.abs(np.asarray(msg.k) - ref)) <= 1.0
+            )
+            if not self.he_ok:
+                self.get_logger().error(
+                    "camera_info 가 핸드아이 촬영 때와 다르다 — 핸드아이 좌표 무효"
+                )
+        self.get_logger().info(
+            f"camera_info 확인 {size}: homography_ok={self.homo_ok} hand_eye_ok={self.he_ok}"
+        )
 
     def _on_image(self, msg: Image) -> None:
         self.process(image_to_bgr(msg), msg.header.stamp, live=True)
@@ -308,33 +341,32 @@ class BoxTrackerNode(Node):
         return t, at_obs
 
     def _fill_position(self, m: BoxTrack, u: float, v: float, pose_t, at_obs: bool) -> None:
-        m.position_source, m.position_valid = BoxTrack.SOURCE_NONE, False
         he_xyz = None
-        if pose_t is not None and self.he_ok:
+        if pose_t is not None and self.he is not None and self.plane_z is not None:
             xyz, ok = pixel_to_plane(
                 pose_t @ self.he_T, self.he_k, self.he_d, [[u, v]], self.plane_z
             )
             he_xyz = xyz[0] if ok[0] else None
+        homo_xyz, inside = None, False
         if pose_t is not None and at_obs and self.homo:
             xy, ok = pixel_to_base_xy(self.homo, np.array([[u, v]], float))
-            m.position_base.x, m.position_base.y = xy[0, 0] / 1000.0, xy[0, 1] / 1000.0
-            m.position_base.z = self.plane_z / 1000.0
-            m.position_valid = bool(ok[0]) and self.homo_ok
-            m.position_source = BoxTrack.SOURCE_OBSERVE_HOMOGRAPHY
-            m.calib_version = f"homography {self.homo.get('created')}"
-            # 관측 자세에서 두 방식 차이를 로그로 남긴다(calibration.md). 호모그래피 유효 영역 밖은
-            # 외삽이라 비교하지 않는다
-            if he_xyz is not None and m.position_valid:
-                d = float(np.hypot(he_xyz[0] - xy[0, 0], he_xyz[1] - xy[0, 1]))
+            homo_xyz, inside = (float(xy[0, 0]), float(xy[0, 1]), self.plane_z), bool(ok[0])
+            # 관측 자세에서 두 방식 차이를 로그로 남긴다(calibration.md). 유효 영역 밖은 외삽이라 비교하지 않는다
+            if he_xyz is not None and inside:
+                d = float(np.hypot(he_xyz[0] - homo_xyz[0], he_xyz[1] - homo_xyz[1]))
                 with self._stats_lock:
                     self.stats.homo_vs_he_mm = max(self.stats.homo_vs_he_mm, d)
-        elif he_xyz is not None:
-            m.position_base.x, m.position_base.y, m.position_base.z = (
-                float(c) / 1000.0 for c in he_xyz
-            )
-            m.position_valid = self.he_verified  # 이동 중 검증 전에는 쓰지 않는다
-            m.position_source = BoxTrack.SOURCE_HAND_EYE
-            m.calib_version = f"hand_eye {self.he.get('created')}"
+        src, valid, xyz = tl.choose_position(
+            pose_t is not None, at_obs, homo_xyz, inside, self.homo_ok,
+            he_xyz, self.he_ok, self.he_verified if self.he else False, self.observe_source,
+        )  # fmt: skip
+        m.position_source, m.position_valid = src, valid
+        if xyz is not None:
+            m.position_base.x, m.position_base.y, m.position_base.z = (c / 1000.0 for c in xyz)
+        if src == BoxTrack.SOURCE_OBSERVE_HOMOGRAPHY:
+            m.calib_version = self.homo_label
+        elif src == BoxTrack.SOURCE_HAND_EYE:
+            m.calib_version = self.he_label
 
     def _maybe_crop(self, bgr: np.ndarray, t, stamp, ts: float, label_stage: int) -> None:
         if not self.gate.due(t.id, label_stage, ts):

@@ -12,7 +12,8 @@ box_tracker:
     pose_max_extrap_ms: 80.0 # 그 pose 가 아직 없으면 최근 속도로 이만큼까지만 앞으로 외삽 (calibration.md, 제안값)
     hz_warn: 25.0            # 실시간 영상이 이 Hz 밑이면 WARN (카메라 USB 끊김 확인용)
     observe_tol_mm: 1.0      # TCP 가 관측 자세에서 이 안이면 호모그래피, 밖이면 핸드아이
-    observe_tol_deg: 0.5     # 공구축 각
+    observe_tol_deg: 0.5     # 자세 전체 각(공구축 둘레 회전 포함)
+    observe_source: hand_eye # hand_eye: 검증된 핸드아이를 관측 자세에서도 / homography: 되돌림용(게이트 측정 중 바꾸지 않음)
     # LabelCrop (voss_msgs.md): 박스 영역 크롭(원본 색), 송장 찾기·펴기는 label_reader
     crop_margin: 0.15        # 박스 bbox 를 사방으로 15% 넓혀 자른다
     crop_period_s: 0.2       # 트랙·단계별 최소 간격(5 Hz)
