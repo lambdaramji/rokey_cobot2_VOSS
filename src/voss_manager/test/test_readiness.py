@@ -42,6 +42,18 @@ def test_robot_state_rule_replaces_transitional() -> None:
     assert not_ready(with_(**{**rs, "robot_state_age_s": 2.0})) == ["ROBOT"]
 
 
+def test_robot_busy_ready_only_for_own_motion() -> None:
+    """운전 중(우리가 보낸 goal·MoveToZone) BUSY 는 준비, 남이 움직이는 BUSY 는 미준비. 오류·끊김은 늘 미준비."""
+    rs = dict(robot_state_age_s=0.5, robot_connected=True, robot_state="BUSY")
+    assert not_ready(with_(**rs, own_motion=True)) == []
+    assert not_ready(with_(**rs, own_motion=False)) == ["ROBOT"]
+    assert not_ready(
+        with_(**{**rs, "robot_state": "ERROR", "robot_error": "ESTOP"}, own_motion=True)
+    ) == ["ROBOT"]
+    assert not_ready(with_(**{**rs, "robot_connected": False}, own_motion=True)) == ["ROBOT"]
+    assert not_ready(with_(**{**rs, "robot_state_age_s": 2.0}, own_motion=True)) == ["ROBOT"]
+
+
 def test_servo_vision_ocr() -> None:
     assert not_ready(with_(servo_server=False, vision_pubs=0, ocr_pubs=0)) == [
         "SERVO",

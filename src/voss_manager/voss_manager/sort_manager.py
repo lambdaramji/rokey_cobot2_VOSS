@@ -80,6 +80,9 @@ class SortManagerNode(Node):
         self.read_timeout_s = p("read_timeout_s", 15.0).value
         ask_timeout_s = p("ask_timeout_s", 30.0).value  # 질문 발화부터 무응답 보류까지 (SRD §5.7)
         self.state_period_s = p("state_period_s", 0.4).value
+        # 우리 goal·MoveToZone 이 끝난 뒤에도 gateway 가 BUSY 인 시간 — belt_servo 0 유지 0.5 s + watchdog 0.2 s,
+        # gateway 의 zone_servo_settle_s 와 같은 1.5 s. 이 안의 BUSY 는 준비로 본다
+        self.busy_grace_s = p("robot_busy_grace_s", 1.5).value
         self.limits = ReadyLimits(
             pose_max_age_s=p("pose_max_age_s", 0.5).value,
             robot_state_max_age_s=p("robot_state_max_age_s", 1.5).value,
@@ -140,6 +143,9 @@ class SortManagerNode(Node):
         # 장비 호출: 한 번에 하나(goal 또는 이동) + stop. token 이 바뀌면 늦은 응답은 버린다
         self.token = 0
         self.dev: dict | None = None  # {kind, token, deadline, handle, cancel}
+        self.motion_seen = (
+            -1.0
+        )  # 우리 로봇 동작(goal·move)이 진행 중인 것을 마지막으로 본 monotonic
         self.stop_op: dict | None = None
         self.queue: deque = deque()
         self.pumping = False
@@ -163,6 +169,8 @@ class SortManagerNode(Node):
         def age(rx: float) -> float:
             return mono - rx if rx >= 0 else float("inf")
 
+        if self.dev is not None and self.dev["kind"] in ("goal", "move"):
+            self.motion_seen = mono
         return ReadyInputs(
             pose_age_s=age(self.pose_rx),
             move_srv=self.move_cli.service_is_ready(),
@@ -170,6 +178,7 @@ class SortManagerNode(Node):
             robot_connected=bool(rs and rs.connected),
             robot_state=rs.state if rs else "",
             robot_error=rs.error_code if rs else "",
+            own_motion=age(self.motion_seen) <= self.busy_grace_s,
             servo_server=self.grasp_ac.server_is_ready(),
             vision_pubs=self.count_publishers("/voss/vision/box"),
             ocr_pubs=self.count_publishers("/voss/vision/label"),
@@ -287,6 +296,8 @@ class SortManagerNode(Node):
 
     def _new_op(self, kind: str, timeout_s: float) -> dict:
         self.token += 1
+        if kind in ("goal", "move"):
+            self.motion_seen = time.monotonic()
         return {
             "kind": kind,
             "token": self.token,

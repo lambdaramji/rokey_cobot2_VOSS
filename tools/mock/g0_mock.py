@@ -5,6 +5,8 @@
 공용 PC 에서도 다른 도메인(예 77)에서만 쓴다.
   --servo   /voss/servo/track_and_grasp 액션 서버 (belt_servo 대역)
   --robot   /voss/robot/move_to_zone·/voss/robot/stop 서비스, /voss/robot/pose 50 Hz (robot_gateway 대역)
+  --robot-state  (--robot 와 함께) /voss/robot/state 2 Hz + 바뀔 때 — 이동·서보 중 BUSY, 서보 끝난 뒤 0.7 s 더 BUSY
+            (belt_servo 0 유지 + watchdog), stop 뒤 STOPPED. 없으면 sort_manager 는 ROBOT 과도 규칙(pose + 서비스)
   --log     /voss/log/status 1 Hz (sort_logger 대역)
   --vision  /voss/vision/box 30 Hz + /voss/vision/label stage 1 (box_tracker·label_reader 대역, 박스 1개)
   --read    /voss/vision/read_label 서비스 (label_reader 3단계 재판독 대역) — 재확인·질문 흐름 시험용
@@ -27,13 +29,13 @@ from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 from rclpy.node import Node
-from rclpy.qos import QoSProfile, ReliabilityPolicy
+from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from rclpy.signals import SignalHandlerOptions
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
 from voss_msgs.action import TrackAndGrasp
-from voss_msgs.msg import BoxTrack, LabelRead
+from voss_msgs.msg import BoxTrack, LabelRead, RobotState
 from voss_msgs.srv import MoveToZone, ReadLabel
 
 BEST_EFFORT = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
@@ -77,6 +79,21 @@ class G0Mock(Node):
         if a.robot and self._free_service("/voss/robot/stop"):
             self.create_service(Trigger, "/voss/robot/stop", self._stop, callback_group=self.cb)
             log.info("[robot] stop 모의")
+        self.action, self.servo_tail, self.stopped = "", 0.0, False
+        self.state_pub = None
+        if a.robot and a.robot_state and self._free_topic("/voss/robot/state"):
+            self.state_pub = self.create_publisher(
+                RobotState,
+                "/voss/robot/state",
+                QoSProfile(
+                    depth=1,
+                    reliability=ReliabilityPolicy.RELIABLE,
+                    durability=DurabilityPolicy.TRANSIENT_LOCAL,
+                ),
+            )
+            self.create_timer(0.5, self._state, callback_group=self.cb)
+            self.create_timer(0.05, self._state_tail, callback_group=self.cb)
+            log.info("[robot] RobotState 2 Hz 모의 (BUSY·STOPPED·READY)")
         if a.robot and self._free_topic("/voss/robot/pose"):
             self.pose_pub = self.create_publisher(PoseStamped, "/voss/robot/pose", BEST_EFFORT)
             self.create_timer(0.02, self._pose, callback_group=self.cb)
@@ -121,10 +138,42 @@ class G0Mock(Node):
             self.get_logger().error(f"{name} 진짜 발행자가 이미 있다 — 모의를 띄우지 않는다")
         return not busy
 
+    # robot_gateway RobotState 대역 (state_logic.decide 와 같은 우선순위, 오류 없음)
+    def _state(self) -> None:
+        if self.state_pub is None:
+            return
+        action = self.action or ("SERVO" if time.monotonic() < self.servo_tail else "")
+        msg = RobotState(connected=True, action=action, gripper_width_mm=90.0)
+        msg.state = "BUSY" if action else ("STOPPED" if self.stopped else "READY")
+        msg.header.stamp = self.get_clock().now().to_msg()
+        self.state_pub.publish(msg)
+
+    def _state_tail(self) -> None:
+        if self.servo_tail and time.monotonic() >= self.servo_tail and not self.action:
+            self.servo_tail = 0.0
+            self._state()  # 서보 꼬리가 끝나면 READY 를 바로 알린다
+
+    def _set_action(self, action: str) -> None:
+        if action:
+            self.stopped = False  # 새 모션 명령이 STOPPED 를 푼다
+        self.action = action
+        self._state()
+
     # belt_servo 대역
     def _execute(self, gh) -> TrackAndGrasp.Result:
-        a, res = self.a, TrackAndGrasp.Result()
+        res = TrackAndGrasp.Result()
         self.get_logger().info(f"[servo] goal track {gh.request.track_id}")
+        self._set_action("SERVO")
+        try:
+            return self._run_goal(gh, res)
+        finally:
+            self.servo_tail = (
+                time.monotonic() + 0.7
+            )  # belt_servo 0 유지 0.5 s + gateway watchdog 0.2 s
+            self._set_action("")
+
+    def _run_goal(self, gh, res: TrackAndGrasp.Result) -> TrackAndGrasp.Result:
+        a = self.a
         phases = ["PREPARE", "TRACK", "DESCEND", "GRASP", "LIFT", "VERIFY"]
         t_end = time.monotonic() + a.grasp_s
         while time.monotonic() < t_end:
@@ -144,9 +193,18 @@ class G0Mock(Node):
 
     # robot_gateway 대역
     def _move(self, req: MoveToZone.Request, res: MoveToZone.Response) -> MoveToZone.Response:
-        a = self.a
         mode = "이동" if req.zone == "OBSERVE" else (req.mode or "PLACE")
         self.get_logger().info(f"[robot] MoveToZone {req.zone} 칸 {req.slot} {mode}")
+        self._set_action(f"MOVE_TO_ZONE:{req.zone}")
+        try:
+            return self._run_move(req, res, mode)
+        finally:
+            self._set_action("")  # 진짜 gateway 처럼 응답 전에 READY 를 먼저 낸다
+
+    def _run_move(
+        self, req: MoveToZone.Request, res: MoveToZone.Response, mode: str
+    ) -> MoveToZone.Response:
+        a = self.a
         time.sleep(a.place_s if mode in ("PLACE", "PICK") else 0.5)
         if mode == "VIEW":  # 재확인 구역을 보는 자세로 이동만
             res.ok, res.message = (False, "INVALID view_pose null") if a.view_fail else (True, "OK")
@@ -180,6 +238,9 @@ class G0Mock(Node):
     def _stop(self, _req: Trigger.Request, res: Trigger.Response) -> Trigger.Response:
         self.get_logger().info("[robot] stop")
         res.success, res.message = not self.a.stop_fail, "TIMEOUT" if self.a.stop_fail else ""
+        if res.success:
+            self.stopped = True
+            self._state()
         return res
 
     def _pose(self) -> None:
@@ -226,6 +287,9 @@ def main() -> None:
     )
     ap.add_argument("--servo", action="store_true")
     ap.add_argument("--robot", action="store_true")
+    ap.add_argument(
+        "--robot-state", action="store_true", help="--robot 와 함께 /voss/robot/state 모의"
+    )
     ap.add_argument("--log", action="store_true")
     ap.add_argument("--vision", action="store_true")
     ap.add_argument(

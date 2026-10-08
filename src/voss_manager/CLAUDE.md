@@ -24,5 +24,6 @@
 - **stop:** `/voss/robot/stop` 먼저 → goal 취소 → PAUSED. 취소된 박스는 FAILED·STOPPED. stop 이 false·시간 초과면 not_ready 에 ROBOT, **stop 을 다시 보내 성공해야 resume**. **IDLE 에서 stop 은 IDLE 유지**(세션이 없어 resume 할 곳이 없음 — SRD 표 "모든 상태 → PAUSED" 와 다름, F-04 에 제안).
 - **구역 가득:** 다음 박스 구역의 칸 = grid 칸 수면 PAUSED(그 박스는 box_id 없이 통과), `reset_zone` 전 resume 거부. ZONE_FULL 결과 기록은 F-07 제안 상태라 아직 안 한다.
 - **priority:** 비대상은 PASSED·NON_TARGET·attempts 0. IDLE 에서 저장한 우선은 start 뒤에도 유지, 운전 중 start(ALL) 는 전체로 전환. PAUSED 에서는 거부. 불확실한 박스는 동을 몰라 재확인으로 보낸다(판정 뒤 그 구역에 놓는다).
+- **ROBOT 준비:** RobotState READY·STOPPED + connected + 오류 없음. BUSY 는 우리 goal·MoveToZone 중이거나 끝난 뒤 `robot_busy_grace_s`(1.5 s) 안일 때만 준비(운전 중 `SortState.ready` 유지). 남이 움직이는 BUSY 는 미준비.
 - **준비 판단 한계:** VISION·OCR 은 발행자 존재만 본다(BoxTrack·LabelRead 는 박스가 있을 때만 나와서 나이로 장애를 못 가른다). SERVO 는 액션 서버 존재. 상태 신호(heartbeat)는 인터페이스 변경이라 G0 뒤 논의.
 - **아직 없음:** label_reader 의 `/voss/vision/read_label`(3단계, T23 비전) — 없으면 바로 질문으로 간다. `zones.recheck.view_pose` 교시(김학민 T35) 전에는 VIEW 가 거부돼 질문으로 간다. UpdateZoneMap(C 범위), voss_config 쓰기.
