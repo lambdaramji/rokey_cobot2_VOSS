@@ -21,6 +21,7 @@ HLD: [U1-hld.md](U1-hld.md). 팀 계약은 docs/interfaces 가 우선이다. 이
 | 예외·종료 견고성 | 모든 콜백 최상위 try. 로그 쓰기 실패는 goal 을 끝내지 않고 경고 1회. 예외 경로는 "봉투 채우기 → 0 유지"를 최우선. `_execute` 는 try/finally 로 busy 해제 보장. 노드 종료 시 0 발행은 best-effort 이고, 프로세스가 죽었을 때의 정지는 gateway watchdog 책임(ADR-0010) |
 | gripper 무응답 timeout | U5 에서 `gripper_timeout_s` + stop 과 같은 poll 구조로 추가(U1 은 gripper 를 부르지 않음) |
 | depth 5 와 topics.md | PR 본문에만 적음(구독 depth 는 소비자 재량) |
+| 액션 서버 생성 | READY 일 때만 만든다(5절) |
 
 ## 1. params.py
 
@@ -102,9 +103,27 @@ HLD: [U1-hld.md](U1-hld.md). 팀 계약은 docs/interfaces 가 우선이다. 이
 
 모르는 값은 null(NaN 금지). 파일 `<log.dir>/ticks/servo_ticks_YYYYMMDD_HHMMSS.jsonl`, `<log.dir>/attempts/servo_attempts_YYYYMMDD_HHMMSS.jsonl`.
 
-## 4. 테스트 (약 45개)
+## 4. 테스트 (59개, 코드 재검 r3 반영)
 
 - test_params: 정상 ready · null → missing · 미전달 → missing · 노름 0.5 거부 · 노름 1.005 통과 · x_min ≥ x_max 거부 · approach ≤ cutoff + 5 거부 · retry 0·4 거부 · config_version int 허용 · 지문 결정적 · config_version 없어도 ready
 - test_fsm: 정상 6단계 OK·attempts 1 · TRACK LOST · DESCEND 사각 LOST 무시 · DESCEND 경계 위 LOST · GRASP LOST 무시 · OUT_OF_REACH · box STALE(BOX_INVALID) · 사각 구간 pose STALE(POSE_MISSING) · 취소 → CANCELED · 취소 → stop 실패(message 포함)·timeout·미가용 → DEVICE_ERROR · stopping 중 pose_stale·gripper 응답 무시 · 취소가 LOST 보다 우선 · max_attempts 1 이면 첫 NOT_HELD 에 GRASP_FAILED · max 3: grip_detected=False 재시도·폭 범위 밖 재시도·3회 → GRASP_FAILED·attempts 3 · VERIFY 떨어뜨림 재시도 · gripper ok=False → DEVICE_ERROR · is_vision_blind 경계·히스테리시스(진입·이탈 높이 다름) · 재시도 PREPARE 직후 파지 높이에서 blind 유지 · input_flags 사각 → 보임 뒤 시계 다시 셈 · input_flags 메시지 없음은 STALE 아닌 LOST
 - test_log_schema: 틱 키 전체 · 누락 ValueError · 시도 ⊂ 틱 · JSON 왕복·NaN 없음 · JsonlWriter tmp_path
 - test_node: 파라미터 없이 생성 → ready=False·missing · READY 아님 → goal REJECT · READY 아님 상태에서 box 수신해도 예외 없음 · `_on_box` 역행 폐기·다른 트랙이 덮어쓰지 않음
+
+## 5. READY 가 아니면 액션 서버를 만들지 않는다 (10/08, 사용자 승인)
+
+- 문제: sort_manager(#96)는 SERVO 준비를 "`/voss/servo/track_and_grasp` 액션 서버 있음"으로만 판단한다(`src/voss_manager/voss_manager/readiness.py` 6행). belt_servo 가 미측정 파라미터로 READY 거부 상태여도 서버가 떠 있으면 sort_manager 는 준비로 보고 goal 을 보내고, reject 를 받으면 PAUSED 로 간다(`sort_fsm.py` 567~573행).
+- 결정: 기동 검사를 통과했을 때만 액션 서버를 만든다. READY=false 면 서버 없이 "READY 거부: missing=[…] invalid=[…] — 액션 서버 미생성" 로그만 남기고 spin 한다. 구독·타이머는 유지하지만 goal 이 없으니 servo_cmd 는 발행하지 않는다(종료 시 0 발행도 READY 일 때만). 인터페이스 변경 없음.
+- 판정은 기동 때 한 번(DEC-10, MC-009 정적 값은 정지 상태에서만 바뀜). 운전 중 재판정은 없다 — 값을 고치면 노드를 다시 띄운다.
+- 남은 일: belt_servo READY 를 직접 알리는 상태 토픽(예: RobotState 같은 SERVO 상태)은 G0 뒤 남현지와 협의. 통보(#29 댓글)는 주관 세션.
+- 시험: test_node — READY=false 면 서버 없음, READY=true 면 있음.
+
+## 6. 코드 독립 재검 반영 (10/08, r3)
+
+- 예외로 끝난 goal(틱 예외·`_execute` 비정상 종료)도 `_finish` 가 스냅샷으로 틱·GOAL_END 를 남긴다 → 게이트 분모에서 빠지지 않는다.
+- READY 가 아니면 타이머 주기는 30 Hz 고정(잘못된 `rate_hz` 로 기동 중 죽지 않음).
+- `input_flags`: box_stale 은 메시지가 아직 오는 중(마지막 수신이 stale_timeout 안)일 때만. invalid 뒤 수신이 끊기면 LOST 로 분류.
+- `check_params`: 문자열 "null"·"~" 도 미측정(--params-file 로 YAML null 이 문자열로 들어오는 경우).
+- `params_digest`: `log.dir`·`config_version`·`config_sha256` 제외 — 같은 제어 설정이면 PC·실행 위치가 달라도 같은 지문.
+- 시험 추가: `test_action_e2e.py`(한 프로세스 액션 경로 5건: LOST→0 유지→재수락, 취소×stop 없음·성공·실패, 내부 예외), 잘못된 rate_hz 기동, 지문·null 문자열·invalid 후 끊김.
+

@@ -1,4 +1,4 @@
-# U1 belt_servo 뼈대 — Pseudo code (r2, 독립 재검 반영)
+# U1 belt_servo 뼈대 — Pseudo code (r2 설계 재검 + r3 코드 재검 반영. 최종은 코드가 기준)
 
 [U1-dd.md](U1-dd.md) 의 함수별 의사코드. 순수 모듈(params·fsm·log_schema)은 ROS 를 import 하지 않는다.
 
@@ -74,7 +74,8 @@ BLIND_EXIT_MARGIN_MM = 5                          # 사각에서 나오는 높�
     box_ref = max(last_box_rx 또는 −∞, vision_since)
     box_lost = now − box_ref > lost_timeout
     valid_ref = max(last_valid_rx 또는 −∞, vision_since)
-    box_stale = latest_invalid 이고 (now − valid_ref > stale_timeout)   # 메시지는 오는데 계속 invalid
+    receiving = now − box_ref ≤ stale_timeout                          # 메시지가 아직 오는 중
+    box_stale = latest_invalid 이고 (now − valid_ref > stale_timeout) 이고 receiving   # 끊김은 LOST 로 (r3)
     반환 (box_lost, box_stale, pose_stale)
 
 함수 step(state, ev, w_min, w_max, max_attempts):
@@ -157,8 +158,9 @@ BoxEntry = (latest msg, latest_rx, latest_invalid, last_valid msg 또는 None, l
     구독 box(QOS_BOX) → _on_box, pose(QOS_POSE) → _on_pose
     발행 servo_cmd(QOS_CMD)
     클라이언트 gripper(U5 에서 사용), stop
-    액션 서버 track_and_grasp(goal → _on_goal, cancel → _on_cancel, execute → _execute)
-    타이머 1/rate_hz (rate 가 없으면 30) → _on_tick
+    READY 일 때만 액션 서버 track_and_grasp(goal → _on_goal, cancel → _on_cancel, execute → _execute)  # DD 5절
+    타이머 주기 = READY 면 rate_hz, 아니면 30 (잘못된 값으로 기동 중 죽지 않게)
+    → _on_tick
     상태: ctx = None, last_goal = None, busy = 거짓, hold_until = None, boxes = {}, pose = None,
           log_fail_warned = 거짓
 
