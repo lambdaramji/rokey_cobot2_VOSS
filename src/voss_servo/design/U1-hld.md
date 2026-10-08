@@ -36,7 +36,7 @@
 │                 ② fsm.step(상태, 이벤트)          ── 순수 ──▶ 다음 phase·reason        │
 │                 ③ 속도 계산 = 0 (U2 에서 control.py 로 교체)                            │
 │                 ④ servo_cmd 발행 (TwistStamped, base_link)                             │
-│                 ⑤ feedback 발행 (phase, err_u, err_v)                                  │
+│                 ⑤ feedback 발행 (phase 만 — err_u/err_v 는 #102 로 삭제)               │
 │                 ⑥ log_schema 로 틱 레코드 → data/servo/ticks/*.jsonl                    │
 │                 ⑦ 시도 종료면 시도 레코드 → data/servo/attempts/*.jsonl                 │
 │                 ⑧ 종료면 봉투 채움 + 0 속도 유지 구간 시작                               │
@@ -81,7 +81,7 @@
 
 ## 5. Detail design 에서 정할 것
 
-- `err_u`·`err_v`(px)의 기준점 → 선택 파라미터(`feedback.target_u_px`·`target_v_px`, READY 무관, 없으면 feedback 0·로그 null)로 두되, **값은 비전에서 받는다.** belt_servo 는 비전 변환·캘리브레이션을 직접 쓰지 않으므로(voss_msgs.md BoxTrack) 기준 픽셀(예: 관측 자세에서 TCP 가 비치는 픽셀)이 필요하면 남현지에게 받는다 — 남현지 확인 항목. feedback 표시용이라 제어에는 쓰지 않는다.
+- `err_u`·`err_v`(px)의 기준점 → **필드 자체를 삭제하기로 결정(10/08, #102, PR 진행 중).** 제어는 베이스 좌표 오차로 하고 쓰는 곳이 없으며 기준 픽셀을 belt_servo 가 알 방법이 없다. belt_servo 는 feedback 에 phase 만 채우고(머지 전에도 err_u/err_v 는 건드리지 않아 기본값 0), 기준점 파라미터와 남현지 확인 항목은 두지 않는다.
 - 종료 후 0 속도 유지 시간 → `zero_hold_s` 0.5 s 제안(watchdog 200 ms + 정지 0.15~0.41 s 보다 길게). 이 구간에는 새 goal reject.
 - READY 조건 → 파라미터만. gripper/stop 서비스는 호출 때 실패로 처리.
 - 틱 로그 구간 → goal 진행 중 + 0 유지 구간. IDLE 틱은 쓰지 않는다.
@@ -177,4 +177,4 @@ assert result.terminal and result.reason == "LOST"          # 끝나고 이유�
 | 날짜 | 변경 |
 |---|---|
 | 10/07 | HLD 승인 (박병후) |
-| 10/08 | PR #95(box_tracker) 검토 의견 반영: box 를 track_id 별 사전 + 구독 depth 5 로(규칙 1·그림), 틱 로그에 `position_source`·`calib_version` 추가, `err_u`·`err_v` 기준 픽셀은 비전에서 받음(남현지 확인 항목). `lost_timeout_s` 를 GRASP 가림보다 길게 하자는 의견은 사각 구간 규칙으로 대신함(부록 A-2). 비전 사각 구간 규칙 6 추가(팀원 알림: 카메라가 공구축에서 약 8 cm 옆, 마지막 약 20 mm 하강은 비전 없이). STALE_INPUT 의 원인을 로그에서 박스·pose 로 구분 |
+| 10/08 | PR #95(box_tracker) 검토 의견 반영: box 를 track_id 별 사전 + 구독 depth 5 로(규칙 1·그림), 틱 로그에 `position_source`·`calib_version` 추가, `err_u`·`err_v` 기준 픽셀은 비전에서 받음(남현지 확인 항목) → 같은 날 필드 삭제로 대체(#102). `lost_timeout_s` 를 GRASP 가림보다 길게 하자는 의견은 사각 구간 규칙으로 대신함(부록 A-2). 비전 사각 구간 규칙 6 추가(팀원 알림: 카메라가 공구축에서 약 8 cm 옆, 마지막 약 20 mm 하강은 비전 없이). STALE_INPUT 의 원인을 로그에서 박스·pose 로 구분 |
