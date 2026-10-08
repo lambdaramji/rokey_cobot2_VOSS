@@ -1,7 +1,7 @@
 # U1 belt_servo 뼈대 — High-level design
 
 - 이슈: #36 (T27) · 브랜치 `feat/36-voss_servo-u1-skeleton` · 작성 2026-10-07~08
-- 상태: **HLD 승인(박병후)**. Detail design 검토 중 — 이 문서는 설계 단계 작업 노트다. 팀 계약은 docs/interfaces 가 우선이다.
+- 상태: **HLD 승인(박병후)**, 10/08 리뷰 반영(아래 6절). Detail design 검토 중 — 이 문서는 설계 단계 작업 노트다. 팀 계약은 docs/interfaces 가 우선이다.
 - 범위: 30 Hz 타이머·최신값 보관·액션 서버 골격, 기동 검사(null → READY 거부, version·sha256 로그), phase 전이 순수 함수, 로그 스키마. 제어 계산(U2)·파지 동작(U5)은 자리만 둔다.
 
 ## 0. 이 작업에서 정한 것 (브리핑 단계 승인)
@@ -24,8 +24,8 @@
 ```
 ┌──────────────────────── belt_servo.py (ROS 껍데기, 판단 없음) ────────────────────────┐
 │                                                                                        │
-│  /voss/vision/box ─▶ on_box()  ─▶ latest.box  (+수신 시각)    QoS best_effort·depth 1   │
-│  /voss/robot/pose ─▶ on_pose() ─▶ latest.pose (+수신 시각)                              │
+│  /voss/vision/box ─▶ on_box()  ─▶ latest_box[track_id] (+수신 시각)  best_effort·구독 depth 5 │
+│  /voss/robot/pose ─▶ on_pose() ─▶ latest_pose (+수신 시각)            best_effort·depth 1  │
 │                                                                                        │
 │  액션 /voss/servo/track_and_grasp                                                      │
 │    goal_cb   ─▶ "READY 인가? 바쁜가?" ─▶ ACCEPT / REJECT                                │
@@ -63,11 +63,12 @@
 
 ## 3. 데이터 흐름 규칙
 
-1. **콜백은 보관만.** 구독 콜백은 최신값 하나와 받은 시각만 저장한다. 늦은 값은 버리고 최신만 남긴다(best_effort·depth 1 과 같은 철학).
+1. **콜백은 보관만.** 구독 콜백은 계산하지 않고 최신값과 받은 시각만 저장한다. box 는 **track_id 별 사전**에 트랙마다 최신 하나를 둔다 — 트래커는 박스마다 메시지를 따로 보내므로(한 프레임에 박스 2개 = 메시지 2개) 최신값 하나만 두면 다른 박스가 내 박스를 덮어쓴다. 같은 이유로 box 구독 depth 는 5 로 둔다(발행 쪽 best_effort·depth 1 과 호환, depth 는 QoS 호환 조건이 아니다). 같은 트랙에서 stamp 가 뒤로 간 메시지는 버린다. 오래된 트랙 항목은 지운다. pose 는 하나뿐이라 depth 1.
 2. **판단은 타이머 한 곳.** 상태가 바뀌는 곳이 하나라 순서 꼬임이 없고, 틱 하나 = 로그 한 줄이 된다.
 3. **FSM 은 이벤트만 본다.** "pose 가 0.5 s 넘게 안 왔다" 같은 판단은 노드가 이벤트 플래그로 만들어 넘기고, FSM 은 플래그 → 전이만 한다. FSM 테스트에 ROS 가 필요 없다.
 4. **READY 는 기동 때 한 번.** 정적 파라미터는 정지 상태에서만 바뀌므로(MC-009) 실행 중 재검사하지 않는다. READY=false 면 모든 goal reject, 기동 로그에 빠진 키 이름.
 5. **끝은 반드시 0 속도.** goal 이 어떻게 끝나든(성공·중단·취소·예외) 이후 일정 구간 0 속도를 반복 발행한다(ADR-0010: 스트림이 끊겨도 로봇이 계속 간다). U1 은 원래 항상 0 이지만 이 구조는 지금 만든다.
+6. **비전 사각 구간(10/08 반영).** 카메라가 공구축에서 약 8 cm 옆이라 핑거 끝이 박스 윗면에 닿는 높이부터 송장이 화면 아래 끝에 걸리고, box_tracker 는 가장자리에 걸린 송장을 내지 않는다(`border_px`). 그래서 마지막 약 19~20 mm 하강·GRASP·LIFT·VERIFY 동안 박스 관측이 없다. 이 구간에서는 박스 미수신·invalid 를 LOST/STALE 로 보지 않고, 마지막 유효 관측 + 벨트 속도 예측(FF)으로 간다. 사각 구간에 들어가기 직전 관측이 충분히 새로워야 한다. 비전이 다시 필요한 단계(재시도 PREPARE)로 돌아오면 LOST/STALE 시계를 그 시점부터 다시 센다. pose 끊김은 사각 구간에서도 STALE 이다.
 
 ## 4. 선택과 대안
 
@@ -80,10 +81,11 @@
 
 ## 5. Detail design 에서 정할 것
 
-- `err_u`·`err_v`(px)의 기준점
-- 종료 후 0 속도 유지 시간(`zero_hold_s`, 제안값)
-- READY 조건에 gripper/stop 서비스 존재를 넣을지
-- 틱 로그를 쓰는 구간(goal 중만? 0 유지 구간까지?)
+- `err_u`·`err_v`(px)의 기준점 → 선택 파라미터(`feedback.target_u_px`·`target_v_px`, READY 무관, 없으면 feedback 0·로그 null)로 두되, **값은 비전에서 받는다.** belt_servo 는 비전 변환·캘리브레이션을 직접 쓰지 않으므로(voss_msgs.md BoxTrack) 기준 픽셀(예: 관측 자세에서 TCP 가 비치는 픽셀)이 필요하면 남현지에게 받는다 — 남현지 확인 항목. feedback 표시용이라 제어에는 쓰지 않는다.
+- 종료 후 0 속도 유지 시간 → `zero_hold_s` 0.5 s 제안(watchdog 200 ms + 정지 0.15~0.41 s 보다 길게). 이 구간에는 새 goal reject.
+- READY 조건 → 파라미터만. gripper/stop 서비스는 호출 때 실패로 처리.
+- 틱 로그 구간 → goal 진행 중 + 0 유지 구간. IDLE 틱은 쓰지 않는다.
+- 비전 사각 구간 시작 높이(규칙 6) → 파라미터 `z.vision_cutoff_above_top_mm`(박스 윗면 기준 TCP 높이, null·제안 10 mm). 이 높이 아래에서는 박스 관측을 기다리지 않는다.
 
 ---
 
@@ -116,8 +118,9 @@ sha256(지문): 파일 내용을 64자리 문자열로 요약한 것. 글자 하
 | `limits.max_acc_mps2` | null | 한 틱 사이 속도 변화 상한 |
 | `z.approach_height_mm` | null | 하강 전 박스 위 대기 높이 |
 | `z.lift_height_mm` | null | 집은 뒤 들어 올릴 안전 높이(grasped=true 조건) |
-| `input.stale_timeout_s` | null | valid=false·pose 끊김이 이만큼 지속되면 STALE_INPUT |
-| `input.lost_timeout_s` | null | 내 track_id 가 이만큼 안 보이면 LOST |
+| `input.stale_timeout_s` | null | valid=false·pose 끊김이 이만큼 지속되면 STALE_INPUT. 로그 원인은 `BOX_INVALID`·`POSE_MISSING` 으로 나눈다 |
+| `input.lost_timeout_s` | null (제안 0.5 = 트래커 15프레임) | 내 track_id 가 이만큼 안 보이면 LOST. **GRASP 가림(약 1.2 s)과 마지막 하강 사각 구간은 timeout 을 늘려서가 아니라 사각 구간에서 LOST 를 보지 않는 것으로 처리한다** — 1.2 s 보다 길게 잡으면 TRACK 중 진짜 LOST 를 늦게(박스 약 58 mm 이동 뒤) 안다 |
+| `z.vision_cutoff_above_top_mm` | null (제안 10) | 박스 윗면 + 이 높이 아래로 TCP 가 내려가면 비전 사각 구간(규칙 6) |
 | `rate_hz` | 30 | 타이머 주기 |
 | `zero_hold_s` | 제안값 | goal 종료 후 0 속도를 계속 보낼 시간 |
 | `log.dir` | `data/servo` | `ticks/`·`attempts/` |
@@ -166,3 +169,12 @@ assert result.terminal and result.reason == "LOST"          # 끝나고 이유�
 ```
 
 덧붙임: `log_schema.py` 의 파일 쓰기(`JsonlWriter`)는 엄밀히 순수하지 않다. 레코드 만들기·JSON 변환(순수)과 파일에 한 줄 쓰기(작은 클래스)를 나누고, 테스트는 임시 폴더(`tmp_path`)에 쓴다.
+
+---
+
+## 6. 변경 기록
+
+| 날짜 | 변경 |
+|---|---|
+| 10/07 | HLD 승인 (박병후) |
+| 10/08 | PR #95(box_tracker) 검토 의견 반영: box 를 track_id 별 사전 + 구독 depth 5 로(규칙 1·그림), 틱 로그에 `position_source`·`calib_version` 추가, `err_u`·`err_v` 기준 픽셀은 비전에서 받음(남현지 확인 항목). `lost_timeout_s` 를 GRASP 가림보다 길게 하자는 의견은 사각 구간 규칙으로 대신함(부록 A-2). 비전 사각 구간 규칙 6 추가(팀원 알림: 카메라가 공구축에서 약 8 cm 옆, 마지막 약 20 mm 하강은 비전 없이). STALE_INPUT 의 원인을 로그에서 박스·pose 로 구분 |
