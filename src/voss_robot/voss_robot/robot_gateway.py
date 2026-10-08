@@ -197,6 +197,7 @@ class RobotGatewayNode(Node):
         # move_line 은 TCP 직선 이동 — 출발–목표 선분에서 이만큼 벗어나면 move_stop 하고 LIMIT
         self.path_tol = float(self.declare_parameter("zone_path_tol_mm", 15.0).value)
         self._cmd_off = list(self.tcp)  # _run_path 가 매번 잰 컨트롤러 TCP 오프셋으로 바꾼다
+        self._tcp_note = ""  # RobotState.detail: 컨트롤러 TCP 가 voss_config 와 다를 때
         self._mlock = threading.Lock()  # 모션 자원(MoveToZone)
         self._zone_action = ""
         self._abort = threading.Event()  # /voss/robot/stop 이 세운다
@@ -269,6 +270,7 @@ class RobotGatewayNode(Node):
                 self._js_fallback(f"컨트롤러 TCP 를 모름({why})")
             else:
                 self._js_off = off
+        self._set_tcp_note(off)
         if off is not None:
             self.get_logger().info(f"컨트롤러 TCP 등록 {why}")
         else:
@@ -276,6 +278,18 @@ class RobotGatewayNode(Node):
                 f"컨트롤러 TCP 등록이 {why} — 모르는 TCP 라 MoveToZone 을 거부한다(NOT_CONFIGURED). "
                 "펜던트 툴·TCP 를 GripperDA_v1 또는 없음으로"
             )
+
+    def _set_tcp_note(self, off) -> None:
+        """잰 컨트롤러 TCP 를 RobotState.detail 에 남긴다(같음이면 비움)."""
+        if off is None:
+            note = "TCP 등록 모름(MoveToZone 거부)"
+        elif any(off):
+            note = ""
+        else:
+            note = "TCP 등록 없음(플랜지 모드 — 펜던트 공간 제한이 핑거 끝을 못 막음)"
+        if note != self._tcp_note:
+            self._tcp_note = note
+            self._update_state()
 
     def _js_fallback(self, why: str) -> None:
         """joint_states pose 를 그만 쓰고 service(등록 TCP 와 무관)로 되돌린다."""
@@ -465,6 +479,7 @@ class RobotGatewayNode(Node):
             zone_action=self._zone_action,
             stopped=self.stopped,
             last_alarm=self.dsr.last_alarm,
+            tcp_note=self._tcp_note,
         )
         st = decide(i)
         with self._slock:
@@ -636,12 +651,19 @@ class RobotGatewayNode(Node):
         try:
             off, why, cur, sol = self.queue.submit(self._ctrl_tcp).result(timeout=5.0)
             if off is None:
+                # 두 서비스 값은 0.1 s 마다만 바뀌어 움직이는 중이면 어긋날 수 있다 → 0.2 s 뒤 한 번 더(#121 리뷰)
+                time.sleep(0.2)
+                off, why, cur, sol = self.queue.submit(self._ctrl_tcp).result(timeout=5.0)
+            self._set_tcp_note(off)
+            if off is None:
                 raise _ZoneError(
                     f"NOT_CONFIGURED: 컨트롤러 TCP 등록이 {why} — 펜던트 툴·TCP 를 GripperDA_v1 또는 없음으로"
                 )
-            self._cmd_off = (
-                off  # move_line·ikin 에 보낼 좌표 기준 (MoveToZone 은 _mlock 으로 하나씩)
-            )
+            self._cmd_off = off  # move_line·ikin 좌표 기준 (MoveToZone 은 _mlock 으로 하나씩)
+            if not any(off):
+                self.get_logger().warn(
+                    "MoveToZone 플랜지 모드 — 컨트롤러 TCP 등록 없음, 펜던트 공간 제한이 핑거 끝을 못 막음"
+                )
             if not self._ik_ok(target_flange, sol):
                 raise _ZoneError("LIMIT: 목표 자세에 팔이 닿지 않음 (구역·칸 위치 확인)")
             z0, z1 = self._travel_z(cur, sol), self._travel_z(target_flange, sol)
@@ -729,6 +751,8 @@ class RobotGatewayNode(Node):
             fresh = p is not None and self._now() - p[0] < 0.3
             if fresh and seg_a is None:
                 seg_a = p[1:]  # 시작 때 pose 가 없었으면 처음 받은 pose 부터
+            # 전제: 구역 자세는 모두 툴 수직·yaw 거의 같음(rx−rz ≈ 90° ±1.3°) → 단계 중 회전이 없어 컨트롤러가
+            # 직선으로 보내는 점(TCP 든 플랜지 모드의 플랜지든)과 핑거 끝이 함께 직선으로 간다(#121 리뷰 남현지)
             if fresh and (off := segment_distance_mm(seg_a, tcp_xyz, p[1:])) > self.path_tol:
                 raise _ZoneError(
                     f"LIMIT: {name} 중 경로 이탈 {off:.0f} mm (직선 이동이어야 함 — TCP 등록·충돌 확인)"

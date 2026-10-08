@@ -44,6 +44,9 @@ class Inputs:
     zone_action: str = ""  # move_to_zone 중이면 "MOVE_TO_ZONE:B" 등 (다음 단계)
     stopped: bool = False  # /voss/robot/stop 뒤 아직 새 모션 명령 전
     last_alarm: str = ""  # 마지막 컨트롤러 알람 (detail 용)
+    tcp_note: str = (
+        ""  # 컨트롤러 TCP 등록이 voss_config 와 다를 때 (예 "TCP 등록 없음(플랜지 모드)")
+    )
 
 
 @dataclass(frozen=True)
@@ -97,6 +100,10 @@ def decide(i: Inputs) -> State:
         parts.append("RG2 읽기 실패")
     if i.rg2_safety:
         parts.append("RG2 safety_err")
+    if i.tcp_note:
+        parts.append(
+            i.tcp_note
+        )  # 펜던트 공간 제한이 핑거 끝을 못 막는 상태 — HMI·절차서에서 보이게(#121)
     if i.last_alarm:
         parts.append(f"마지막 알람 {i.last_alarm}")
     return State(connected, state, action, err, ", ".join(parts))
