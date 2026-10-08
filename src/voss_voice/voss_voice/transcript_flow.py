@@ -112,7 +112,7 @@ class TranscriptFlow:
                     self.allow_update_zone_map,
                 )
 
-            # 5. 최종 판단 결과에 따라 발행하거나 답한다.
+            # 6. 최종 판단 결과에 따라 발행하거나 답한다.
             if d.kind == "publish":
                 self._publish(d.intent)
 
