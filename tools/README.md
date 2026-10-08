@@ -11,3 +11,4 @@
   paddle 3.3 CPU 는 oneDNN 오류가 있어 도구가 `enable_mkldnn=False` 로 띄운다 (남현지)
 - `vision/eval_bag.py` — T17 녹화 bag 평가(ADR-0004): 분할 검출(`voss_vision.box_detect`) + 트래커 → 오검출·트랙·구간 검출률·지연(CPU 참고), 확인 시트, YOLO 자동 라벨 내보내기(`--export-yolo`, 음성은 앞뒤 2 s 안에 검출이 없는 프레임만). ROS Jazzy 환경에서 실행 (남현지)
 - `colab/t17_yolo_train.ipynb` — 자동 라벨로 YOLO nano 학습·이어 학습·holdout 평가·ONNX 내보내기. 입력·체크포인트·출력 경로는 팀 Drive 구조(`docs/setup/drive.md`)를 따른다 (남현지)
+- `mock/g0_mock.py` — G0 모의 상대: belt_servo 액션(`--servo`)·robot_gateway MoveToZone·stop·pose(`--robot`)·sort_logger 상태(`--log`)·박스 1개 BoxTrack·LabelRead(`--vision`). 진짜 서버·발행자가 이미 있으면 그 부분은 띄우지 않는다. 장비를 움직이지 않는다 — sort_manager 를 로봇 없이 끝까지 돌려 보는 용도 (남현지)
