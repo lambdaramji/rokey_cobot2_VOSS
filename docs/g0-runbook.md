@@ -15,21 +15,23 @@ G0 = 실물 박스 **1개**를 인식 → 이동 중 픽업 → 기본 구역 �
 > **로봇 비상정지는 벨트를 멈추지 않는다**(아두이노 12 V 별도). 박스가 끼거나 떨어지면 벨트 담당이 12 V 를 끈다. 아두이노 시리얼 포트를 열거나 RESET 하면 보드가 재시작해 **벨트가 바로 돈다**(`tools/README.md`) — 회차 중 포트를 건드리지 않는다.
 
 ## 0. 전제 — G0 전에 돼 있어야 하는 것
-| 항목 | 담당 | 10/08 현재 | 확인 방법 |
+| 항목 | 담당 | 10/08 저녁 현재 | 확인 방법 |
 |---|---|---|---|
-| main 머지: #75 ✅ → #97 (label_reader) | 남현지 · 리뷰 병후·학민 | #75 머지, #97 승인·CI 중 | `git log main` |
-| main 머지: #90 → #95 (핸드아이·box_tracker) | 남현지 · 리뷰 학민·병후 | #90 승인·CI 중, #95 병후 재리뷰 대기 | 〃 |
+| main 머지: #75 ✅ → #97 (label_reader) ✅ | 남현지 · 리뷰 병후·학민 | 머지됨 | `git log main` |
+| main 머지: #90 ✅ → #95 (핸드아이·box_tracker) ✅ | 남현지 · 리뷰 학민·병후 | 머지됨 | 〃 |
 | main 머지: #96 (sort_manager) ✅, #99 (ADR-0011·measurements-1008) ✅, #103 (TrackAndGrasp feedback = phase 만) ✅ | — | 머지됨 | 〃 |
 | main 머지: #94 (sort_logger·DB) ✅ | 정의석 | 머지됨 | 〃 |
 | main 머지: #100 (MoveToZone STOPPED·OBSERVE 이동만) ✅ | 김학민 | 머지됨 | 〃 |
-| robot_gateway `servo_cmd` → speedl_stream(**퍼블리셔 reliable**) + 만료 watchdog 200 ms·**TCP z 하한 clamp**·추종 구간 x·`stop`(F-04) | 김학민 | #104 (F-04 5 mm/s 실측, 리뷰 중) | ADR-0010·measurements 의 F-04 수치 |
-| robot_gateway `move_to_zone`(PLACE·OBSERVE, STOPPED 코드)·`gripper`·`/voss/robot/state` | 김학민 (T32 ⑤) | PR 전 | `ros2 service list`, `ros2 topic echo --once /voss/robot/state` |
-| belt_servo `/voss/servo/track_and_grasp` 액션 | 박병후 (#36) | U1 액션 골격 PR 10/08 15:30 · U2 FF+P 추종 18:00 · **U5 파지 시퀀스 22:00 이후** | `ros2 action list`, **TrackAndGrasp 1회 인계는 U5 뒤 — 10/10 오전 G0 직전** |
+| robot_gateway `servo_cmd` → speedl_stream(**퍼블리셔 reliable**) + 만료 watchdog 200 ms·**TCP z 하한 clamp**·추종 구간 x·`stop`(F-04) | 김학민 | ✅ #104 머지. F-04: watchdog 200 ms, 48 mm/s 에서 끊긴 뒤 약 0.3 s·10~11 mm 에 정지(move_stop), goal 끝마다 move_stop 1회 | ADR-0010·measurements 의 F-04 수치 |
+| robot_gateway `move_to_zone`(PLACE·OBSERVE, STOPPED 코드)·`gripper`·`/voss/robot/state` | 김학민 (T32 ⑤) | ✅ #104 머지. 5구역 12칸 PLACE + OBSERVE 복귀 실기(50 mm/s), C 칸 −80/−30/+20. PLACE(100 mm/s, 가장 먼 칸) A 18.6·B 21.9·C 32.8 s | `ros2 service list`, `ros2 topic echo --once /voss/robot/state` |
+| belt_servo `/voss/servo/track_and_grasp` 액션 | 박병후 (#36) | U1 골격 ✅ #109 머지(launch 없음 — 기동 명령·측정값 파라미터 파일은 T7, 병후). U2 FF+P 추종·**U5 파지 시퀀스** 는 병후 PR | `ros2 action list`, **TrackAndGrasp 1회 인계는 U5 뒤 — 10/10 오전 G0 직전** |
 | 카메라 USB 케이블 손목에 여유 고리로 고정, `lsusb -t` 에서 RealSense 5000M | 김학민 | ✅ 10/08 (Bus 002 5000M, 팔에 고정) | G0 직전 `lsusb -t` 한 번 더 |
 | 아두이노가 레포 `conveyor_test`(h250) 스케치인지 | 김학민 | ✅ 10/08 다시 올림(전에는 h500 옛 스케치) | 벨트 4.8 cm/s 근처 |
-| 공용 PC PaddleOCR venv | 남현지 (아래 1-3) | 없음 | `label_reader` 가 "판독 준비 완료" |
+| 공용 PC PaddleOCR venv | 남현지 (아래 1-3) | ✅ 10/08 학민 설치·재생 시험(10트랙 정답, CPU OCR 평균 2.06 s, measurements-1008 #9) | `label_reader` 가 "판독 준비 완료" |
+| **펜던트 공간 제한(벨트 영역)** | 김학민 | ☐ 10/08 **꺼짐**(영역 없음) 확인 → **10/10 G0 전 켠다(PL 결정 ①, 10/08)**. 범위·값은 아래 "박스 회차 Go/No-Go" | 펜던트 안전 설정 화면 사진 + 값을 measurements 에 |
+| `/voss/robot/pose` 소스 (#118) | 김학민·남현지 | 기본 `service`(값 0.1 s 계단 — 10/08 오후 발견). `joint_states` 로 쓸지는 G0 전 지연 측정 뒤 정한다(#118 리뷰) | gateway 기동 로그 `pose_source` |
 
-**머지 순서**(충돌 최소): **#98(아이디 변경)을 먼저** — CODEOWNERS 가 옛 아이디라 지금은 리뷰어가 자동으로 붙지 않는다 → #99 → #90 → #95(main 을 받아 맞춘 뒤) → #75 → #97(base 를 main 으로 바꾼 뒤) → #100 → #96 → #94 → 학민·병후 PR. 각 PR 은 CODEOWNERS 승인 뒤 squash. **G0 는 main 한 커밋에서 돌리고 그 해시를 기록한다.**
+**머지 상태**(10/08 저녁): G0 의 비전(box_tracker·label_reader 1단계)·sort_manager 최소 경로·gateway·DB 는 main 에 있다. 남은 G0 관련 PR 은 belt_servo U2·U5(병후)와 #118(pose 소스, 선택). 재확인 흐름 #111·#113 은 G0 범위 밖. 각 PR 은 CODEOWNERS 승인 뒤 squash. **G0 는 main 한 커밋에서 돌리고 그 해시를 기록한다.**
 
 **10/08 저녁 리허설(로봇 시간 우선순위):** ① gateway watchdog·종료 시험(학민, 추종 속도 48 mm/s 에서 watchdog 초과 거리 포함) → ② **goal 수락 → TRACK 추종 → cancel 때 0 속도 정지**까지(병후 U2, 파지 없음) → ③ 아래 2~4 를 박스 없이 start → OBSERVE → stop 까지. **파지 1회 인계는 10/10 오전 G0 직전**(병후 U5).
 
@@ -82,7 +84,7 @@ EOF
 |---|---|---|---|---|
 | 1 | 두산 브링업 | `ros2 launch m0609_rg2_bringup bringup.launch.py mode:=real host:=<로봇 컨트롤러 IP> port:=12345 model:=m0609` (IP 는 `scripts/measure_1006/servo_stream_check.md`·현장 메모 — 공개 레포라 여기 적지 않는다) | 학민 · **비상정지** | `dsr_controller2` active, 펜던트 AUTONOMOUS·STANDBY |
 | 2 | robot_gateway | `ros2 launch voss_robot robot_gateway.launch.py dry_run:=false` (config 기본 `~/voss_ws/config/voss_config.yaml`). **`dry_run` 기본이 true** — 빼먹으면 로봇이 안 움직이고 가짜 pose 가 나온다 | 학민 · **비상정지** | `voss_config version=1 sha256=<12자리>`, `robot_gateway started: real …`(**real 확인**), 5초마다 `pose 50.0 Hz, rtt …` · FAULT 없음 |
-| 3 | 카메라 (노드 하나만) | `ros2 launch realsense2_camera rs_launch.py camera_namespace:=/ camera_name:=camera enable_depth:=false rgb_camera.color_profile:=1920,1080,30 rgb_camera.enable_auto_exposure:=false` 뒤 `ros2 param set /camera rgb_camera.exposure 60`, `… enable_auto_white_balance false`, `… white_balance 4600.0` | 남현지 | 30 fps |
+| 3 | 카메라 (노드 하나만) | `ros2 launch realsense2_camera rs_launch.py camera_namespace:=/ camera_name:=camera enable_depth:=false rgb_camera.color_profile:=1920,1080,30 rgb_camera.enable_auto_exposure:=false` (rs_launch 가 namespace 를 거부하면 10/08 학민이 쓴 `ros2 run realsense2_camera realsense2_camera_node --ros-args -r __ns:=/ -r __node:=camera` + 같은 파라미터 — `/camera/color/image_raw` 확인) 뒤 `ros2 param set /camera rgb_camera.exposure 60`, `… enable_auto_white_balance false`, `… white_balance 4600.0` | 남현지 | 30 fps |
 | 4 | sort_logger (**sort_manager 보다 먼저**) | `export VOSS_DB_LOGGER_PASSWORD=<.env 값>` → `ros2 run voss_hmi sort_logger` | 정의석 | `/voss/log/status` STARTING → OK |
 | 5 | box_tracker | `ros2 launch voss_vision box_tracker.launch.py` | 남현지 | 시작 줄 `hand_eye=2026-10-08T11:21:40 moving_verified=True pose_lag=60 ms`, 5초 로그 ≈ 30 Hz·WARN 없음 |
 | 6 | label_reader | `ros2 launch voss_vision label_reader.launch.py python:=$HOME/.venvs/voss_ocr/bin/python` | 남현지 | "OCR 엔진 준비" (판독 준비 완료는 T8 뒤 zone_map 을 받으면) |
@@ -104,9 +106,12 @@ ros2 topic echo --once /voss/log/status            # OK
 - [ ] 비상정지 대기자(학민)·벨트 12 V 담당(병후) 위치
 
 **박스 회차 Go/No-Go — 하나라도 ☐ 이면 박스 회차를 하지 않고 박스 없는 start → OBSERVE → stop 까지만 한다**(ADR-0010: gateway 가 죽으면 speedl 이 계속 간다):
-- [ ] F-04 기록 있음(학민): servo_cmd 만료 watchdog 값, 움직이는 speedl 에 move_stop 이 걸림, gateway 강제 종료 때 로봇 거동 — measurements 에 수치
+- [ ] F-04 기록 있음(학민): servo_cmd 만료 watchdog 값, 움직이는 speedl 에 move_stop 이 걸림, gateway 강제 종료 때 로봇 거동 — measurements 에 수치 (10/08: ADR-0010 48 mm/s 기록 있음, 강제 종료(SIGKILL)는 미측정 — 그래서 아래 공간 제한이 필요하다)
 - [ ] gateway 기동 로그에 속도 상한·TCP z 하한(ADR-0010 조건 7) 값이 찍힘
-- [ ] 펜던트 안전 설정 공간 제한(벨트 위 TCP z 하한·추종 구간 x)이 켜져 있음 — ROS 와 무관하게 동작하는 마지막 방어선(ADR-0010 리스크)
+- [ ] 펜던트 안전 설정 공간 제한(벨트 위 TCP z 하한·추종 구간 x)이 켜져 있음 — ROS 와 무관하게 동작하는 마지막 방어선(ADR-0010 리스크). **10/08 꺼짐 확인 → PL 결정 ①(10/08): G0 전에 켠다. 공간 제한 없이 박스 회차를 하는 예외는 두지 않는다.**
+  - 범위: **벨트 위 영역에서만** — 추종 구간 TCP x −107~638 mm(gateway `servo_x_range_mm`, measurements #6)·벨트 폭. 트레이는 벨트보다 낮아서 z 하한을 작업 공간 전체에 걸면 PLACE 가 막힌다.
+  - 값: TCP z 하한을 **벨트 면(TCP ≈ 73.8 mm)보다 위, gateway 소프트웨어 하한 `servo_z_min_mm`(78 mm)보다 아래**(예 75~76 mm). 정상 운전에서는 gateway 가 먼저 자르므로 걸리지 않아야 하고, gateway 가 죽었을 때만 컨트롤러가 세운다.
+  - 설정 방식(제한 공간·금지 공간 중 펜던트가 지원하는 것)과 확인 방법(펜던트 저속 조그로 경계에서 서는지)은 학민. 켠 뒤 설정 화면 사진과 값을 measurements 에 남긴다.
 - [ ] TrackAndGrasp 1회 인계 성공 기록(10/10 오전 G0 직전, 박병후 U5 뒤 — 10/08 저녁에는 추종·cancel 까지만)
 - [ ] 1회차는 벨트 h500(2.38 cm/s, measurements-1008 #10)로, 성공하면 h250
 
