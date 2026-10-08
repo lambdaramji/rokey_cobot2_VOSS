@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """T34(#43) 완료 기준 "찌그러짐 없는 파지 10회" + ADR-0009 회전 박스(15°·30°) 파지 기록.
 
+⚠ RG2 가 움직인다 — 사람이 비상정지 옆에서 실행(CLAUDE.md 규칙 6, 그리퍼도 대상).
 RG2 만 움직인다(/voss/robot/gripper — robot_gateway 경유, 두산·RG2 직접 호출 없음). 로봇 팔은 움직이지 않는다.
-박스는 사람이 핑거 사이에 둔다(손을 핑거 밖으로 뺀 뒤 Enter). 로봇 위치는 펜던트로 미리 정한다.
+박스는 사람이 핑거 사이에 둔다(손을 핑거 밖으로 뺀 뒤 Enter). 로봇 위치는 펜던트로 미리 정한다
+(10/08: 벨트 12 V 끔, 박스를 관측 자세 아래 벨트 위에, 핑거 끝 TCP z ≈ 82 — measurements-1008 #14).
 
     python3 grip_check.py                       # 10회, 39 mm·14 N (ADR-0009 값), 각도 0
     python3 grip_check.py --angle 15 --n 5      # 핑거 닫힘축에 대해 박스를 15° 돌려 둔 회차
@@ -10,8 +12,8 @@ RG2 만 움직인다(/voss/robot/gripper — robot_gateway 경유, 두산·RG2 �
     python3 grip_check.py --offset 10 --n 3    # 박스 중심을 핑거 중심에서 벨트 방향(X)으로 10 mm 어긋나게 둔 회차
 
 회차마다: Enter → 닫기(width·force) → 보고 폭·grip_detected → 사람이 찌그러짐·미끄러짐 입력 → 90 mm 열기.
-기록: ~/voss_data/1009/grip/grip_HHMMSS.csv. 판정 기준(ADR-0009·measurements #8): grip_detected=True,
-보고 폭 39~44 mm(박스 31 mm 면 → 보고 ≈ 40.6), 찌그러짐 없음.
+기록: ~/voss_data/<실행 MMDD>/grip/grip_HHMMSS.csv. 판정 기준(ADR-0009·measurements #8): grip_detected=True,
+보고 폭 40~44 mm(박스 31 mm 면 → 보고 40.7~43.0, 10/08), 찌그러짐·미끄러짐 없음.
 """
 
 from __future__ import annotations
@@ -25,9 +27,12 @@ import rclpy
 
 from voss_msgs.srv import Gripper
 
-OUT = Path.home() / "voss_data" / "1009" / "grip"
+OUT = Path.home() / "voss_data" / time.strftime("%m%d") / "grip"
 OPEN_MM = 90.0
-OK_WIDTH = (39.0, 44.0)  # 보고값 mm — 빈손 39 → 실제 28, 박스 31 mm 면 → 보고 40.6 (10/08)
+OK_WIDTH = (
+    40.0,
+    44.0,
+)  # 보고값 mm — 빈손 38~39 와 가르게. 박스 31 mm 면 → 보고 40.7~43.0 (10/08 #14)
 
 
 def call(node, cli, width: float, force: float) -> Gripper.Response | None:
@@ -65,6 +70,10 @@ def main() -> None:
     path = OUT / time.strftime("grip_%H%M%S.csv")
     r = call(node, cli, OPEN_MM, a.force)
     print(f"시작 열기 → {r.message if r else 'NO_RESPONSE'}, 기록 {path}")
+    if not (r and r.ok):
+        node.destroy_node()
+        rclpy.shutdown()
+        raise SystemExit("시작 열기 실패 — gateway·RG2 확인 뒤 다시")
     good = done = 0
     with path.open("w", newline="") as f:
         w = csv.writer(f)
