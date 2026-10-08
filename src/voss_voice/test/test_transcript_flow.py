@@ -4,7 +4,6 @@ import threading
 import time
 
 import pytest
-
 from voss_voice.http_client import IntentParseError
 from voss_voice.intent_logic import SAY_RETRY, ZoneMapView
 from voss_voice.transcript_flow import SAY_AI_DOWN, SAY_BUSY, TranscriptFlow
