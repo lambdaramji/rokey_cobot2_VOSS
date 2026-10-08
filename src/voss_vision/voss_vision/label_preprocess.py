@@ -2,7 +2,7 @@
 
 `find_label_rect` 는 관측 자세 정지 사진용 휴리스틱이다(T16·T18). 흰 송장은 V≈250 으로
 벨트 위 위치 테이프(≈130)·레일(≈170)보다 훨씬 밝다. 운용 중에는 box_tracker 의 박스 영역이
-LabelCrop 으로 오므로 label_reader 는 `crop_upright` 부터 쓴다.
+LabelCrop 으로 오므로 label_reader 는 `find_label_in_crop` → `crop_upright` 를 쓴다.
 """
 
 from __future__ import annotations
@@ -30,6 +30,46 @@ def find_label_rect(image: np.ndarray) -> Rect | None:
     i = max(range(1, n), key=lambda j: st[j, cv2.CC_STAT_AREA])
     pts = np.column_stack(np.where(lab == i))[:, ::-1].astype(np.float32)
     return cv2.minAreaRect(pts)
+
+
+def find_label_in_crop(
+    crop: np.ndarray,
+    v_min: int = 200,
+    s_max: int = 90,
+    close_px: int = 5,
+    min_area_frac: float = 0.05,
+    aspect: float = 40 / 25,
+    aspect_tol: float = 0.5,
+) -> Rect | None:
+    """LabelCrop(박스 영역 + 여백) 안의 송장 회전 사각형. 없으면 None.
+
+    box_tracker 의 박스 bbox 는 송장 중심에 맞춰져 있으므로, 흰 덩어리 중 모양이 송장다운 것
+    가운데 **크롭 중심에 가장 가까운 것**을 고른다(옆 박스 송장이 가장자리에 걸려도 고르지 않게).
+    글자 구멍은 큰 닫힘 대신 **바깥 윤곽 안을 채워** 메운다 — 닫힘은 26 px 남짓 떨어진 옆 송장과 붙여
+    모양 검사에서 둘 다 떨어뜨린다. close_px 는 송장 테두리의 작은 끊김만 잇는다.
+    """
+    hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+    m = cv2.inRange(hsv, (0, 0, v_min), (180, s_max, 255))
+    if close_px > 1:
+        m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((close_px, close_px), np.uint8))
+    contours, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    m = cv2.drawContours(np.zeros_like(m), contours, -1, 255, cv2.FILLED)
+    n, lab, st, cent = cv2.connectedComponentsWithStats(m)
+    h, w = crop.shape[:2]
+    c0 = np.array([w / 2, h / 2])
+    best, best_d = None, np.inf
+    for i in range(1, n):
+        if st[i, cv2.CC_STAT_AREA] < min_area_frac * h * w:
+            continue
+        pts = np.column_stack(np.where(lab == i))[:, ::-1].astype(np.float32)
+        rect = cv2.minAreaRect(pts)
+        long_, short = max(rect[1]), min(rect[1])
+        if short < 1 or abs(long_ / short - aspect) > aspect_tol:
+            continue
+        d = float(np.linalg.norm(cent[i] - c0))
+        if d < best_d:
+            best, best_d = rect, d
+    return best
 
 
 # 관측 자세 화면에서 송장 글자가 나아가는 방향(이미지 좌표, y 아래). 송장은 박스 윗면에 늘 같은
