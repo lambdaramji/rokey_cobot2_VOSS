@@ -66,17 +66,19 @@ class RobotGatewayNode(Node):
         self.create_timer(5.0, self._log_stats)
 
         # ---- servo_cmd → speedl (ADR-0010). 값은 gateway 파라미터(voss_config.md 값 규칙) ----
+        # [선 mm/s², 각 deg/s²]. 선가속은 time 보다 우선(조건 4). 추종 속도 값은 T26·T27 에서 정한다
+        self.servo_acc = [
+            float(a) for a in self.declare_parameter("servo_acc", [100.0, 10.0]).value
+        ]
         sp = ServoParams(
+            lin_acc_mm_s2=self.servo_acc[0],
             watchdog_s=float(self.declare_parameter("servo_watchdog_s", 0.2).value),
             max_speed_mm_s=float(self.declare_parameter("servo_max_speed_mm_s", 100.0).value),
             z_min_mm=float(self.declare_parameter("servo_z_min_mm", 78.0).value),
             x_range_mm=tuple(self.declare_parameter("servo_x_range_mm", [-107.0, 638.0]).value),
             pose_max_age_s=float(self.declare_parameter("servo_pose_max_age_s", 0.1).value),
+            pose_latency_s=float(self.declare_parameter("servo_pose_latency_s", 0.06).value),
         )
-        # [선 mm/s², 각 deg/s²]. 선가속은 time 보다 우선(조건 4). 추종 속도 값은 T26·T27 에서 정한다
-        self.servo_acc = [
-            float(a) for a in self.declare_parameter("servo_acc", [100.0, 10.0]).value
-        ]
         self.guard = ServoGuard(sp)
         # guard 는 servo 콜백·watchdog 타이머·pose 완료(큐 스레드)가 같이 쓴다
         self._glock = threading.Lock()
@@ -243,14 +245,24 @@ class RobotGatewayNode(Node):
         self.get_logger().info(f"/voss/robot/stop → {res.message}")
         return res
 
-    def halt_on_exit(self) -> None:
-        """종료 직전: 움직이는 중이었으면 0 속도 + move_stop 을 보낸다(응답은 기다리지 않음)."""
+    def halt_on_exit(self) -> threading.Event | None:
+        """종료 직전: 움직이는 중이었으면 0 속도 + move_stop. 응답 대기용 Event 를 돌려준다(없으면 None).
+        이때 executor 는 이미 멈춰 있어 응답 처리는 main() 이 spin_once 로 돌린다(10/08 F-04: 안 돌리면 TIMEOUT)."""
         with self._glock:
             moving = self.guard.active
             self.guard.stop(self._now())
-        if moving:
-            self.get_logger().warn("종료 중 servo 활성 → 0 속도 + move_stop")
-            self._halt("exit")
+        if not moving:
+            return None
+        self.get_logger().warn("종료 중 servo 활성 → 0 속도 + move_stop")
+        ev = threading.Event()
+
+        def done(ok: bool, message: str) -> None:
+            if ok:
+                self.get_logger().info("종료 정지: move_stop OK")
+            ev.set()
+
+        self._halt("exit", done)
+        return ev
 
     def destroy_node(self) -> None:
         self.queue.close()  # 대기 작업을 버리고 작업 스레드를 끝낸다
@@ -270,8 +282,11 @@ def main(args=None) -> None:
         pass  # Ctrl-C·launch 종료는 정상 종료
     finally:
         try:
-            node.halt_on_exit()  # speedl 은 끊겨도 마지막 속도로 계속 간다(ADR-0010) → 먼저 멈춘다
-            time.sleep(0.1)  # 발행·요청이 나갈 시간
+            # speedl 은 끊겨도 마지막 속도로 계속 간다(ADR-0010) → 먼저 멈추고 move_stop 응답을 받는다
+            ev = node.halt_on_exit()
+            end = time.monotonic() + 1.0
+            while ev is not None and not ev.is_set() and time.monotonic() < end:
+                executor.spin_once(timeout_sec=0.05)
             executor.shutdown(timeout_sec=1.0)  # 실행 스레드를 먼저 멈춘 뒤 노드를 정리한다
             node.destroy_node()
         except KeyboardInterrupt:

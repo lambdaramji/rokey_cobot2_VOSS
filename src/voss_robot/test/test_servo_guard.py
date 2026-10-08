@@ -51,7 +51,7 @@ def test_angular_is_dropped_and_flagged():
 
 
 def test_z_min_cuts_only_downward():
-    g = ServoGuard(ServoParams(z_min_mm=78.0))
+    g = ServoGuard(ServoParams(z_min_mm=78.0, lin_acc_mm_s2=0.0))
     g.set_pose(10.0, 0.0, -276.0, 78.0)
     r = g.on_cmd(10.01, 10.0, (0.01, 0.0, -0.02))
     assert r.vel_mm_s == pytest.approx([10.0, 0.0, 0.0])
@@ -61,7 +61,7 @@ def test_z_min_cuts_only_downward():
 
 
 def test_x_range_cuts_outward_only():
-    g = ServoGuard(ServoParams(x_range_mm=(-107.0, 638.0)))
+    g = ServoGuard(ServoParams(x_range_mm=(-107.0, 638.0), lin_acc_mm_s2=0.0))
     g.set_pose(10.0, 640.0, -276.0, 200.0)
     r = g.on_cmd(10.01, 10.0, (0.05, 0.0, 0.0))
     assert r.vel_mm_s[0] == 0.0 and "x_max" in r.clamps
@@ -70,7 +70,9 @@ def test_x_range_cuts_outward_only():
 
 
 def test_tick_clamps_when_prediction_reaches_z_min():
-    g = ServoGuard(ServoParams(z_min_mm=78.0, pose_max_age_s=0.2))
+    g = ServoGuard(
+        ServoParams(z_min_mm=78.0, pose_max_age_s=0.2, pose_latency_s=0.0, lin_acc_mm_s2=0.0)
+    )
     g.set_pose(10.0, 0.0, -276.0, 80.0)
     g.on_cmd(10.0, 10.0, (0.0, 0.0, -0.02))  # −20 mm/s, 80 → 78 mm 까지 0.1 s
     assert g.on_tick(10.05) == ("", None)
@@ -114,3 +116,26 @@ def test_stop_is_idempotent():
     g.stop(10.0)
     g.stop(10.0)
     assert not g.active and g.on_tick(10.5) == ("", None)
+
+
+def test_pose_latency_clamps_earlier():
+    # −20 mm/s, pose 80 mm. 지연 0.06 s 를 더하면 0.04 s 만에 예측 z 가 78 에 닿는다
+    g = ServoGuard(
+        ServoParams(z_min_mm=78.0, pose_max_age_s=0.2, pose_latency_s=0.06, lin_acc_mm_s2=0.0)
+    )
+    g.set_pose(10.0, 0.0, -276.0, 80.0)
+    g.on_cmd(10.0, 10.0, (0.0, 0.0, -0.02))
+    assert g.on_tick(10.03) == ("", None)
+    assert g.on_tick(10.05)[0] == "clamp"
+
+
+def test_braking_distance_cuts_before_limit():
+    # 50 mm/s 하강, acc 100 → 감속 12.5 mm. 하한 78 + 12.5 = 90.5 위에서 이미 잘라야 한다
+    g = ServoGuard(ServoParams(z_min_mm=78.0, lin_acc_mm_s2=100.0, pose_latency_s=0.0))
+    g.set_pose(10.0, 0.0, -276.0, 95.0)
+    assert g.on_cmd(10.0, 10.0, (0.0, 0.0, -0.05)).clamps == []
+    g.set_pose(10.0, 0.0, -276.0, 90.0)
+    r = g.on_cmd(10.0, 10.0, (0.0, 0.0, -0.05))
+    assert r.vel_mm_s[2] == 0.0 and r.clamps == ["z_min"]
+    slow = g.on_cmd(10.0, 10.0, (0.0, 0.0, -0.005))  # 5 mm/s 는 감속 0.125 mm 라 계속 내려간다
+    assert slow.vel_mm_s[2] == -5.0

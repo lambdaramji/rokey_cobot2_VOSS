@@ -218,21 +218,28 @@ def main() -> int:
         res.update(z_start=start[3], z_end=z_end)
         node.ev(f"z {start[3]:.2f} → {z_end:.2f} mm (gateway servo_z_min_mm 근처에서 멈췄나)")
     elif a.scenario == "exit":
-        node.ev(
-            f"스트리밍 시작 {v} mm/s — 지금 gateway 터미널에서 Ctrl-C 를 누르세요 (최대 {secs + 3:.0f} s)"
-        )
-        t_end = time.monotonic() + secs + 3.0
+        limit_s = min(
+            secs, MAX_TRAVEL / a.speed
+        )  # 이동 한도 안에서만 (10/08 첫 시도는 5 s·24.5 mm 를 감)
+        node.ev(f"스트리밍 시작 {v} mm/s — 지금 gateway 터미널에서 Ctrl-C (최대 {limit_s:.1f} s)")
+        t_end = time.monotonic() + limit_s
         gone = None
         while time.monotonic() < t_end:
-            node.send(v)
-            if gone is None and node.count_publishers("/voss/robot/pose") == 0:
+            if node.count_publishers("/voss/robot/pose") == 0:
                 gone = time.monotonic()
                 node.ev("gateway 사라짐(pose 퍼블리셔 0)")
                 break
+            p = node.last()
+            if p and math.dist(p[1:], start[1:]) > ABORT_DEV:
+                node.ev(f"⚠ 시작점에서 {ABORT_DEV} mm 이탈 → stop: {node.call_stop()}")
+                break
+            node.send(v)
             time.sleep(1.0 / RATE_HZ)
+        if gone is None:
+            node.ev("시간 안에 gateway 가 안 꺼짐 → 스트리밍 중단 (watchdog 이 멈춘다)")
         res["gateway_gone"] = gone is not None
         node.ev(
-            "이후 이동은 pose 가 없어 여기서 못 잼 — 펜던트/눈으로 멈췄는지 확인, 필요하면 비상정지"
+            "이후 이동은 pose 가 없어 여기서 못 잼 — 눈으로 멈췄는지 확인, gateway 로그의 '종료 중 servo 활성' 확인"
         )
 
     OUT.mkdir(parents=True, exist_ok=True)
