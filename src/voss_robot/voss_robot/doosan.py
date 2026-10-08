@@ -99,10 +99,12 @@ class DryRunDoosan:
         return 2
 
     def ikin(self, tcp_posx: Sequence[float], sol: int) -> list[float] | None:
-        """가짜: 베이스에서 TCP 까지 거리가 700 mm 넘으면 못 감. 관절은 J3 만 의미 있게(여유 판단용)."""
+        """가짜: 10/08 실기 ikin 을 대충 흉내 — 수평 거리 r 에서 닿는 최고 TCP z 를 r 650 → 200 mm,
+        r 700 → 80 mm 로 직선 근사하고 그보다 높거나 r > 720 이면 못 감. J3 는 여유 판단만 통과하게 60°."""
         x, y, z = (float(v) for v in tcp_posx[:3])
-        d = (x * x + y * y + z * z) ** 0.5
-        return None if d > 700 else [0.0, 0.0, 90.0 * (1 - d / 700) + 5.0, 0.0, 90.0, 0.0]
+        r = (x * x + y * y) ** 0.5
+        zmax = 200.0 if r <= 650 else 200.0 - (r - 650.0) * 2.4
+        return None if r > 720 or z > zmax else [0.0, 0.0, 60.0, 0.0, 90.0, 0.0]
 
     # RobotState·MoveToZone 용 (실기와 같은 이름)
     faulted = False
