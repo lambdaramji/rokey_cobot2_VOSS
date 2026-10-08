@@ -4,8 +4,9 @@
   TCP posx 로 보내야 해서, gateway 가 보낼 때 flange_to_tcp 로 바꾼다.
 - 경로(#51 MC-015, T35): 현재 x·y 에서 플랜지 z ≥ safe_z(446.6 = TCP z 200)까지 수직 상승 → 그 높이로 수평 이동
   → 목표 위에서 수직 하강. 목표가 safe_z 이상이면(관측 자세 450.2) 하강 없이 바로 간다.
-- 격자(measurements #6): X(벨트 방향) 한 줄. 칸 오프셋 = (col − (cols−1)/2) × pitch → A·B·C −60/0/+60,
-  재확인·보류 ±30. slot 0 이 −X 끝. rows > 1 이면 Y 도 같은 식(지금 설정은 모두 1).
+- 격자(measurements #6): X(벨트 방향) 한 줄. 칸 오프셋 = offset + (col − (cols−1)/2) × pitch → A·B·C
+  −60/0/+60. slot 0 이 −X 끝. rows > 1 이면 Y 도 같은 식(지금 설정은 모두 1). 먼 트레이(x ≈ 675)는 수직
+  자세로 +X 쪽에 팔이 닿지 않아(10/08 ikin) offset 으로 칸을 −X 쪽에 둔다: 재확인 1칸 −60, 보류 −60/0.
 """
 
 from __future__ import annotations
@@ -16,12 +17,14 @@ SAFE_Z_MM = 446.6  # 플랜지 z, TCP z 200 (measurements #6 홈 복귀)
 
 
 def slot_offset(grid: Sequence[float], slot: int) -> tuple[float, float]:
-    """grid = [cols, rows, pitch_mm] → (dx, dy) mm. 범위 밖이면 ValueError."""
+    """grid = [cols, rows, pitch_mm(, offset_mm)] → (dx, dy) mm. offset_mm = 칸 줄 중심의 X 위치(트레이 중심
+    기준, 먼 트레이에서 팔이 닿는 −X 쪽으로 당김 — 10/08). 범위 밖이면 ValueError."""
     cols, rows, pitch = int(grid[0]), int(grid[1]), float(grid[2])
+    off = float(grid[3]) if len(grid) > 3 else 0.0
     if not 0 <= slot < cols * rows:
         raise ValueError(f"slot {slot} 는 0~{cols * rows - 1}")
     col, row = slot % cols, slot // cols
-    return (col - (cols - 1) / 2.0) * pitch, (row - (rows - 1) / 2.0) * pitch
+    return off + (col - (cols - 1) / 2.0) * pitch, (row - (rows - 1) / 2.0) * pitch
 
 
 def slot_pose(zone_pose: Sequence[float], grid: Sequence[float], slot: int) -> list[float]:

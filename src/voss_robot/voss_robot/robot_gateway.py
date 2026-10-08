@@ -139,7 +139,7 @@ class RobotGatewayNode(Node):
             view = list(self.declare_parameter(f"zones.{z}.view_pose", [0.0]).value)
             self.zones[z] = {
                 "pose": pose if len(pose) == 6 else None,
-                "grid": grid if len(grid) == 3 else None,
+                "grid": grid if len(grid) in (3, 4) else None,
                 "view": view if len(view) == 6 else None,
             }
         self.pre_open = float(self.declare_parameter("gripper.pre_open_mm", 90.0).value)
@@ -353,6 +353,8 @@ class RobotGatewayNode(Node):
 
         if mode not in ("", "PLACE", "VIEW", "PICK"):
             return fail(f"INVALID: mode {req.mode}")
+        if zone == "OBSERVE" and mode:
+            return fail('INVALID: OBSERVE 는 mode "" 만 (이동만, #96)')
         if mode == "PICK":
             return fail("NOT_CONFIGURED: PICK 은 아직 구현 전 (10/13 재확인 흐름)")
         place = mode in ("", "PLACE") and zone != "OBSERVE"
@@ -424,31 +426,36 @@ class RobotGatewayNode(Node):
 
     def _travel_z(self, xy_pose, sol: int) -> float | None:
         """xy_pose(플랜지) 의 x·y 위에서 safe_z 부터 10 mm 씩 내려가며, 지금 관절 배치로 풀리고 J3 여유가 있는
-        가장 높은 플랜지 z. 최저 이동 높이보다 낮아지면 None. 큐 작업 스레드에서."""
-        min_flange = self.min_travel_tcp_z + (
-            self.safe_z - 200.0
-        )  # safe_z 446.6 ↔ TCP 200 과 같은 차이
+        가장 높은 플랜지 z. TCP z 가 최저 이동 높이보다 낮아지면 None. ikin 은 한 번씩 큐로 보낸다(그 사이
+        pose 읽기가 끊기지 않게)."""
         z = self.safe_z
-        while z >= min_flange - 1e-6:
-            j = self.dsr.ikin(
-                flange_to_tcp([xy_pose[0], xy_pose[1], z, *xy_pose[3:]], self.tcp), sol
-            )
-            if j is not None and abs(j[2]) >= self.min_j3_deg:
+        while True:
+            tcp = flange_to_tcp([xy_pose[0], xy_pose[1], z, *xy_pose[3:]], self.tcp)
+            if tcp[2] < self.min_travel_tcp_z - 1e-6:
+                return None
+            if self._ik_ok(tcp, sol):
                 return z
             z -= 10.0
-        return None
+
+    def _ik_ok(self, tcp, sol: int) -> bool:
+        """TCP posx 가 지금 관절 배치(sol)로 풀리고 J3 여유가 있는지."""
+        j = self.queue.submit(lambda: self.dsr.ikin(tcp, sol)).result(timeout=3.0)
+        return j is not None and abs(j[2]) >= self.min_j3_deg
 
     def _run_path(self, target_flange) -> None:
         """현재 플랜지 → 목표: 수직 상승 → 수평 → 수직 하강, 단계마다 도착을 pose 로 확인.
-        수평 이동 높이 = safe_z 와, 출발·도착 x·y 에서 닿는 최고 높이 중 낮은 것(움직이기 전에 정한다)."""
-
-        def plan():
-            cur = self.dsr.get_flange_posx()
-            sol = self.dsr.current_solution_space()
+        수평 이동 높이 = safe_z 와, 출발·도착 x·y 에서 닿는 최고 높이 중 낮은 것. 목표 자세 자체도 풀리는지
+        움직이기 전에 확인한다."""
+        try:
+            cur, sol = self.queue.submit(
+                lambda: (self.dsr.get_flange_posx(), self.dsr.current_solution_space())
+            ).result(timeout=5.0)
             zs = [self._travel_z(cur, sol), self._travel_z(target_flange, sol)]
-            return cur, zs
-
-        cur, zs = self.queue.submit(plan).result(timeout=5.0)
+            reach = self._ik_ok(flange_to_tcp(target_flange, self.tcp), sol)
+        except Exception as e:  # 큐 응답 없음
+            raise _ZoneError(f"TIMEOUT: 경로 계산 {e}") from e
+        if not reach:
+            raise _ZoneError("LIMIT: 목표 자세에 팔이 닿지 않음 (구역·칸 위치 확인)")
         if None in zs:
             where = "출발" if zs[0] is None else "도착"
             raise _ZoneError(

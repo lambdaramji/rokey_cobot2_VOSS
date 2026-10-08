@@ -58,3 +58,10 @@ def test_far_zone_lower_travel_height_and_no_overshoot_rise():
     assert [(n, round(p[2], 1)) for n, p in steps] == [("over", 400.0), ("descend", 260.9)]
     back = plan_move(c, OBS, safe_z=400.0)
     assert [(n, round(p[2], 2)) for n, p in back] == [("rise", 400.0), ("over", 450.16)]
+
+
+def test_offset_moves_slots_toward_minus_x():
+    # 10/08: 먼 트레이는 칸 줄을 −X 쪽에 둔다 (보류 −60/0, 재확인 1칸 −60)
+    assert [slot_offset([2, 1, 60, -30], s)[0] for s in range(2)] == [-60.0, 0.0]
+    assert slot_offset([1, 1, 60, -60], 0) == (-60.0, 0.0)
+    assert slot_offset([3, 1, 60], 2) == (60.0, 0.0)  # offset 없으면 0

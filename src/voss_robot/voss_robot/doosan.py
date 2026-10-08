@@ -99,11 +99,18 @@ class DryRunDoosan:
         return 2
 
     def ikin(self, tcp_posx: Sequence[float], sol: int) -> list[float] | None:
-        """가짜: 10/08 실기 ikin 을 대충 흉내 — 수평 거리 r 에서 닿는 최고 TCP z 를 r 650 → 200 mm,
-        r 700 → 80 mm 로 직선 근사하고 그보다 높거나 r > 720 이면 못 감. J3 는 여유 판단만 통과하게 60°."""
-        x, y, z = (float(v) for v in tcp_posx[:3])
+        """가짜: 10/08 실기 ikin 을 대충 흉내 — 손목 중심(플랜지에서 툴 축 위로 136 mm)의 수평 거리 r 에서
+        닿는 최고 높이(손목 z − 툴 길이, 수직이면 TCP z)를 r 650 → 200 mm, r 700 → 80 mm 로 직선 근사(안쪽은
+        더 높이), r > 720 이면 못 감. 그리퍼를 기울이면 손목이 당겨져 닿는다(C +60·15° → 약 190, 실기 190).
+        J3 는 여유 판단만 통과하게 60°."""
+        from voss_robot.geometry import zyz_to_matrix
+
+        m = zyz_to_matrix(*(float(v) for v in tcp_posx[3:]))
+        length = self._tcp[2] + 136.0  # TCP → 손목 중심
+        x, y, wz = (float(tcp_posx[i]) - length * m[i][2] for i in range(3))
+        z = wz - length
         r = (x * x + y * y) ** 0.5
-        zmax = 200.0 if r <= 650 else 200.0 - (r - 650.0) * 2.4
+        zmax = 200.0 + (650.0 - r) * (5.0 if r <= 650 else 2.4)
         return None if r > 720 or z > zmax else [0.0, 0.0, 60.0, 0.0, 90.0, 0.0]
 
     # RobotState·MoveToZone 용 (실기와 같은 이름)
