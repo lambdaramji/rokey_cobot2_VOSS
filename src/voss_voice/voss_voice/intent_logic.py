@@ -120,6 +120,75 @@ def _intent(t: str, dong: str = "", zone: str = "", raw_text: str = "", box_id: 
     }
 
 
+def decide_bare_dong(
+    raw_text: str,
+    view: ZoneMapView | None,
+    sort_state: str,
+    sort_box_id: str,
+) -> Decision | None:
+    """동 이름만 말한 발화를 로봇 질문 상태에 따라 처리한다.
+    단독 동 이름이 아니면 None을 반환한다.
+    """
+    if view is None:
+        return None
+
+    dong = view.canonical_dong(raw_text)
+    if dong is None:
+        return None
+
+    # 질문 중이 아니면 동 이름만으로 로봇 동작을 시작하지 않는다.
+    if sort_state != "ASKING" or not sort_box_id:
+        return Decision("say", say=SAY_NO_QUESTION)
+
+    return Decision(
+        "publish",
+        intent=_intent(
+            "answer",
+            dong=dong,
+            raw_text=raw_text,
+            box_id=sort_box_id,
+        ),
+    )
+
+
+def decide_destination_answer(
+    raw_text: str,
+    view: ZoneMapView | None,
+    sort_state: str,
+    sort_box_id: str,
+) -> Decision | None:
+    """'역삼으로 보내' 같은 목적지 답변을 처리한다.
+    해당 표현이 아니면 None을 반환한다.
+    """
+    if view is None:
+        return None
+
+    pattern = r"(.+?)(?:으로|로)\s*보내(?:\s*줘|\s*주세요)?"
+    match = re.fullmatch(pattern, raw_text.strip())
+
+    if match is None:
+        return None
+
+    dong = view.canonical_dong(match.group(1))
+
+    if dong is None:
+        return None
+
+    # 질문 중이 아니면 목적지 답변으로 로봇을 움직이지 않는다.
+    if sort_state != "ASKING" or not sort_box_id:
+        return Decision("say", say=SAY_NO_QUESTION)
+
+    return Decision(
+        "publish",
+        intent=_intent(
+            "answer",
+            dong=dong,
+            raw_text=raw_text,
+            box_id=sort_box_id,
+        ),
+    )
+
+
 def decide(
     llm: dict | None,
     raw_text: str,
