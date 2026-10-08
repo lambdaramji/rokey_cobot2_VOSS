@@ -440,7 +440,7 @@ class RobotGatewayNode(Node):
         z = self.safe_z
         while True:
             tcp = flange_to_tcp([xy_pose[0], xy_pose[1], z, *xy_pose[3:]], self.tcp)
-            if tcp[2] < floor - 1e-6:
+            if tcp[2] < floor - 0.5:  # 툴 길이 246.642 라 10 mm 단계가 TCP 69.96 처럼 떨어진다
                 return None
             if self._ik_ok(tcp, sol):
                 return z
