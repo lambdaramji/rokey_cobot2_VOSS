@@ -225,10 +225,11 @@ class RosDoosan:
         self.last_alarm = ""
         self.alarm_seq = 0  # WARN·ERROR 알람 수 (MoveToZone 이 이동 중 새 알람을 본다)
         self.disconnected = False
-        from dsr_msgs2.srv import GetCurrentPosx, Ikin, MoveLine
+        from dsr_msgs2.srv import Fkin, GetCurrentPosx, Ikin, MoveLine
 
-        self._ik_srv, self._posx_srv = Ikin, GetCurrentPosx
+        self._ik_srv, self._fk_srv, self._posx_srv = Ikin, Fkin, GetCurrentPosx
         self._ik = node.create_client(Ikin, prefix + "motion/ikin", callback_group=self._group)
+        self._fk = node.create_client(Fkin, prefix + "motion/fkin", callback_group=self._group)
         self._posx = node.create_client(
             GetCurrentPosx, prefix + "aux_control/get_current_posx", callback_group=self._group
         )
@@ -280,17 +281,28 @@ class RosDoosan:
         return int(self.caller.call(self._posx, r).task_pos_info[0].data[6])
 
     def ikin(self, tcp_posx: Sequence[float], sol: int) -> list[float] | None:
-        """TCP posx → 관절(deg). 못 풀면 None (엉터리 해 ±350° 초과도 None — 10/08 핸드아이 계획에서 확인).
-        큐 작업 스레드에서만."""
+        """TCP posx → 관절(deg). 못 풀면 None. 큐 작업 스레드에서만.
+
+        두산 ikin 은 닿지 않는 자세에도 success=True 와 수렴하지 않은 관절값을 돌려준다(±350° 초과 — 10/08
+        핸드아이 계획, 범위 안의 그럴듯한 값 — 10/08 HOLD +30 TCP 100 에서 move_line 1206). 결과는 지금 관절을
+        출발점으로 한 수치 풀이라 로봇 위치에 따라 달라진다. 그래서 fkin 으로 되돌려 위치가 1 mm 안일 때만 쓴다."""
         r = self._ik_srv.Request()
         r.pos = [float(v) for v in tcp_posx]
         r.sol_space, r.ref = int(sol), 0
         try:
             res = self.caller.call(self._ik, r)
+            j = [float(v) for v in res.conv_posj]
+            if not res.success or any(abs(v) >= 350 for v in j):
+                return None
+            f = self._fk_srv.Request()
+            f.pos, f.ref = j, 0
+            back = self.caller.call(self._fk, f)
         except DoosanError:
             return None
-        j = [float(v) for v in res.conv_posj]
-        return j if all(abs(v) < 350 for v in j) else None
+        err = sum(
+            (a - float(b)) ** 2 for a, b in zip(tcp_posx[:3], back.conv_posx[:3], strict=True)
+        )
+        return j if back.success and err <= 1.0 else None
 
     def get_robot_state(self) -> int:
         """두산 ROBOT_STATE (DRFC.h). 큐 작업 스레드에서만."""
