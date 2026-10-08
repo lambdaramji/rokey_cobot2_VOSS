@@ -15,4 +15,11 @@
 - 후보는 `/voss/sort/zone_map` 에서만. 발행자는 엔진 예열 + zone_map 수신 뒤에 만든다(sort_manager 의 OCR 준비 = 발행자 존재).
 - OCR 은 작업 스레드 하나, 트랙마다 최신 크롭 1장만 대기, 같은 동 2장 + confidence_min 이상이면 그 트랙은 더 안 읽는다.
 - 호스트 G0 는 PaddleOCR venv(`--system-site-packages`)로: `ros2 launch voss_vision label_reader.launch.py python:=<venv>/bin/python`. GPU·컨테이너는 T22.
-- 아직 없음: stage 2(추종 중, 선명도 가중) — T19 2차, stage 3·`/voss/vision/read_label` — T23.
+- 아직 없음: stage 2(추종 중, 선명도 가중) — T19 2차.
+
+## label_reader 재판독 (stage 3, T23 #32)
+- `/voss/vision/read_label`: 요청 동안만 `/camera/color/image_raw` 구독 → max_frames 장(기본 5)을 timeout_s(기본 2 s) 안에 모음 → 해제. 재확인 트레이는 초록 벨트가 아니라 box_tracker 크롭이 없다 → `label_view.find_labels_in_view`(전체 화면 흰 송장, `view.roi` 중심에 가까운 순) → 선명도 순으로 최대 `view.max_ocr` 장 OCR, 같은 동 `view.min_agree` 장 + confidence_min 이면 조기 종료.
+- 작업 스레드는 재판독을 크롭보다 먼저 처리. 서비스 콜백은 결과를 기다리므로 MultiThreadedExecutor(4) + 서비스·카메라 콜백 그룹 분리.
+- 실패 사유: timeout(프레임 0장·OCR 대기 초과) / no_box / no_text. 낮은 신뢰도는 ok=true 로 돌려주고 질문 여부는 sort_manager 가 정한다.
+- `view.area_*`·`aspect_tol`·`roi` 는 10/08 VIEW 자세(view_pose #116) 사진 11장으로 정한 값(송장 174~177 px, 칸 0 y ≈ 420·칸 1 ≈ 690). view_pose 를 바꾸면 다시 잰다. 사진 판독(프레임 1장씩, 개인 PC CPU): 칸 0·1 단독 6장·BOTH 칸별·R180·TILT 20° 모두 1.00, 흐린 송장은 코드만 0.63, EMPTY no_box. `debug_save_dir` 를 주면 요청마다 첫 프레임을 `view_s3_<stamp>.png` 로 남긴다(튜닝용, 커밋 금지).
+- **칸 지정**(10/08 결정): `ReadLabel.slot`(기본 -1) — sort_manager 가 그 박스의 재확인 칸을 보내면 `view.slot_rois` 의 그 칸 영역만 본다(칸 0 = 화면 위, 1 = 아래). -1 은 `view.roi` 중심(박스 1개일 때만 안전 — BOTH 에서는 중심이 두 칸 가운데). 없는 칸 번호는 `bad_slot`.

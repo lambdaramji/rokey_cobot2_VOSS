@@ -1,0 +1,11 @@
+# VOSS Mosquitto 예시 설정.
+# 실제 비밀번호 파일은 공용 PC에서 생성하고 Git에 커밋하지 않는다.
+
+listener 1883
+allow_anonymous false
+
+password_file /etc/mosquitto/passwd_voss
+acl_file /etc/mosquitto/acl_voss
+
+persistence true
+persistence_location /var/lib/mosquitto/

@@ -41,7 +41,7 @@ from voss_msgs.msg import (
     ZoneMap,
     ZoneMapEntry,
 )
-from voss_msgs.srv import Command, MoveToZone
+from voss_msgs.srv import Command, MoveToZone, ReadLabel
 
 DEFAULT_CONFIG_PATH = os.path.join(
     os.environ.get("VOSS_CONFIG_DIR", os.path.expanduser("~/voss_ws/src/rokey_cobot2_VOSS/config")),
@@ -76,7 +76,13 @@ class SortManagerNode(Node):
         self.move_timeout_s = p("move_timeout_s", 60.0).value
         self.goal_response_timeout_s = p("goal_response_timeout_s", 5.0).value
         self.goal_result_timeout_s = p("goal_result_timeout_s", 120.0).value
+        # ReadLabel 응답: label_reader 프레임 모으기 2 s + OCR 대기 상한 10 s(view.ocr_wait_s) + 여유
+        self.read_timeout_s = p("read_timeout_s", 15.0).value
+        ask_timeout_s = p("ask_timeout_s", 30.0).value  # 질문 발화부터 무응답 보류까지 (SRD §5.7)
         self.state_period_s = p("state_period_s", 0.4).value
+        # 우리 goal·MoveToZone 이 끝난 뒤에도 gateway 가 BUSY 인 시간 — belt_servo 0 유지 0.5 s + watchdog 0.2 s,
+        # gateway 의 zone_servo_settle_s 와 같은 1.5 s. 이 안의 BUSY 는 준비로 본다
+        self.busy_grace_s = p("robot_busy_grace_s", 1.5).value
         self.limits = ReadyLimits(
             pose_max_age_s=p("pose_max_age_s", 0.5).value,
             robot_state_max_age_s=p("robot_state_max_age_s", 1.5).value,
@@ -87,7 +93,7 @@ class SortManagerNode(Node):
         with open(self.config_path, "rb") as f:
             raw = f.read()
         cfg = fsm.load_config(yaml.safe_load(raw))  # 어긋나면 ValueError → 기동 거부
-        self.ctx = fsm.new_ctx(cfg, home_first=home_first)
+        self.ctx = fsm.new_ctx(cfg, home_first=home_first, ask_timeout_s=ask_timeout_s)
         self.get_logger().info(
             f"voss_config {self.config_path} version {cfg.version} sha256 {hashlib.sha256(raw).hexdigest()[:12]}, "
             f"구역 칸 {cfg.capacity}, confidence_min {cfg.confidence_min}, home_first {home_first}"
@@ -120,6 +126,7 @@ class SortManagerNode(Node):
         self.grasp_ac = ActionClient(self, TrackAndGrasp, "/voss/servo/track_and_grasp")
         self.move_cli = self.create_client(MoveToZone, "/voss/robot/move_to_zone")
         self.stop_cli = self.create_client(Trigger, "/voss/robot/stop")
+        self.read_cli = self.create_client(ReadLabel, "/voss/vision/read_label")
 
         # 입력 기록
         self.tracks: dict[
@@ -136,6 +143,9 @@ class SortManagerNode(Node):
         # 장비 호출: 한 번에 하나(goal 또는 이동) + stop. token 이 바뀌면 늦은 응답은 버린다
         self.token = 0
         self.dev: dict | None = None  # {kind, token, deadline, handle, cancel}
+        self.motion_seen = (
+            -1.0
+        )  # 우리 로봇 동작(goal·move)이 진행 중인 것을 마지막으로 본 monotonic
         self.stop_op: dict | None = None
         self.queue: deque = deque()
         self.pumping = False
@@ -159,6 +169,8 @@ class SortManagerNode(Node):
         def age(rx: float) -> float:
             return mono - rx if rx >= 0 else float("inf")
 
+        if self.dev is not None and self.dev["kind"] in ("goal", "move"):
+            self.motion_seen = mono
         return ReadyInputs(
             pose_age_s=age(self.pose_rx),
             move_srv=self.move_cli.service_is_ready(),
@@ -166,6 +178,7 @@ class SortManagerNode(Node):
             robot_connected=bool(rs and rs.connected),
             robot_state=rs.state if rs else "",
             robot_error=rs.error_code if rs else "",
+            own_motion=age(self.motion_seen) <= self.busy_grace_s,
             servo_server=self.grasp_ac.server_is_ready(),
             vision_pubs=self.count_publishers("/voss/vision/box"),
             ocr_pubs=self.count_publishers("/voss/vision/label"),
@@ -274,6 +287,8 @@ class SortManagerNode(Node):
             self._cancel_goal()
         elif isinstance(a, fsm.CallMove):
             self._call_move(a)
+        elif isinstance(a, fsm.CallReadLabel):
+            self._call_read(a.track_id, a.slot)
         elif isinstance(a, fsm.CallStop):
             self._call_stop()
         else:
@@ -281,6 +296,8 @@ class SortManagerNode(Node):
 
     def _new_op(self, kind: str, timeout_s: float) -> dict:
         self.token += 1
+        if kind in ("goal", "move"):
+            self.motion_seen = time.monotonic()
         return {
             "kind": kind,
             "token": self.token,
@@ -370,6 +387,37 @@ class SortManagerNode(Node):
         self._post(fsm.MoveDone(r.ok, r.message, _ns(r.placed_stamp), self._now_ns()))
 
     # /voss/robot/stop
+    # /voss/vision/read_label (재확인 구역 정지 재판독, stage 3)
+    def _call_read(self, track_id: int, slot: int) -> None:
+        if not self.read_cli.service_is_ready():
+            self._post(fsm.ReadDone(False, "", "", 0.0, "", "", "NO_SERVICE", self._now_ns()))
+            return
+        op = self.dev = self._new_op("read", self.read_timeout_s)
+        fut = self.read_cli.call_async(
+            ReadLabel.Request(track_id=track_id, max_frames=0, timeout_s=0.0, slot=slot)
+        )
+        fut.add_done_callback(lambda f, t=op["token"]: self._on_read_response(f, t))
+
+    def _on_read_response(self, fut, token: int) -> None:
+        r = fut.result()
+        if not self._live(self.dev, token):
+            self.get_logger().warn(f"시간 초과 뒤 늦은 ReadLabel 응답 무시: {r.ok} {r.message}")
+            return
+        self.dev = None
+        lb = r.label
+        self._post(
+            fsm.ReadDone(
+                r.ok,
+                lb.code,
+                lb.dong,
+                float(lb.confidence),
+                lb.dong_alt,
+                lb.raw_text,
+                r.message,
+                self._now_ns(),
+            )
+        )
+
     def _call_stop(self) -> None:
         if not self.stop_cli.service_is_ready():
             self._post(fsm.StopDone(False, "NO_SERVICE", self._now_ns()))
@@ -391,10 +439,15 @@ class SortManagerNode(Node):
     def _tick(self) -> None:
         mono, now = time.monotonic(), self._now_ns()
         self._update_ready()
+        if self.ctx.state == fsm.ASKING and self.ctx.ask_deadline_ns:
+            self._post(fsm.Tick(now))  # 질문 30 s 타이머 (만료면 보류)
 
         if self.dev is not None and mono > self.dev["deadline"]:
             op, self.dev = self.dev, None
-            if op["kind"] == "goal":
+            if op["kind"] == "read":
+                self.get_logger().error("ReadLabel 응답 시간 초과")
+                self._post(fsm.ReadDone(False, "", "", 0.0, "", "", "TIMEOUT", now))
+            elif op["kind"] == "goal":
                 self.get_logger().error("TrackAndGrasp 응답 시간 초과 → DEVICE_ERROR")
                 if op["handle"] is not None:
                     op["handle"].cancel_goal_async()
@@ -432,7 +485,7 @@ class SortManagerNode(Node):
             SortState(
                 state=c.state,
                 box_id=box_id,
-                pending_question="",
+                pending_question=c.question if c.state == fsm.ASKING else "",
                 track_id=track_id,
                 ready=not nr,
                 not_ready=nr,
