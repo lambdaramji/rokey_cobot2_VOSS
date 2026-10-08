@@ -19,6 +19,9 @@ def _gateway(context):
     z_min = LaunchConfiguration("servo_z_min_mm").perform(context)
     if z_min:  # 시험 때 하한을 높여 잡는다(F-04). 비우면 노드 기본값(78 mm)
         params["servo_z_min_mm"] = float(z_min)
+    zone_vel = LaunchConfiguration("zone_vel_mm_s").perform(context)
+    if zone_vel:  # MoveToZone 선속도. 첫 실기는 낮게. 비우면 노드 기본값(100 mm/s, 45 deg/s)
+        params["zone_vel"] = [float(zone_vel), 45.0]
     return [
         Node(
             package="voss_robot",
@@ -35,6 +38,7 @@ def generate_launch_description() -> LaunchDescription:
         [
             DeclareLaunchArgument("dry_run", default_value="true"),
             DeclareLaunchArgument("servo_z_min_mm", default_value=""),
+            DeclareLaunchArgument("zone_vel_mm_s", default_value=""),
             DeclareLaunchArgument("config", default_value="~/voss_ws/config/voss_config.yaml"),
             OpaqueFunction(function=_gateway),
         ]
