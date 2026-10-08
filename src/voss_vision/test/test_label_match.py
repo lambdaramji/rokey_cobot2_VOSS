@@ -90,3 +90,10 @@ def test_candidates_from_config() -> None:
         ("역삼동", "01", ("역삼", "역삼동")),
         ("대치동", "02", ()),
     ]
+
+
+def test_code_survives_s_as_5_without_hyphen() -> None:
+    """S→5 오독 + 하이픈 누락에도 동 번호(02)를 잃지 않는다 — 동 이름과 엇갈리면 재확인행 (#75 리뷰)."""
+    assert "0702" in code_numbers("50702")
+    m = match_label([("50702", 0.9), ("역삼동", 0.9)], CANDS)
+    assert m.reason == "CONFLICT" and m.confidence < CONF_MIN
