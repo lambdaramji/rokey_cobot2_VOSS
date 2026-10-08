@@ -94,7 +94,7 @@ ros2 topic hz /voss/robot/pose                     # ≈ 50 Hz
 ros2 topic echo --once /voss/log/status            # OK
 ```
 - [ ] T6 label_reader 에 "판독 준비 완료 — /voss/vision/label 발행 시작"
-- [ ] voss_config sha256 이 T2·T6·T8 로그에서 같다
+- [ ] voss_config sha256 이 T2·T6·T8 로그에서 같다(T2 는 전체, T6·T8 은 앞 12자리 — 앞 12자리로 비교)
 - [ ] 트레이 A·B·C 비어 있음 (새 세션 start 때 칸 카운터가 0 이 된다)
 - [ ] 벨트 h250(4.89 cm/s), 벨트 위 비어 있음, 송장 박스 1개 준비(명확한 송장, 예 S07-02 대치동 → B)
 - [ ] 비상정지 대기자 위치, 속도 제한·작업 영역 제한(TCP z 하한 등) 확인 — 학민
