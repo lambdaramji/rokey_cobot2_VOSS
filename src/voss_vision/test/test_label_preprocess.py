@@ -3,7 +3,7 @@
 import cv2
 import numpy as np
 import pytest
-from voss_vision.label_preprocess import crop_upright, find_label_rect
+from voss_vision.label_preprocess import crop_upright, find_label_in_crop, find_label_rect
 
 LONG, SHORT = 172, 106  # 10/06 관측 자세에서 송장 크기(px)
 
@@ -40,3 +40,31 @@ def test_crop_is_landscape_and_reads_from_top_left(angle: float) -> None:
     assert w == pytest.approx(LONG * 2, rel=0.06) and h == pytest.approx(SHORT * 2, rel=0.08)
     ys, xs = np.where(cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY) < 40)
     assert xs.mean() < w / 2 and ys.mean() < h / 2  # 점이 왼쪽 위 = 글자가 바로 섰다
+
+
+def box_crop(angle_deg: float, neighbor: bool = False) -> np.ndarray:
+    """LabelCrop 흉내: 골판지색 박스 영역 가운데 송장, 가장자리에 옆 박스 송장 일부(선택)."""
+    img, _ = synthetic(angle_deg)
+    crop = img[600 - 160 : 600 + 160, 1100 - 130 : 1100 + 130].copy()
+    crop[np.all(crop == (40, 110, 20), axis=-1)] = (80, 130, 170)  # 벨트 대신 골판지색
+    if neighbor:
+        cv2.rectangle(crop, (0, 0), (60, 90), (250, 250, 250), -1)  # 옆 송장이 모서리에 걸림
+    return crop
+
+
+@pytest.mark.parametrize("angle", [0, 25, -40])
+@pytest.mark.parametrize("neighbor", [False, True])
+def test_find_label_in_crop_picks_centre_label(angle: float, neighbor: bool) -> None:
+    crop = box_crop(angle, neighbor)
+    rect = find_label_in_crop(crop)
+    assert rect is not None
+    (cx, cy), (w, h), _ = rect
+    assert abs(cx - 130) < 6 and abs(cy - 160) < 6  # 가운데 송장
+    assert max(w, h) == pytest.approx(LONG, rel=0.08) and min(w, h) == pytest.approx(SHORT, rel=0.1)
+    up = crop_upright(crop, rect, scale=2.0, pad_px=0)
+    ys, xs = np.where(cv2.cvtColor(up, cv2.COLOR_BGR2GRAY) < 40)
+    assert up.shape[1] > up.shape[0] and xs.mean() < up.shape[1] / 2  # 바로 섰다
+
+
+def test_find_label_in_crop_none_without_label() -> None:
+    assert find_label_in_crop(np.full((300, 240, 3), (80, 130, 170), np.uint8)) is None
