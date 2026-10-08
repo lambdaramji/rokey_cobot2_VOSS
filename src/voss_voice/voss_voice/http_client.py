@@ -14,8 +14,10 @@ import urllib.request
 AI_BASE = "http://127.0.0.1:8000"
 API_BASE = "http://127.0.0.1:8080"
 
+
 class IntentParseError(Exception):
     """FastAPI가 음성을 유효한 Intent로 해석하지 못했음을 알린다."""
+
 
 def _request(req: urllib.request.Request, timeout_s: float) -> dict | None:
     try:
