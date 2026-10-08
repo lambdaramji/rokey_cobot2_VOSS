@@ -170,7 +170,8 @@ def interpolate_pose(
 ):
     """시각 t 의 T_base_tcp — 위치 선형, 자세 slerp.
 
-    stamps 는 오름차순(초). 범위 안이면 보간하되 가장 가까운 pose 가 max_gap_s 보다 멀면 None.
+    stamps 는 오름차순(초). 범위 안이면 보간하되 가장 가까운 pose 가 max_gap_s 보다 멀거나 앞뒤 pose 사이가
+    2·max_gap_s 보다 길면 None.
     t 가 마지막 pose 보다 뒤면 max_extrap_s 까지만 **앞으로 외삽**한다(최근 pose 몇 개의 속도, 끊김 없을 때만).
     마지막 pose 보다 max_extrap_s 넘게 뒤거나 첫 pose 보다 앞이면 None (calibration.md: pose_lag 때문에
     촬영 시각 + 지연의 pose 가 아직 안 왔을 때 기다리지 않으려고 쓴다).
@@ -185,8 +186,8 @@ def interpolate_pose(
     if len(st) == 1:
         return poses[0] if abs(t - st[0]) <= max_gap_s else None
     t0, t1 = st[i], st[i + 1]
-    if min(t - t0, t1 - t) > max_gap_s:
-        return None
+    if min(t - t0, t1 - t) > max_gap_s or t1 - t0 > 2 * max_gap_s:
+        return None  # 가까운 pose 가 멀거나, pose 가 끊긴 긴 구간을 선형으로 메우지 않는다
     a = 0.0 if t1 == t0 else (t - t0) / (t1 - t0)
     pa, pb = poses[i], poses[i + 1]
     q = _slerp(rot_to_quat(pa[:3, :3]), rot_to_quat(pb[:3, :3]), a)
