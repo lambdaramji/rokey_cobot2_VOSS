@@ -22,6 +22,7 @@ ROS_TYPES = (
 )  # Intent 로 보내는 것
 QUERY_KINDS = ("count_by_dong", "held_count", "remaining_count")
 HOLD = "HOLD"
+DESTINATION_ANSWER_RE = re.compile(r"(.+?)(?:으로|로)보내(?:줘|주세요|줘요|요)?")
 
 # 정지 키워드: 공백·문장부호를 지운 뒤 포함 여부로 본다. 오인식으로 멈추는 쪽은 허용한다.
 STOP_KEYWORDS = ("멈춰", "멈추", "정지", "스톱", "스탑", "그만", "stop")
@@ -118,6 +119,75 @@ def _intent(t: str, dong: str = "", zone: str = "", raw_text: str = "", box_id: 
         "raw_text": raw_text,
         "box_id": box_id,
     }
+
+
+def decide_bare_dong(
+    raw_text: str,
+    view: ZoneMapView | None,
+    sort_state: str,
+    sort_box_id: str,
+) -> Decision | None:
+    """동 이름만 말한 발화를 로봇 질문 상태에 따라 처리한다.
+    단독 동 이름이 아니면 None을 반환한다.
+    """
+    if view is None:
+        return None
+
+    dong = view.canonical_dong(raw_text)
+    if dong is None:
+        return None
+
+    # 질문 중이 아니면 동 이름만으로 로봇 동작을 시작하지 않는다.
+    if sort_state != "ASKING" or not sort_box_id:
+        return Decision("say", say=SAY_NO_QUESTION)
+
+    return Decision(
+        "publish",
+        intent=_intent(
+            "answer",
+            dong=dong,
+            raw_text=raw_text,
+            box_id=sort_box_id,
+        ),
+    )
+
+
+def decide_destination_answer(
+    raw_text: str,
+    view: ZoneMapView | None,
+    sort_state: str,
+    sort_box_id: str,
+) -> Decision | None:
+    """'역삼으로 보내' 같은 목적지 답변을 처리한다.
+    해당 표현이 아니면 None을 반환한다.
+    """
+    if view is None:
+        return None
+
+    # Whisper의 문장부호·띄어쓰기 차이를 단독 동 판정과 같이 정규화한다.
+    match = DESTINATION_ANSWER_RE.fullmatch(_squash(raw_text))
+
+    if match is None:
+        return None
+
+    dong = view.canonical_dong(match.group(1))
+
+    if dong is None:
+        return None
+
+    # 질문 중이 아니면 목적지 답변으로 로봇을 움직이지 않는다.
+    if sort_state != "ASKING" or not sort_box_id:
+        return Decision("say", say=SAY_NO_QUESTION)
+
+    return Decision(
+        "publish",
+        intent=_intent(
+            "answer",
+            dong=dong,
+            raw_text=raw_text,
+            box_id=sort_box_id,
+        ),
+    )
 
 
 def decide(

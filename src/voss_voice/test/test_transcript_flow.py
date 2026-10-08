@@ -3,7 +3,9 @@
 import threading
 import time
 
-from voss_voice.intent_logic import ZoneMapView
+import pytest
+from voss_voice.http_client import IntentParseError
+from voss_voice.intent_logic import SAY_RETRY, ZoneMapView
 from voss_voice.transcript_flow import SAY_AI_DOWN, SAY_BUSY, TranscriptFlow
 
 VIEW = ZoneMapView.from_entries([("역삼동", "A", ["역삼"]), ("대치동", "B", [])])
@@ -128,3 +130,162 @@ def test_query_goes_to_stats_and_is_spoken():
 def test_empty_text_ignored():
     f, published, said = _flow(lambda t, a: {"type": "start"})
     assert f.handle("   ")[0] == "empty" and not published and not said
+
+
+def test_bare_dong_is_rejected_when_not_asking() -> None:
+    """질문 중이 아니면 동 이름만으로 우선 분류를 시작하지 않는다."""
+
+    def unexpected_llm(text: str, allowed: dict) -> dict:
+        """로컬 판단 대상에서는 LLM 호출을 금지한다."""
+        raise AssertionError("LLM이 호출되면 안 됩니다")
+
+    flow, published, spoken = _flow(unexpected_llm)
+    flow.state = "IDLE"
+
+    result_kind, _ = flow.handle("대치동")
+
+    assert result_kind == "say"
+    assert published == []
+    assert spoken == ["지금은 답할 질문이 없습니다."]
+
+
+def test_bare_dong_becomes_answer_when_asking() -> None:
+    """질문 중에는 동 이름을 현재 박스의 답변으로 처리한다."""
+
+    def unexpected_llm(text: str, allowed: dict) -> dict:
+        """로컬 답변 처리에서는 LLM 호출을 금지한다."""
+        raise AssertionError("LLM이 호출되면 안 됩니다")
+
+    flow, published, _ = _flow(unexpected_llm)
+    flow.state = "ASKING"
+    flow.box_id = "test-box-12"
+
+    result_kind, _ = flow.handle("대치동")
+
+    assert result_kind == "publish"
+    assert len(published) == 1
+    assert published[0]["type"] == "answer"
+    assert published[0]["dong"] == "대치동"
+    assert published[0]["box_id"] == "test-box-12"
+
+
+def test_parse_error_asks_user_to_repeat_without_publishing() -> None:
+    """LLM 파싱 실패 시 실행하지 않고 다시 말해 달라고 안내한다."""
+
+    def raise_parse_error(text: str, allowed: dict) -> dict:
+        """가짜 LLM에서 PARSE_ERROR를 발생시킨다."""
+        raise IntentParseError("FastAPI /ai/intent: PARSE_ERROR")
+
+    flow, published, spoken = _flow(raise_parse_error)
+
+    result_kind, _ = flow.handle("오늘 날씨 알려줘")
+
+    assert result_kind == "say"
+    assert published == []
+    assert spoken == [SAY_RETRY]
+
+    # 예외 처리 후 잠금이 풀렸는지도 확인한다.
+    second_kind, _ = flow.handle("로봇 춤춰")
+    assert second_kind == "say"
+
+
+def test_destination_answer_uses_current_box_id() -> None:
+    """질문 중 목적지 발화를 현재 박스의 답변으로 처리한다."""
+
+    def unexpected_llm(text: str, allowed: dict) -> dict:
+        """로컬 답변 처리에서 LLM 호출을 금지한다."""
+        raise AssertionError("LLM을 호출하면 안 됩니다")
+
+    flow, published, _ = _flow(unexpected_llm)
+    flow.state = "ASKING"
+    flow.box_id = "box-12"
+
+    result_kind, _ = flow.handle("역삼으로 보내")
+
+    assert result_kind == "publish"
+    assert len(published) == 1
+    assert published[0]["type"] == "answer"
+    assert published[0]["dong"] == "역삼동"
+    assert published[0]["box_id"] == "box-12"
+
+
+def test_destination_answer_without_question_is_rejected() -> None:
+    """질문 상태가 아니면 목적지 발화로 명령을 발행하지 않는다."""
+
+    def unexpected_llm(text: str, allowed: dict) -> dict:
+        """질문이 없는 목적지 발화를 LLM에 보내지 않는다."""
+        raise AssertionError("LLM을 호출하면 안 됩니다")
+
+    flow, published, spoken = _flow(unexpected_llm)
+    flow.state = "IDLE"
+
+    result_kind, _ = flow.handle("역삼으로 보내")
+
+    assert result_kind == "say"
+    assert published == []
+    assert spoken == ["지금은 답할 질문이 없습니다."]
+
+
+def test_explicit_priority_is_preserved_while_asking() -> None:
+    """질문 중에도 명시적인 우선순위 지시는 유지한다."""
+
+    def fake_llm(text: str, allowed: dict) -> dict:
+        """명시적인 우선순위 명령을 반환한다."""
+        return {"type": "priority", "dong": "역삼동"}
+
+    flow, published, _ = _flow(fake_llm)
+    flow.state = "ASKING"
+    flow.box_id = "box-12"
+
+    result_kind, _ = flow.handle("역삼 먼저 분류해")
+
+    assert result_kind == "publish"
+    assert len(published) == 1
+    assert published[0]["type"] == "priority"
+    assert published[0]["box_id"] == ""
+
+
+@pytest.mark.parametrize(
+    ("text", "dong"),
+    [
+        ("역삼으로 보내.", "역삼동"),
+        ("역삼으로, 보내", "역삼동"),
+        ("역삼으로 보내요", "역삼동"),
+        ("대치로 보내!", "대치동"),
+    ],
+)
+def test_destination_variations_do_not_call_llm(text: str, dong: str) -> None:
+    """ASKING 중 변형 목적지 답변은 LLM 전에 현재 박스로 발행한다."""
+
+    def unexpected_llm(raw_text: str, allowed: dict) -> dict:
+        """로컬 목적지 답변에서 LLM 호출을 금지한다."""
+        raise AssertionError("LLM을 호출하면 안 됩니다")
+
+    flow, published, spoken = _flow(unexpected_llm)
+    flow.state, flow.box_id = "ASKING", "box-12"
+
+    result_kind, _ = flow.handle(text)
+
+    assert result_kind == "publish"
+    assert len(published) == 1 and spoken == []
+    assert published[0]["type"] == "answer"
+    assert published[0]["dong"] == dong
+    assert published[0]["raw_text"] == text
+    assert published[0]["box_id"] == "box-12"
+
+
+def test_punctuated_destination_is_rejected_outside_asking() -> None:
+    """RUNNING에서도 문장부호를 이용한 로컬 차단 우회를 막는다."""
+
+    def unexpected_llm(raw_text: str, allowed: dict) -> dict:
+        """목적지 발화가 LLM으로 넘어가면 시험이 실패한다."""
+        raise AssertionError("LLM을 호출하면 안 됩니다")
+
+    flow, published, spoken = _flow(unexpected_llm)
+    flow.state, flow.box_id = "RUNNING", "box-12"
+
+    result_kind, _ = flow.handle("역삼으로 보내.")
+
+    assert result_kind == "say"
+    assert published == []
+    assert spoken == ["지금은 답할 질문이 없습니다."]

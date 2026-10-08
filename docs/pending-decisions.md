@@ -21,4 +21,4 @@
 | 15 | 분류코드 끝 두 자리 ↔ 동 매핑 | 김학민·남현지 | 10/07 | SR-HW-07 | 결정 | S07-01 역삼동 / S07-02 대치동 / S07-03 청담동 (10/05) |
 | 16 | 파지 방향: 31 mm 면(10/06 실측) vs 46 mm 면(BRD TR-PICK-06) | 김학민·박병후 (PL 확정) | 10/07 | SR-HW-02, TR-PICK-06 | 결정 | **31 mm 폭 파지**(핑거 간격 31 mm, 46×27 mm 긴 옆면, 46 mm 변 = 벨트 방향, 닫힘축 벨트 가로). 사전 개방 여유(실제 약 ±24.5 mm)는 벨트 가로 방향이라 벨트 방향 타이밍 여유는 추종(피드포워드·서보)이 맡는다. 값: 목표 폭 39 mm(보고값)·14 N, 벨트 위 파지 높이 TCP z = `position_base.z − 19 mm` (10/07). BRD TR-PICK-06 정정은 v1.3(#79). / ADR-0009 |
 | 17 | 기본 검출기 최종 선택: 분할(seg) vs YOLO | 남현지 | 10/08 | SR-SW-07, T17 | 결정 | **분할(seg)** — 정답셋 187/187·오검출 0/25 로 YOLO 와 같고, 공용 PC 실시간 30 Hz·검출 p95 4.2 ms·지연 p95 49 ms(measurements-1008 #1). YOLO 는 대비책, 게이트 중 변경 없음 (ADR-0011, 10/08 PL) |
-| 18 | LLM 모델 (`OPENAI_MODEL`) | 정의석 | 미정 | TR-VOICE-03 | 미정 | 제안: OpenAI Structured Output(JSON Schema strict)을 지원하는 모델. intent 20문장 시험(VC-EUS-INTENT-01)·응답 지연으로 고른다. 정하면 `docker/ai/README.md` 에 기록 |
+| 18 | LLM 모델 (`OPENAI_MODEL`) | 정의석 | 10/08 | TR-VOICE-03 | 결정 | `gpt-4o` — Structured Output(JSON Schema strict) 지원, 실제 API 로 intent 20문장(VC-EUS-INTENT-01) 20/20 (10/08, #124 · 이슈 #18). `docker/ai/.env` 의 `OPENAI_MODEL` 에 넣는다 |

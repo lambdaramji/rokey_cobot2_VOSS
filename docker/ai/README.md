@@ -8,7 +8,7 @@ ADR-0006 · 계약: `docs/interfaces/web_api.md` (`/ai/stt`, `/ai/intent`), `int
 | 이미지 | `nvidia/cuda:12.6.3-cudnn-runtime-ubuntu24.04`, Python 3.12 (venv `/opt/venv`) | ADR-0006 |
 | STT | faster-whisper 1.1 (CTranslate2, CUDA 12·cuDNN 9), 모델 크기는 pending #6 | ADR-0006 |
 | intent | LangChain `ChatOpenAI.with_structured_output(..., method="json_schema")` + strict JSON Schema, 재시도 없음, timeout `LLM_TIMEOUT_S`(기본 3 s) | BRD TR-VOICE-03, ADR-0006 |
-| LLM 모델 | `.env` 의 `OPENAI_MODEL` — pending #18 (structured output 지원 모델) | |
+| LLM 모델 | `.env` 의 `OPENAI_MODEL=gpt-4o` — intent 20문장 20/20 (10/08) | pending #18 결정, #124 |
 
 
 ## 실행 (공용 PC, 사람이 실행)
