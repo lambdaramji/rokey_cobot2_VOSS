@@ -1,6 +1,6 @@
 # VOSS SRD v1.0
 
-**게시일:** 2026-10-07(KST) · **관리 이슈:** [#6](https://github.com/yujh5537/rokey_cobot2_VOSS/issues/6)
+**게시일:** 2026-10-07(KST) · **관리 이슈:** [#6](https://github.com/lambdaramji/rokey_cobot2_VOSS/issues/6)
 
 #50~#55 전체 댓글과 최종 정정을 반영한 시스템 요구사항 명세와 근거 자료다. ISO/IEC/IEEE 29148:2018 참고 구성과 70개 SYS·70개 VT·18개 IC·26개 TBD·34개 MC ID를 유지했다.
 
@@ -13,11 +13,12 @@
 | 70개 SYS/VT 검증 추적표 | [04 검증 추적표](markdown/04_검증카드_70개요구사항_추적표.md) | [Word](word/04_검증카드_70개요구사항_추적표.docx) |
 | BRD v1.1/v1.2/v1.3 대조 | [05 BRD 대조](markdown/05_BRD_v1.1_v1.2_대조기록.md) | [Word](word/05_BRD_v1.1_v1.2_대조기록.docx) |
 
-- 전체 자료 묶음이 필요하면 GitHub의 Download ZIP을 쓴다. 폴더와 같은 파일을 한 번 더 담던 ZIP은 PR #77 리뷰에 따라 뺐다(최초 게시본: [7e5e928 ZIP](https://github.com/yujh5537/rokey_cobot2_VOSS/blob/7e5e92859cd452054ad62b7b83f0569ce123e8f2/docs/requirments/srd/VOSS_SRD_v0.3_%ED%95%A9%EC%9D%98%EB%B0%98%EC%98%81_%EC%A0%84%EC%B2%B4%EC%9E%90%EB%A3%8C.zip)).
+- 전체 자료 묶음이 필요하면 GitHub의 Download ZIP을 쓴다. 폴더와 같은 파일을 한 번 더 담던 ZIP은 PR #77 리뷰에 따라 뺐다(최초 게시본: [7e5e928 ZIP](https://github.com/lambdaramji/rokey_cobot2_VOSS/blob/7e5e92859cd452054ad62b7b83f0569ce123e8f2/docs/requirments/srd/VOSS_SRD_v0.3_%ED%95%A9%EC%9D%98%EB%B0%98%EC%98%81_%EC%A0%84%EC%B2%B4%EC%9E%90%EB%A3%8C.zip)).
 - [논리 구조도](assets/VOSS_v0.3_논리구조.png) · [상세 구조도](assets/VOSS_v0.3_논리구조_전체.png) · DOT 원본은 같은 폴더 (v0.3에서 그린 책임·경로 그림이며 v1.0에서 바뀐 경로는 없다)
-- [6개 이슈 전체 회신·이전 SRD·main 계약/IDL·BRD 근거](sources/) — 기준판 BRD는 [docs/requirements/VOSS_BRD_v1.3.docx](../VOSS_BRD_v1.3.docx)(#79), v1.2 Word는 [git 기록 e8dd5e5](https://github.com/yujh5537/rokey_cobot2_VOSS/blob/e8dd5e5/docs/requirements/VOSS_BRD_v1.2.docx)에 있다
+- [6개 이슈 전체 회신·이전 SRD·main 계약/IDL·BRD 근거](sources/) — 기준판 BRD는 [docs/requirements/VOSS_BRD_v1.3.docx](../VOSS_BRD_v1.3.docx)(#79), v1.2 Word는 [git 기록 e8dd5e5](https://github.com/lambdaramji/rokey_cobot2_VOSS/blob/e8dd5e5/docs/requirements/VOSS_BRD_v1.2.docx)에 있다
 - [문서 검증 결과](문서검증결과.json) · [원본 파일 해시](파일해시_manifest.json) · [합의/출처 manifest](manifest.json)
 - [PR #56의 v0.2 자료 보관](archive/) — 이전 회신 원문·취합 양식·초안 등 45개 중 ZIP 2개를 뺀 43개 파일을 원본 그대로 보존(ZIP 2개는 PR #56 head 고정 링크)
+- 원본 보존 자료(`파일해시_manifest.json` 대장의 파일과 `archive/`)는 10/08 GitHub 아이디 변경(`yujh5537` → `lambdaramji`, #98) 뒤에도 **원문 그대로** 둔다. 옛 링크는 GitHub 가 새 주소로 넘겨 준다 — 고치면 대장 sha256 과 어긋난다.
 
 ## 현재 상태와 다음 작업
 
