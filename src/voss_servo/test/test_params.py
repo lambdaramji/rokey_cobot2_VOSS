@@ -34,6 +34,16 @@ def valid_values() -> dict:
         "rate_hz": 30,
         "zero_hold_s": 0.5,
         "log.dir": "data/servo",
+        # U2 제어 값 (design/U2-dd.md 2절, 제안값)
+        "control.kp_z_per_s": 2.0,
+        "control.align_tol_along_mm": 3.0,
+        "control.align_tol_cross_mm": 5.0,
+        "z.descend_speed_mps": 0.05,
+        "z.lift_speed_mps": 0.08,
+        "z.height_tol_mm": 2.0,
+        "input.pose_lag_ms": 60.0,
+        "input.pose_extrap_max_ms": 120.0,
+        "input.blind_entry_max_age_s": 0.15,
     }
 
 
@@ -129,3 +139,135 @@ def test_null_string_from_params_file_is_missing() -> None:
     values["control.kp_per_s"] = "null"  # --params-file 로 YAML null 이 문자열로 들어온 경우
     report = check_params(values)
     assert report.missing == ["control.kp_per_s"] and not report.invalid
+
+
+# ---------------------------------------------------------------- U2 제어 값 (design/U2-dd.md 2절)
+
+U2_KEYS = (
+    "control.kp_z_per_s",
+    "control.align_tol_along_mm",
+    "control.align_tol_cross_mm",
+    "z.descend_speed_mps",
+    "z.lift_speed_mps",
+    "z.height_tol_mm",
+    "input.pose_lag_ms",
+    "input.pose_extrap_max_ms",
+    "input.blind_entry_max_age_s",
+)
+
+
+def invalid_keys(values: dict) -> list[str]:
+    """invalid 로 걸린 키 이름 목록."""
+    return [k for k, _ in check_params(values).invalid]
+
+
+def test_u2_null_keys_are_missing() -> None:
+    values = valid_values()
+    for k in U2_KEYS:
+        values[k] = None  # yaml null = 미측정
+    report = check_params(values)
+    assert not report.ready and sorted(report.missing) == sorted(U2_KEYS)
+
+
+def test_pose_lag_zero_is_allowed() -> None:
+    values = valid_values()
+    values["input.pose_lag_ms"] = 0.0  # 0 = 보정 없음 (유효)
+    values["input.pose_extrap_max_ms"] = 20.0  # ≥ 0 + 20
+    assert check_params(values).ready
+
+
+def test_max_speed_equal_gateway_rejected() -> None:  # 검사 1: gateway 100 mm/s 보다 작게
+    values = valid_values()
+    values["limits.max_speed_mps"] = 0.1
+    assert "limits.max_speed_mps" in invalid_keys(values)
+
+
+def test_max_acc_over_robot_ramp_rejected() -> None:  # 검사 2: 로봇 램프 0.1 이하
+    values = valid_values()
+    values["limits.max_acc_mps2"] = 0.11
+    assert "limits.max_acc_mps2" in invalid_keys(values)
+    values["limits.max_acc_mps2"] = 0.1  # 같으면 통과
+    assert check_params(values).ready
+
+
+def test_max_speed_not_above_belt_rejected() -> None:  # 검사 3: 벨트보다 빨라야 따라간다
+    values = valid_values()
+    values["limits.max_speed_mps"] = 0.048  # 벨트 4.8 cm/s 와 같음
+    values["z.lift_speed_mps"] = 0.04
+    values["z.descend_speed_mps"] = 0.04
+    assert invalid_keys(values) == ["limits.max_speed_mps"]
+
+
+def test_descend_over_max_speed_rejected() -> None:  # 검사 4
+    values = valid_values()
+    values["z.descend_speed_mps"] = 0.09
+    values["control.kp_z_per_s"] = 1.0  # 검사 9 는 통과시키고
+    assert invalid_keys(values) == ["z.descend_speed_mps"]
+
+
+def test_lift_over_max_speed_rejected() -> None:  # 검사 5
+    values = valid_values()
+    values["z.lift_speed_mps"] = 0.09
+    assert invalid_keys(values) == ["z.lift_speed_mps"]
+
+
+def test_extrap_max_below_lag_plus_period_rejected() -> None:  # 검사 6
+    values = valid_values()
+    values["input.pose_extrap_max_ms"] = 79.0  # 60 + 20 = 80 미만
+    assert invalid_keys(values) == ["input.pose_extrap_max_ms"]
+    values["input.pose_extrap_max_ms"] = 80.0  # 경계는 통과
+    assert check_params(values).ready
+
+
+def test_along_tol_over_cross_rejected() -> None:  # 검사 7: 벨트 방향이 더 엄격
+    values = valid_values()
+    values["control.align_tol_along_mm"] = 6.0
+    assert invalid_keys(values) == ["control.align_tol_along_mm"]
+
+
+def test_cross_tol_over_10_rejected() -> None:  # 검사 8: 상한 10 mm (확정)
+    values = valid_values()
+    values["control.align_tol_cross_mm"] = 10.5
+    assert invalid_keys(values) == ["control.align_tol_cross_mm"]
+    values["control.align_tol_cross_mm"] = 10.0  # 경계는 통과
+    assert check_params(values).ready
+
+
+def test_kp_z_times_descend_over_acc_rejected() -> None:  # 검사 9
+    values = valid_values()
+    values["control.kp_z_per_s"] = 2.5  # 2.5 × 0.05 = 0.125 > 0.1
+    assert invalid_keys(values) == ["control.kp_z_per_s"]
+
+
+def test_height_tol_reaching_blind_exit_rejected() -> None:  # 검사 10
+    values = valid_values()
+    values["z.height_tol_mm"] = 25.0  # 접근 40 − (사각 10 + 5) = 25 → 같으면 거부
+    assert invalid_keys(values) == ["z.height_tol_mm"]
+
+
+def test_direction_vertical_rejected() -> None:  # 검사 11: 길이 1 이지만 수평 성분이 없다
+    values = valid_values()
+    values["belt.direction_base"] = [0.0, 0.0, 1.0]
+    assert invalid_keys(values) == ["belt.direction_base"]
+
+
+def test_kp_z_zero_rejected() -> None:  # 개별 검사: 0 이면 높이를 못 바꾼다
+    values = valid_values()
+    values["control.kp_z_per_s"] = 0.0
+    assert "control.kp_z_per_s" in invalid_keys(values)
+
+
+def test_null_strings_in_cross_checked_keys_do_not_crash() -> None:
+    # --params-file 로 belt_servo.yaml 을 그대로 주면 교차 검사 대상 키도 "null" 문자열이 된다
+    values = valid_values()
+    for k in (
+        "z.approach_above_top_mm",
+        "z.vision_cutoff_above_top_mm",
+        "z.height_tol_mm",
+        "limits.max_speed_mps",
+        "control.kp_z_per_s",
+        "input.pose_extrap_max_ms",
+    ):
+        values[k] = "null"
+    report = check_params(values)  # 예외 없이
+    assert not report.ready and not report.invalid and "z.height_tol_mm" in report.missing

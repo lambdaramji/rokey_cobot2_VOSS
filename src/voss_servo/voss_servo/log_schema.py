@@ -35,14 +35,29 @@ TICK_FIELDS: tuple[str, ...] = (
     "position_valid",
     "position_source",
     "calib_version",
-    "tcp_pose_m",  # 현재 TCP [x, y, z]
+    "tcp_pose_m",  # 받은 TCP pose [x, y, z] (원본)
+    "tcp_now_m",  # 보정 TCP (지금으로 외삽, U2)
+    "tcp_extrap_s",  # 외삽 지평 (자르기 전)
+    "tcp_extrap_capped",  # 외삽 지평이 상한에서 잘렸나
     "predicted_m",  # 예측 박스 위치 (U2)
+    "predict_horizon_s",  # 예측 지평
+    "predict_dt_clipped",  # 박스 stamp 가 미래였나
+    "obs_age_s",  # 마지막 유효 관측 나이 (촬영 시각 기준)
+    "visible",  # 사각 아님 + 최신 메시지 valid
     "tcp_target_m",  # TCP 목표 (U2)
     "error_m",  # 목표 − TCP (U2)
+    "err_along_m",  # 접근 높이 기준 오차의 벨트 방향 성분
+    "err_cross_m",  # 같은 오차의 가로 성분 크기
     "belt_vel_mps",  # 벨트 속도 벡터
     "belt_speed_mps",
     "cmd_vel_mps",  # 발행한 속도
     "clamped",  # 한계로 잘랐나 (U2)
+    "cmd_rule",  # FF_P | FF | ZERO | ZERO_NO_POSE | ZERO_NO_OBS | ZERO_STOP
+    "dt_s",  # 가속 제한에 쓴 틱 간격
+    "aligned",  # 전환 플래그 (TRACK → DESCEND)
+    "at_grasp_height",  # 전환 플래그 (DESCEND → GRASP)
+    "at_lift_height",  # 전환 플래그 (LIFT → VERIFY)
+    "reach",  # null | X_MIN | X_MAX
     "vision_blind",
     "box_lost",
     "box_stale",

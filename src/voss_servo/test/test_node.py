@@ -60,6 +60,17 @@ def test_box_store_per_track_and_drop_backwards(node) -> None:
     assert entry.latest_invalid and entry.last_valid.stamp.sec == 10  # 마지막 유효 관측 보관
 
 
+def test_box_nan_position_counts_as_invalid(node) -> None:
+    node._on_box(box(7, 10, valid=True))
+    bad = box(7, 11, valid=True)
+    bad.position_base.x = float("nan")  # valid 라고 왔지만 좌표가 NaN
+    node._on_box(bad)
+    entry = node._boxes[7]
+    assert (
+        entry.latest_invalid and entry.last_valid.stamp.sec == 10
+    )  # 마지막 유효 관측을 덮지 않는다
+
+
 READY_ARGS = [
     "belt.speed_cmps:=4.8",
     "belt.direction_base:=[0.99992,-0.01292,0.0]",
@@ -84,6 +95,16 @@ READY_ARGS = [
     "stop_timeout_s:=1.0",
     "rate_hz:=30.0",
     "zero_hold_s:=0.5",
+    # U2 제어 값 (design/U2-dd.md 2절, 제안값)
+    "control.kp_z_per_s:=2.0",
+    "control.align_tol_along_mm:=3.0",
+    "control.align_tol_cross_mm:=5.0",
+    "z.descend_speed_mps:=0.05",
+    "z.lift_speed_mps:=0.08",
+    "z.height_tol_mm:=2.0",
+    "input.pose_lag_ms:=60.0",
+    "input.pose_extrap_max_ms:=120.0",
+    "input.blind_entry_max_age_s:=0.15",
 ]
 
 

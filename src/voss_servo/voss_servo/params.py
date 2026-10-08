@@ -21,6 +21,20 @@ BLIND_EXIT_MARGIN_MM = 5.0
 MAX_ATTEMPTS = 3
 # belt.direction_base 길이 허용 오차 (voss_config.md 값 규칙: 1 ± 0.01)
 DIRECTION_NORM_TOL = 0.01
+# belt.direction_base 의 수평(xy) 길이 하한 — 벨트는 수평. [0, 0, 1] 도 길이 검사는 통과하므로 따로 막는다
+DIRECTION_XY_MIN = 0.99
+# robot_gateway 파라미터 기본값의 사본 (src/voss_robot/voss_robot/servo_guard.py, #104 머지 014a7b4).
+# 학민이 gateway 값을 바꾸면 여기도 함께 바꾼다.
+GATEWAY_MAX_SPEED_MPS = (
+    0.1  # gateway 속도 자르기 max_speed_mm_s 100 → belt_servo 상한은 이보다 작게
+)
+GATEWAY_ACC_MPS2 = (
+    0.1  # gateway 가 speedl 에 넘기는 램프 servo_acc 100 mm/s² (gateway 는 가속을 자르지 않음)
+)
+# 가로 정렬 허용치 상한 (U2 DD 승인 10/08 박병후 — 그리퍼 가로 여유 24.5 mm 의 절반 아래)
+ALIGN_CROSS_MAX_MM = 10.0
+# /voss/robot/pose 간격 (topics.md ~50 Hz)
+POSE_PERIOD_MS = 20.0
 
 # YAML 의 null 이 --params-file 로 들어오면 문자열 "null" 이 된다 → 미측정으로 본다
 NULL_STRINGS = ("null", "~")
@@ -80,13 +94,22 @@ PARAM_SPECS: tuple[ParamSpec, ...] = (
     ParamSpec("reach.x_min_mm", "float", "mm", True),
     ParamSpec("reach.x_max_mm", "float", "mm", True),
     ParamSpec("control.kp_per_s", "float", "1/s", True, _non_negative),  # 0 = FF 만
+    ParamSpec("control.kp_z_per_s", "float", "1/s", True, _positive),  # 0 이면 높이를 못 바꾼다
+    ParamSpec("control.align_tol_along_mm", "float", "mm", True, _positive),
+    ParamSpec("control.align_tol_cross_mm", "float", "mm", True, _positive),
     ParamSpec("limits.max_speed_mps", "float", "m/s", True, _positive),
     ParamSpec("limits.max_acc_mps2", "float", "m/s²", True, _positive),
     ParamSpec("z.approach_above_top_mm", "float", "mm", True, _positive),
     ParamSpec("z.lift_above_top_mm", "float", "mm", True, _positive),
     ParamSpec("z.vision_cutoff_above_top_mm", "float", "mm", True, _non_negative),
+    ParamSpec("z.descend_speed_mps", "float", "m/s", True, _positive),
+    ParamSpec("z.lift_speed_mps", "float", "m/s", True, _positive),
+    ParamSpec("z.height_tol_mm", "float", "mm", True, _positive),
     ParamSpec("input.stale_timeout_s", "float", "s", True, _positive),
     ParamSpec("input.lost_timeout_s", "float", "s", True, _positive),
+    ParamSpec("input.pose_lag_ms", "float", "ms", True, _non_negative),  # 측정값 60 (0 = 보정 없음)
+    ParamSpec("input.pose_extrap_max_ms", "float", "ms", True, _positive),
+    ParamSpec("input.blind_entry_max_age_s", "float", "s", True, _positive),
     ParamSpec("retry.max_attempts", "int", "회", True, _retry_range),
     ParamSpec("stop_timeout_s", "float", "s", True, _positive),
     ParamSpec("rate_hz", "float", "Hz", True, _positive),
@@ -149,9 +172,13 @@ def _cross_checks(values: dict[str, Any], bad: set[str]) -> list[tuple[str, str]
 
     out: list[tuple[str, str]] = []
     if have("belt.direction_base"):
-        norm = vector_norm(values["belt.direction_base"])  # 방향 화살표 길이
+        d = values["belt.direction_base"]
+        norm = vector_norm(d)  # 방향 화살표 길이
+        xy = math.hypot(float(d[0]), float(d[1]))  # 수평 성분 길이
         if abs(norm - 1.0) > DIRECTION_NORM_TOL:
             out.append(("belt.direction_base", f"norm {norm:.3f}"))
+        elif xy < DIRECTION_XY_MIN:
+            out.append(("belt.direction_base", f"수평 성분 길이 {xy:.3f} < {DIRECTION_XY_MIN}"))
     if have("gripper.grasp_width_mm", "gripper.pre_open_mm"):
         if values["gripper.grasp_width_mm"] >= values["gripper.pre_open_mm"]:
             out.append(("gripper.grasp_width_mm", "pre_open_mm 보다 작아야 함"))
@@ -167,7 +194,55 @@ def _cross_checks(values: dict[str, Any], bad: set[str]) -> list[tuple[str, str]
         )  # 사각에서 나오는 높이
         if values["z.approach_above_top_mm"] <= exit_mm:
             out.append(("z.approach_above_top_mm", f"사각 이탈 높이 {exit_mm:g} mm 보다 커야 함"))
+    out.extend(_control_checks(values, have))
     return out
+
+
+def _control_checks(values: dict[str, Any], have: Callable[..., bool]) -> list[tuple[str, str]]:
+    """U2 제어 값 교차 검사 (design/U2-dd.md 2절 1~11 중 1~10, 11 은 direction 검사)."""
+    v = values
+    out: list[tuple[str, str]] = []
+    if have("limits.max_speed_mps") and v["limits.max_speed_mps"] >= GATEWAY_MAX_SPEED_MPS:
+        # 같으면 belt_servo 와 gateway 중 어디서 잘렸는지 구분할 수 없다
+        out.append(
+            ("limits.max_speed_mps", f"gateway 속도 상한 {GATEWAY_MAX_SPEED_MPS} 보다 작아야 함")
+        )
+    if have("limits.max_acc_mps2") and v["limits.max_acc_mps2"] > GATEWAY_ACC_MPS2:
+        # 로봇 램프보다 급하면 로봇이 못 따라와 TCP 외삽(마지막 명령 속도 가정)이 틀린다
+        out.append(("limits.max_acc_mps2", f"로봇 램프 {GATEWAY_ACC_MPS2} 이하여야 함"))
+    if have("belt.speed_cmps", "limits.max_speed_mps"):
+        if v["belt.speed_cmps"] / 100.0 >= v["limits.max_speed_mps"]:  # cm/s → m/s
+            out.append(("limits.max_speed_mps", "벨트 속도보다 커야 함"))
+    for name in ("z.descend_speed_mps", "z.lift_speed_mps"):
+        if have(name, "limits.max_speed_mps") and v[name] > v["limits.max_speed_mps"]:
+            out.append((name, "limits.max_speed_mps 이하여야 함"))
+    if have("input.pose_extrap_max_ms", "input.pose_lag_ms"):
+        if v["input.pose_extrap_max_ms"] < v["input.pose_lag_ms"] + POSE_PERIOD_MS:
+            out.append(
+                ("input.pose_extrap_max_ms", f"pose_lag_ms + {POSE_PERIOD_MS:g} 이상이어야 함")
+            )
+    if have("control.align_tol_along_mm", "control.align_tol_cross_mm"):
+        if v["control.align_tol_along_mm"] > v["control.align_tol_cross_mm"]:
+            out.append(
+                ("control.align_tol_along_mm", "align_tol_cross_mm 이하여야 함")
+            )  # 벨트 방향이 더 엄격
+    if have("control.align_tol_cross_mm") and v["control.align_tol_cross_mm"] > ALIGN_CROSS_MAX_MM:
+        out.append(("control.align_tol_cross_mm", f"{ALIGN_CROSS_MAX_MM:g} mm 이하여야 함"))
+    if have("control.kp_z_per_s", "z.descend_speed_mps", "limits.max_acc_mps2"):
+        # 하강 끝 감속률 ≈ kp_z × v. 지나침 경계는 2 × a_max, 반응 지연 때문에 2배 여유
+        if v["control.kp_z_per_s"] * v["z.descend_speed_mps"] > v["limits.max_acc_mps2"]:
+            out.append(("control.kp_z_per_s", "kp_z × descend_speed ≤ max_acc 이어야 함"))
+    names = ("z.height_tol_mm", "z.approach_above_top_mm", "z.vision_cutoff_above_top_mm")
+    if have(*names):
+        exit_mm = v["z.vision_cutoff_above_top_mm"] + BLIND_EXIT_MARGIN_MM  # 사각 이탈 높이
+        if v["z.height_tol_mm"] >= v["z.approach_above_top_mm"] - exit_mm:
+            out.append(("z.height_tol_mm", "접근 높이 − 사각 이탈 높이보다 작아야 함"))
+    return out
+
+
+def _is_null_string(v: Any) -> bool:
+    """--params-file 로 YAML null 이 들어오면 문자열 "null" 이 된다."""
+    return isinstance(v, str) and v.strip() in NULL_STRINGS
 
 
 def check_params(values: dict[str, Any]) -> ReadyReport:
@@ -175,12 +250,13 @@ def check_params(values: dict[str, Any]) -> ReadyReport:
 
     values: {이름: 값 또는 None}. None 또는 키 없음 = 미측정·미전달.
     """
+    # 문자열 "null" 도 미측정 → 교차 검사까지 None 으로 보이게 한 번에 바꾼다
+    # (U2 실물 기동에서 발견: --params-file 의 null 이 교차 검사에서 숫자 덧셈에 들어가 예외)
+    values = {k: None if _is_null_string(v) else v for k, v in values.items()}
     missing: list[str] = []
     invalid: list[tuple[str, str]] = []
     for spec in PARAM_SPECS:
         v = values.get(spec.name)  # 없으면 None
-        if isinstance(v, str) and v.strip() in NULL_STRINGS:
-            v = None  # 문자열 "null" 도 미측정
         if v is None:
             if spec.required:
                 missing.append(spec.name)  # 필수인데 안 왔다
