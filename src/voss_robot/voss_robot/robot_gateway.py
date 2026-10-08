@@ -27,10 +27,10 @@ from voss_robot.call_queue import SerialCallQueue
 from voss_robot.config_params import ZONES
 from voss_robot.doosan import DEFAULT_PREFIX, DoosanError, DryRunDoosan
 from voss_robot.geometry import (
+    controller_tcp_offset,
     flange_to_ros_pose,
     flange_to_tcp,
     segment_distance_mm,
-    tcp_mismatch_mm,
 )
 from voss_robot.rg2 import DryRunRg2, Rg2
 from voss_robot.servo_guard import ServoGuard, ServoParams
@@ -177,6 +177,7 @@ class RobotGatewayNode(Node):
         self.tcp_check_tol = float(self.declare_parameter("zone_tcp_check_tol_mm", 3.0).value)
         # move_line 은 TCP 직선 이동 — 출발–목표 선분에서 이만큼 벗어나면 move_stop 하고 LIMIT
         self.path_tol = float(self.declare_parameter("zone_path_tol_mm", 15.0).value)
+        self._cmd_off = list(self.tcp)  # _run_path 가 매번 잰 컨트롤러 TCP 오프셋으로 바꾼다
         self._mlock = threading.Lock()  # 모션 자원(MoveToZone)
         self._zone_action = ""
         self._abort = threading.Event()  # /voss/robot/stop 이 세운다
@@ -220,26 +221,36 @@ class RobotGatewayNode(Node):
         )
         threading.Thread(target=self._startup_tcp_check, daemon=True).start()
 
-    def _tcp_mismatch(self):
-        """(컨트롤러 등록 TCP 와 플랜지 + tcp_offset_mm 의 차 mm, 플랜지, solution space). 큐 작업 스레드에서."""
+    def _ctrl_tcp(self):
+        """컨트롤러 등록 TCP 를 재서 move_line·ikin 에 보낼 오프셋을 정한다. 큐 작업 스레드에서.
+
+        (오프셋 또는 None, 설명, 플랜지, solution space). 등록 = voss_config 면 tcp_offset_mm, 등록이 없으면
+        (get_current_posx = 플랜지, 10/08 18:24 브링업 뒤) 0 — 플랜지 좌표로 보낸다. 둘 다 아니면 None(거부)."""
         flange = self.dsr.get_flange_posx()
         ctrl, sol = self.dsr.current_posx()
-        return tcp_mismatch_mm(ctrl, flange, self.tcp), flange, sol
+        off, d_cfg, d_none = controller_tcp_offset(ctrl, flange, self.tcp, self.tcp_check_tol)
+        if off is None:
+            why = f"voss_config 와 {d_cfg:.0f} mm, 플랜지와 {d_none:.0f} mm 다름"
+        elif any(off):
+            why = f"voss_config 와 같음 (차 {d_cfg:.1f} mm)"
+        else:
+            why = f"없음 → 플랜지 좌표로 명령 (차 {d_none:.1f} mm)"
+        return off, why, flange, sol
 
     def _startup_tcp_check(self) -> None:
-        """기동 때 한 번: 펜던트 TCP 등록이 voss_config 와 맞는지 로그로 알린다(MoveToZone 은 매번 다시 본다)."""
+        """기동 때 한 번: 컨트롤러 TCP 상태를 로그로 알린다(MoveToZone 은 매번 다시 본다)."""
         time.sleep(1.0)  # executor 가 돌기 시작한 뒤
         try:
-            d = self.queue.submit(self._tcp_mismatch).result(timeout=5.0)[0]
+            off, why, _, _ = self.queue.submit(self._ctrl_tcp).result(timeout=5.0)
         except Exception as e:  # 큐 응답 없음 — pose 쪽 로그가 따로 알린다
-            self.get_logger().warn(f"TCP 등록 확인 못 함: {e}")
+            self.get_logger().warn(f"컨트롤러 TCP 확인 못 함: {e}")
             return
-        if d <= self.tcp_check_tol:
-            self.get_logger().info(f"컨트롤러 TCP 등록 = voss_config tcp_offset_mm (차 {d:.1f} mm)")
+        if off is not None:
+            self.get_logger().info(f"컨트롤러 TCP 등록 {why}")
         else:
             self.get_logger().error(
-                f"컨트롤러 TCP 등록이 voss_config tcp_offset_mm 과 {d:.0f} mm 다름 — 펜던트에서 툴·TCP "
-                "(GripperDA_v1) 선택 전에는 MoveToZone 을 거부한다(NOT_CONFIGURED)"
+                f"컨트롤러 TCP 등록이 {why} — 모르는 TCP 라 MoveToZone 을 거부한다(NOT_CONFIGURED). "
+                "펜던트 툴·TCP 를 GripperDA_v1 또는 없음으로"
             )
 
     # ---------------- pose ----------------
@@ -484,16 +495,19 @@ class RobotGatewayNode(Node):
         floor = self.min_travel_tcp_z if min_tcp_z is None else min_tcp_z
         z = self.safe_z
         while True:
-            tcp = flange_to_tcp([xy_pose[0], xy_pose[1], z, *xy_pose[3:]], self.tcp)
-            if tcp[2] < floor - 0.5:  # 툴 길이 246.642 라 10 mm 단계가 TCP 69.96 처럼 떨어진다
+            flange = [xy_pose[0], xy_pose[1], z, *xy_pose[3:]]
+            # 툴 길이 246.642 라 10 mm 단계가 TCP 69.96 처럼 떨어진다
+            if flange_to_tcp(flange, self.tcp)[2] < floor - 0.5:
                 return None
-            if self._ik_ok(tcp, sol):
+            if self._ik_ok(flange, sol):
                 return z
             z -= 10.0
 
-    def _ik_ok(self, tcp, sol: int) -> bool:
-        """TCP posx 가 지금 관절 배치(sol)로 풀리고 J3 여유가 있는지."""
-        j = self.queue.submit(lambda: self.dsr.ikin(tcp, sol)).result(timeout=3.0)
+    def _ik_ok(self, flange, sol: int) -> bool:
+        """플랜지 posx 가 지금 관절 배치(sol)로 풀리고 J3 여유가 있는지. ikin 은 컨트롤러 등록 TCP 기준이라
+        _run_path 가 잰 오프셋(_cmd_off)으로 바꿔 보낸다."""
+        cmd = flange_to_tcp(flange, self._cmd_off)
+        j = self.queue.submit(lambda: self.dsr.ikin(cmd, sol)).result(timeout=3.0)
         return j is not None and abs(j[2]) >= self.min_j3_deg
 
     def _in_tray(self, slot_flange, stage, sol: int):
@@ -521,13 +535,15 @@ class RobotGatewayNode(Node):
         움직이기 전에 확인한다. 먼 칸(출발·도착) 위로 최저 이동 높이가 안 나오면 stage(같은 구역 칸 0) 를
         거쳐 트레이 안에서만 낮게 옆으로 간다. 자세는 늘 수직(구역 자세 그대로)."""
         try:
-            mis, cur, sol = self.queue.submit(self._tcp_mismatch).result(timeout=5.0)
-            if mis > self.tcp_check_tol:
+            off, why, cur, sol = self.queue.submit(self._ctrl_tcp).result(timeout=5.0)
+            if off is None:
                 raise _ZoneError(
-                    f"NOT_CONFIGURED: 컨트롤러 TCP 등록이 voss_config tcp_offset_mm 과 {mis:.0f} mm 다름"
-                    " — 펜던트에서 툴·TCP(GripperDA_v1) 선택 후 다시"
+                    f"NOT_CONFIGURED: 컨트롤러 TCP 등록이 {why} — 펜던트 툴·TCP 를 GripperDA_v1 또는 없음으로"
                 )
-            if not self._ik_ok(flange_to_tcp(target_flange, self.tcp), sol):
+            self._cmd_off = (
+                off  # move_line·ikin 에 보낼 좌표 기준 (MoveToZone 은 _mlock 으로 하나씩)
+            )
+            if not self._ik_ok(target_flange, sol):
                 raise _ZoneError("LIMIT: 목표 자세에 팔이 닿지 않음 (구역·칸 위치 확인)")
             z0, z1 = self._travel_z(cur, sol), self._travel_z(target_flange, sol)
             pre, post = [], []
@@ -567,12 +583,15 @@ class RobotGatewayNode(Node):
             )
         steps = pre + plan_move(start, end, hz) + post
         for name, step in steps:
-            tcp = flange_to_tcp(step, self.tcp)
+            cmd = flange_to_tcp(step, self._cmd_off)  # 컨트롤러 등록 TCP 기준 목표
+            tcp = flange_to_tcp(
+                step, self.tcp
+            )  # 핑거 끝(/voss/robot/pose 와 같은 기준) — 도착 판정
             seq0 = self.dsr.alarm_seq
             try:
                 try:
                     self.queue.submit(
-                        lambda t=tcp: self.dsr.move_line_async(t, self.zone_vel, self.zone_acc)
+                        lambda c=cmd: self.dsr.move_line_async(c, self.zone_vel, self.zone_acc)
                     ).result(timeout=2.0)
                 except Exception as e:
                     raise _ZoneError(f"TIMEOUT: move_line({name}) {e}") from e

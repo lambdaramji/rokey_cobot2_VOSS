@@ -115,8 +115,10 @@ class DryRunDoosan:
         닿는 최고 높이(손목 z − 툴 길이, 수직이면 TCP z)를 r 650 → 200 mm, r 700 → 80 mm 로 직선 근사(안쪽은
         더 높이), r > 720 이면 못 감. 그리퍼를 기울이면 손목이 당겨져 닿는다(C +60·15° → 약 190, 실기 190).
         J3 는 여유 판단만 통과하게 60°."""
-        from voss_robot.geometry import zyz_to_matrix
+        from voss_robot.geometry import flange_to_tcp, zyz_to_matrix
 
+        if not self.tcp_registered:  # 등록이 없으면 들어온 값은 플랜지 — 핑거 끝으로 바꿔 근사
+            tcp_posx = flange_to_tcp(tcp_posx, self._tcp)
         m = zyz_to_matrix(*(float(v) for v in tcp_posx[3:]))
         length = self._tcp[2] + 136.0  # TCP → 손목 중심
         x, y, wz = (float(tcp_posx[i]) - length * m[i][2] for i in range(3))

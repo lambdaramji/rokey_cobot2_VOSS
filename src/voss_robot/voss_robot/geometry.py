@@ -167,3 +167,21 @@ def tcp_mismatch_mm(
     등록이 풀리면(브링업마다 풀린다, measure_1006 README) 툴 길이(≈ 247 mm)만큼 나온다(10/08 18:26 수직 하강).
     """
     return math.dist(ctrl_tcp[:3], flange_to_tcp(flange, tcp_offset_mm)[:3])
+
+
+def controller_tcp_offset(
+    ctrl_tcp: Sequence[float],
+    flange: Sequence[float],
+    tcp_offset_mm: Sequence[float],
+    tol_mm: float,
+) -> tuple[list[float] | None, float, float]:
+    """컨트롤러 등록 TCP 가 voss_config 오프셋이면 그 오프셋, 등록이 없으면(= 플랜지) 0, 둘 다 아니면 None.
+
+    move_line·ikin 에 보낼 좌표 기준을 정한다. 두 번째·세 번째 값은 voss_config·플랜지와의 거리(mm)."""
+    d_cfg = tcp_mismatch_mm(ctrl_tcp, flange, tcp_offset_mm)
+    d_none = tcp_mismatch_mm(ctrl_tcp, flange, [0.0, 0.0, 0.0])
+    if d_cfg <= tol_mm:
+        return [float(v) for v in tcp_offset_mm], d_cfg, d_none
+    if d_none <= tol_mm:
+        return [0.0, 0.0, 0.0], d_cfg, d_none
+    return None, d_cfg, d_none

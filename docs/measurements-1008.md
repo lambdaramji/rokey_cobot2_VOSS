@@ -64,9 +64,10 @@
 
 ## 사건: MoveToZone OBSERVE 수직 하강 — 벨트 충돌 직전 비상정지 (18:26)
 - 상황: 브링업을 새로 켠 뒤(18:24) gateway(`zone_vel_mm_s:=30`)로 홈 자세에서 `OBSERVE` 이동 → 로봇이 x·y 그대로 **수직으로 계속 내려가** 벨트에 닿기 직전 비상정지(시작 후 5.9 s, ≈ 170 mm). gateway 로그는 `over 도착 안 함` TIMEOUT 뿐.
-- 원인: 툴·TCP 등록은 브링업마다 풀린다(`scripts/measure_1006/README.md`). gateway 는 OBSERVE(플랜지 z 450.2)를 TCP 좌표(z 203.6)로 바꿔 move_line 에 보내는데, 등록이 없으면 컨트롤러가 이를 **플랜지** 목표로 받아 246.6 mm 수직 하강이 된다. 도착 판정은 config 오프셋 TCP 로 봐서 목표에서 멀어지는 걸 모르고 기다렸고(제한 8 s → 비상정지 없으면 ≈ 240 mm), 실패해도 move_stop 을 보내지 않았다. 낮 동안은 펜던트에서 등록한 채 브링업을 유지해 드러나지 않았다.
-- 조치(#41, `fix/41-gateway-tcp-guard`): ① 기동 때와 MoveToZone 마다 `get_current_posx`(등록 TCP)와 플랜지 + `tcp_offset_mm` 비교, 3 mm 넘으면 `NOT_CONFIGURED`로 움직이지 않음 ② 이동 중 TCP 가 단계 직선에서 15 mm 벗어나면 move_stop + `LIMIT` ③ 이동 시작 뒤 실패·gateway 종료 때 move_stop. dry-run 재현: 등록 풀림 → `NOT_CONFIGURED … 247 mm`, 확인을 끄면 → `LIMIT: over 중 경로 이탈 15 mm` + move_stop.
-- 운영: 브링업 뒤 **펜던트에서 툴·TCP(GripperDA_v1) 선택**, gateway 기동 로그 `컨트롤러 TCP 등록 = voss_config tcp_offset_mm (차 x mm)` 확인. 실이동 첫 명령은 출발 자세를 눈으로 본 뒤.
+- 원인: 컨트롤러 툴·TCP 등록이 **비어 있었다**(`tcp/get_current_tcp` info='', gateway 측정 247 mm 차). gateway 는 OBSERVE(플랜지 z 450.2)를 TCP 좌표(z 203.6)로 바꿔 move_line 에 보내는데, 등록이 없으면 컨트롤러가 이를 **플랜지** 목표로 받아 246.6 mm 수직 하강이 된다. 도착 판정은 config 오프셋 TCP 로 봐서 목표에서 멀어지는 걸 모르고 기다렸고(제한 8 s → 비상정지 없으면 ≈ 240 mm), 실패해도 move_stop 을 보내지 않았다.
+- 등록이 언제 풀렸나: **확인 필요.** 15:52·17:26·18:01 브링업 뒤에는 MoveToZone 이 정상(등록 유지)이었고 브링업 로그(권한·상태)는 18:24 와 같다 → 브링업 재시작 자체가 아니라 18:01~18:24 사이 다른 일(컨트롤러 재부팅·펜던트 조작 등). ROS `tcp/set_current_tcp`(GripperDA_v1)·`tcp/config_create_tcp` 는 자동 모드에서 `success=False`.
+- 조치(#41, PR #121): ① MoveToZone 마다 `get_current_posx`(등록 TCP)를 플랜지와 비교 — 등록 = `tcp_offset_mm` 이면 TCP 좌표, **등록 없음이면 플랜지 좌표로 명령**, 둘 다 아니면 `NOT_CONFIGURED` ② 이동 중 TCP 가 단계 직선에서 15 mm 벗어나면 move_stop + `LIMIT` ③ 이동 시작 뒤 실패·gateway 종료 때 move_stop. 실기(19:26, 등록 없음): 기동 ERROR 로그·OBSERVE `NOT_CONFIGURED … 247 mm`, 로봇 정지 그대로(①의 첫 판, 거부만 하던 버전).
+- **남은 위험 — 펜던트 공간 제한:** 제한은 등록 TCP 기준이라 등록이 없으면 플랜지를 막는다(핑거 끝은 247 mm 아래). G0 공간 제한(#119)을 믿으려면 컨트롤러 TCP 를 GripperDA_v1 로 되돌리고, 제한 근처로 jog 해 핑거 끝 높이에서 서는지 확인해야 한다.
 
 ## 기타
 - ros2 CLI 데몬이 오래된 그래프를 들고 있으면 토픽이 안 보인다 → 도메인·오버레이를 바꾼 뒤에는 `--no-daemon` 또는 `ros2 daemon stop`.
