@@ -123,7 +123,10 @@ class RobotGatewayNode(Node):
         port = int(self.declare_parameter("rg2_port", 502).value)
         rg2_timeout = float(self.declare_parameter("rg2_timeout_s", 6.0).value)
         if self.dry_run:
-            self.rg2 = DryRunRg2()
+            # 가짜 물체 폭(RG2 보고값 mm, 0 이하 = 물체 없음). 닫힘 명령 폭보다 커야 grip_detected —
+            # 실측 31 mm 면 파지는 명령 39 → 보고 40.3~40.6 mm(measurements #8)라 40.5 정도를 준다
+            obj = float(self.declare_parameter("dry_run_object_mm", 0.0).value)
+            self.rg2 = DryRunRg2(object_mm=obj if obj > 0.0 else None)
         else:
             from pymodbus.client import ModbusTcpClient
 
