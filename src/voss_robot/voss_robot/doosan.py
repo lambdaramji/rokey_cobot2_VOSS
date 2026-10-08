@@ -186,7 +186,9 @@ class RosDoosan:
 
     def _on_error(self, m) -> None:
         text = f"{m.level}/{m.group}/{m.code} {m.msg1}".strip()
-        if m.level < 2:  # INFO(예 1216 speedl 가속 한계로 time 자동 조정)는 안내라 detail 에 남기지 않는다
+        if (
+            m.level < 2
+        ):  # INFO(예 1216 speedl 가속 한계로 time 자동 조정)는 안내라 detail 에 남기지 않는다
             self._log.info(f"두산 안내: {text}")
             return
         self.last_alarm = text  # WARN·ERROR (예 1206 NOT REACHABLE)
