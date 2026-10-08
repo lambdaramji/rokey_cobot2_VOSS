@@ -161,6 +161,7 @@ class LabelReaderNode(Node):
             "area_min_px": p("view.area_min_px", 4000).value,
             "area_max_px": p("view.area_max_px", 300_000).value,
             "fill_min": p("view.fill_min", 0.75).value,
+            "aspect_tol": p("view.aspect_tol", 0.5).value,
             "roi": tuple(roi) if any(roi) else None,
         }
 

@@ -20,5 +20,5 @@
 - `/voss/vision/read_label`: 요청 동안만 `/camera/color/image_raw` 구독 → max_frames 장(기본 5)을 timeout_s(기본 2 s) 안에 모음 → 해제. 재확인 트레이는 초록 벨트가 아니라 box_tracker 크롭이 없다 → `label_view.find_labels_in_view`(전체 화면 흰 송장, `view.roi` 중심에 가까운 순) → 선명도 순으로 최대 `view.max_ocr` 장 OCR, 같은 동 `view.min_agree` 장 + confidence_min 이면 조기 종료.
 - 작업 스레드는 재판독을 크롭보다 먼저 처리. 서비스 콜백은 결과를 기다리므로 MultiThreadedExecutor(4) + 서비스·카메라 콜백 그룹 분리.
 - 실패 사유: timeout(프레임 0장·OCR 대기 초과) / no_box / no_text. 낮은 신뢰도는 ok=true 로 돌려주고 질문 여부는 sort_manager 가 정한다.
-- `view.area_*`·`roi` 는 재확인 VIEW 자세 사진(학민 촬영, Drive raw/1008/recheck_view) 전까지 넓은 값. `debug_save_dir` 를 주면 요청마다 첫 프레임을 `view_s3_<stamp>.png` 로 남긴다(튜닝용, 커밋 금지).
+- `view.area_*`·`aspect_tol`·`roi` 는 10/08 VIEW 자세(view_pose #116) 사진 11장으로 정한 값(송장 174~177 px, 칸 0 y ≈ 420·칸 1 ≈ 690). view_pose 를 바꾸면 다시 잰다. 사진 판독(프레임 1장씩, 개인 PC CPU): 칸 0·1 단독 6장·BOTH 칸별·R180·TILT 20° 모두 1.00, 흐린 송장은 코드만 0.63, EMPTY no_box. `debug_save_dir` 를 주면 요청마다 첫 프레임을 `view_s3_<stamp>.png` 로 남긴다(튜닝용, 커밋 금지).
 - 트레이 2박스(보류로 남은 박스) 때 칸 지정은 미정 — VIEW 사진 뒤 slot 필드 추가 또는 칸별 VIEW 자세 중 결정.
