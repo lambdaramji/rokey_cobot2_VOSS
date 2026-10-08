@@ -19,6 +19,7 @@ from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallb
 from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
+from rclpy.time import Time
 from std_srvs.srv import Trigger
 
 from voss_msgs.msg import RobotState
@@ -26,7 +27,7 @@ from voss_msgs.srv import Gripper, MoveToZone
 from voss_robot.call_queue import SerialCallQueue
 from voss_robot.config_params import ZONES
 from voss_robot.doosan import DEFAULT_PREFIX, DoosanError, DryRunDoosan
-from voss_robot.geometry import flange_to_ros_pose, flange_to_tcp
+from voss_robot.geometry import flange_to_ros_pose, flange_to_tcp, tcp_to_flange
 from voss_robot.rg2 import DryRunRg2, Rg2
 from voss_robot.servo_guard import ServoGuard, ServoParams
 from voss_robot.state_logic import Inputs, decide
@@ -44,6 +45,9 @@ class RobotGatewayNode(Node):
         self.dry_run = self.declare_parameter("dry_run", True).value
         prefix = self.declare_parameter("dsr_prefix", DEFAULT_PREFIX).value
         rate = self.declare_parameter("pose_rate_hz", 50.0).value
+        # service = get_current_tool_flange_posx(응답 수신 시각 stamp), joint_states = /dsr01/joint_states 최신 관절
+        # → fkin(stamp = joint_states 시각, 기본). 10/08 오후 service 값이 0.1 s 마다만 바뀌었다
+        self.pose_source = str(self.declare_parameter("pose_source", "joint_states").value)
         timeout = self.declare_parameter("call_timeout_s", 0.5).value
         max_misses = self.declare_parameter("max_call_misses", 3).value  # 연속 응답 없음 → FAULT
         # voss_config 값은 launch 가 넘긴다(config_params.py). 빈 배열 = 미측정
@@ -216,8 +220,16 @@ class RobotGatewayNode(Node):
     def _read_pose(self):
         """큐 작업: 플랜지 posx 를 읽어 (응답 수신 시각, 값, RTT) 를 돌려준다."""
         t0 = time.monotonic()
-        flange = self.dsr.get_flange_posx()
-        stamp = self.get_clock().now()  # MC-004: 응답 수신 시각 (측정 시각 아님)
+        if self.pose_source == "joint_states" and not self.dry_run:
+            js = self.dsr.latest_joints()
+            now = self.get_clock().now()
+            if js is None or (now.nanoseconds - js[1]) * 1e-9 > 0.1:
+                raise DoosanError("joint_states 없음·0.1 s 넘게 오래됨")
+            flange = tcp_to_flange(self.dsr.fkin_tcp(js[0]), self.tcp)
+            stamp = Time(nanoseconds=js[1], clock_type=now.clock_type)  # joint_states 측정 시각
+        else:
+            flange = self.dsr.get_flange_posx()
+            stamp = self.get_clock().now()  # MC-004: 응답 수신 시각 (측정 시각 아님)
         return stamp, flange, time.monotonic() - t0, self.queue.last_wait_s
 
     def _pose_done(self, fut) -> None:
