@@ -7,7 +7,7 @@
 - Mosquitto listener 자체는 `0.0.0.0:1883` 을 사용하되 방화벽으로 노출을 제한한다. `enp4s0`(로봇망)은 항상 차단한다. `wlo1` 은 개발 중 개인 PC의 읽기 전용 디버깅이 필요할 때만 임시로 열고, **시연 때는 1883/wlo1 을 닫는다**. HMI는 공용 PC의 Spring Boot가 로컬로 붙으므로 시연 기능에는 영향이 없다.
 - `allow_anonymous false`. 비밀번호 파일과 실제 비밀번호는 Git에 넣지 않고 공용 PC에서 생성한다(`.env`/로컬 파일만). ACL은 아래처럼 고정한다.
   - `web`: `voss/command` write, `voss/#` read
-  - `bridge`: `voss/command` read, `voss/#` write
+  - `bridge`: `voss/command` read. write는 `voss/state`·`voss/result`·`voss/zone_map`·`voss/robot`·`voss/command/ack`·`voss/log_status`만 허용한다 (`voss/command` write 금지)
   - `debug`: `voss/#` read only
 - 런타임 계정의 비밀번호는 환경 변수로 주입한다. hmi_bridge 는 `VOSS_MQTT_BRIDGE_PASSWORD`, Spring Boot 는 웹 컨테이너의 MQTT 비밀번호 변수를 사용한다.
 
