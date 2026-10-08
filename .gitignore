@@ -21,6 +21,8 @@ models/
 *.engine
 data/recordings/
 data/images/
+# belt_servo 30 Hz 틱 로그(goal 마다 수천 줄). data/servo/attempts/ 는 게이트 증거라 추적한다 (#110)
+data/servo/ticks/
 *.bag
 *.db
 *.sqlite
