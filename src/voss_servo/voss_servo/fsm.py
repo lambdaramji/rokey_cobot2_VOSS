@@ -86,7 +86,7 @@ class TickEvent:
     box_stale: bool = False
     pose_stale: bool = False
     vision_blind: bool = False
-    reach: str | None = None  # None | "X_MIN" | "X_MAX"
+    reach: str | None = None  # None | "X_MIN" | "X_MAX" | "Z_MIN" (U2)
     aligned: bool = False  # U2 가 채움
     at_grasp_height: bool = False  # U2 가 채움
     at_lift_height: bool = False  # U2 가 채움
