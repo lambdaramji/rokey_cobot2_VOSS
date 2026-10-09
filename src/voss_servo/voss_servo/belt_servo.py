@@ -752,8 +752,20 @@ class BeltServoNode(Node):
         super().destroy_node()
 
 
-def _raise_interrupt(signum: int, frame: Any) -> None:
-    """SIGTERM 도 Ctrl+C 와 같은 정리 경로로 보낸다 (ros2 launch 는 SIGINT 뒤 SIGTERM 을 보낸다)."""
+def _ignore_stop_signals() -> None:
+    """정리(0 발행·로그 닫기) 중에 오는 SIGINT·SIGTERM 은 무시한다."""
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+
+
+def _on_stop_signal(signum: int, frame: Any) -> None:
+    """첫 SIGINT·SIGTERM: 뒤따르는 신호를 먼저 막고 KeyboardInterrupt 로 정리 경로에 보낸다.
+
+    래퍼 timeout 은 프로세스 그룹에 SIGINT 를, ros2 launch 는 자식에 SIGINT 를 한 번 더(그 뒤 5 s 에 SIGTERM)
+    보낸다. 막지 않으면 destroy_node 가 0 을 보내는 도중 두 번째 KeyboardInterrupt 로 죽는다 (U3 실측).
+    처리기 안에서 바로 막아 "첫 신호 → finally 진입" 사이의 틈도 없앤다.
+    """
+    _ignore_stop_signals()
     raise KeyboardInterrupt
 
 
@@ -763,13 +775,15 @@ def main(args: list[str] | None = None) -> None:
     # → 처리기를 끄고 KeyboardInterrupt 로 받아, context 가 살아 있을 때 0 을 먼저 보낸다.
     #   30 Hz 타이머가 대기를 깨우므로 신호는 늦어도 한 틱(33 ms) 안에 처리된다.
     rclpy.init(args=args, signal_handler_options=SignalHandlerOptions.NO)
-    signal.signal(signal.SIGTERM, _raise_interrupt)
+    signal.signal(signal.SIGINT, _on_stop_signal)
+    signal.signal(signal.SIGTERM, _on_stop_signal)
     node = BeltServoNode()
     try:
         rclpy.spin(node)  # 단일 executor (DEC-14)
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
+        _ignore_stop_signals()  # 신호가 아닌 종료 경로에서도 정리 중에는 끊기지 않게
         node.destroy_node()
         rclpy.try_shutdown()
 

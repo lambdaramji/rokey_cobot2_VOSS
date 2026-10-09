@@ -17,7 +17,9 @@ from rclpy.executors import SingleThreadedExecutor
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from test_node import READY_ARGS
 
-TEST_DOMAIN_ID = 103  # 시험 전용 도메인 (팀 30~34·다른 시험 101 과 겹치지 않게)
+# 시험 전용 도메인: 실행마다 다르게(150~219) — 팀 30~34·스모크 77·e2e 101 과 겹치지 않고,
+# 같은 PC 의 다른 세션·이전 실행의 참가자가 servo_cmd 발행자로 잡히지 않게 (10/10 간헐 실패 대응)
+TEST_DOMAIN_ID = 150 + os.getpid() % 70
 
 
 @pytest.fixture
@@ -58,8 +60,17 @@ def spin_until(ex, cond, timeout: float) -> bool:
     return cond()
 
 
-@pytest.mark.parametrize("sig", [signal.SIGINT, signal.SIGTERM])
-def test_signal_publishes_final_zero(listener, tmp_path, sig) -> None:
+@pytest.mark.parametrize(
+    "sigs",
+    [
+        [signal.SIGINT],
+        [signal.SIGTERM],
+        [signal.SIGINT, signal.SIGINT],  # 래퍼 timeout(그룹) + launch(자식) 가 한 번씩 (U3 실측)
+        [signal.SIGINT, signal.SIGTERM],  # launch: SIGINT 뒤 SIGTERM
+    ],
+    ids=["INT", "TERM", "INT_INT", "INT_TERM"],
+)
+def test_signal_publishes_final_zero(listener, tmp_path, sigs) -> None:
     node, ex, cmds = listener
     proc = start_servo(tmp_path)
     try:
@@ -67,15 +78,25 @@ def test_signal_publishes_final_zero(listener, tmp_path, sig) -> None:
         found = spin_until(ex, lambda: node.count_publishers("/voss/robot/servo_cmd") > 0, 10.0)
         assert found, "belt_servo 가 뜨지 않음"
         spin_until(ex, lambda: False, 0.5)  # 구독 연결이 자리 잡게
-        assert not cmds  # IDLE: 발행 없음
-        proc.send_signal(sig)
+        assert not cmds, f"IDLE 인데 servo_cmd {len(cmds)}개 (다른 발행자?)"
+        t_sig = time.monotonic()
+        for i, sig in enumerate(sigs):
+            if i:
+                time.sleep(0.05)  # 50 ms 간격으로 한 번 더
+            proc.send_signal(sig)
         spin_until(ex, lambda: proc.poll() is not None and bool(cmds), 5.0)
+        exit_s = time.monotonic() - t_sig  # 첫 신호 → 프로세스 끝
     finally:
         if proc.poll() is None:
             proc.kill()
         out = proc.communicate(timeout=5)[0]
-    assert proc.returncode == 0, out  # 정상 종료 (예외·강제 종료 아님)
-    assert cmds, "종료 때 0 속도가 오지 않음\n" + out
+    info = (
+        f"exit {exit_s:.2f}s rc={proc.returncode} cmds={len(cmds)} domain={TEST_DOMAIN_ID}\n{out}"
+    )
+    assert proc.returncode == 0, info  # 정상 종료 (예외·강제 종료 아님)
+    assert cmds, "종료 때 0 속도가 오지 않음 " + info
     last = cmds[-1].twist.linear
     assert (last.x, last.y, last.z) == (0.0, 0.0, 0.0)
     assert "0 발행 실패" not in out and "context is invalid" not in out
+    assert "Traceback" not in out, info  # 두 번째 신호로 정리 중에 죽지 않는다
+    assert exit_s < 5.0, info  # ros2 launch 는 5 s 뒤 SIGTERM, 다시 5 s 뒤 SIGKILL
