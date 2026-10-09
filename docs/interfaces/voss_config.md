@@ -26,7 +26,7 @@ zones:               # 두산 posx: x y z rx ry rz, mm/deg. 플랜지 기준(TCP
   hold:    {pose: null, grid: {cols: 2, rows: 1, pitch_mm: 60}}
 observe_pose: null   # 벨트 위 관측·대기 자세 (= 홈). 플랜지 기준
 robot:
-  tcp_offset_mm: [1.382, 2.684, 246.642]   # 플랜지 → TCP(핑거 끝) 오프셋, 툴 좌표 mm. robot_gateway 가 브링업마다 등록하고,
+  tcp_offset_mm: [1.382, 2.684, 246.642]   # 플랜지 → TCP(핑거 끝) 오프셋, 툴 좌표 mm. 펜던트 툴·TCP 등록(GripperDA_v1) 또는 등록 없음이어야 하고(gateway 가 MoveToZone 마다 재서 맞춤),
                                           # /voss/robot/pose·servo_cmd(TCP 기준)와 zones·observe_pose(플랜지) 사이를 변환한다
 belt:
   speed_cmps: null       # 10/06 실측
@@ -69,3 +69,4 @@ timing:
 - 2026-10-08: gripper 주석의 "실제 간격 ≈ 보고값 − 10 mm" 를 실측표로 바꿈 — 보고 90 → 80, 빈손 보고 39 → 28 mm(김학민 10/08), 박스 40.3 → 30(10/06). 값·단위(보고값) 변경 없음 (#41).
 - 2026-10-08: grid `offset_mm` 추가, **C 칸 −60/0/+60 → −80/−30/+20**(pitch 50, offset −30) (김학민 #41). 수직 놓기 자세로는 C 트레이(x ≈ 675)의 +X 쪽에 팔이 닿지 않는다 — fkin 으로 검증한 ikin(J3 ≥ 15°): +60 은 해 없음, 0 위 최고 TCP 100, +20 위 61. 트레이는 고정, 우선 트레이 안에 넣는 것이 목표라 칸을 −X 로 모았다(벽 4.5 mm·박스 사이 4 mm, 통합 뒤 조정). 칸 수 3 그대로라 sort_manager 영향 없음. 먼 칸은 robot_gateway 가 칸 0 위로 들어가 트레이 안에서 낮게(TCP ≥ 60) 옆으로 간다.
 - 2026-10-08: `zones.recheck.view_pose` 실측값 입력 [520.58, −37.92, 367.14, 169.44, −180.0, 79.38] (플랜지, 김학민 T35 #44). 펜던트 TCP [517.9, −39.3, 120.5, …] 교시를 tcp_offset_mm 로 변환. 카메라 광축이 재확인 트레이 중심 위, 송장 면까지 약 300 mm. 스키마·키 변경 없음. 출처 measurements-1008 #13.
+- 2026-10-08 저녁: `robot.tcp_offset_mm` 주석 — gateway 는 TCP 를 등록하지 않고, 컨트롤러 등록이 이 값이거나 없을 때만 MoveToZone 을 한다로 고침 (#41, 10/08 18:26 사고). 값 변경 없음.

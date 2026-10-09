@@ -28,6 +28,11 @@ class _Handler(BaseHTTPRequestHandler):
             self._send(200 if ok else 400, {"ok": ok, "text": "작업 시작", "stt_ms": 12})
             return
         req = json.loads(body)
+
+        if req["text"] == "parse_fail":
+            self._send(422, {"ok": False, "message": "PARSE_ERROR"})
+            return
+
         if req["text"] == "fail":
             self._send(502, {"ok": False, "message": "LLM_ERROR"})
         else:
@@ -78,3 +83,9 @@ def test_post_stt_sends_multipart_wav(base):
 
 def test_post_stt_unreachable_returns_none():
     assert http_client.post_stt(b"RIFF", base="http://127.0.0.1:9", timeout_s=0.5) is None
+
+
+def test_post_intent_parse_error_raises_specific_exception(base) -> None:
+    """HTTP 422 PARSE_ERROR를 연결 장애와 구분한다."""
+    with pytest.raises(http_client.IntentParseError):
+        http_client.post_intent("parse_fail", {}, base=base)

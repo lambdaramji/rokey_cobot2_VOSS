@@ -4,7 +4,8 @@
 # - null = 미측정. launch 는 null 키를 넘기지 않고, 노드는 값이 안 온 필수 키가 있으면 READY 를 거부한다.
 #   (--params-file 로 직접 주면 null 이 문자열 "null" 로 들어오고, 노드는 그것도 미측정으로 보고 READY 를 거부한다.
 #    null 을 걸러 넘기는 launch 는 U3 sim.launch)
-# - 주석의 "제안" 값은 pending #4 승인 전 제안값이다. 실측 근거가 생기면 measurements 와 함께 채운다.
+# - 주석의 "제안" 값은 미측정 제안값이다(ADR-0012 승인 수치 목표의 범위 밖). 실측 근거가 생기면 measurements 와 함께 채운다.
+#   제안값의 근거·성격(측정/계산/판단)·확정 단위는 design/U2-dd.md 7절.
 belt_servo:
   ros__parameters:
     grasp:
@@ -13,19 +14,30 @@ belt_servo:
       hold_width_max_mm: null       # 쥔 폭 범위 상한. 제안 41.5
     reach:
       x_min_mm: -107.0              # 추종 가능 구간 TCP x (measurements #6, 748 mm)
-      x_max_mm: 638.0
+      x_max_mm: 620.0               # 유효값 (측정 구간은 638, measurements #6). gateway 가 x + v²/2a ≥ 638 에서 x 를 자르고
+                                    # 램프로 약 11.5 mm 더 가서 635~638 에 선다 → 638 − 11.5 − 여유 (PR #122 학민 리뷰, U2 DD 7.3)
     control:
       kp_per_s: null                # P 게인 (1/s). 0 = FF 만. U4 실기에서 정함
+      kp_z_per_s: null              # z P 게인 (1/s). kp_z × descend_speed ≤ max_acc (descend 0.05 면 ≤ 2). U4
+      align_tol_along_mm: null      # 벨트 방향 정렬 허용치. 제안 3 (이동 중 좌표 오차 최대 2.73 mm, measurements-1008 #5)
+      align_tol_cross_mm: null      # 가로 정렬 허용치. 제안 5, 상한 10 (확정)
     limits:
-      max_speed_mps: null           # TCP 선속도 상한. 제안 0.08
-      max_acc_mps2: null            # 가속 상한. 제안 0.1 (= 100 mm/s², measurements #3 acc 100)
+      max_speed_mps: null           # TCP 선속도 상한. 제안 0.08 (gateway 100 mm/s 보다 작게, 판단값)
+      max_acc_mps2: null            # 가속 상한. 제안 0.1 (= gateway servo_acc 100 mm/s² 로봇 램프, measurements #3)
     z:
       approach_above_top_mm: null   # 하강 전 대기 높이 (관측 박스 윗면 기준). cutoff + 5 보다 커야 함
       lift_above_top_mm: null       # 들기 안전 높이 (관측 박스 윗면 기준)
       vision_cutoff_above_top_mm: null  # 이 높이 아래는 비전 사각. 제안 10 (남현지 확인)
+      descend_speed_mps: null       # 하강 속도 상한. 제안 0.05 (상한 약 0.06, U4 에서 바닥 근처 정지 거리 확인)
+      lift_speed_mps: null          # 들기 속도 상한. 제안 0.08 (= max_speed)
+      height_tol_mm: null           # "높이 도달" 허용치. 제안 2
     input:
       stale_timeout_s: null         # position_valid=false·pose 끊김 지속 기준. 제안 0.3
       lost_timeout_s: null          # 내 track_id 미수신 지속 기준. 제안 0.5 (트래커 15프레임)
+      pose_lag_ms: 60.0             # pose stamp 가 실제보다 늦은 시간 (측정값, measurements-1008 #6, gateway pose_source: service 기준).
+                                    # gateway 를 joint_states 로 바꾸면 다시 잰다
+      pose_extrap_max_ms: null      # TCP 외삽 지평 상한 (넘으면 상한까지만 외삽). 제안 200 (≥ pose_lag + 120: pose 값 0.1 s 갱신 + 메시지 20 ms)
+      blind_entry_max_age_s: null   # 하강 시작 때 마지막 유효 관측 나이(촬영 시각 기준) 상한. 제안 0.15
     retry:
       max_attempts: 1               # 1~3. U9 에서 3 으로 켠다 (U5 지시서: 재시도 동작은 U9)
     stop_timeout_s: 1.0             # stop 응답 기다리는 한계. 제안

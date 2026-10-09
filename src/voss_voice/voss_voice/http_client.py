@@ -15,6 +15,10 @@ AI_BASE = "http://127.0.0.1:8000"
 API_BASE = "http://127.0.0.1:8080"
 
 
+class IntentParseError(Exception):
+    """FastAPI가 음성을 유효한 Intent로 해석하지 못했음을 알린다."""
+
+
 def _request(req: urllib.request.Request, timeout_s: float) -> dict | None:
     try:
         with urllib.request.urlopen(req, timeout=timeout_s) as r:
@@ -37,8 +41,14 @@ def post_intent(
         f"{base}/ai/intent", data=body, headers={"Content-Type": "application/json"}, method="POST"
     )
     resp = _request(req, timeout_s)
+
+    # PARSE_ERROR는 연결 장애가 아니라 되묻기로 처리한다.
+    if resp and not resp.get("ok") and resp.get("message") == "PARSE_ERROR":
+        raise IntentParseError("FastAPI /ai/intent: PARSE_ERROR")
+
     if not resp or not resp.get("ok") or not isinstance(resp.get("intent"), dict):
         return None
+
     return resp["intent"]
 
 

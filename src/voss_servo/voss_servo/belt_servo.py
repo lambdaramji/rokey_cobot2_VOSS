@@ -1,4 +1,4 @@
-"""belt_servo — 컨베이어 박스 추종·파지 노드 (U1 뼈대: 속도는 항상 0).
+"""belt_servo — 컨베이어 박스 추종·파지 노드 (U1 뼈대 + U2 제어 계산, 그리퍼 호출은 U5).
 
 계약 (docs/interfaces/topics.md belt_servo 행, voss_msgs.md TrackAndGrasp 행):
 - 구독 /voss/vision/box (BoxTrack: position_base = 촬영 시각 관측 박스 윗면 중심 m, base_link),
@@ -8,7 +8,7 @@
 - 서비스 호출 /voss/robot/stop (취소 시), /voss/robot/gripper (U5).
 - ADR-0010: speedl 은 스트림이 끊겨도 마지막 속도로 계속 간다 → 어떤 종료든 마지막 명령은 0.
 구조 (design/U1-hld.md): 콜백은 최신값만 보관 → 30 Hz 타이머 한 곳에서 판단·발행·로그.
-판단 로직은 순수 모듈 params·fsm·log_schema 에 있다.
+판단 로직은 순수 모듈 params·fsm·control·log_schema 에 있다 (control 설계: design/U2-*.md).
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
+import numpy as np
 import rclpy
 from geometry_msgs.msg import PoseStamped, TwistStamped
 from rcl_interfaces.msg import ParameterDescriptor
@@ -30,7 +31,7 @@ from std_srvs.srv import Trigger
 from voss_msgs.action import TrackAndGrasp
 from voss_msgs.msg import BoxTrack
 from voss_msgs.srv import Gripper
-from voss_servo import fsm
+from voss_servo import control, fsm
 from voss_servo import log_schema as ls
 from voss_servo.params import PARAM_SPECS, check_params, params_digest, ready_log_line
 
@@ -45,6 +46,33 @@ QOS_FAST = QoSProfile(
 BOX_PRUNE_S = 2.0  # 이만큼 갱신 없는 다른 트랙 항목은 지운다 (파라미터와 무관한 상수)
 DEFAULT_RATE_HZ = 30.0  # rate_hz 가 없을 때 (READY 아님) 타이머 주기
 ZERO = (0.0, 0.0, 0.0)  # 속도 0
+# 0 유지·예외 경로 로그에서 null 로 두는 U2 키
+SNAPSHOT_NULL_KEYS = (
+    "tcp_now_m",
+    "tcp_extrap_s",
+    "tcp_extrap_capped",
+    "predict_horizon_s",
+    "predict_dt_clipped",
+    "obs_age_s",
+    "visible",
+    "err_along_m",
+    "err_cross_m",
+    "dt_s",
+    "aligned",
+    "at_grasp_height",
+    "at_lift_height",
+    "reach",
+)
+
+
+def _as_list(a: Any) -> list[float] | None:
+    """NumPy 벡터 → float 목록 (None 이면 None)."""
+    return None if a is None else [float(x) for x in a]
+
+
+def _as_float(x: Any) -> float | None:
+    """NumPy 숫자 → float (None 이면 None)."""
+    return None if x is None else float(x)
 
 
 def stamp_s(stamp: Any) -> float:
@@ -86,10 +114,15 @@ class GoalCtx:
     stop_future: Any = None  # stop 서비스 call_async 결과
     stop_sent: float | None = None  # stop 요청 보낸 시각
     stop_result: fsm.StopResult | None = None  # 정해진 stop 결과
+    last_calc: float | None = None  # 지난 틱 계산 시각 (dt 용)
+    dt: float | None = None  # 이번 틱 dt (로그용)
+    geo: control.Geometry | None = None  # 이번 틱 기하 계산 (로그용)
+    cmd: control.Command | None = None  # 이번 틱 명령 (로그용)
+    source: int | None = None  # 마지막 유효 관측의 position_source (바뀌면 경고)
 
 
 class BeltServoNode(Node):
-    """U1: 기동 검사·액션 골격·30 Hz 0 속도 발행·로그."""
+    """기동 검사·액션 골격·30 Hz 제어 발행·로그."""
 
     def __init__(self) -> None:
         super().__init__("belt_servo")
@@ -98,9 +131,14 @@ class BeltServoNode(Node):
         self._busy = False  # goal 진행 중 또는 0 유지 중
         self._hold_until: float | None = None  # 0 유지 끝 시각
         self._boxes: dict[int, BoxEntry] = {}  # track_id 별 최신 관측
-        self._pose: tuple[PoseStamped, float] | None = None  # (최신 pose, 받은 시각)
+        self._pose: tuple[PoseStamped, float] | None = None  # (최신 pose, 받은 시각) — 끊김 판정용
+        # (위치 값, 그 값이 처음 온 stamp) — 외삽 기준. 값이 0.1 s 마다만 바뀌는 pose 대응 (PR #122 리뷰)
+        self._pose_value: tuple[tuple[float, float, float], float] | None = None
+        self._last_cmd = control.zero_cmd()  # 마지막 발행 속도 (TCP 외삽·가속 제한 입력)
         self.values = self._declare_params()  # {이름: 값 또는 None}
         self.ready = self._startup_check()  # READY 여부 (기동 때 한 번)
+        # 제어 설정 묶음 (단위 변환 한 곳). READY 일 때만 goal 이 돌아서 그때만 만든다
+        self._ctrl = control.config_from_values(self.values) if self.ready else None
         self._setup_logs()
         self._setup_ros()
 
@@ -128,6 +166,11 @@ class BeltServoNode(Node):
             self.get_logger().info(line)
         if report.ready:
             self.get_logger().info("READY")
+            # pose_lag_ms 는 gateway pose_source 에 묶인 측정값이다 (gateway 가 바뀌면 다시 잰다)
+            self.get_logger().info(
+                f"pose_lag_ms={self.values.get('input.pose_lag_ms')} — gateway pose_source: service "
+                "기준 측정(measurements-1008 #6). joint_states 로 바꾸면 다시 잰다"
+            )
         else:
             # 어떤 키가 문제인지 이름으로. READY 가 아니면 액션 서버를 만들지 않는다 (_setup_ros)
             self.get_logger().error(ready_log_line(report) + " — 액션 서버 미생성")
@@ -185,7 +228,9 @@ class BeltServoNode(Node):
             prev = self._boxes.get(msg.track_id)
             if prev is not None and stamp_s(msg.stamp) < stamp_s(prev.msg.stamp):
                 return  # 같은 트랙에서 시각이 뒤로 간 메시지는 버린다
-            valid = bool(msg.position_valid)
+            p = msg.position_base
+            finite = control.finite_vec((p.x, p.y, p.z)) is not None
+            valid = bool(msg.position_valid) and finite  # NaN 좌표는 valid 라도 invalid 로 본다
             last_valid = msg if valid else (prev.last_valid if prev else None)
             last_valid_rx = now if valid else (prev.last_valid_rx if prev else None)
             self._boxes[msg.track_id] = BoxEntry(msg, now, not valid, last_valid, last_valid_rx)
@@ -201,9 +246,13 @@ class BeltServoNode(Node):
             del self._boxes[t]
 
     def _on_pose(self, msg: PoseStamped) -> None:
-        """최신 TCP pose 와 받은 시각만 보관한다."""
+        """최신 TCP pose 와 받은 시각, 그리고 위치 값이 바뀐 첫 stamp 를 보관한다."""
         try:
-            self._pose = (msg, self._now())
+            self._pose = (msg, self._now())  # 수신 시각은 메시지마다 (pose_stale 판정)
+            p = msg.pose.position
+            stamp = stamp_s(msg.header.stamp)
+            # 같은 값이 반복되면 처음 stamp 유지 → 외삽 지평에 값의 실제 나이가 들어간다
+            self._pose_value = control.pose_value_stamp(self._pose_value, (p.x, p.y, p.z), stamp)
         except Exception as exc:
             self.get_logger().error(f"_on_pose 예외: {exc!r}")
 
@@ -312,7 +361,14 @@ class BeltServoNode(Node):
         )
         ctx.state = tr.state
         self._handle_actions(ctx, tr.actions, now)
-        vel = ZERO  # U2: stopping·terminal 이 아닐 때만 control 계산으로 바꾼다
+        cfg = self._ctrl
+        ctx.dt = control.effective_dt(ctx.last_calc, now, cfg.dt_nominal)  # ① dt 먼저
+        ctx.last_calc = now  # ② 그 다음 갱신
+        # ③ 새 phase 기준 속도. stopping·terminal 이면 command 첫 줄에서 항상 0
+        ctx.cmd = control.command(
+            tr.state.phase, tr.state.stopping, tr.terminal, ctx.geo, self._last_cmd, ctx.dt, cfg
+        )
+        vel = tuple(float(x) for x in ctx.cmd.vel)
         t_pub = self._publish(vel)
         self._send_feedback(ctx)
         tick = ls.make_tick(**self._tick_values(ctx, ev, tr, now, t_pub, vel))
@@ -337,10 +393,15 @@ class BeltServoNode(Node):
             self._busy = False
 
     def _build_event(self, ctx: GoalCtx, now: float) -> fsm.TickEvent:
-        """이번 틱의 사실들을 모은다. U2·U5 몫(reach·aligned·높이·gripper)은 기본값."""
+        """이번 틱의 사실들을 모은다: 보정 TCP → 사각 → 입력 끊김 → 기하·전환 플래그. gripper 는 U5."""
+        cfg = self._ctrl
         entry = self._boxes.get(ctx.track_id)
-        tcp_z = self._pose[0].pose.position.z if self._pose else None
-        top_z = entry.last_valid.position_base.z if entry and entry.last_valid else None
+        tcp_est = self._tcp_estimate(now)  # (보정 TCP, 지평, 잘림) 또는 None
+        obs = entry.last_valid if entry else None  # 마지막 유효 관측 (사각 구간 예측에 씀)
+        obs_xyz = self._obs_xyz(obs)
+        tcp_z = float(tcp_est[0][2]) if tcp_est else None
+        top_z = float(obs_xyz[2]) if obs_xyz is not None else None
+        # 사각 판정에도 보정 TCP z 를 쓴다 (U2 DD 0절 — 모든 플래그가 같은 TCP 를 보게)
         blind = fsm.is_vision_blind(
             ctx.state.phase, tcp_z, top_z, self._p("z.vision_cutoff_above_top_mm"), ctx.blind
         )
@@ -359,6 +420,15 @@ class BeltServoNode(Node):
             self._p("input.lost_timeout_s"),
             self._p("input.stale_timeout_s"),
         )
+        self._check_source(ctx, obs)
+        # 보인다 = 사각 아님 + 이 트랙 최신 메시지 valid + 유효 관측 있음
+        visible = (not blind) and entry is not None and not entry.latest_invalid
+        visible = visible and obs_xyz is not None
+        obs_stamp = stamp_s(obs.stamp) if obs is not None else None
+        ctx.geo = (
+            control.geometry(tcp_est, obs_xyz, obs_stamp, visible, now, cfg) if tcp_est else None
+        )
+        geo = ctx.geo
         return fsm.TickEvent(
             cancel_requested=bool(ctx.handle.is_cancel_requested),
             stop_result=self._poll_stop(ctx, now),
@@ -366,7 +436,43 @@ class BeltServoNode(Node):
             box_stale=box_stale,
             pose_stale=pose_stale,
             vision_blind=blind,
+            reach=geo.reach if geo else None,
+            aligned=bool(geo.aligned) if geo else False,
+            at_grasp_height=bool(geo.at_grasp_height) if geo else False,
+            at_lift_height=bool(geo.at_lift_height) if geo else False,
         )
+
+    def _tcp_estimate(self, now: float) -> tuple[np.ndarray, float, bool] | None:
+        """최신 pose → control.tcp_now (pose 없음·NaN 이면 None)."""
+        if self._pose_value is None:
+            return None
+        position, stamp = self._pose_value  # stamp = 이 값이 처음 온 메시지의 stamp (실제보다 늦음)
+        pose = control.finite_vec(position)
+        if pose is None:
+            return None  # NaN pose 는 없는 것으로
+        cfg = self._ctrl
+        return control.tcp_now(
+            pose, stamp, cfg.pose_lag_s, self._last_cmd, now, cfg.pose_extrap_max_s
+        )
+
+    @staticmethod
+    def _obs_xyz(obs: BoxTrack | None) -> np.ndarray | None:
+        """유효 관측의 position_base → 배열 (없으면 None)."""
+        if obs is None:
+            return None
+        p = obs.position_base
+        return control.finite_vec((p.x, p.y, p.z))
+
+    def _check_source(self, ctx: GoalCtx, obs: BoxTrack | None) -> None:
+        """goal 중 좌표 출처가 바뀌면 경고만 (예측 리셋은 U9, U2 HLD 4절 규칙 8)."""
+        if obs is None:
+            return
+        src = int(obs.position_source)
+        if ctx.source is not None and src != ctx.source:
+            self.get_logger().warning(
+                f"goal 중 position_source 변경 {ctx.source}→{src} — 예측 리셋은 U9"
+            )
+        ctx.source = src
 
     # ------------------------------------------------------------------ 행동·서비스
 
@@ -449,6 +555,7 @@ class BeltServoNode(Node):
         msg.header.frame_id = "base_link"
         msg.twist.linear.x, msg.twist.linear.y, msg.twist.linear.z = vel
         self._cmd_pub.publish(msg)  # 각속도는 기본값 0
+        self._last_cmd = np.array(vel, dtype=float)  # 0 유지·예외 경로 포함 모든 발행을 기억
         return stamp_s(msg.header.stamp)
 
     def _safe_zero(self) -> None:
@@ -470,9 +577,9 @@ class BeltServoNode(Node):
     def _common_values(self) -> dict[str, Any]:
         """모든 틱에 같은 설정 값."""
         speed = self.values.get("belt.speed_cmps")
-        direction = self.values.get("belt.direction_base")
         belt_mps = speed / 100.0 if speed is not None else None  # cm/s → m/s
-        belt_vel = [belt_mps * d for d in direction] if belt_mps is not None and direction else None
+        # 제어(FF)에 실제로 쓴 벨트 속도 벡터와 같은 값 (수평 정규화, z = 0). READY 아니면 None
+        belt_vel = _as_list(self._ctrl.belt_v) if self._ctrl is not None else None
         return {
             "belt_vel_mps": belt_vel,
             "belt_speed_mps": belt_mps,
@@ -527,11 +634,7 @@ class BeltServoNode(Node):
             "terminal": tr.terminal,
             "t_calc_s": now,
             "t_pub_s": t_pub,
-            "predicted_m": None,  # U2
-            "tcp_target_m": None,  # U2
-            "error_m": None,  # U2
             "cmd_vel_mps": list(vel),
-            "clamped": False,  # U2
             "vision_blind": ev.vision_blind,
             "box_lost": ev.box_lost,
             "box_stale": ev.box_stale,
@@ -542,8 +645,35 @@ class BeltServoNode(Node):
             "cause": tr.cause,
             "grasped": tr.grasped,
             "gripper": None,  # U5: {ok, width_actual_mm, grip_detected, message}
+            **self._control_values(ctx, ev),
             **self._input_values(ctx.track_id),
             **self._common_values(),
+        }
+
+    @staticmethod
+    def _control_values(ctx: GoalCtx, ev: fsm.TickEvent) -> dict[str, Any]:
+        """U2 제어 계산 값 (없으면 null). NumPy 는 list·float·bool 로 바꿔 JSON 에 넣는다."""
+        geo, cmd = ctx.geo, ctx.cmd
+        return {
+            "predicted_m": _as_list(geo.p_pred) if geo else None,
+            "tcp_target_m": _as_list(cmd.tcp_target) if cmd else None,
+            "error_m": _as_list(cmd.error) if cmd else None,
+            "clamped": bool(cmd.clamped) if cmd else False,
+            "cmd_rule": cmd.rule if cmd else None,
+            "tcp_now_m": _as_list(geo.tcp) if geo else None,
+            "tcp_extrap_s": float(geo.tcp_horizon_s) if geo else None,
+            "tcp_extrap_capped": bool(geo.tcp_extrap_capped) if geo else None,
+            "predict_horizon_s": _as_float(geo.pred_horizon_s) if geo else None,
+            "predict_dt_clipped": bool(geo.dt_clipped) if geo else None,
+            "obs_age_s": _as_float(geo.obs_age_s) if geo else None,
+            "visible": bool(geo.visible) if geo else None,
+            "err_along_m": _as_float(geo.err_along) if geo else None,
+            "err_cross_m": _as_float(geo.err_cross) if geo else None,
+            "dt_s": ctx.dt,
+            "aligned": ev.aligned,
+            "at_grasp_height": ev.at_grasp_height,
+            "at_lift_height": ev.at_lift_height,
+            "reach": ev.reach,
         }
 
     def _snapshot_values(
@@ -565,6 +695,8 @@ class BeltServoNode(Node):
             "error_m": None,
             "cmd_vel_mps": list(ZERO),
             "clamped": False,
+            "cmd_rule": control.ZERO_STOP,  # 0 유지·예외 경로
+            **{k: None for k in SNAPSHOT_NULL_KEYS},  # U2 계산 값은 이 경로에 없다
             "vision_blind": None,
             "box_lost": None,
             "box_stale": None,

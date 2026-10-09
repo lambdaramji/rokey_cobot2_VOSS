@@ -22,6 +22,7 @@ LLM(FastAPI `/intent`, OpenAI structured output — ADR-0006)의 출력은 반�
   - `dong`(정식 이름)은 `aliases` 가 비어 있어도 항상 허용한다.
   - zone_map 을 아직 받지 못했으면 intent 를 발행하지 않고 "준비 중입니다" 라고 답한다. **단 stop 은 예외**(위).
 - "보류" 는 `zone = "HOLD"` 로 바꾼다(answer 에서만 허용).
+- **로컬 질문 답변(#124):** 등록된 동 이름 단독(`"대치동."`) 및 등록 동을 목적지로 한 `"~로 보내"`(`"역삼으로, 보내요"`)는 문장부호·공백을 정규화해 LLM 전에 처리한다. `ASKING`이고 현재 `box_id`가 있을 때만 `answer`를 발행한다. 그렇지 않으면 발행하지 않고 "지금은 답할 질문이 없습니다"라고 안내한다. 부정·복합·미등록 동 발화는 로컬 판정 대상이 아니며 기존 LLM·허용 목록 검증을 따른다. `raw_text`는 원문을 보존한다.
 
 ## type 별 처리
 | type | 필수 | 보내는 곳 | 비고 |
@@ -41,6 +42,8 @@ LLM(FastAPI `/intent`, OpenAI structured output — ADR-0006)의 출력은 반�
 | "역삼부터 분류해" | priority | 역삼동 | null | null | "" |
 | "멈춰" / "다시 시작" | stop / resume | null | null | null | "" |
 | (질문 중) "청담동이야" | answer | 청담동 | null | null | SortState.box_id |
+| (질문 중) "대치동." | answer (로컬) | 대치동 | null | null | SortState.box_id |
+| (질문 중) "역삼으로, 보내요" | answer (로컬) | 역삼동 | null | null | SortState.box_id |
 | (질문 중) "보류해" | answer | null | HOLD | null | SortState.box_id |
 | "역삼동 지금까지 몇 개야" | query_history | 역삼동 | null | count_by_dong | — (REST) |
 | "보류 몇 개야" | query_history | null | null | held_count | — (REST) |
@@ -57,6 +60,7 @@ LLM(FastAPI `/intent`, OpenAI structured output — ADR-0006)의 출력은 반�
 - 판정: **전체 20건 중 정답 ≥ 19**. API 오류·timeout 도 분모에 넣고 따로 보고하며, API 성공 건만의 조건부 정확도는 참고로 적는다. 허용 외 입력은 100% 거부.
 
 ## 변경 이력
+- 2026-10-08: #124 로컬 단독 동·목적지 답변의 문장부호·띄어쓰기·`보내요` 처리와 ASKING 외 발행 차단을 명시. 토픽·Intent JSON 필드·메시지 스키마 변경 없음.
 - 2026-10-05: 초안.
 - 2026-10-06: SRD 상호확인 합의 반영 (#18, #52 MC-022·023·024·025, #47 별칭).
   - `type` 에 `query_history` 추가, `query_kind` 필드 추가. 이력 질의는 manager 로 보내지 않고 REST `GET /api/stats` 로 조회.
