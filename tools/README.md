@@ -10,5 +10,6 @@
   ```
   paddle 3.3 CPU 는 oneDNN 오류가 있어 도구가 `enable_mkldnn=False` 로 띄운다 (남현지)
 - `vision/eval_bag.py` — T17 녹화 bag 평가(ADR-0004): 분할 검출(`voss_vision.box_detect`) + 트래커 → 오검출·트랙·구간 검출률·지연(CPU 참고), 확인 시트, YOLO 자동 라벨 내보내기(`--export-yolo`, 음성은 앞뒤 2 s 안에 검출이 없는 프레임만). ROS Jazzy 환경에서 실행 (남현지)
+- `calib/pose_lag_eval.py` — 영상-pose 지연(box_tracker `pose_lag_ms`)과 이동 중 좌표 오차를 녹화 하나로 잰다(T21 #30, calibration.md 이동 중 검증). 박스를 세워 두고 로봇만 움직인 녹화(이동 전후 3 s 정지, +x 한 방향·두 속도면 충분)에서 box_tracker 와 같은 계산으로 lag 를 훑어 이동 프레임 RMS 가 가장 작은 값을 고르고, 진행 방향 오차의 기울기로 한 번 더 확인한다. pose 값 갱신 간격(service 0.1 s 계단, #118)도 알려 준다. 계산은 `voss_vision/pose_lag.py`(pytest). `python3 tools/calib/pose_lag_eval.py <bag> --hand-eye config/hand_eye.yaml --homography config/belt_homography.yaml [--lags=-20:150:5] [--csv out.csv]` (남현지)
 - `colab/t17_yolo_train.ipynb` — 자동 라벨로 YOLO nano 학습·이어 학습·holdout 평가·ONNX 내보내기. 입력·체크포인트·출력 경로는 팀 Drive 구조(`docs/setup/drive.md`)를 따른다 (남현지)
 - `mock/g0_mock.py` — G0 모의 상대: belt_servo 액션(`--servo`)·robot_gateway MoveToZone·stop·pose(`--robot`)·sort_logger 상태(`--log`)·박스 1개 BoxTrack·LabelRead(`--vision`). 진짜 서버·발행자가 이미 있으면 그 부분은 띄우지 않는다. 장비를 움직이지 않는다 — sort_manager 를 로봇 없이 끝까지 돌려 보는 용도 (남현지)
