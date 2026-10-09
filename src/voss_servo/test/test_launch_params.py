@@ -15,6 +15,9 @@ BASE_YAML = PKG / "config" / "belt_servo.yaml"
 EXAMPLE_YAML = PKG / "config" / "belt_servo_real.yaml.example"
 SIM_YAML = PKG / "config" / "belt_servo_sim.yaml"
 VOSS_CONFIG = REPO / "config" / "voss_config.yaml"
+# U5 PR #131 이 belt_servo.yaml·PARAM_SPECS 에 더하는 필수 키. example·sim 에 미리 넣었다 → U3·U5 어느 쪽이 먼저
+# 머지돼도 T-L12 와 sim READY 가 깨지지 않는다. #131 머지 뒤에는 base 가 이 키를 가지므로 지워도 된다.
+U5_PENDING_KEYS = {"grasp.close_time_max_s", "grasp.room_margin_mm", "gripper_timeout_s"}
 
 
 def write_params(tmp_path: Path, name: str, body: dict) -> Path:
@@ -187,11 +190,13 @@ def test_build_with_repo_files() -> None:
 
 
 def test_three_yaml_files_have_same_keys() -> None:
-    """T-L12: belt_servo.yaml = example = sim (평탄화 키 집합). U5 가 키를 더하면 여기서 알람."""
-    base = flat_keys(BASE_YAML)
-    assert flat_keys(EXAMPLE_YAML) == base
-    assert flat_keys(SIM_YAML) == base
-    assert not lp.forbidden_keys(dict.fromkeys(base))  # voss_config 몫은 셋 다 없다
+    """T-L12: example = sim = belt_servo.yaml ∪ U5 대기 키 (평탄화 키 집합). 키가 새로 생기면 여기서 알람."""
+    want = flat_keys(BASE_YAML) | U5_PENDING_KEYS  # #131 머지 전후 모두 같은 집합
+    assert flat_keys(EXAMPLE_YAML) == want
+    assert flat_keys(SIM_YAML) == want
+    assert not lp.forbidden_keys(dict.fromkeys(want))  # voss_config 몫은 셋 다 없다
+    # gripper_timeout_s 는 voss_config gripper.* 묶음이 아니다 (첫 마디가 "gripper" 가 아님)
+    assert not lp.forbidden_keys({"gripper_timeout_s": 3.0})
 
 
 def test_sim_yaml_is_ready() -> None:

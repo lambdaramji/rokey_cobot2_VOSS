@@ -25,6 +25,8 @@ setup(
     entry_points={
         "console_scripts": [
             "belt_servo = voss_servo.belt_servo:main",
+            "fake_box = voss_servo.fake_box:main",  # sim 전용 (U3)
+            "sim_check = voss_servo.sim_check:main",  # sim 전용 (U3)
         ],
     },
 )

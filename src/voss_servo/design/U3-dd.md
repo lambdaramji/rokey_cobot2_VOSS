@@ -300,6 +300,16 @@ grasp profile 은 U5 머지 뒤 실제 값으로 다시 확인한다(지금은 U
 - (A) 공용 PC 실기 기동 (G0 T7): 선행(브링업 T1·T2, gateway T4 떠 있음) · 값 파일 준비(example → `~/voss_ws/config/belt_servo_real.yaml`, null 채우기는 측정값만) · 기동 명령 한 줄(`params:=`·`log_dir:=<레포>/data/servo`) · 기대 로그(launch 요약 줄, `config_version=… config_sha256=<gateway 와 같은 12자리> params_sha256=…`, `READY` 또는 `READY 거부: missing=[…]` 과 그때 할 일) · 확인 `ros2 action list` 에 `/voss/servo/track_and_grasp` · 끄는 순서(runbook 183행: belt_servo 를 gateway 보다 먼저) · 로봇을 움직이는 명령 없음.
 - (B) 개인 PC sim: 빌드·`cd ~/cobot2/cobot2_voss` · `voss-ros ros2 run voss_servo sim_check --case all --out …` · 기대 출력 표(pre_u5 5 case) · 단계별 수동 절차(sim.launch 를 직접 띄우고 `ros2 action send_goal` 로 goal — **모든 sim 명령에 `log_dir:=/tmp/voss_sim/<이름>` 명시**) · run 폴더 구조 · 종료 코드 뜻 · U5 뒤 `--profile grasp`.
 
-## 11. 변경 기록
+## 11. 구현하며 보탠 것 (code 단계, 10/10)
+- sim_check: gateway 시작 줄(J10) 다음에 **belt_servo `READY` 줄**을 기다린다(≤ 20 s). `READY 거부` 면 그 줄을 J1 UNKNOWN 이유로 낸다(U5 뒤 sim yaml 에 키가 빠졌을 때 원인이 바로 보이게).
+- sim_check: 액션 클라이언트를 case 마다 새로 만들고 끝나면 없앤다(앞 case 의 서버 정보가 남지 않게).
+- sim_check: rclpy 기본 SIGINT 처리기를 끄고(`SignalHandlerOptions.NO`), SIGINT·SIGTERM 처리기는 **깃발만 세운다**. 기다리는 반복문(로그 줄·그래프·액션 서버·첫 박스·수락·결과)이 0.05~0.5 s 마다 깃발을 보고 `Interrupted` 를 올리면 `run_case` 의 `finally` 가 sim 을 끄고 종료 코드 2. 처음 구현(KeyboardInterrupt 로 받기)은 신호가 rclpy C 확장 안에서 들어오면 `RuntimeError` 로 바뀌어 종료 코드가 1 이 됐다(10/10 실측) → 깃발 방식으로 바꿈. 정리 중 두 번째 신호는 정리를 끊지 않는다. launch 는 새 프로세스 그룹이라 래퍼 timeout 의 그룹 신호를 직접 받지 않고, launch 에만 보낸 SIGINT 하나로 노드 셋이 `finished cleanly`(실측).
+- sim_check: SIGKILL 을 쓴 case 는 판정 표에 `J-` UNKNOWN 한 줄.
+- fake_box: 기본 시작 위치·둘째 박스 offset 을 상수(`DEFAULT_START_M`·`DEFAULT_SECOND_OFFSET_M`)로 두고 sim_check J12 가 같은 상수를 쓴다.
+- 테스트 실제 수: launch_params 13(실행 14), fake_box 7(실행 9), sim_check 10.
+- **U5 #131 키 미리 반영(사용자 승인 A안, 10/10)**: example·sim yaml 에 `grasp.close_time_max_s` 2.1·`grasp.room_margin_mm` 10·`gripper_timeout_s` 3.0 추가, example 의 hold_width 를 #131 값 39.5/43.5 로. T-L12 = "example = sim = belt_servo.yaml ∪ `U5_PENDING_KEYS`" → U3·U5 어느 쪽이 먼저 머지돼도 깨지지 않는다(#131 뒤에는 상수를 지워도 됨). main 노드는 선언 안 된 키를 무시해 READY·params_sha256 그대로(실측). 이 경우 3절 "키 집합 같음" 규칙은 이 한 가지 예외를 둔다.
+- 실행 도메인: RULES §2 배정(10/10)에 따라 이후 세션 실행은 75~79.
+
+## 12. 변경 기록
 - 2026-10-10 r1: 초안. 승인.
 - 2026-10-10 r2: 독립 재검 반영 — Include 형식(`.items()`), sim yaml log.dir /tmp, fake_box T 8 s, `--no-launch` 삭제·사전 점검 J0, emulate_tty 삭제·색 끔, SIGINT 는 launch 에만·STOP 15 s, case 시작 뒤 stamp 만 인정, J7~J9 창 제한, J11 정의 보정, J12 범위 명시, NULL 비교 노드와 같게, worst_code, U3-run 목차, U5 머지 순서 메모, 테스트 30개.
