@@ -50,8 +50,8 @@ ros2 action list | grep track_and_grasp      # READY 면 /voss/servo/track_and_g
 cd ~/cobot2/cobot2_voss
 voss-ros ros2 launch voss_servo belt_servo.launch.py params:=<example 사본> config:=$PWD/config/voss_config.yaml log_dir:=/tmp/voss_l3
 ```
-- example 그대로: `넘김 17개, null 로 뺀 키 18개` → `config_sha256=db97243ec6ef` → `READY 거부: missing=[grasp.hold_width_min_mm, …]`, `ros2 action list` 비어 있음.
-- 값을 다 채운 사본: `넘김 35개, null 로 뺀 키 0개` → `READY`, `/voss/servo/track_and_grasp` 보임, `ros2 param get /belt_servo gripper.pre_open_mm` = `Double value is: 90.0`(voss_config 의 정수 90 이 float 로), `retry.max_attempts` = Integer 1.
+- example 그대로: `넘김 22개, null 로 뺀 키 16개` → `config_sha256=db97243ec6ef` → `READY 거부: missing=[control.kp_per_s, …]`, `ros2 action list` 비어 있음. (U5 #131 머지 전 main 에서는 `경고: PARAM_SPECS 에 없는 키(노드가 무시): [grasp.close_time_max_s, grasp.room_margin_mm, gripper_timeout_s]` 한 줄도 찍힌다 — 정상)
+- 값을 다 채운 사본: `넘김 38개, null 로 뺀 키 0개` → `READY`, `/voss/servo/track_and_grasp` 보임, `ros2 param get /belt_servo gripper.pre_open_mm` = `Double value is: 90.0`(voss_config 의 정수 90 이 float 로), `retry.max_attempts` = Integer 1.
 - 값을 채운 사본의 `params_sha256=2f6b9530…` 은 같은 값을 `--params-file` 로 준 사전 실험과 같다 → launch 로 띄워도 지문이 바뀌지 않는다.
 
 ## B. 개인 PC 시뮬 — sim_check (로봇 없음)
@@ -76,7 +76,7 @@ ROS_DOMAIN_ID=75 voss-ros ros2 run voss_servo sim_check --case all --out /tmp/vo
 | invalid | 6 / STALE_INPUT | BOX_INVALID | [PREPARE] | 15~16틱 0.50~0.53 s | 33.3 ms | 1회 0.71~0.76 s | 1 | |
 | cancel | 5 / CANCELED | STOP_OK | [PREPARE] | 15~16틱 0.50~0.53 s | 33.3 ms | 1회 0.71~0.76 s | 2 | stop 1 → OK |
 | normal | 6 / OUT_OF_REACH | REACH_X_MAX | [PREPARE] | 15~16틱 0.50~0.53 s | 33.3 ms | 1회 0.71~0.76 s | 1 | J11 439~445틱 위반 0 |
-| two_boxes | 6 / OUT_OF_REACH | REACH_X_MAX | [PREPARE] | 15~16틱 0.50~0.53 s | 33.3 ms | 1회 0.71~0.76 s | 1 | J12 최대 0.00 mm (둘째 박스 track 2 도 발행됨 — topic echo 로 확인) |
+| two_boxes | 6 / OUT_OF_REACH | REACH_X_MAX | [PREPARE] | 15~16틱 0.50~0.53 s | 33.3 ms | 1회 0.71~0.76 s | 1 | J12 최대 0.00 mm (track 1·2 둘 다 30 Hz 발행 — depth 10 구독자로 확인. depth 1 구독자는 같은 틱의 앞 건이 덮여 track 1 이 거의 안 보인다, belt_servo 는 depth 5) |
 
 끝에 요약 표, 종료 코드 0. `--profile grasp --case normal` 은 지금(U5 전) **종료 코드 1**(J1·J2·J3 ❌)이 정상이다 — 도구가 실패를 잡는지 확인한 결과.
 
@@ -95,6 +95,7 @@ voss-ros ros2 action send_goal --feedback /voss/servo/track_and_grasp voss_msgs/
 ```
 - **모든 sim 명령에 `log_dir:=/tmp/voss_sim/<이름>` 을 준다**(안 주면 sim yaml 의 `/tmp/voss_sim/servo`).
 - dry_run 가짜 로봇은 goal 뒤 제자리에 남는다 → 다음 시험 전에 launch 를 끄고 다시 띄운다.
+- **goal 은 launch 뒤 5 s 안에 보낸다.** fake_box 는 기동 순간부터 박스를 움직인다. goal 이 늦으면(약 7 s 이상) 박스가 멀리 앞서 P 항이 포화(0.08 m/s)되고, gateway 가 `x + v²/2a ≥ 638`(80 mm/s 면 606 mm)에서 vx 를 0 으로 자르는데 가짜 로봇은 램프 없이 그 자리에 서서 belt_servo 의 x_max 620 에 영영 닿지 못한다 → goal 이 PREPARE 에서 끝나지 않는다(gateway 통계에 `자름 {'x_max': …}` 가 계속 찍힘). 그렇게 되면 cancel 하고 launch 를 다시 띄운다. sim_check 는 박스가 오자마자(기동 뒤 1 s 안) goal 을 보내므로 해당 없다. 실로봇은 감속 램프로 638 근처까지 가므로 이 정지는 dry_run 에서만 생긴다(10/10 독립 재검 실측).
 - scenario 는 `normal | invalid_after_s | lost_after_s | two_boxes`, 빈손은 `object_mm:=0`, kp 는 `kp:=<값>`.
 
 ### B.6 U5 뒤

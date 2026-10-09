@@ -764,7 +764,8 @@ def main(argv: list[str] | None = None) -> None:
         rclpy.try_shutdown()
     print("== 요약 ==\n| case | 종료 코드 | run 폴더 |\n|---|---|---|")
     for name, code in codes.items():
-        print(f"| {name} | {code} | {os.path.join(out_root, name)} |")
+        folder = os.path.join(out_root, name) if name in CASES else "-"  # 중단 행은 폴더 없음
+        print(f"| {name} | {code} | {folder} |")
     sys.exit(worst_code(list(codes.values())))
 
 

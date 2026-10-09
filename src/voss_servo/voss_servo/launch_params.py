@@ -160,9 +160,17 @@ def config_values(cfg_doc: dict[str, Any], sha: str) -> dict[str, Any]:
 
 
 def _section_from(path: Any) -> tuple[dict[str, Any], list[str]]:
-    """belt_servo 파라미터 YAML 하나 → (넘길 값, null 이라 뺀 키)."""
+    """belt_servo 파라미터 YAML 하나 → (넘길 값, null 이라 뺀 키). voss_config 몫 키가 있으면 오류.
+
+    규칙 5 검사는 null 을 지우기 전에 한다 (belt.speed_cmps: null 처럼 값이 비어도 잘못 쓴 키다).
+    """
     doc = load_yaml(path)
     flat = flatten(node_section(doc, NODE_NAME, expand(path)))
+    bad = forbidden_keys(flat)
+    if bad:
+        raise LaunchParamsError(
+            f"voss_config 키가 있다(규칙 5): {expand(path)} {bad} — 지우기 (launch 가 voss_config 에서 넘김)"
+        )
     return drop_unset(flat)
 
 
@@ -182,11 +190,7 @@ def build_params(
         values.update(over)  # 같은 키는 덮어쓰고, 새 키는 더한다
         # 값을 받은 키는 뺀 키가 아니다
         dropped = sorted((set(dropped) | set(over_dropped)) - set(over))
-    bad = forbidden_keys(values)  # ③ 규칙 5
-    if bad:
-        raise LaunchParamsError(
-            f"params/overrides 에 voss_config 키가 있다(규칙 5): {bad} — 지우기"
-        )
+    # ③ 규칙 5(voss_config 키 금지)는 _section_from 이 파일마다 null 제거 전에 검사했다
     if log_dir:  # ④ 로그 폴더
         values["log.dir"] = expand(log_dir)
     elif isinstance(values.get("log.dir"), str) and not os.path.isabs(values["log.dir"]):

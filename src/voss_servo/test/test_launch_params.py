@@ -87,9 +87,12 @@ def test_overrides_replace_add_and_clear_dropped(tmp_path: Path) -> None:
     assert "control.kp_per_s" not in res.dropped
 
 
-@pytest.mark.parametrize("bad", [{"belt": {"speed_cmps": 5.0}}, {"config_version": 2}])
+@pytest.mark.parametrize(
+    "bad",
+    [{"belt": {"speed_cmps": 5.0}}, {"config_version": 2}, {"belt": {"speed_cmps": None}}],
+)
 def test_voss_config_keys_in_params_rejected(tmp_path: Path, bad: dict) -> None:
-    """T-L4: params 에 voss_config 몫 키가 있으면 launch 를 멈춘다 (규칙 5)."""
+    """T-L4: params 에 voss_config 몫 키가 있으면 launch 를 멈춘다 (규칙 5, 값이 null 이어도)."""
     path = write_params(tmp_path, "p.yaml", {"rate_hz": 30.0, **bad})
     with pytest.raises(lp.LaunchParamsError, match="규칙 5"):
         lp.build_params(path, small_config(tmp_path))
