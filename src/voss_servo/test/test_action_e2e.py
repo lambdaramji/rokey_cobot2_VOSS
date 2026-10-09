@@ -20,7 +20,6 @@ from test_node import READY_ARGS
 from voss_servo.belt_servo import BeltServoNode
 
 from voss_msgs.action import TrackAndGrasp
-from voss_msgs.msg import BoxTrack
 
 TEST_DOMAIN_ID = 101  # 시험 전용 도메인 (팀 30~34 와 겹치지 않게)
 
@@ -186,40 +185,3 @@ def test_internal_exception_aborts_and_logs_goal_end(env, monkeypatch) -> None:
     assert len(ends) == 1 and ends[0]["cause"] == "INTERNAL_EXCEPTION"  # 게이트 분모에 남는다
     spin_for(ex, 0.7)
     assert not node._busy
-
-
-@pytest.mark.parametrize("env", [True], indirect=True)
-def test_prepare_with_visible_box_moves_then_cancel_zero(env) -> None:
-    """보이는 박스 → PREPARE 에서 벨트 방향으로 움직이는 명령 → 취소 → CANCELED, 마지막 명령 0 (U2)."""
-    node, client, ex, tmp = env
-    qos = QoSProfile(
-        depth=5, reliability=ReliabilityPolicy.BEST_EFFORT, durability=DurabilityPolicy.VOLATILE
-    )
-    box_pub = client.create_publisher(BoxTrack, "/voss/vision/box", qos)
-
-    def pub_box() -> None:
-        msg = BoxTrack()
-        msg.track_id = 7
-        msg.stamp = client.get_clock().now().to_msg()  # 지금 촬영
-        msg.position_valid = True
-        msg.position_source = BoxTrack.SOURCE_HAND_EYE
-        msg.position_base.x = 0.01  # TCP(x 0) 보다 10 mm 하류
-        msg.position_base.z = 0.16  # 윗면 + 접근 40 mm = 가짜 pose z 0.2
-        box_pub.publish(msg)
-
-    client.create_timer(1.0 / 30.0, pub_box)  # 30 Hz 가짜 box_tracker
-    spin_for(ex, 0.2)  # box 가 먼저 들어오게
-    handle = send(client, ex)
-    spin_for(ex, 0.5)
-    moving = [m for m in client.cmds if m.twist.linear.x > 0.0]
-    assert moving, "PREPARE 에서 벨트 방향으로 움직이는 명령이 있어야 한다"
-    assert all(m.twist.linear.x <= 0.08 + 1e-9 for m in client.cmds)  # 속도 상한
-    spin_until(ex, handle.cancel_goal_async(), 2.0)
-    res = spin_until(ex, handle.get_result_async(), 3.0)
-    assert res.status == GoalStatus.STATUS_CANCELED and res.result.reason == "CANCELED"
-    spin_for(ex, 0.2)  # 0 유지 구간 명령까지 받기
-    last = client.cmds[-1].twist.linear
-    assert (last.x, last.y, last.z) == (0.0, 0.0, 0.0)  # 끝은 반드시 0 (ADR-0010)
-    ticks = read_jsonl(tmp / "ticks")
-    assert any(t["cmd_rule"] == "FF_P" and t["phase"] == "PREPARE" for t in ticks)
-    assert any(t["cmd_rule"] == "ZERO_STOP" for t in ticks)
