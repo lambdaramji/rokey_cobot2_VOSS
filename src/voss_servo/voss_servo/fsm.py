@@ -3,7 +3,7 @@
 - phase 이름·reason 7종·grasped 의미: src/voss_msgs/action/TrackAndGrasp.action, docs/interfaces/voss_msgs.md
 - GRASP → LIFT = 닫힘 완료 응답 + grip_detected + 보고폭 범위. 닫힘만으로는 LIFT 하지 않는다.
 - 비전 사각 구간: 카메라가 공구축 옆이라 낮은 높이·GRASP·LIFT·VERIFY 에서는 박스가 안 보인다.
-- 설계: src/voss_servo/design/U1-dd.md 2절 (전이표 1~17).
+- 설계: src/voss_servo/design/U1-dd.md 2절 (전이표 1~17), U5-dd.md 2절 (11b x 여유).
 """
 
 from __future__ import annotations
@@ -31,6 +31,9 @@ OUT_OF_REACH = "OUT_OF_REACH"
 STALE_INPUT = "STALE_INPUT"
 DEVICE_ERROR = "DEVICE_ERROR"
 CANCELED = "CANCELED"
+
+# --- cause (로그용 세부 원인) ---
+REACH_GRASP_ROOM = "REACH_GRASP_ROOM"  # 정렬됐지만 하강·닫힘 동안 x 끝에 닿는다 (U5 HLD D6)
 
 # --- 노드에게 시키는 행동 ---
 GRIPPER_OPEN = "GRIPPER_OPEN"
@@ -90,7 +93,8 @@ class TickEvent:
     aligned: bool = False  # U2 가 채움
     at_grasp_height: bool = False  # U2 가 채움
     at_lift_height: bool = False  # U2 가 채움
-    gripper: GripperReply | None = None  # U5 가 채움 (현재 goal·attempt 응답만)
+    gripper: GripperReply | None = None  # 지금 기다리던 호출의 응답 (U5, message = 코드)
+    grasp_room: bool = True  # 정렬 순간 하강·닫힘을 끝낼 x 여유가 있나 (U5). 기본 = 있음
 
 
 @dataclass(frozen=True)
@@ -237,6 +241,8 @@ def _advance(
     if phase == PREPARE and ev.gripper is not None:
         return Transition(state=replace(state, phase=TRACK))  # 개방 완료 (실패는 5번에서 끝남)
     if phase == TRACK and ev.aligned:
+        if not ev.grasp_room:  # 내려가 닫는 동안 x 끝에 닿는다 → 들어가지 않는다 (11b)
+            return _end(state, OUT_OF_REACH, REACH_GRASP_ROOM)
         return Transition(state=replace(state, phase=DESCEND))
     if phase == DESCEND and ev.at_grasp_height:
         nxt = replace(state, phase=GRASP, attempts=state.attempts + 1)  # 시도 1회 시작

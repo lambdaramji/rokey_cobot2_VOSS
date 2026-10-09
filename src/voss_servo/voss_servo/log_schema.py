@@ -67,7 +67,7 @@ TICK_FIELDS: tuple[str, ...] = (
     "reason",
     "cause",
     "grasped",
-    "gripper",  # null | {ok, width_actual_mm, grip_detected, message}
+    "gripper",  # null | 그리퍼 호출 기록 dict (키 목록은 grip.call_record, design/U5-dd.md 4절)
     "config_version",
     "config_sha256",
     "params_sha256",
