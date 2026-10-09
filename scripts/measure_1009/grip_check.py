@@ -12,7 +12,7 @@ RG2 만 움직인다(/voss/robot/gripper — robot_gateway 경유, 두산·RG2 �
     python3 grip_check.py --offset 10 --n 3    # 박스 중심을 핑거 중심에서 벨트 방향(X)으로 10 mm 어긋나게 둔 회차
 
 회차마다: Enter → 닫기(width·force) → 보고 폭·grip_detected → 사람이 찌그러짐·미끄러짐 입력 → 90 mm 열기.
-기록: ~/voss_data/<실행 MMDD>/grip/grip_HHMMSS.csv. 판정 기준(ADR-0009·measurements #8): grip_detected=True,
+기록: ~/voss_data/<실행 MMDD>/grip/grip_HHMMSS.csv. 판정 기준(ADR-0009·measurements-1006 #8·measurements-1008 #14): grip_detected=True,
 보고 폭 40~44 mm(박스 31 mm 면 → 보고 40.7~43.0, 10/08), 찌그러짐·미끄러짐 없음.
 """
 

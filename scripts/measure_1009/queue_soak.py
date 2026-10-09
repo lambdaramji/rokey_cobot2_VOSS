@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""T32(#41) 완료 기준 "move_line 큐 30분 무정지"(10/08 PL 승인, 원래 1시간) — MoveToZone 을 돌려 가며 gateway 큐를 지켜본다.
+"""T32(#41) 완료 기준 "move_line 큐 30분 무정지"(10/09 PL 승인 #123 리뷰, 원래 1시간) — MoveToZone 을 돌려 가며 gateway 큐를 지켜본다.
 
 ⚠ 로봇이 계속 움직인다. 실로봇: 사람이 비상정지 옆에서 끝까지. 두산은 부르지 않는다(robot_gateway 만 — 절대 규칙 3). 빈손.
 실행 전제(18:26 사고, #123 리뷰 남현지):
@@ -33,6 +33,7 @@ from pathlib import Path
 
 import rclpy
 from geometry_msgs.msg import PoseStamped
+from rcl_interfaces.msg import ParameterType
 from rcl_interfaces.srv import GetParameters
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
@@ -139,6 +140,15 @@ class Soak(Node):
         r = self._wait(self.stop.call_async(Trigger.Request()), 6.0)
         print(f"{why} → /voss/robot/stop {r.message if r else 'NO_RESPONSE'}", flush=True)
 
+    def has_param(self, name: str) -> bool | None:
+        """gateway 에 파라미터가 선언돼 있나 (None = 파라미터 서비스 응답 없음)."""
+        req = GetParameters.Request()
+        req.names = [name]
+        r = self._wait(self.params.call_async(req), 3.0)
+        if not r or not r.values:
+            return None
+        return r.values[0].type != ParameterType.PARAMETER_NOT_SET
+
     def zone_vel(self) -> str:
         """gateway 파라미터 zone_vel [선 mm/s, 각 deg/s] (기록용)."""
         req = GetParameters.Request()
@@ -177,6 +187,12 @@ def preflight(n: Soak) -> str:
         return "/voss/robot/state 를 3 s 동안 못 받음"
     if not s.connected or s.state not in ("READY", "STOPPED"):
         return f"RobotState {s.state} connected={s.connected} ({s.detail})"
+    # #121 없는 gateway 는 TCP 문구를 아예 내지 않아 아래 검사를 통과한다 → #121 파라미터로 빌드를 확인
+    tcp_check = n.has_param("zone_tcp_check_tol_mm")
+    if tcp_check is None:
+        return "gateway 파라미터를 못 읽음(/robot_gateway/get_parameters)"
+    if not tcp_check:
+        return "gateway 에 #121(컨트롤러 TCP 확인)이 없다 — main 으로 빌드한 gateway 를 띄운다"
     if any(b in s.detail for b in TCP_BAD):
         return (
             f"컨트롤러 TCP 가 GripperDA_v1 이 아님: {s.detail} — 펜던트에서 선택 후 gateway 재기동"
