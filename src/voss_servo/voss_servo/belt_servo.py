@@ -13,6 +13,7 @@
 
 from __future__ import annotations
 
+import signal
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -25,6 +26,7 @@ from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
+from rclpy.signals import SignalHandlerOptions
 from rclpy.task import Future
 from std_srvs.srv import Trigger
 
@@ -721,12 +723,28 @@ class BeltServoNode(Node):
         except Exception as exc:
             self.get_logger().error(f"GOAL_END 스냅샷 기록 실패: {exc!r}")
 
+    def _finish_on_shutdown(self) -> None:
+        """진행 중인 goal 을 cause NODE_SHUTDOWN 으로 끝낸다 (reason 은 계약 7종 중 DEVICE_ERROR).
+
+        이렇게 하지 않으면 노드가 내려가며 실행 코루틴이 정리될 때 INTERNAL_EXCEPTION 으로 남아
+        게이트 로그에서 진짜 내부 오류와 구분되지 않는다 (10/09 SIGINT 스모크).
+        """
+        ctx = self._ctx
+        if ctx is None or ctx.done.done():
+            return
+        try:
+            self._finish(ctx, fsm.DEVICE_ERROR, "NODE_SHUTDOWN", False, self._now())
+        except Exception as exc:  # 종료 경로는 계속 간다 (0 발행이 더 중요)
+            self.get_logger().error(f"종료 중 goal 정리 실패: {exc!r}")
+
     def destroy_node(self) -> None:
         """종료: 0 을 한 번 보내고(best-effort) 파일을 닫는다.
 
-        프로세스가 죽거나 Ctrl+C 로 컨텍스트가 먼저 내려가면 0 이 나가지 않을 수 있다.
-        그때의 정지는 robot_gateway watchdog 책임이다 (ADR-0010 조건 2·리스크).
+        Ctrl+C·SIGTERM 은 main() 이 context 를 살려 둔 채 여기로 오게 한다(0 이 실제로 나간다).
+        프로세스가 강제로 죽으면(SIGKILL 등) 0 이 나가지 않으므로 그때의 정지는
+        robot_gateway watchdog 책임이다 (ADR-0010 조건 2·리스크).
         """
+        self._finish_on_shutdown()  # goal 중이면 원인을 남기고 끝낸다 (로그 파일이 열려 있을 때)
         if self.ready:
             self._safe_zero()  # READY 가 아니면 한 번도 발행하지 않았으므로 보낼 것도 없다
         self._tick_log.close()
@@ -734,8 +752,18 @@ class BeltServoNode(Node):
         super().destroy_node()
 
 
+def _raise_interrupt(signum: int, frame: Any) -> None:
+    """SIGTERM 도 Ctrl+C 와 같은 정리 경로로 보낸다 (ros2 launch 는 SIGINT 뒤 SIGTERM 을 보낸다)."""
+    raise KeyboardInterrupt
+
+
 def main(args: list[str] | None = None) -> None:
-    rclpy.init(args=args)
+    # rclpy 기본 시그널 처리기(ALL)는 Ctrl+C·SIGTERM 때 context 를 먼저 내려 버려서
+    # destroy_node 의 마지막 0 발행이 "context is invalid" 로 실패했다 (10/09 U2 스모크에서 발견).
+    # → 처리기를 끄고 KeyboardInterrupt 로 받아, context 가 살아 있을 때 0 을 먼저 보낸다.
+    #   30 Hz 타이머가 대기를 깨우므로 신호는 늦어도 한 틱(33 ms) 안에 처리된다.
+    rclpy.init(args=args, signal_handler_options=SignalHandlerOptions.NO)
+    signal.signal(signal.SIGTERM, _raise_interrupt)
     node = BeltServoNode()
     try:
         rclpy.spin(node)  # 단일 executor (DEC-14)

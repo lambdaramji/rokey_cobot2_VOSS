@@ -227,3 +227,27 @@ def test_nan_pose_value_gives_no_pose_zero(ready_node) -> None:
     n._tick_goal(ctx, n._now())
     assert ctx.geo is None and ctx.cmd.rule == control.ZERO_NO_POSE
     assert not np.any(ctx.cmd.vel)
+
+
+def test_shutdown_mid_goal_logs_node_shutdown(ready_node, tmp_path) -> None:
+    """goal 중 종료 → GOAL_END cause NODE_SHUTDOWN (INTERNAL_EXCEPTION 과 구분), 결과 봉투도 채워진다."""
+    import json
+
+    from voss_servo.belt_servo import GoalCtx
+
+    from voss_servo import fsm
+
+    n = ready_node
+    now = n._now()
+    state, _ = fsm.start()
+    ctx = GoalCtx(FakeHandle(), "g1", 7, state, start=now, vision_since=now)
+    n._ctx = ctx
+    n._finish_on_shutdown()
+    assert ctx.done.done() and ctx.done.result() == (False, fsm.DEVICE_ERROR, 0)
+    n._finish_on_shutdown()  # 두 번 불러도 안전 (이미 끝난 goal)
+    ends = [
+        json.loads(line)
+        for f in (tmp_path / "attempts").iterdir()
+        for line in f.read_text().splitlines()
+    ]
+    assert [e["cause"] for e in ends if e["event"] == "GOAL_END"] == ["NODE_SHUTDOWN"]
