@@ -6,4 +6,4 @@
 - 실로봇 실행은 사람이. Claude 는 코드와 실행 명령만.
 - 게이트 10/10: 20회 중 14회. 시도별 로그(성공/실패/원인) 는 `data/` 에, 집계만 ADR-0002 에.
 - 두산 경로 speedl_stream(ADR-0010), 실측 measurements-1006 #3.
-- 설계 노트: 결정 카드는 DESIGN.md, 단위별 설계(HLD · DD · pseudo)는 design/U1-{hld,dd,pseudo}.md.
+- 설계 노트: 결정 카드는 DESIGN.md, 단위별 설계(HLD · DD · pseudo)는 design/U1-{hld,dd,pseudo}.md · design/U2-{hld,dd,pseudo}.md · design/U3-{hld,dd,pseudo,run}.md(#132) · design/U5-{hld,dd,pseudo}.md(#131).
