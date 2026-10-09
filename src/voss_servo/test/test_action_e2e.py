@@ -2,10 +2,11 @@
 
 로봇·다른 프로세스 없음. 가짜 pose(50 Hz, 선택: 받은 servo_cmd 적분)·가짜 박스·가짜 stop 서비스는
 같은 executor, 가짜 그리퍼(응답 지연 흉내)는 별도 스레드 executor 에 둔다 (design/U5-dd.md E11).
-다른 기기·사람의 노드와 섞이지 않게 전용 도메인을 쓴다.
+다른 기기·세션의 노드와 섞이지 않게 실행별 도메인(150 + pid % 70)을 쓴다.
 """
 
 import json
+import os
 import threading
 import time
 
@@ -26,7 +27,8 @@ from voss_msgs.action import TrackAndGrasp
 from voss_msgs.msg import BoxTrack
 from voss_msgs.srv import Gripper
 
-TEST_DOMAIN_ID = 101  # 시험 전용 도메인 (팀 30~34 와 겹치지 않게)
+# 실행별 도메인 (RULES §2, 2026-10-10): 같은 PC 의 다른 세션·사용자 노드와 섞이지 않게 (고정값 금지)
+TEST_DOMAIN_ID = 150 + os.getpid() % 70
 BELT_V = (0.048 * 0.99992, 0.048 * -0.01292, 0.0)  # 벨트 속도 m/s (READY_ARGS 와 같은 방향·크기)
 BOX_TOP_Z = 0.16  # 박스 윗면 z — 접근 +40 mm = 가짜 pose 시작 z 0.2
 
@@ -207,7 +209,7 @@ def spin_until(ex, fut, timeout: float):
     end = time.monotonic() + timeout
     while not fut.done() and time.monotonic() < end:
         ex.spin_once(timeout_sec=0.02)
-    assert fut.done(), "시간 초과"
+    assert fut.done(), f"시간 초과 {timeout} s (domain={TEST_DOMAIN_ID})"
     return fut.result()
 
 
@@ -215,7 +217,7 @@ def spin_until_true(ex, cond, timeout: float) -> None:
     end = time.monotonic() + timeout
     while not cond() and time.monotonic() < end:
         ex.spin_once(timeout_sec=0.02)
-    assert cond(), "조건 시간 초과"
+    assert cond(), f"조건 시간 초과 {timeout} s (domain={TEST_DOMAIN_ID})"
 
 
 def send(client, ex, track_id: int = 7):

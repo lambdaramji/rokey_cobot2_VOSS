@@ -1,5 +1,7 @@
 """belt_servo 노드를 프로세스 안에서 만들어 보는 시험 (spin 없이, 로봇·다른 노드 없음)."""
 
+import os
+
 import numpy as np
 import pytest
 import rclpy
@@ -11,12 +13,16 @@ from voss_servo.belt_servo import BeltServoNode
 from voss_msgs.action import TrackAndGrasp
 from voss_msgs.msg import BoxTrack
 
+# 실행별 도메인 (RULES §2, 2026-10-10): 같은 PC 의 다른 세션·사용자 노드와 섞이지 않게.
+# 고정값·환경 변수에 기대지 않는다 (예: 남이 /voss/robot/gripper 를 띄워 두면 '서비스 없음' 시험이 깨진다)
+TEST_DOMAIN_ID = 150 + os.getpid() % 70
+
 
 @pytest.fixture
 def node(tmp_path):
     """파라미터 없이 띄운 노드 (로그는 임시 폴더로)."""
     args = ["--ros-args", "-p", f"log.dir:={tmp_path}"]  # log.dir 만 주고 나머지는 미전달
-    rclpy.init(args=args)
+    rclpy.init(args=args, domain_id=TEST_DOMAIN_ID)
     n = BeltServoNode()
     yield n
     n.destroy_node()
@@ -132,7 +138,7 @@ def ready_node(tmp_path):
     args = ["--ros-args", "-p", f"log.dir:={tmp_path}"]
     for item in READY_ARGS:
         args += ["-p", item]
-    rclpy.init(args=args)
+    rclpy.init(args=args, domain_id=TEST_DOMAIN_ID)
     n = BeltServoNode()
     yield n
     n.destroy_node()
@@ -163,7 +169,8 @@ def test_ready_node_tick_and_hold_logs_match_schema(ready_node) -> None:
 
 @pytest.mark.parametrize("bad_rate", ["abc", "-5.0"])
 def test_bad_rate_does_not_crash_startup(tmp_path, bad_rate) -> None:
-    rclpy.init(args=["--ros-args", "-p", f"log.dir:={tmp_path}", "-p", f"rate_hz:={bad_rate}"])
+    args = ["--ros-args", "-p", f"log.dir:={tmp_path}", "-p", f"rate_hz:={bad_rate}"]
+    rclpy.init(args=args, domain_id=TEST_DOMAIN_ID)
     try:
         n = BeltServoNode()  # 예외 없이 READY 거부 상태로 떠야 한다
         assert not n.ready and n._action is None
