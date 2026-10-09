@@ -148,3 +148,40 @@ def clamp_speed(v: Sequence[float], vmax: float) -> list[float]:
 def in_box(xyz: Sequence[float], lo: Sequence[float], hi: Sequence[float]) -> bool:
     """점이 축 정렬 상자 [lo, hi] 안에 있는가 (작업 영역 리밋)."""
     return all(lo[i] <= xyz[i] <= hi[i] for i in range(3))
+
+
+def segment_distance_mm(a: Sequence[float], b: Sequence[float], p: Sequence[float]) -> float:
+    """점 p 와 선분 a–b 사이 거리(mm, xyz). move_line 은 TCP 가 직선으로 가므로 여기서 벗어나면 이상이다."""
+    d = [b[i] - a[i] for i in range(3)]
+    n2 = sum(c * c for c in d)
+    t = 0.0 if n2 == 0.0 else max(0.0, min(1.0, sum((p[i] - a[i]) * d[i] for i in range(3)) / n2))
+    return math.dist([a[i] + t * d[i] for i in range(3)], p[:3])
+
+
+def tcp_mismatch_mm(
+    ctrl_tcp: Sequence[float], flange: Sequence[float], tcp_offset_mm: Sequence[float]
+) -> float:
+    """컨트롤러가 보는 TCP 위치(get_current_posx, 등록 TCP 기준)와 플랜지 + voss_config 오프셋의 거리(mm).
+
+    move_line·ikin 은 컨트롤러 등록 TCP 기준이라 이 값이 크면 gateway 가 보낸 TCP 좌표가 엉뚱한 곳이 된다.
+    등록이 풀리면(브링업마다 풀린다, measure_1006 README) 툴 길이(≈ 247 mm)만큼 나온다(10/08 18:26 수직 하강).
+    """
+    return math.dist(ctrl_tcp[:3], flange_to_tcp(flange, tcp_offset_mm)[:3])
+
+
+def controller_tcp_offset(
+    ctrl_tcp: Sequence[float],
+    flange: Sequence[float],
+    tcp_offset_mm: Sequence[float],
+    tol_mm: float,
+) -> tuple[list[float] | None, float, float]:
+    """컨트롤러 등록 TCP 가 voss_config 오프셋이면 그 오프셋, 등록이 없으면(= 플랜지) 0, 둘 다 아니면 None.
+
+    move_line·ikin 에 보낼 좌표 기준을 정한다. 두 번째·세 번째 값은 voss_config·플랜지와의 거리(mm)."""
+    d_cfg = tcp_mismatch_mm(ctrl_tcp, flange, tcp_offset_mm)
+    d_none = tcp_mismatch_mm(ctrl_tcp, flange, [0.0, 0.0, 0.0])
+    if d_cfg <= tol_mm:
+        return [float(v) for v in tcp_offset_mm], d_cfg, d_none
+    if d_none <= tol_mm:
+        return [0.0, 0.0, 0.0], d_cfg, d_none
+    return None, d_cfg, d_none

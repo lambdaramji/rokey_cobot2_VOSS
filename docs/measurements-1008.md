@@ -62,6 +62,14 @@
 - 로봇을 박스 위로 내려 터치하던 중 `usb 2-2 disconnect`. 케이블 당김·접점 의심. 카메라 노드만 다시 띄우자 box_tracker 는 그대로 30 Hz, 트랙은 새 번호로 다시 잡힘(정상), 좌표 같음. 10/07 의 "카메라 0 Hz 멈춤" 도 같은 원인일 수 있다.
 - 조치: 케이블을 손목에 여유 고리로 고정, `lsusb -t` 로 5000M(USB 3) 확인 — **완료(김학민 11:37: Bus 002 5000M, 팔에 고정)**. sort_manager 는 box_tracker 노드 존재만 보므로 카메라가 멈춰도 VISION 준비로 남는다 → box_tracker 가 25 Hz 밑이면 WARN(#95), G0 점검표에 5초 로그 Hz 확인.
 
+## 사건: MoveToZone OBSERVE 수직 하강 — 벨트 충돌 직전 비상정지 (18:26)
+- 상황: 브링업을 새로 켠 뒤(18:24) gateway(`zone_vel_mm_s:=30`)로 홈 자세에서 `OBSERVE` 이동 → 로봇이 x·y 그대로 **수직으로 계속 내려가** 벨트에 닿기 직전 비상정지(시작 후 5.9 s, ≈ 170 mm). gateway 로그는 `over 도착 안 함` TIMEOUT 뿐.
+- 원인: 컨트롤러 툴·TCP 등록이 **비어 있었다**(`tcp/get_current_tcp` info='', gateway 측정 247 mm 차). gateway 는 OBSERVE(플랜지 z 450.2)를 TCP 좌표(z 203.6)로 바꿔 move_line 에 보내는데, 등록이 없으면 컨트롤러가 이를 **플랜지** 목표로 받아 246.6 mm 수직 하강이 된다. 도착 판정은 config 오프셋 TCP 로 봐서 목표에서 멀어지는 걸 모르고 기다렸고(제한 8 s → 비상정지 없으면 ≈ 240 mm), 실패해도 move_stop 을 보내지 않았다.
+- 등록이 언제 풀렸나: **확인 필요.** 15:52·17:26·18:01 브링업 뒤에는 MoveToZone 이 정상(등록 유지)이었고 브링업 로그(권한·상태)는 18:24 와 같다 → 브링업 재시작 자체가 아니라 18:01~18:24 사이 다른 일(컨트롤러 재부팅·펜던트 조작 등). ROS `tcp/set_current_tcp`(GripperDA_v1)·`tcp/config_create_tcp` 는 자동 모드에서 `success=False`.
+- 조치(#41, PR #121): ① MoveToZone 마다 `get_current_posx`(등록 TCP)를 플랜지와 비교 — 등록 = `tcp_offset_mm` 이면 TCP 좌표, **등록 없음이면 플랜지 좌표로 명령**, 둘 다 아니면 `NOT_CONFIGURED` ② 이동 중 TCP 가 단계 직선에서 15 mm 벗어나면 move_stop + `LIMIT` ③ 이동 시작 뒤 실패·gateway 종료 때 move_stop. 실기(19:26, 등록 없음): 기동 ERROR 로그·OBSERVE `NOT_CONFIGURED … 247 mm`, 로봇 정지 그대로(①의 첫 판, 거부만 하던 버전).
+- 복구 확인(20:03): 펜던트 강제회수 → 툴·TCP GripperDA_v1 선택 → 제어권 반환 → `tcp/get_current_tcp` = `'GripperDA_v1'`, gateway 기동 `컨트롤러 TCP 등록 voss_config 와 같음 (차 0.0 mm)`, OBSERVE OK·**A 칸 1 PLACE OK 47.5 s**(30 mm/s), pose (−14.49, −276.54, 203.58) mm. 브링업 재시작 없이 제어권이 돌아왔다. 등록 없음 상태(19:39 플랜지 모드, A 칸 1 47.0 s)와 같은 결과.
+- **남은 위험 — 펜던트 공간 제한:** 제한은 등록 TCP 기준이라 등록이 없으면 플랜지를 막는다(핑거 끝은 247 mm 아래). G0 공간 제한(#119)을 믿으려면 컨트롤러 TCP 를 GripperDA_v1 로 되돌리고, 제한 근처로 jog 해 핑거 끝 높이에서 서는지 확인해야 한다.
+
 ## 기타
 - ros2 CLI 데몬이 오래된 그래프를 들고 있으면 토픽이 안 보인다 → 도메인·오버레이를 바꾼 뒤에는 `--no-daemon` 또는 `ros2 daemon stop`.
 - 공용 PC `~/voss_ws/install` 의 voss_msgs 는 #92(RobotState) 이전 — sort_manager 확인은 `~/voss_sm_ws` 오버레이(local_setup.bash)로 했다. 게이트웨이를 main 으로 다시 빌드할 때 함께 맞춘다.

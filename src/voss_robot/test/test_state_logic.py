@@ -55,3 +55,10 @@ def test_estop_wins_over_others():
 def test_alarm_only_in_detail():
     s = decide(ok(last_alarm="2/2/1206 NOT REACHABLE"))
     assert s.error_code == "" and "1206" in s.detail
+
+
+def test_tcp_note_in_detail():
+    """컨트롤러 TCP 등록이 없을 때(플랜지 모드) detail 에 보인다(#121)."""
+    note = "TCP 등록 없음(플랜지 모드 — 펜던트 공간 제한이 핑거 끝을 못 막음)"
+    st = decide(ok(tcp_note=note))
+    assert note in st.detail and st.state == "READY"
