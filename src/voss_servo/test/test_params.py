@@ -42,7 +42,7 @@ def valid_values() -> dict:
         "z.lift_speed_mps": 0.08,
         "z.height_tol_mm": 2.0,
         "input.pose_lag_ms": 60.0,
-        "input.pose_extrap_max_ms": 120.0,
+        "input.pose_extrap_max_ms": 200.0,
         "input.blind_entry_max_age_s": 0.15,
     }
 
@@ -172,7 +172,7 @@ def test_u2_null_keys_are_missing() -> None:
 def test_pose_lag_zero_is_allowed() -> None:
     values = valid_values()
     values["input.pose_lag_ms"] = 0.0  # 0 = 보정 없음 (유효)
-    values["input.pose_extrap_max_ms"] = 20.0  # ≥ 0 + 20
+    values["input.pose_extrap_max_ms"] = 120.0  # ≥ 0 + 120
     assert check_params(values).ready
 
 
@@ -213,9 +213,9 @@ def test_lift_over_max_speed_rejected() -> None:  # 검사 5
 
 def test_extrap_max_below_lag_plus_period_rejected() -> None:  # 검사 6
     values = valid_values()
-    values["input.pose_extrap_max_ms"] = 79.0  # 60 + 20 = 80 미만
+    values["input.pose_extrap_max_ms"] = 179.0  # 60 + 120 = 180 미만 (값 0.1 s 갱신 + 메시지 20 ms)
     assert invalid_keys(values) == ["input.pose_extrap_max_ms"]
-    values["input.pose_extrap_max_ms"] = 80.0  # 경계는 통과
+    values["input.pose_extrap_max_ms"] = 180.0  # 경계는 통과
     assert check_params(values).ready
 
 

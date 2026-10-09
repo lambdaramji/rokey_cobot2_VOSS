@@ -23,7 +23,7 @@ def values(**over) -> dict:
         "belt.direction_base": [1.0, 0.0, 0.0],  # 시험은 +x 로 단순하게
         "timing.latency_offset_ms": 0.0,
         "input.pose_lag_ms": 60.0,
-        "input.pose_extrap_max_ms": 120.0,
+        "input.pose_extrap_max_ms": 200.0,
         "input.blind_entry_max_age_s": 0.15,
         "control.kp_per_s": 2.0,
         "control.kp_z_per_s": 2.0,
@@ -69,7 +69,7 @@ def test_config_from_values_units() -> None:
     cfg = control.config_from_values(values(**{"belt.direction_base": array.array("d", [0, 2, 0])}))
     assert np.allclose(cfg.belt_dir_xy, [0, 1, 0])  # 수평 성분을 다시 길이 1 로 (array.array 도)
     assert np.allclose(cfg.belt_v, [0, BELT, 0])  # cm/s → m/s
-    assert cfg.pose_lag_s == pytest.approx(0.06) and cfg.pose_extrap_max_s == pytest.approx(0.12)
+    assert cfg.pose_lag_s == pytest.approx(0.06) and cfg.pose_extrap_max_s == pytest.approx(0.2)
     assert cfg.grasp_dz == pytest.approx(-0.019)  # 윗면보다 아래 → 음수
     assert cfg.align_cross_m == pytest.approx(0.005) and cfg.dt_nominal == pytest.approx(DT)
 
@@ -364,3 +364,38 @@ def test_finite_vec_rejects_nan() -> None:
     assert control.finite_vec([0.0, math.nan, 0.0]) is None
     assert control.finite_vec([0.0, math.inf, 0.0]) is None
     assert np.allclose(control.finite_vec([1, 2, 3]), [1, 2, 3])
+
+
+# ------------------------------------------------------------------ r4: PR #122 학민 리뷰
+
+
+def test_pose_value_stamp_keeps_first_stamp_while_value_repeats() -> None:
+    # gateway service: 50 Hz 로 오지만 값은 0.1 s 마다만 바뀐다 (ADR-0010 69행)
+    v = control.pose_value_stamp(None, (0.0, 0.0, 0.2), 10.00)
+    v = control.pose_value_stamp(v, (0.0, 0.0, 0.2), 10.02)  # 같은 값 반복
+    v = control.pose_value_stamp(v, (0.0, 0.0, 0.2), 10.08)
+    assert v == ((0.0, 0.0, 0.2), 10.00)  # 처음 stamp 유지
+    v = control.pose_value_stamp(v, (0.0048, 0.0, 0.2), 10.10)  # 값이 바뀐 첫 메시지
+    assert v == ((0.0048, 0.0, 0.2), 10.10)
+
+
+def test_repeated_pose_value_extrapolates_by_real_age() -> None:
+    # 값이 10.00 에 처음 오고 10.08 까지 반복 → 지금 10.08 이면 지평 = 0.08 + lag 0.06 = 0.14
+    position, stamp = control.pose_value_stamp(
+        control.pose_value_stamp(None, (0.0, 0.0, 0.2), 10.00), (0.0, 0.0, 0.2), 10.08
+    )
+    tcp, h, capped = control.tcp_now(position, stamp, 0.06, BELT_V, 10.08, 0.18)
+    assert h == pytest.approx(0.14) and not capped
+    assert tcp[0] == pytest.approx(BELT * 0.14)  # 마지막 메시지 stamp 로 계산했다면 2.88 mm 에 그침
+
+
+def test_grasp_floor_blocked_reach_z_min() -> None:
+    # 문턱 = 윗면 − 19 + 2 mm. gateway z 하한 78 + 여유 1 = 79 mm 보다 낮으면 닿을 수 없다
+    assert geo(box=(0.0, 0.0, 0.0955)).reach == "Z_MIN"  # 문턱 78.5 mm
+    assert geo(box=(0.0, 0.0, 0.0965)).reach is None  # 문턱 79.5 mm
+    assert geo(box=(0.0, 0.0, 0.1008)).reach is None  # 공칭 윗면 100.8 mm (파지 81.8)
+
+
+def test_reach_x_before_z_min() -> None:
+    g = control.geometry(tcp_est(x=0.7), np.array([0.7, 0.0, 0.09]), NOW, True, NOW, CFG)
+    assert g.reach == "X_MAX"  # 둘 다 걸리면 x 가 먼저

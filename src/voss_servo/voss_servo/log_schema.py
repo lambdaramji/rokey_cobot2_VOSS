@@ -57,7 +57,7 @@ TICK_FIELDS: tuple[str, ...] = (
     "aligned",  # 전환 플래그 (TRACK → DESCEND)
     "at_grasp_height",  # 전환 플래그 (DESCEND → GRASP)
     "at_lift_height",  # 전환 플래그 (LIFT → VERIFY)
-    "reach",  # null | X_MIN | X_MAX
+    "reach",  # null | X_MIN | X_MAX | Z_MIN
     "vision_blind",
     "box_lost",
     "box_stale",

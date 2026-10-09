@@ -1,8 +1,10 @@
 """belt_servo 노드를 프로세스 안에서 만들어 보는 시험 (spin 없이, 로봇·다른 노드 없음)."""
 
+import numpy as np
 import pytest
 import rclpy
 from builtin_interfaces.msg import Time
+from geometry_msgs.msg import PoseStamped
 from rclpy.action import GoalResponse
 from voss_servo.belt_servo import BeltServoNode
 
@@ -103,7 +105,7 @@ READY_ARGS = [
     "z.lift_speed_mps:=0.08",
     "z.height_tol_mm:=2.0",
     "input.pose_lag_ms:=60.0",
-    "input.pose_extrap_max_ms:=120.0",
+    "input.pose_extrap_max_ms:=200.0",
     "input.blind_entry_max_age_s:=0.15",
 ]
 
@@ -164,3 +166,64 @@ def test_bad_rate_does_not_crash_startup(tmp_path, bad_rate) -> None:
         n.destroy_node()
     finally:
         rclpy.try_shutdown()
+
+
+def pose(sec: float, x: float) -> PoseStamped:
+    """시험용 TCP pose."""
+    msg = PoseStamped()
+    msg.header.stamp = Time(sec=int(sec), nanosec=int(round((sec % 1) * 1e9)))
+    msg.pose.position.x = x
+    msg.pose.position.z = 0.2
+    return msg
+
+
+def test_pose_value_stamp_held_while_value_repeats(node) -> None:
+    node._on_pose(pose(10.00, 0.0))
+    rx_first = node._pose[1]
+    node._on_pose(pose(10.02, 0.0))  # 같은 값 반복 (gateway service 0.1 s 갱신)
+    assert node._pose_value[1] == pytest.approx(10.00)  # 외삽 기준은 처음 stamp
+    assert node._pose[1] >= rx_first  # 끊김 판정용 수신 시각은 메시지마다 갱신
+    node._on_pose(pose(10.10, 0.0048))  # 값이 바뀜
+    assert node._pose_value == ((0.0048, 0.0, 0.2), pytest.approx(10.10))
+
+
+def test_repeated_pose_value_extrapolates_until_pose_stale(ready_node) -> None:
+    """같은 pose 값이 계속 와도(수신은 신선) pose_stale 전까지 FF_P 가 나가고, 외삽은 값의 실제 나이로."""
+    from voss_servo.belt_servo import GoalCtx
+
+    from voss_servo import control, fsm
+
+    n = ready_node
+    now = n._now()
+    state, _ = fsm.start()
+    ctx = GoalCtx(FakeHandle(), "g1", 7, state, start=now, vision_since=now)
+    n._ctx = ctx
+    n._last_cmd = np.array([0.048, 0.0, 0.0])  # 직전 명령 = 벨트 속도
+    n._on_pose(pose(now - 0.10, 0.0))  # 값이 0.1 s 전에 처음 왔고
+    n._on_pose(pose(now - 0.02, 0.0))  # 같은 값이 계속 온다 (수신 시각은 지금)
+    b = box(7, 0)
+    b.stamp = n.get_clock().now().to_msg()
+    b.position_base.x = 0.01  # TCP 보다 10 mm 하류
+    b.position_base.z = 0.16  # 윗면 + 접근 40 mm = pose z 0.2
+    n._on_box(b)
+    n._tick_goal(ctx, n._now())
+    assert ctx.geo.tcp_horizon_s >= 0.10 + 0.06  # 마지막 메시지(0.02 s 전)가 아니라 값 나이로
+    assert ctx.geo.tcp[0] == pytest.approx(0.048 * ctx.geo.tcp_horizon_s, abs=1e-4)
+    assert ctx.cmd.rule == control.FF_P and ctx.cmd.vel[0] > 0.0  # pose_stale 아님 → 계속 추종
+    assert not ctx.state.stopping and ctx.state.phase == fsm.PREPARE
+
+
+def test_nan_pose_value_gives_no_pose_zero(ready_node) -> None:
+    from voss_servo.belt_servo import GoalCtx
+
+    from voss_servo import control, fsm
+
+    n = ready_node
+    now = n._now()
+    state, _ = fsm.start()
+    ctx = GoalCtx(FakeHandle(), "g1", 7, state, start=now, vision_since=now)
+    n._ctx = ctx
+    n._on_pose(pose(now, float("nan")))  # 위치에 NaN
+    n._tick_goal(ctx, n._now())
+    assert ctx.geo is None and ctx.cmd.rule == control.ZERO_NO_POSE
+    assert not np.any(ctx.cmd.vel)

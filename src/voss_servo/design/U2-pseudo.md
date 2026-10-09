@@ -51,7 +51,14 @@ XY 규칙 이름:  FF_P = "FF_P"   FF = "FF"   ZERO = "ZERO"
     h = max(h, 0)                                       # 음수 offset 이 커도 과거로 되돌리지 않음
     반환 (p_obs + belt_v × h, h, clipped)
 
-함수 tcp_now(pose, pose_stamp, pose_lag, last_cmd_v, now, extrap_max):
+함수 pose_value_stamp(prev, position, stamp):           # r4: pose 값이 0.1 s 마다만 바뀌는 gateway 대응
+    prev 가 있고 prev.값 == position 이면 반환 prev      # 같은 값 반복 → 처음 stamp 유지
+    반환 (position, stamp)                              # 값이 바뀐 첫 메시지
+
+함수 grasp_floor_blocked(top_z, cfg):                 # r4: gateway z 하한 때문에 파지 문턱에 못 닿나
+    반환 top_z + grasp_dz + height_tol < z_min + 0.001
+
+함수 tcp_now(pose, pose_stamp, pose_lag, last_cmd_v, now, extrap_max):   # pose_stamp = 값이 처음 온 stamp
     h = max(now − pose_stamp, 0) + pose_lag             # pose 가 실제로 찍힌 시각부터 지금까지
     capped = h > extrap_max                             # 너무 오래된 pose 인가
     h_used = min(h, extrap_max)                         # 상한까지만 외삽 (원본으로 돌아가면 TCP 추정이 튄다)
@@ -156,7 +163,8 @@ XY 규칙 이름:  FF_P = "FF_P"   FF = "FF"   ZERO = "ZERO"
 GATEWAY_MAX_SPEED_MPS = 0.1    # gateway 속도 자르기 기본값 사본 (servo_guard.py max_speed_mm_s 100, #104 014a7b4). 바뀌면 함께
 GATEWAY_ACC_MPS2      = 0.1    # gateway → speedl 램프 기본값 사본 (servo_acc 100 mm/s²). gateway 는 가속을 자르지 않는다
 ALIGN_CROSS_MAX_MM    = 10.0   # 가로 정렬 허용치 상한 (DD 승인 10/08, 박병후)
-POSE_PERIOD_MS        = 20.0   # /voss/robot/pose 50 Hz 간격 (topics.md)
+POSE_VALUE_PERIOD_MS  = 100.0  # pose 값 갱신 간격 최악값 (gateway service, ADR-0010 69행)
+GATEWAY_Z_MIN_MM      = 78.0   # gateway z 하한 사본 (servo_guard.py z_min_mm)
 DIRECTION_XY_MIN      = 0.99   # 벨트 방향의 수평 길이 하한
 
 PARAM_SPECS 에 추가 (DD 2절 표, 순서 = 묶음별):
@@ -176,8 +184,8 @@ _cross_checks 에 추가 (값이 모두 있고 개별 검사를 통과한 것만
  3  belt.speed_cmps / 100 ≥ max_speed            → invalid (limits.max_speed_mps, "벨트 속도보다 커야 함")
  4  descend_speed > max_speed                    → invalid (z.descend_speed_mps, "max_speed 이하")
  5  lift_speed > max_speed                       → invalid (z.lift_speed_mps, "max_speed 이하")
- 6  pose_extrap_max_ms < pose_lag_ms + POSE_PERIOD_MS
-                                                 → invalid (input.pose_extrap_max_ms, "pose_lag_ms + 20 이상")
+ 6  pose_extrap_max_ms < pose_lag_ms + POSE_VALUE_PERIOD_MS + POSE_PERIOD_MS(20)
+                                                 → invalid (input.pose_extrap_max_ms, "pose_lag_ms + 120 이상")
  7  align_tol_along_mm > align_tol_cross_mm      → invalid (control.align_tol_along_mm, "cross 이하")
  8  align_tol_cross_mm > ALIGN_CROSS_MAX_MM      → invalid (control.align_tol_cross_mm, "10 mm 이하")
  9  kp_z × descend_speed > max_acc               → invalid (control.kp_z_per_s, "kp_z × descend_speed ≤ max_acc")
@@ -207,6 +215,10 @@ __init__:
 
 GoalCtx 에 추가:  last_calc = 없음,  geo = 없음,  cmd = 없음,  dt = 없음,  source = 없음(마지막 유효 관측 출처)
 
+_on_pose(msg):                                         # r4
+    self._pose = (msg, 수신 시각)                       # 끊김 판정용, 메시지마다
+    self._pose_value = control.pose_value_stamp(self._pose_value, msg 위치, stamp_s(msg stamp))
+
 _on_box(msg):                                          # U1 에서 한 줄 바뀜
     valid = msg.position_valid 그리고 vec(msg.position_base) 가 있음   # NaN·inf 좌표면 valid 메시지라도 invalid 로
     (나머지 U1 그대로: last_valid 는 valid 일 때만 갱신)
@@ -224,8 +236,9 @@ _build_event(ctx, now):
     cfg = self._ctrl
     entry = 내 track_id 의 BoxEntry
     tcp_est = 없음
-    pose 가 있고 vec(pose 위치) 가 있으면:
-        tcp_est = control.tcp_now(vec(pose 위치), stamp_s(pose stamp), cfg.pose_lag_s,
+    self._pose_value 가 있고 그 값이 유한하면:                # r4: 값이 처음 온 stamp 기준
+        (위치, 값 stamp) = self._pose_value
+        tcp_est = control.tcp_now(위치, 값 stamp, cfg.pose_lag_s,
                                   self._last_cmd, now, cfg.pose_extrap_max_s)
     obs = entry.last_valid (entry 없으면 없음)
     obs_xyz = vec(obs.position_base) (obs 없으면 없음)
@@ -286,7 +299,7 @@ _snapshot_values(...):                                 # 0 유지·예외 경로
 ```text
 cfg = 테스트용 설정 (belt 0.048 m/s +x, kp_xy 2, kp_z 2, v_max 0.08, a_max 0.1,
                     approach 40 mm, lift 50 mm, grasp −19 mm, descend 0.05, lift 0.08, tol 2 mm,
-                    along 3 mm, cross 5 mm, lag 60 ms, extrap_max 120 ms, blind_entry 0.15 s)
+                    along 3 mm, cross 5 mm, lag 60 ms, extrap_max 200 ms, blind_entry 0.15 s)
 
 test_tcp_now_lag60_moves_2_88mm_at_48mmps:
     (tcp, h, capped) = tcp_now(pose=(0,0,0.2), stamp=10.0, lag=0.06, last_v=(0.048,0,0), now=10.0, max=0.12)
@@ -329,4 +342,5 @@ test_aligned_needs_all_five:
 |---|---|
 | 10/08 | 초안 |
 | 10/08 | 확정(박병후): r2 + 외삽 상한 초과 → 상한까지 외삽 |
+| 10/09 | r4 PR #122 학민 리뷰: pose_value_stamp, grasp_floor_blocked(reach Z_MIN), POSE_VALUE_PERIOD_MS, _on_pose |
 | 10/08 | r2 독립 재검(Fable 5.1) 반영: ff_p 기다리기, PREPARE 안 보임 FF, ZERO_NO_POSE, belt_v = speed × dir_xy, 교차 검사 11개, 로그 키 15개, `_on_box` NaN, position_source 경고, dt 순서, 구현 메모(8절) |

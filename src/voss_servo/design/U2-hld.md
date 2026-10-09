@@ -14,11 +14,13 @@
 | GRASP | **FF 만**(벨트 속도로 같이 감), z 는 파지 높이에 고정 | GRASP 에 왔다 = 정렬 완료. RG2 개폐는 약 1.2 s(measurements-1006 #4: open 90 → 1.21 s) — 그동안 멈추면 박스가 48 mm/s × 1.2 s ≈ 58 mm 밀려 나간다 |
 | LIFT | x·y 0, z 만 위로 | U1 회신 ⑤ |
 | 정렬 허용치 | 벨트 방향(`along`)·가로(`cross`) 둘로 나눔. cross 도 여유롭게 두지 않는다 | 그리퍼 여유는 가로 ±24.5 mm 뿐, 벨트 방향은 0 (ADR-0009) |
-| 새 파라미터 | `input.pose_lag_ms` 60(측정값) 외 전부 null + 제안값 주석 | 값 규칙(voss_config.md), pending #4 전 제안값 |
+| 새 파라미터 | `input.pose_lag_ms` 60(측정값) 외 전부 null + 제안값 주석 | 값 규칙(voss_config.md), 미측정 제안값(ADR-0012 범위 밖) |
 | Δt 음수 | 0 으로 자르고 로그에 표시 | 시계 차이로 미래 stamp 가 올 수 있음 |
 | clamp | 벡터 크기 기준(방향 유지). 정지(0) 명령에는 가속 제한 없음 | ADR-0010: 끊기면 계속 간다 → 멈출 때는 바로 0 |
 | 영역 판정 | 현재 TCP x 기준 (U2 지시서) | |
 | Kp = 0 | FF 만 나간다 (개루프 = 프리셋, 별도 모드 없음) | B안 시작 위치 맞추기는 U4·U8a |
+| **pose 값 갱신 0.1 s 대응** (r4, PR #122 학민 리뷰) | 외삽 기준 stamp = 위치 값이 바뀐 첫 메시지의 stamp | gateway service 소스는 50 Hz 로 보내도 값은 0.1 s 마다만 바뀐다(ADR-0010) → 메시지 stamp 로는 TCP 추정이 0~4.8 mm 톱니 |
+| **파지 바닥·x 끝** (r4) | 파지 도달 문턱 < gateway z 하한 78 + 1 mm 이면 OUT_OF_REACH(`REACH_Z_MIN`) — 박스 z 는 plane_z 상수라 설정 불일치 때만 걸림. x_max 유효값 620 | gateway 가 자르면 at_grasp·X_MAX 판정이 확정적이지 않다. DESCEND 시간 상한은 U9 |
 | **벨트 방향은 기다린다** (재검 r2) | xy 속도의 벨트 방향 성분 하한 0 — 박스가 TCP 보다 상류에 있어도 로봇은 상류로 가지 않고 기다린다. 가로 성분은 양방향 P 그대로 | 관측 자세(x −14.5)에서 박스는 x −97~−170 mm 에서 처음 보인다. 부호 제한이 없으면 P 가 상류로 돌진: Kp 4·오차 −170 mm 시뮬레이션에서 x −124 mm(한계 −107) → OUT_OF_REACH. 기다리기 규칙이면 상류 이동 0, 정렬 2~4 s 뒤 x ≈ −13~+7 mm (scratchpad sim_along.py) |
 
 ## 1. 개념 다섯 개 (처음 보는 것만)
@@ -34,7 +36,7 @@
 pose 가 말한 위치 ●  (실제로는 stamp − 60 ms 의 위치)
                     └─ 마지막으로 보낸 속도 × (지금 − (stamp − 60 ms)) ─▶ ◎ 지금 TCP 는 여기쯤
 ```
-외삽(extrapolation) = 마지막 값과 속도로 앞을 추정. 너무 오래 외삽하면 엉뚱해지므로 상한(`pose_extrap_max_ms`)까지만 외삽하고 거기서 멈춘다(`min(h, 상한)`, 로그에 표시). 원본 pose 로 돌아가면 48 mm/s 에서 TCP 추정이 약 5.8 mm 뒤로 튀어 P 에 속도 계단이 생기므로 그렇게 하지 않는다(r2, 박병후 승인 — 지시서의 "상한 초과 시 외삽 없음"에서 바꿈). 48 mm/s 에서 60 ms ≈ 2.9 mm.
+pose 값은 50 Hz 로 와도 0.1 s 마다만 바뀔 수 있어서, 시작 시각은 **그 위치 값이 처음 온 메시지의 stamp** 로 잡는다(r4). 외삽(extrapolation) = 마지막 값과 속도로 앞을 추정. 너무 오래 외삽하면 엉뚱해지므로 상한(`pose_extrap_max_ms`)까지만 외삽하고 거기서 멈춘다(`min(h, 상한)`, 로그에 표시). 원본 pose 로 돌아가면 48 mm/s 에서 TCP 추정이 약 5.8 mm 뒤로 튀어 P 에 속도 계단이 생기므로 그렇게 하지 않는다(r2, 박병후 승인 — 지시서의 "상한 초과 시 외삽 없음"에서 바꿈). 48 mm/s 에서 60 ms ≈ 2.9 mm.
 
 **③ 피드포워드 + P (ff_p).** 버스를 따라 뛰는 사람을 생각한다.
 ```
@@ -162,7 +164,7 @@ control.py (순수, ROS·시계·파일 없음, NumPy 벡터, 단위 m·m/s·s)
 | 파라미터 | 값 | 쉬운 뜻 |
 |---|---|---|
 | `input.pose_lag_ms` | **60** (측정값, measurements-1008 #6. gateway pose 방식이 바뀌면 재측정) | pose stamp 가 실제보다 늦은 시간 |
-| `input.pose_extrap_max_ms` | null (제안 120) | TCP 외삽을 허용하는 최대 시간. 50 Hz pose 면 보통 60~80 ms |
+| `input.pose_extrap_max_ms` | null (제안 200, r4) | TCP 외삽을 허용하는 최대 시간. 지평 = 값 나이(0.1 s 갱신 + 메시지 20 ms) + lag 60 → 최대 약 180 ms |
 | `input.blind_entry_max_age_s` | null (제안 0.15, 재검 r2 — 근거 DD 7절) | 하강(사각 진입) 직전 마지막 유효 관측 나이 상한 |
 | `control.kp_z_per_s` | null | Z 축 P 게인 |
 | `control.align_tol_along_mm` | null (제안 3) | 벨트 방향 정렬 허용치 |
@@ -171,7 +173,7 @@ control.py (순수, ROS·시계·파일 없음, NumPy 벡터, 단위 m·m/s·s)
 | `z.lift_speed_mps` | null | 들기 속도 상한 |
 | `z.height_tol_mm` | null (제안 2) | "높이에 도달했다" 허용치 |
 
-모든 제안값은 pending #4 승인 전 제안값이다. null 이 하나라도 있으면 READY 거부(U1 규칙).
+모든 제안값은 미측정 제안값이다(ADR-0012 승인 수치 목표의 범위 밖). null 이 하나라도 있으면 READY 거부(U1 규칙).
 
 ## 7. 변경 기록
 
@@ -179,5 +181,6 @@ control.py (순수, ROS·시계·파일 없음, NumPy 벡터, 단위 m·m/s·s)
 |---|---|
 | 10/08 | 초안. 브리핑 승인 결정(0절) 반영 |
 | 10/08 | HLD 승인 (박병후). GRASP z 속도 0·aligned 에 관측 나이 조건 포함 확인 |
+| 10/09 | r4 PR #122 학민 리뷰 반영(0절 r4 두 줄, DD 0·7.3절) |
 | 10/08 | r2 승인(박병후): 아래 r2 + 외삽 상한 초과 시 상한까지 외삽(원본 복귀 아님) |
 | 10/08 | r2 독립 재검(Fable 5.1) 반영: 벨트 방향 기다리기(하한 0), PREPARE 안 보임 → FF, 전제(핸드아이 출처) 명시, RG2 개폐 1.2 s 정정, ready_to_blind 삭제, 사각 중 관측 갱신 명시 |

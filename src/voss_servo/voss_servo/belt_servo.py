@@ -131,7 +131,9 @@ class BeltServoNode(Node):
         self._busy = False  # goal 진행 중 또는 0 유지 중
         self._hold_until: float | None = None  # 0 유지 끝 시각
         self._boxes: dict[int, BoxEntry] = {}  # track_id 별 최신 관측
-        self._pose: tuple[PoseStamped, float] | None = None  # (최신 pose, 받은 시각)
+        self._pose: tuple[PoseStamped, float] | None = None  # (최신 pose, 받은 시각) — 끊김 판정용
+        # (위치 값, 그 값이 처음 온 stamp) — 외삽 기준. 값이 0.1 s 마다만 바뀌는 pose 대응 (PR #122 리뷰)
+        self._pose_value: tuple[tuple[float, float, float], float] | None = None
         self._last_cmd = control.zero_cmd()  # 마지막 발행 속도 (TCP 외삽·가속 제한 입력)
         self.values = self._declare_params()  # {이름: 값 또는 None}
         self.ready = self._startup_check()  # READY 여부 (기동 때 한 번)
@@ -164,6 +166,11 @@ class BeltServoNode(Node):
             self.get_logger().info(line)
         if report.ready:
             self.get_logger().info("READY")
+            # pose_lag_ms 는 gateway pose_source 에 묶인 측정값이다 (gateway 가 바뀌면 다시 잰다)
+            self.get_logger().info(
+                f"pose_lag_ms={self.values.get('input.pose_lag_ms')} — gateway pose_source: service "
+                "기준 측정(measurements-1008 #6). joint_states 로 바꾸면 다시 잰다"
+            )
         else:
             # 어떤 키가 문제인지 이름으로. READY 가 아니면 액션 서버를 만들지 않는다 (_setup_ros)
             self.get_logger().error(ready_log_line(report) + " — 액션 서버 미생성")
@@ -239,9 +246,13 @@ class BeltServoNode(Node):
             del self._boxes[t]
 
     def _on_pose(self, msg: PoseStamped) -> None:
-        """최신 TCP pose 와 받은 시각만 보관한다."""
+        """최신 TCP pose 와 받은 시각, 그리고 위치 값이 바뀐 첫 stamp 를 보관한다."""
         try:
-            self._pose = (msg, self._now())
+            self._pose = (msg, self._now())  # 수신 시각은 메시지마다 (pose_stale 판정)
+            p = msg.pose.position
+            stamp = stamp_s(msg.header.stamp)
+            # 같은 값이 반복되면 처음 stamp 유지 → 외삽 지평에 값의 실제 나이가 들어간다
+            self._pose_value = control.pose_value_stamp(self._pose_value, (p.x, p.y, p.z), stamp)
         except Exception as exc:
             self.get_logger().error(f"_on_pose 예외: {exc!r}")
 
@@ -433,15 +444,13 @@ class BeltServoNode(Node):
 
     def _tcp_estimate(self, now: float) -> tuple[np.ndarray, float, bool] | None:
         """최신 pose → control.tcp_now (pose 없음·NaN 이면 None)."""
-        if self._pose is None:
+        if self._pose_value is None:
             return None
-        msg = self._pose[0]
-        p = msg.pose.position
-        pose = control.finite_vec((p.x, p.y, p.z))
+        position, stamp = self._pose_value  # stamp = 이 값이 처음 온 메시지의 stamp (실제보다 늦음)
+        pose = control.finite_vec(position)
         if pose is None:
             return None  # NaN pose 는 없는 것으로
         cfg = self._ctrl
-        stamp = stamp_s(msg.header.stamp)  # 게이트웨이 응답 수신 시각 (실제보다 늦음)
         return control.tcp_now(
             pose, stamp, cfg.pose_lag_s, self._last_cmd, now, cfg.pose_extrap_max_s
         )

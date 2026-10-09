@@ -18,6 +18,7 @@ from typing import Any
 import numpy as np
 
 from voss_servo import fsm
+from voss_servo.params import GATEWAY_Z_MIN_MM
 
 # --- xy 규칙 이름 (틱 로그 cmd_rule 에도 그대로 쓴다) ---
 FF_P = "FF_P"  # 벨트 속도 + Kp × 오차
@@ -29,6 +30,8 @@ ZERO_NO_OBS = "ZERO_NO_OBS"  # 이 트랙의 유효 관측이 한 번도 없다
 ZERO_STOP = "ZERO_STOP"  # 멈추는 중(stopping) 또는 goal 끝(terminal)
 
 Vec = Sequence[float] | np.ndarray  # 길이 3 벡터로 받을 수 있는 것
+# 파지 높이 도달 문턱(목표 + height_tol)이 gateway z 하한보다 이만큼은 위에 있어야 도달할 수 있다
+Z_MIN_MARGIN_M = 0.001
 
 
 @dataclass(frozen=True, eq=False)
@@ -56,6 +59,7 @@ class ControlConfig:
     x_min: float  # 추종 가능 구간 TCP x 하한
     x_max: float  # 추종 가능 구간 TCP x 상한
     dt_nominal: float  # 1 / rate_hz
+    z_min: float  # gateway TCP z 하한 (사본, m)
 
 
 def vec3(v: Vec) -> np.ndarray:
@@ -91,6 +95,7 @@ def config_from_values(values: dict[str, Any]) -> ControlConfig:
         x_min=values["reach.x_min_mm"] / 1000.0,
         x_max=values["reach.x_max_mm"] / 1000.0,
         dt_nominal=1.0 / values["rate_hz"],
+        z_min=GATEWAY_Z_MIN_MM / 1000.0,
     )
 
 
@@ -121,6 +126,21 @@ def predict(
     h = max(raw, 0.0) + latency_offset  # 음수 Δt 는 0 으로 자른 뒤 offset 을 더한다
     h = max(h, 0.0)  # 음수 offset 이 커도 과거로 되돌리지 않는다
     return vec3(p_obs) + vec3(belt_v) * h, h, clipped
+
+
+def pose_value_stamp(
+    prev: tuple[tuple[float, float, float], float] | None,
+    position: tuple[float, float, float],
+    stamp: float,
+) -> tuple[tuple[float, float, float], float]:
+    """(위치 값, 그 값이 처음 온 stamp) 갱신. 같은 값이 반복되면 처음 stamp 를 유지한다.
+
+    gateway pose_source: service 는 50 Hz 로 보내지만 값은 0.1 s 마다만 바뀐다 (ADR-0010 69행).
+    stamp 를 메시지마다 쓰면 값의 실제 나이(최대 0.1 s 더)를 모르고 TCP 추정이 톱니처럼 뒤처진다.
+    """
+    if prev is not None and prev[0] == position:
+        return prev  # 같은 값 반복 → 그 값이 처음 온 시각 그대로
+    return position, stamp  # 값이 바뀐 첫 메시지
 
 
 def tcp_now(
@@ -216,6 +236,16 @@ def in_reach(tcp_x: float, x_min: float, x_max: float) -> str | None:
     return None
 
 
+def grasp_floor_blocked(top_z: float, cfg: ControlConfig) -> bool:
+    """gateway z 하한 때문에 파지 높이 도달 문턱(목표 + height_tol)에 닿을 수 없는가.
+
+    gateway 는 z 가 하한(78 mm)에 닿으면 -z 를 자른다. 문턱이 하한 + 여유보다 낮으면 at_grasp_height 가
+    영영 참이 안 되고, DESCEND 는 사각이라 LOST 도 없이 FF 로 x 끝까지 간다 (PR #122 학민 리뷰).
+    """
+    threshold = top_z + cfg.grasp_dz + cfg.height_tol_m  # at_grasp_height 문턱
+    return threshold < cfg.z_min + Z_MIN_MARGIN_M
+
+
 def xy_rule(phase: str, visible: bool) -> str:
     """phase 와 박스가 보이는지 → xy 규칙 (HLD 3절)."""
     if phase in (fsm.PREPARE, fsm.TRACK, fsm.DESCEND):
@@ -247,7 +277,7 @@ class Geometry:
     aligned: bool  # TRACK → DESCEND 조건
     at_grasp_height: bool  # DESCEND → GRASP 조건
     at_lift_height: bool  # LIFT → VERIFY 조건
-    reach: str | None  # None | X_MIN | X_MAX
+    reach: str | None  # None | X_MIN | X_MAX | Z_MIN
 
 
 def geometry(
@@ -261,7 +291,7 @@ def geometry(
     """예측·오차·전환 플래그. tcp_est 는 노드가 먼저 부른 tcp_now() 결과."""
     tcp, tcp_h, capped = tcp_est
     tcp = vec3(tcp)
-    reach = in_reach(float(tcp[0]), cfg.x_min, cfg.x_max)  # 관측 없이도 계산
+    reach = in_reach(float(tcp[0]), cfg.x_min, cfg.x_max)  # 관측 없이도 계산 (x 가 먼저)
     if obs_xyz is None or obs_stamp is None:
         return Geometry(
             tcp=tcp,
@@ -295,6 +325,8 @@ def geometry(
         and obs_age <= cfg.blind_entry_max_age_s  # 사각 진입 직전 관측이 신선하다
     )
     at_grasp = float(tcp[2]) <= top_z + cfg.grasp_dz + cfg.height_tol_m
+    if reach is None and grasp_floor_blocked(top_z, cfg):
+        reach = "Z_MIN"  # 파지 높이에 닿을 수 없다 → OUT_OF_REACH (cause REACH_Z_MIN)
     at_lift = float(tcp[2]) >= top_z + cfg.lift_dz - cfg.height_tol_m
     return Geometry(
         tcp=tcp,

@@ -33,8 +33,15 @@ GATEWAY_ACC_MPS2 = (
 )
 # 가로 정렬 허용치 상한 (U2 DD 승인 10/08 박병후 — 그리퍼 가로 여유 24.5 mm 의 절반 아래)
 ALIGN_CROSS_MAX_MM = 10.0
-# /voss/robot/pose 간격 (topics.md ~50 Hz)
-POSE_PERIOD_MS = 20.0
+GATEWAY_Z_MIN_MM = (
+    78.0  # gateway TCP z 하한 z_min_mm (servo_guard.py). 이보다 아래로는 -z 를 자른다
+)
+# /voss/robot/pose 값이 바뀌는 간격의 최악값. 메시지는 50 Hz 지만 gateway pose_source: service 에서는
+# 값이 0.1 s 마다만 바뀐다 (ADR-0010 69행, PR #122 학민 리뷰) → 외삽 지평이 lag + 100 ms 까지 간다
+POSE_VALUE_PERIOD_MS = 100.0
+POSE_PERIOD_MS = (
+    20.0  # 메시지 간격 (50 Hz) — 값이 바뀐 뒤 첫 메시지가 올 때까지 최대 이만큼 더 늦다
+)
 
 # YAML 의 null 이 --params-file 로 들어오면 문자열 "null" 이 된다 → 미측정으로 본다
 NULL_STRINGS = ("null", "~")
@@ -217,9 +224,14 @@ def _control_checks(values: dict[str, Any], have: Callable[..., bool]) -> list[t
         if have(name, "limits.max_speed_mps") and v[name] > v["limits.max_speed_mps"]:
             out.append((name, "limits.max_speed_mps 이하여야 함"))
     if have("input.pose_extrap_max_ms", "input.pose_lag_ms"):
-        if v["input.pose_extrap_max_ms"] < v["input.pose_lag_ms"] + POSE_PERIOD_MS:
+        # 정상 지평 상한 = lag + 값 갱신 간격 + 메시지 간격 (r4 재검: 180 이면 정상 운전에서도 capped)
+        margin = POSE_VALUE_PERIOD_MS + POSE_PERIOD_MS
+        if v["input.pose_extrap_max_ms"] < v["input.pose_lag_ms"] + margin:
             out.append(
-                ("input.pose_extrap_max_ms", f"pose_lag_ms + {POSE_PERIOD_MS:g} 이상이어야 함")
+                (
+                    "input.pose_extrap_max_ms",
+                    f"pose_lag_ms + {margin:g} 이상이어야 함",
+                )
             )
     if have("control.align_tol_along_mm", "control.align_tol_cross_mm"):
         if v["control.align_tol_along_mm"] > v["control.align_tol_cross_mm"]:
