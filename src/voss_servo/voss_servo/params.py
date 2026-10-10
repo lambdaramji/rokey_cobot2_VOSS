@@ -3,7 +3,7 @@
 - 값 규칙: docs/interfaces/voss_config.md. 미측정 = null → launch 가 넘기지 않음 → 여기서 None → READY 거부.
 - belt.* · gripper.* · timing.* 원본은 config/voss_config.yaml. CLAUDE.md 규칙 5 로 belt_servo 는 그 파일을
   직접 읽지 않고 bringup 이 넘겨주는 파라미터로 받는다.
-- 설계: src/voss_servo/design/U1-dd.md 1절.
+- 설계: src/voss_servo/design/U1-dd.md 1절, U2-dd.md 2절, U5-dd.md 5절.
 """
 
 from __future__ import annotations
@@ -98,6 +98,8 @@ PARAM_SPECS: tuple[ParamSpec, ...] = (
     ParamSpec("grasp.tcp_z_below_top_mm", "float", "mm", True, _positive),
     ParamSpec("grasp.hold_width_min_mm", "float", "mm", True, _positive),
     ParamSpec("grasp.hold_width_max_mm", "float", "mm", True, _positive),
+    ParamSpec("grasp.close_time_max_s", "float", "s", True, _positive),  # 닫힘 최대 시간 (x 여유)
+    ParamSpec("grasp.room_margin_mm", "float", "mm", True, _non_negative),  # x 여유 덧셈
     ParamSpec("reach.x_min_mm", "float", "mm", True),
     ParamSpec("reach.x_max_mm", "float", "mm", True),
     ParamSpec("control.kp_per_s", "float", "1/s", True, _non_negative),  # 0 = FF 만
@@ -119,6 +121,7 @@ PARAM_SPECS: tuple[ParamSpec, ...] = (
     ParamSpec("input.blind_entry_max_age_s", "float", "s", True, _positive),
     ParamSpec("retry.max_attempts", "int", "회", True, _retry_range),
     ParamSpec("stop_timeout_s", "float", "s", True, _positive),
+    ParamSpec("gripper_timeout_s", "float", "s", True, _positive),  # 그리퍼 응답 기다림 한계
     ParamSpec("rate_hz", "float", "Hz", True, _positive),
     ParamSpec("zero_hold_s", "float", "s", True, _non_negative),
     ParamSpec("log.dir", "str", "-", True, _not_empty),
@@ -192,6 +195,7 @@ def _cross_checks(values: dict[str, Any], bad: set[str]) -> list[tuple[str, str]
     if have("grasp.hold_width_min_mm", "grasp.hold_width_max_mm"):
         if values["grasp.hold_width_min_mm"] >= values["grasp.hold_width_max_mm"]:
             out.append(("grasp.hold_width_min_mm", "hold_width_max_mm 보다 작아야 함"))
+    out.extend(_grip_checks(values, have))
     if have("reach.x_min_mm", "reach.x_max_mm"):
         if values["reach.x_min_mm"] >= values["reach.x_max_mm"]:
             out.append(("reach.x_min_mm", "x_max_mm 보다 작아야 함"))
@@ -202,6 +206,24 @@ def _cross_checks(values: dict[str, Any], bad: set[str]) -> list[tuple[str, str]
         if values["z.approach_above_top_mm"] <= exit_mm:
             out.append(("z.approach_above_top_mm", f"사각 이탈 높이 {exit_mm:g} mm 보다 커야 함"))
     out.extend(_control_checks(values, have))
+    return out
+
+
+def _grip_checks(values: dict[str, Any], have: Callable[..., bool]) -> list[tuple[str, str]]:
+    """그리퍼 값 교차 검사 (design/U5-dd.md E9)."""
+    v = values
+    out: list[tuple[str, str]] = []
+    if have("gripper_timeout_s", "grasp.close_time_max_s"):
+        if v["gripper_timeout_s"] <= v["grasp.close_time_max_s"]:  # 정상 닫힘이 시간초과가 된다
+            out.append(("gripper_timeout_s", "grasp.close_time_max_s 보다 커야 함"))
+    if have("grasp.hold_width_max_mm", "gripper.pre_open_mm"):
+        # 쥔 폭이 개방 폭보다 클 수 없다
+        if v["grasp.hold_width_max_mm"] >= v["gripper.pre_open_mm"]:
+            out.append(("grasp.hold_width_max_mm", "gripper.pre_open_mm 보다 작아야 함"))
+    if have("grasp.hold_width_min_mm", "gripper.grasp_width_mm"):
+        # 빈손 보고 폭은 명령 폭 아래(39 → 38.0~38.7) → 하한이 명령 폭 이하면 빈손이 범위에 들어온다
+        if v["grasp.hold_width_min_mm"] <= v["gripper.grasp_width_mm"]:
+            out.append(("grasp.hold_width_min_mm", "gripper.grasp_width_mm 보다 커야 함"))
     return out
 
 

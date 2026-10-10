@@ -1,5 +1,7 @@
 """belt_servo 노드를 프로세스 안에서 만들어 보는 시험 (spin 없이, 로봇·다른 노드 없음)."""
 
+import os
+
 import numpy as np
 import pytest
 import rclpy
@@ -11,12 +13,16 @@ from voss_servo.belt_servo import BeltServoNode
 from voss_msgs.action import TrackAndGrasp
 from voss_msgs.msg import BoxTrack
 
+# 실행별 도메인 (RULES §2, 2026-10-10): 같은 PC 의 다른 세션·사용자 노드와 섞이지 않게.
+# 고정값·환경 변수에 기대지 않는다 (예: 남이 /voss/robot/gripper 를 띄워 두면 '서비스 없음' 시험이 깨진다)
+TEST_DOMAIN_ID = 150 + os.getpid() % 70
+
 
 @pytest.fixture
 def node(tmp_path):
     """파라미터 없이 띄운 노드 (로그는 임시 폴더로)."""
     args = ["--ros-args", "-p", f"log.dir:={tmp_path}"]  # log.dir 만 주고 나머지는 미전달
-    rclpy.init(args=args)
+    rclpy.init(args=args, domain_id=TEST_DOMAIN_ID)
     n = BeltServoNode()
     yield n
     n.destroy_node()
@@ -82,7 +88,7 @@ READY_ARGS = [
     "timing.latency_offset_ms:=0.0",
     "grasp.tcp_z_below_top_mm:=19.0",
     "grasp.hold_width_min_mm:=39.5",
-    "grasp.hold_width_max_mm:=41.5",
+    "grasp.hold_width_max_mm:=43.5",
     "reach.x_min_mm:=-107.0",
     "reach.x_max_mm:=638.0",
     "control.kp_per_s:=0.0",
@@ -107,6 +113,10 @@ READY_ARGS = [
     "input.pose_lag_ms:=60.0",
     "input.pose_extrap_max_ms:=200.0",
     "input.blind_entry_max_age_s:=0.15",
+    # U5 그리퍼 값 (design/U5-dd.md 5절)
+    "grasp.close_time_max_s:=2.1",
+    "grasp.room_margin_mm:=10.0",
+    "gripper_timeout_s:=3.0",
 ]
 
 
@@ -128,7 +138,7 @@ def ready_node(tmp_path):
     args = ["--ros-args", "-p", f"log.dir:={tmp_path}"]
     for item in READY_ARGS:
         args += ["-p", item]
-    rclpy.init(args=args)
+    rclpy.init(args=args, domain_id=TEST_DOMAIN_ID)
     n = BeltServoNode()
     yield n
     n.destroy_node()
@@ -159,7 +169,8 @@ def test_ready_node_tick_and_hold_logs_match_schema(ready_node) -> None:
 
 @pytest.mark.parametrize("bad_rate", ["abc", "-5.0"])
 def test_bad_rate_does_not_crash_startup(tmp_path, bad_rate) -> None:
-    rclpy.init(args=["--ros-args", "-p", f"log.dir:={tmp_path}", "-p", f"rate_hz:={bad_rate}"])
+    args = ["--ros-args", "-p", f"log.dir:={tmp_path}", "-p", f"rate_hz:={bad_rate}"]
+    rclpy.init(args=args, domain_id=TEST_DOMAIN_ID)
     try:
         n = BeltServoNode()  # 예외 없이 READY 거부 상태로 떠야 한다
         assert not n.ready and n._action is None
@@ -227,6 +238,151 @@ def test_nan_pose_value_gives_no_pose_zero(ready_node) -> None:
     n._tick_goal(ctx, n._now())
     assert ctx.geo is None and ctx.cmd.rule == control.ZERO_NO_POSE
     assert not np.any(ctx.cmd.vel)
+
+
+# --- U5 그리퍼 호출 (가짜 future, spin 없이 — design/U5-dd.md 6.4) ---
+
+
+class FakeGripperCli:
+    """그리퍼 클라이언트 대신: 요청을 기록하고 우리가 직접 채울 future 를 돌려준다."""
+
+    def __init__(self) -> None:
+        self.requests = []  # (폭, 힘)
+        self.futures = []
+        self.ready = True  # False 로 바꾸면 서비스가 사라진 것처럼
+
+    def service_is_ready(self) -> bool:
+        return self.ready
+
+    def call_async(self, req):
+        from rclpy.task import Future
+
+        self.requests.append((req.width, req.force))
+        fut = Future()  # executor 없음 → done 콜백은 set_result 때 바로 불린다
+        self.futures.append(fut)
+        return fut
+
+
+def gripper_resp(ok=True, width=40.9, grip=True, message="OK"):
+    from voss_msgs.srv import Gripper
+
+    r = Gripper.Response()
+    r.ok, r.width_actual, r.grip_detected, r.message = ok, width, grip, message
+    return r
+
+
+def new_ctx(n, goal_id="g1"):
+    """진행 중 goal 상태 하나 (PREPARE)."""
+    from voss_servo.belt_servo import GoalCtx
+
+    from voss_servo import fsm
+
+    now = n._now()
+    state, _ = fsm.start()
+    ctx = GoalCtx(FakeHandle(), goal_id, 7, state, start=now, vision_since=now)
+    n._ctx = ctx
+    return ctx
+
+
+def test_gripper_service_missing_gives_unavailable_once(ready_node) -> None:
+    from voss_servo import fsm, grip
+
+    n = ready_node
+    ctx = new_ctx(n)
+    n._request_gripper(ctx, fsm.GRIPPER_OPEN, 1.0)  # 진짜 클라이언트, 서비스 없음 (HLD D5)
+    reply = n._poll_gripper(ctx, 1.03)
+    assert reply.message == grip.UNAVAILABLE  # → FSM 이 DEVICE_ERROR(GRIPPER_UNAVAILABLE)
+    assert ctx.grip_log["state"] == grip.UNAVAILABLE
+    assert n._poll_gripper(ctx, 1.06) is None  # 한 번만 넘긴다
+
+
+def test_reply_after_goal_end_is_discarded(ready_node) -> None:
+    from voss_servo import fsm
+
+    n = ready_node
+    cli = FakeGripperCli()
+    n._gripper_cli = cli
+    ctx = new_ctx(n)
+    ctx.state = fsm.FsmState(fsm.GRASP, 1, False)
+    n._request_gripper(ctx, fsm.GRIPPER_CLOSE, 1.0)
+    n._finish(ctx, fsm.CANCELED, "STOP_OK", False, 1.2)  # 닫는 중에 goal 끝 → 고아
+    assert ctx.grip_call is None and n.grip_late_discarded == 0
+    cli.futures[0].set_result(gripper_resp())  # 늦게 온 닫기 응답
+    assert n.grip_late_discarded == 1  # 버리고 센다
+    ctx2 = new_ctx(n, "g2")  # 다음 goal 은 그 응답을 보지 않는다
+    assert n._poll_gripper(ctx2, 1.5) is None
+    assert cli.requests == [(39.0, 14.0)]  # 끝난 뒤 개방 요청 없음
+
+
+def test_timed_out_call_late_reply_is_discarded(ready_node) -> None:
+    from voss_servo import fsm
+
+    n = ready_node
+    cli = FakeGripperCli()
+    n._gripper_cli = cli
+    ctx = new_ctx(n)
+    n._request_gripper(ctx, fsm.GRIPPER_OPEN, 1.0)
+    assert n._poll_gripper(ctx, 2.0) is None  # 아직
+    reply = n._poll_gripper(ctx, 4.01)  # 3.0 s 넘음
+    assert reply.message == "TIMEOUT" and ctx.grip_call is None
+    cli.futures[0].set_result(gripper_resp(width=90.0, grip=False))
+    assert n.grip_late_discarded == 1
+
+
+def test_busy_waits_then_retries_once(ready_node) -> None:
+    from voss_servo import fsm, grip
+
+    n = ready_node
+    cli = FakeGripperCli()
+    n._gripper_cli = cli
+    ctx = new_ctx(n)
+    n._request_gripper(ctx, fsm.GRIPPER_OPEN, 1.0)
+    cli.futures[0].set_result(gripper_resp(ok=False, width=0.0, grip=False, message="BUSY"))
+    assert n._poll_gripper(ctx, 1.25) is None  # BUSY 첫 번째 → 기다린다
+    assert ctx.grip_call.busy_at == 1.25 and ctx.grip_future is None
+    assert n._poll_gripper(ctx, 1.625) is None and len(cli.requests) == 1  # 0.5 s 전
+    assert n._poll_gripper(ctx, 1.75) is None and len(cli.requests) == 2  # 0.5 s 뒤 재요청
+    assert ctx.grip_call.seq == 2 and ctx.grip_call.busy_retries == 1
+    cli.futures[1].set_result(gripper_resp(width=90.0, grip=False))
+    reply = n._poll_gripper(ctx, 1.9)
+    assert reply.ok and reply.message == "OK"
+    # 개방은 판정하지 않는다 (verdict null)
+    assert ctx.grip_log["state"] == grip.REPLY and ctx.grip_log["verdict"] is None
+    assert n.grip_late_discarded == 0  # 소비한 BUSY 응답은 늦은 응답이 아니다
+    n._request_gripper(ctx, fsm.GRIPPER_CLOSE, 2.0)
+    assert ctx.grip_call.seq == 3  # 순번은 재요청까지 센다 (OPEN 1, 재요청 2, CLOSE 3)
+
+
+def test_busy_retry_when_service_gone_is_unavailable(ready_node) -> None:
+    from voss_servo import fsm, grip
+
+    n = ready_node
+    cli = FakeGripperCli()
+    n._gripper_cli = cli
+    ctx = new_ctx(n)
+    n._request_gripper(ctx, fsm.GRIPPER_OPEN, 1.0)
+    cli.futures[0].set_result(gripper_resp(ok=False, width=0.0, grip=False, message="BUSY"))
+    assert n._poll_gripper(ctx, 1.25) is None  # BUSY → 기다림
+    cli.ready = False  # 기다리는 사이 서비스가 사라짐
+    assert n._poll_gripper(ctx, 1.75) is None and len(cli.requests) == 1  # 보내지 않는다
+    reply = n._poll_gripper(ctx, 1.8)
+    assert reply.message == grip.UNAVAILABLE  # 3 s 시간초과를 기다리지 않고 바로 실패 (HLD D5)
+    assert ctx.grip_call is None and ctx.grip_log["seq"] == 2
+
+
+def test_stopping_does_not_poll_gripper(ready_node) -> None:
+    from voss_servo import fsm
+
+    n = ready_node
+    cli = FakeGripperCli()
+    n._gripper_cli = cli
+    ctx = new_ctx(n)
+    n._request_gripper(ctx, fsm.GRIPPER_OPEN, n._now())
+    cli.futures[0].set_result(gripper_resp(ok=False, width=0.0, grip=False, message="BUSY"))
+    ctx.state = fsm.FsmState(fsm.PREPARE, 0, True)  # 취소 후 stop 응답 대기
+    ev = n._build_event(ctx, n._now())
+    assert ev.gripper is None  # 보지 않는다
+    assert ctx.grip_call.busy_at is None and len(cli.requests) == 1  # BUSY 재요청 준비도 안 함
 
 
 def test_shutdown_mid_goal_logs_node_shutdown(ready_node, tmp_path) -> None:

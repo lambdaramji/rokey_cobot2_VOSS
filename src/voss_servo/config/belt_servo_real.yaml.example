@@ -1,0 +1,58 @@
+# belt_servo 실기 파라미터 — 예시 틀 (design/U3-dd.md 3절, U3-run.md A)
+#
+# 쓰는 법 (공용 PC):
+#   1) 복사: cp src/voss_servo/config/belt_servo_real.yaml.example ~/voss_ws/config/belt_servo_real.yaml
+#      실제 값 파일은 레포 밖에 둔다 (커밋하지 않는다).
+#   2) null 은 미측정이다. 측정해서 measurements 에 남긴 값만 채운다. null 이 남아 있으면 belt_servo 는
+#      "READY 거부: missing=[…]" 를 찍고 액션 서버를 만들지 않는다 (그게 정상 — 모르는 값으로 움직이지 않는다).
+#   3) 기동 (G0 runbook T7, 사람이 비상정지 옆에서):
+#      ros2 launch voss_servo belt_servo.launch.py params:=~/voss_ws/config/belt_servo_real.yaml \
+#        log_dir:=<레포>/data/servo
+#
+# 규칙:
+# - belt.* · gripper.* · timing.* · config_version · config_sha256 은 여기 쓰지 않는다 (있으면 launch 가 멈춘다).
+#   원본은 config/voss_config.yaml 이고 launch 가 읽어 넘긴다 (CLAUDE.md 규칙 5).
+# - 값이 있는 키는 결정값·측정값이다. 바꾸려면 measurements·PR 로 근거를 남긴다.
+# - 주석의 "제안" 은 미측정 제안값이다 (ADR-0012 승인 수치 목표의 범위 밖). 근거는 design/U2-dd.md 7절.
+# - 키 목록은 config/belt_servo.yaml 과 같아야 한다 (test_launch_params T-L12). U5 #131 의 새 키는 미리 넣어 두었다.
+belt_servo:
+  ros__parameters:
+    grasp:
+      tcp_z_below_top_mm: 19.0      # 결정값 — 파지 높이 TCP z = position_base.z − 19 mm (topics.md·pending #16)
+      # 아래 4키는 U5 #131 기준 (measurements-1008 #14, T34). #131 머지 전 main 노드는 close_time·room_margin 을 무시한다
+      hold_width_min_mm: 39.5       # 쥔 폭 범위 하한 (RG2 보고값). 빈손 최대 38.7 + 0.8 — 경계값은 제안
+      hold_width_max_mm: 43.5       # 쥔 폭 범위 상한. 회전 최대 43.0 + 0.5 — 경계값은 제안
+      close_time_max_s: 2.1         # 닫힘 90→39 최대 시간 (T34 1.6~2.1 s). x 여유 계산에 쓴다
+      room_margin_mm: 10.0          # x 여유 덧셈 (제안, 판단값). 부족하면 DESCEND 전에 OUT_OF_REACH(REACH_GRASP_ROOM)
+    reach:
+      x_min_mm: -107.0              # 측정값 — 추종 가능 구간 TCP x (measurements #6)
+      x_max_mm: 620.0               # 유효값 — 측정 구간 638 에서 gateway 감속 여유를 뺌 (PR #122, U2 DD 7.3)
+    control:
+      kp_per_s: null                # P 게인 (1/s). 0 = FF 만. U4 실기에서 정함
+      kp_z_per_s: null              # z P 게인 (1/s). 제안 ≤ 2 (kp_z × descend_speed ≤ max_acc)
+      align_tol_along_mm: null      # 벨트 방향 정렬 허용치. 제안 3
+      align_tol_cross_mm: null      # 가로 정렬 허용치. 제안 5, 상한 10 (확정)
+    limits:
+      max_speed_mps: null           # TCP 선속도 상한. 제안 0.08 (gateway 100 mm/s 보다 작게)
+      max_acc_mps2: null            # 가속 상한. 제안 0.1 (= gateway servo_acc 100 mm/s²)
+    z:
+      approach_above_top_mm: null   # 하강 전 대기 높이 (박스 윗면 기준). 제안 없음 — cutoff + 5 보다 커야 함 (U4)
+      lift_above_top_mm: null       # 들기 안전 높이 (박스 윗면 기준). 제안 없음 (U8a)
+      vision_cutoff_above_top_mm: null  # 이 높이 아래는 비전 사각. 제안 10 (남현지 확인)
+      descend_speed_mps: null       # 하강 속도 상한. 제안 0.05 (상한 약 0.06)
+      lift_speed_mps: null          # 들기 속도 상한. 제안 0.08
+      height_tol_mm: null           # "높이 도달" 허용치. 제안 2
+    input:
+      stale_timeout_s: null         # position_valid=false·pose 끊김 지속 기준. 제안 0.3
+      lost_timeout_s: null          # 내 track_id 미수신 지속 기준. 제안 0.5
+      pose_lag_ms: 60.0             # 측정값 — pose stamp 지연 (measurements-1008 #6, gateway pose_source: service 기준)
+      pose_extrap_max_ms: null      # TCP 외삽 지평 상한. 제안 200
+      blind_entry_max_age_s: null   # 하강 시작 때 마지막 유효 관측 나이 상한. 제안 0.15
+    retry:
+      max_attempts: 1               # U9 에서 3 으로 켠다
+    stop_timeout_s: 1.0             # stop 응답 기다리는 한계
+    gripper_timeout_s: 3.0          # 그리퍼 응답 기다리는 한계 (요청마다). 제안 — T34 닫힘 최대 2.1 s + 여유 (U5 #131 기준)
+    rate_hz: 30.0                   # 서보 루프 (topics.md 계약)
+    zero_hold_s: 0.5                # goal 종료 뒤 0 속도 유지 (watchdog 200 ms + 정지 시간보다 길게)
+    log:
+      dir: data/servo               # T7 은 launch 인자 log_dir:=<레포>/data/servo 로 덮어쓴다

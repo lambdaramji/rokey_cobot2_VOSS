@@ -1,14 +1,16 @@
-"""belt_servo — 컨베이어 박스 추종·파지 노드 (U1 뼈대 + U2 제어 계산, 그리퍼 호출은 U5).
+"""belt_servo — 컨베이어 박스 추종·파지 노드 (U1 뼈대 + U2 제어 계산 + U5 그리퍼 호출·판정).
 
 계약 (docs/interfaces/topics.md belt_servo 행, voss_msgs.md TrackAndGrasp 행):
 - 구독 /voss/vision/box (BoxTrack: position_base = 촬영 시각 관측 박스 윗면 중심 m, base_link),
        /voss/robot/pose (PoseStamped, TCP, base_link, stamp = 응답 수신 시각). best_effort·volatile.
 - 발행 /voss/robot/servo_cmd (TwistStamped, TCP 선속도 m/s, frame base_link, 각속도 0) 30 Hz.
 - 액션 /voss/servo/track_and_grasp. READY 일 때만 서버를 만들고, 바쁘면 reject. goal 1개당 result 1건.
-- 서비스 호출 /voss/robot/stop (취소 시), /voss/robot/gripper (U5).
+- 서비스 호출 /voss/robot/stop (취소 시), /voss/robot/gripper (PREPARE 개방·GRASP 닫기·VERIFY 확인).
+  비동기: 보내고 틱마다 들여다본다. goal 이 끝난 뒤 그리퍼 요청은 보내지 않는다(자동 개방 금지).
 - ADR-0010: speedl 은 스트림이 끊겨도 마지막 속도로 계속 간다 → 어떤 종료든 마지막 명령은 0.
 구조 (design/U1-hld.md): 콜백은 최신값만 보관 → 30 Hz 타이머 한 곳에서 판단·발행·로그.
-판단 로직은 순수 모듈 params·fsm·control·log_schema 에 있다 (control 설계: design/U2-*.md).
+판단 로직은 순수 모듈 params·fsm·control·grip·log_schema 에 있다
+(control 설계: design/U2-*.md, grip 설계: design/U5-*.md).
 """
 
 from __future__ import annotations
@@ -33,7 +35,7 @@ from std_srvs.srv import Trigger
 from voss_msgs.action import TrackAndGrasp
 from voss_msgs.msg import BoxTrack
 from voss_msgs.srv import Gripper
-from voss_servo import control, fsm
+from voss_servo import control, fsm, grip
 from voss_servo import log_schema as ls
 from voss_servo.params import PARAM_SPECS, check_params, params_digest, ready_log_line
 
@@ -121,6 +123,12 @@ class GoalCtx:
     geo: control.Geometry | None = None  # 이번 틱 기하 계산 (로그용)
     cmd: control.Command | None = None  # 이번 틱 명령 (로그용)
     source: int | None = None  # 마지막 유효 관측의 position_source (바뀌면 경고)
+    # 지금 기다리는 그리퍼 호출 (BUSY 재요청 대기 중에도 남음)
+    grip_call: grip.GripCall | None = None
+    grip_future: Any = None  # 그 호출의 future (진동벨). 응답을 소비했으면 None
+    grip_seq: int = 0  # 이 goal 에서 보낸 그리퍼 요청 수
+    grip_ready_reply: fsm.GripperReply | None = None  # 요청 순간 정해진 응답 (서비스 없음)
+    grip_log: dict[str, Any] | None = None  # 로그 gripper 칸 (진행 중 또는 마지막 끝난 호출)
 
 
 class BeltServoNode(Node):
@@ -141,6 +149,8 @@ class BeltServoNode(Node):
         self.ready = self._startup_check()  # READY 여부 (기동 때 한 번)
         # 제어 설정 묶음 (단위 변환 한 곳). READY 일 때만 goal 이 돌아서 그때만 만든다
         self._ctrl = control.config_from_values(self.values) if self.ready else None
+        self.grip_late_discarded = 0  # 버린 늦은 그리퍼 응답 수 (U5 DD E8)
+        self._room_need_s = self._grasp_room_need() if self.ready else None  # x 여유 계산용 시간
         self._setup_logs()
         self._setup_ros()
 
@@ -178,6 +188,25 @@ class BeltServoNode(Node):
             self.get_logger().error(ready_log_line(report) + " — 액션 서버 미생성")
         return report.ready
 
+    def _grasp_room_need(self) -> float:
+        """정렬 뒤 하강 + 닫힘에 걸릴 시간 (s). x 여유 검사(HLD D6)에 쓴다."""
+        cfg = self._ctrl
+        t_desc = grip.descend_time_s(
+            cfg.approach_dz - cfg.grasp_dz,  # 접근 높이 → 파지 높이 거리 (grasp_dz 는 음수)
+            cfg.descend_speed,
+            cfg.a_max,
+            cfg.kp_z,
+            cfg.height_tol_m,
+        )
+        need_s = t_desc + float(self._p("grasp.close_time_max_s"))  # 그동안 벨트를 따라간다
+        belt = float(np.linalg.norm(cfg.belt_v))  # 벨트 속도 m/s
+        need_m = belt * need_s + float(self._p("grasp.room_margin_mm")) / 1000.0
+        self.get_logger().info(
+            f"x 여유: 하강 예상 {t_desc:.2f} s + 닫힘 {need_s - t_desc:.2f} s → 정렬 때 "
+            f"x_max 까지 {need_m * 1000.0:.0f} mm 이상 남아야 DESCEND"
+        )
+        return need_s
+
     def _setup_logs(self) -> None:
         """틱·시도 로그 파일 경로를 정하고 기동 로그에 절대 경로를 남긴다."""
         log_dir = self.values.get("log.dir") or "data/servo"
@@ -193,7 +222,7 @@ class BeltServoNode(Node):
         self.create_subscription(PoseStamped, "/voss/robot/pose", self._on_pose, QOS_FAST)
         self._cmd_pub = self.create_publisher(TwistStamped, "/voss/robot/servo_cmd", QOS_FAST)
         self._stop_cli = self.create_client(Trigger, "/voss/robot/stop")
-        self._gripper_cli = self.create_client(Gripper, "/voss/robot/gripper")  # 호출은 U5
+        self._gripper_cli = self.create_client(Gripper, "/voss/robot/gripper")
         # READY 일 때만 액션 서버를 만든다. sort_manager 는 SERVO 준비를 "액션 서버 있음"으로
         # 판단하므로(voss_manager readiness.py), READY 아닌 서버가 떠 있으면 goal → reject → PAUSED 가 된다.
         # 기동 때 한 번 판정 (DEC-10, 운전 중 재판정 없음). design/U1-dd.md 5절
@@ -395,7 +424,7 @@ class BeltServoNode(Node):
             self._busy = False
 
     def _build_event(self, ctx: GoalCtx, now: float) -> fsm.TickEvent:
-        """이번 틱의 사실들을 모은다: 보정 TCP → 사각 → 입력 끊김 → 기하·전환 플래그. gripper 는 U5."""
+        """이번 틱의 사실들을 모은다: 보정 TCP → 사각 → 입력 끊김 → 기하·전환 플래그 → 그리퍼."""
         cfg = self._ctrl
         entry = self._boxes.get(ctx.track_id)
         tcp_est = self._tcp_estimate(now)  # (보정 TCP, 지평, 잘림) 또는 None
@@ -431,6 +460,9 @@ class BeltServoNode(Node):
             control.geometry(tcp_est, obs_xyz, obs_stamp, visible, now, cfg) if tcp_est else None
         )
         geo = ctx.geo
+        gripper = None
+        if not ctx.state.stopping:  # 취소 뒤에는 보지도, 재요청하지도 않는다 (U5 DD E2)
+            gripper = self._poll_gripper(ctx, now)
         return fsm.TickEvent(
             cancel_requested=bool(ctx.handle.is_cancel_requested),
             stop_result=self._poll_stop(ctx, now),
@@ -442,6 +474,21 @@ class BeltServoNode(Node):
             aligned=bool(geo.aligned) if geo else False,
             at_grasp_height=bool(geo.at_grasp_height) if geo else False,
             at_lift_height=bool(geo.at_lift_height) if geo else False,
+            gripper=gripper,
+            grasp_room=self._grasp_room(geo),
+        )
+
+    def _grasp_room(self, geo: control.Geometry | None) -> bool:
+        """정렬 순간 하강·닫힘을 끝낼 x 여유가 있나 (TCP 를 모르면 True — 그때는 정렬도 안 된다)."""
+        if geo is None:
+            return True
+        cfg = self._ctrl
+        return grip.grasp_room_ok(
+            float(geo.tcp[0]),  # 보정 TCP x (다른 판정과 같은 TCP, U5 DD E6)
+            cfg.x_max,
+            float(np.linalg.norm(cfg.belt_v)),
+            self._room_need_s,
+            float(self._p("grasp.room_margin_mm")) / 1000.0,  # mm → m
         )
 
     def _tcp_estimate(self, now: float) -> tuple[np.ndarray, float, bool] | None:
@@ -483,8 +530,142 @@ class BeltServoNode(Node):
         for action in actions:
             if action == fsm.REQUEST_STOP:
                 self._request_stop(ctx, now)
+            elif action in grip.ACTION_KIND:
+                self._request_gripper(ctx, action, now)
             else:
-                self.get_logger().debug(f"{action}: U5 에서 구현")  # 그리퍼 호출은 U5
+                self.get_logger().warning(f"모르는 행동 {action}")
+
+    def _request_gripper(self, ctx: GoalCtx, action: str, now: float) -> None:
+        """FSM 행동 → 새 그리퍼 요청을 만들어 보낸다 (기다리지 않는다)."""
+        kind, width = grip.request_for(
+            action, self._p("gripper.pre_open_mm"), self._p("gripper.grasp_width_mm")
+        )
+        # attempts 는 전이 뒤 값 (CLOSE 는 이번 시도 번호, OPEN 은 0)
+        force = self._p("gripper.force_n")
+        seq = ctx.grip_seq + 1  # 이 goal 의 다음 순번
+        call = grip.new_call(ctx.goal_id, ctx.state.attempts, kind, width, force, seq, now)
+        self._send_gripper(ctx, call, now)
+
+    def _send_gripper(self, ctx: GoalCtx, call: grip.GripCall, now: float) -> None:
+        """call_async 로 보내고 future 를 보관한다 (처음·BUSY 재요청 공통). 콜백은 달지 않는다 (DD E8).
+
+        서비스가 없으면 보내지 않고 다음 틱에 실패(GRIPPER_UNAVAILABLE)로 넘긴다 (HLD D5) — 재요청도 같다.
+        """
+        ctx.grip_seq = (
+            call.seq
+        )  # 보낸(또는 보내려던) 순번 = 이 goal 의 마지막 순번 (BUSY 재요청 포함)
+        if not self._gripper_cli.service_is_ready():
+            ctx.grip_call, ctx.grip_future = None, None  # 기다릴 호출이 없다
+            ctx.grip_ready_reply = grip.unavailable_reply()  # 다음 틱 FSM 이 DEVICE_ERROR 로 끝낸다
+            ctx.grip_log = grip.call_record(call, grip.UNAVAILABLE, now, code=grip.UNAVAILABLE)
+            self.get_logger().error(
+                f"gripper 서비스 없음 — {call.kind} seq={call.seq} 요청 못 보냄"
+            )
+            return
+        req = Gripper.Request()
+        req.width = float(call.width_mm)  # mm
+        req.force = float(call.force_n)  # N
+        ctx.grip_future = self._gripper_cli.call_async(req)
+        ctx.grip_call = call
+        ctx.grip_log = grip.call_record(call, grip.PENDING, call.sent_s)
+        self.get_logger().info(
+            f"gripper 요청 {call.kind} {call.width_mm:.1f} mm {call.force_n:.1f} N "
+            f"seq={call.seq} attempt={call.attempt}"
+        )
+
+    @staticmethod
+    def _raw_of(fut: Any) -> tuple[bool, grip.RawReply | None, bool, str]:
+        """future → (끝났나, 응답, 예외로 끝났나, 예외 글). ROS 응답을 순수 모듈용으로 옮긴다."""
+        if fut is None or not fut.done():
+            return False, None, False, ""
+        try:
+            resp = fut.result()
+            raw = grip.RawReply(
+                bool(resp.ok), float(resp.width_actual), bool(resp.grip_detected), str(resp.message)
+            )
+            return True, raw, False, ""
+        except Exception as exc:  # 서비스 호출 자체가 실패 → COMM_ERROR 로 본다 (DD E3)
+            return True, None, True, repr(exc)
+
+    def _poll_gripper(self, ctx: GoalCtx, now: float) -> fsm.GripperReply | None:
+        """기다리던 그리퍼 호출을 들여다본다. 결론이 났으면 FSM 에 넘길 응답, 아니면 None.
+
+        BUSY 재요청(0.5 s 뒤 1회)은 여기서 나간다 — _build_event 가 부르므로 틱마다 한 번.
+        """
+        if ctx.grip_ready_reply is not None:  # 요청 순간 정해진 응답(서비스 없음)을 한 번 넘긴다
+            reply, ctx.grip_ready_reply = ctx.grip_ready_reply, None
+            return reply
+        call = ctx.grip_call
+        if call is None:
+            return None  # 기다리는 호출이 없다
+        done, raw, failed, exc_text = self._raw_of(ctx.grip_future)
+        res = grip.poll(call, done, raw, failed, now, self._p("gripper_timeout_s"))
+        if res.status == grip.PENDING:
+            return None
+        if res.status == grip.BUSY_WAIT:  # BUSY 첫 번째: 조금 기다렸다 한 번 더 (HLD D3)
+            self.get_logger().warning(
+                f"gripper BUSY — {grip.BUSY_RETRY_DELAY_S} s 뒤 한 번 더 {call.kind} seq={call.seq}"
+            )
+            ctx.grip_call = grip.busy_marked(call, now)
+            ctx.grip_future = None  # BUSY 응답은 소비했다 (고아로 세지 않게)
+            ctx.grip_log = grip.call_record(
+                ctx.grip_call, grip.BUSY_WAIT, now, code=res.code, raw=res.raw_message
+            )
+            return None
+        if res.status == grip.RETRY:
+            self._send_gripper(ctx, grip.retried(call, now), now)
+            return None
+        # 여기부터 REPLY 또는 TIMED_OUT: 이 호출은 끝 → 기다리는 호출을 비운다
+        if res.status == grip.TIMED_OUT:
+            self._orphan_gripper(ctx)  # 비우면서, 나중에 오는 응답은 버린 것으로 세게 한다
+        else:
+            ctx.grip_call, ctx.grip_future = None, None  # 응답을 받았으니 그냥 비운다
+        verdict = None
+        if call.kind in (grip.CLOSE, grip.VERIFY):  # 개방 응답은 판정하지 않는다 (DD E14)
+            verdict = fsm.judge_grip(
+                res.reply, self._p("grasp.hold_width_min_mm"), self._p("grasp.hold_width_max_mm")
+            )[0]
+        ctx.grip_log = grip.call_record(
+            call, res.status, now, res.reply, res.code, res.raw_message or exc_text or None, verdict
+        )
+        self._log_grip_reply(call, res, exc_text)
+        return res.reply
+
+    def _log_grip_reply(self, call: grip.GripCall, res: grip.PollResult, exc_text: str) -> None:
+        """응답 한 줄 로그. INVALID 는 설정 오류로 따로 알린다 (HLD D3)."""
+        r = res.reply
+        line = (
+            f"gripper 응답 {call.kind} seq={call.seq} → {res.code} "
+            f"폭 {r.width_mm:.1f} mm grip {r.grip_detected} (원문: {res.raw_message or exc_text})"
+        )
+        if res.code == "INVALID":
+            self.get_logger().error(line + " — 설정 오류(폭·힘) 확인")
+        elif not r.ok or res.code != "OK":
+            self.get_logger().warning(line)
+        else:
+            self.get_logger().info(line)
+
+    def _orphan_gripper(self, ctx: GoalCtx) -> None:
+        """기다리던 호출을 내려놓는다 (취소는 못 한다). 나중에 오는 응답은 버리고 센다 (HLD D7, DD E8)."""
+        call, fut = ctx.grip_call, ctx.grip_future
+        ctx.grip_call, ctx.grip_future = None, None
+        if call is not None and fut is not None:
+            # 이미 끝난 future 면 곧바로 불린다 (응답이 와 있었지만 소비하지 않음 = 버림)
+            fut.add_done_callback(lambda f, c=call: self._on_grip_late(c, f))
+
+    def _on_grip_late(self, call: grip.GripCall, fut: Any) -> None:
+        """고아 호출의 응답 = 무조건 버린다. 세고 한 줄 남긴다."""
+        try:
+            self.grip_late_discarded += 1
+            _, raw, failed, exc_text = self._raw_of(fut)
+            code = "COMM_ERROR" if failed or raw is None else grip.message_code(raw.message)
+            text = exc_text if failed or raw is None else raw.message
+            self.get_logger().info(
+                f"gripper_late_discarded goal={call.goal_id} attempt={call.attempt} "
+                f"kind={call.kind} seq={call.seq} code={code} message={text}"
+            )
+        except Exception as exc:  # 콜백 예외로 노드가 죽지 않게
+            self.get_logger().error(f"_on_grip_late 예외: {exc!r}")
 
     def _request_stop(self, ctx: GoalCtx, now: float) -> None:
         """gateway 에 정지를 요청한다 (기다리지 않는다)."""
@@ -534,7 +715,10 @@ class BeltServoNode(Node):
             "reason": reason,
             "cause": cause,
             "grasped": grasped,
+            "gripper": ctx.grip_log,  # 마지막 그리퍼 호출 기록 (GOAL_END 스냅샷에도)
         }
+        # 진행 중 그리퍼 호출은 취소하지 않고 내려놓는다 → 응답이 오면 버린다 (HLD D7, 자동 개방 금지)
+        self._orphan_gripper(ctx)
         if not goal_end_logged:
             self._log_goal_end_snapshot(now)  # 예외 경로도 게이트 분모(GOAL_END)에 남긴다
         if self._ctx is ctx:
@@ -646,7 +830,7 @@ class BeltServoNode(Node):
             "reason": tr.reason,
             "cause": tr.cause,
             "grasped": tr.grasped,
-            "gripper": None,  # U5: {ok, width_actual_mm, grip_detected, message}
+            "gripper": ctx.grip_log,  # 진행 중 또는 마지막 끝난 호출 (U5 DD 4절)
             **self._control_values(ctx, ev),
             **self._input_values(ctx.track_id),
             **self._common_values(),
@@ -708,7 +892,7 @@ class BeltServoNode(Node):
             "reason": g.get("reason"),
             "cause": cause,  # ZERO_HOLD = 종료 뒤 0 유지 구간 표시
             "grasped": g.get("grasped"),
-            "gripper": None,
+            "gripper": g.get("gripper"),
             **self._input_values(g.get("track_id")),
             **self._common_values(),
         }

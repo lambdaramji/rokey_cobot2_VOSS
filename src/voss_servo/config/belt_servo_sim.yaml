@@ -1,0 +1,48 @@
+# belt_servo 시뮬 파라미터 — **sim 전용, 실기 금지** (design/U3-dd.md 3절)
+#
+# - sim.launch.py 가 robot_gateway dry_run(가짜 로봇·가짜 RG2) + fake_box 와 함께 쓴다.
+# - 값은 미측정 제안값이다 (sim 동작 확인용). 실기 값은 belt_servo_real.yaml.example 을 복사해 측정값으로 채운다.
+# - kp_per_s 1.0 · approach 40 · lift 50 은 U3 사전 실험에서 쓴 값이다 (design/U3-hld.md 2절). 나머지는 U2 DD 7절 제안값.
+# - log.dir 은 /tmp 절대 경로: log_dir 없이 띄워도 git 추적 폴더 data/servo/attempts/(게이트 증거)를 오염시키지 않게.
+# - 키 목록은 config/belt_servo.yaml 과 같아야 한다 (test_launch_params T-L12). close_time_max_s·room_margin_mm·
+#   gripper_timeout_s 는 U5 #131 의 새 필수 키를 미리 넣은 것 (#131 머지 전 main 노드는 무시).
+belt_servo:
+  ros__parameters:
+    grasp:
+      tcp_z_below_top_mm: 19.0
+      hold_width_min_mm: 39.5
+      hold_width_max_mm: 43.5
+      close_time_max_s: 2.1
+      room_margin_mm: 10.0
+    reach:
+      x_min_mm: -107.0
+      x_max_mm: 620.0
+    control:
+      kp_per_s: 1.0
+      kp_z_per_s: 1.5
+      align_tol_along_mm: 3.0
+      align_tol_cross_mm: 5.0
+    limits:
+      max_speed_mps: 0.08
+      max_acc_mps2: 0.1
+    z:
+      approach_above_top_mm: 40.0
+      lift_above_top_mm: 50.0
+      vision_cutoff_above_top_mm: 10.0
+      descend_speed_mps: 0.05
+      lift_speed_mps: 0.08
+      height_tol_mm: 2.0
+    input:
+      stale_timeout_s: 0.3
+      lost_timeout_s: 0.5
+      pose_lag_ms: 60.0
+      pose_extrap_max_ms: 200.0
+      blind_entry_max_age_s: 0.15
+    retry:
+      max_attempts: 1
+    stop_timeout_s: 1.0
+    gripper_timeout_s: 3.0
+    rate_hz: 30.0
+    zero_hold_s: 0.5
+    log:
+      dir: /tmp/voss_sim/servo
