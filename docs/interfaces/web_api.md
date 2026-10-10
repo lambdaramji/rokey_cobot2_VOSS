@@ -107,22 +107,6 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 - 실패: `{"ok": false, "message": "LLM_TIMEOUT|LLM_ERROR|PARSE_ERROR"}`, timeout 기본 3초.
 - **intent_parser 가 응답을 다시 검증**한다(허용 목록·필수 필드). FastAPI 응답을 그대로 믿지 않는다.
 
-### `POST /ai/tts` — GPT-4o mini TTS 음성 합성 (T10 #19)
-- 호출자: ROS `speech_out` 전용. FastAPI는 127.0.0.1:8000에서만 수신하고 Nginx로 노출하지 않는다.
-- 요청: `{"text": "분류를 시작합니다."}` (공백 제외 불가, 1~500자)
-- 모델: `gpt-4o-mini-tts`, 초기 음성 `coral` (`docker/ai/.env` 설정)
-- 성공: HTTP 200, `Content-Type: application/octet-stream`
-- 음성 형식: `X-Audio-Format: S16LE;rate=24000;channels=1`
-- 본문: 헤더 없는 24 kHz, 16-bit little-endian, mono PCM 스트림
-- 실패: 공통 오류 JSON 형식
-  - 400 `TTS_INVALID`: 잘못된 입력
-  - 503 `TTS_UNAVAILABLE`: TTS 설정 누락
-  - 504 `TTS_TIMEOUT`: 첫 음성 생성 전 시간 초과
-  - 502 `TTS_ERROR`: 첫 음성 생성 전 API 실패
-- 스트리밍 시작 후 실패는 HTTP 상태를 변경할 수 없으므로 연결 종료와 오류 로그로 처리한다.
-- 자동 재시도 없음. API 키는 FastAPI 컨테이너에만 보관한다.
-- 검증: SYS-FR-022 / VT-022, SYS-PF-005 / VT-049
-
 ## 변경 이력
 - 2026-10-08: #20 MQTT 계약 확정에 맞춰 1883/wlo1은 개발 디버그 때만 임시 개방하고 시연 때 차단하도록 정합.
 - 2026-10-07: `SortState.session_id`(#78) 머지에 맞춰 "현재 세션" 확정 — 임시 규칙(최근 `sort_log` 행) 삭제, `session_id == ""` 이면 `NO_SESSION`(#78 김학민 🟢, `/api/sessions/current` 는 예정 수량만), `next` 예정 수량은 첫 결과가 아니라 `start` 때 붙임. "의존" 절 삭제.

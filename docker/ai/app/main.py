@@ -11,18 +11,15 @@ LLM_TIMEOUT_S
 from __future__ import annotations
 
 import io
-import logging
 import os
 import time
-from collections.abc import Iterator
 from typing import Annotated
 
 from fastapi import FastAPI, File, Form, UploadFile
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from app.intent_prompt import INTENT_SCHEMA, build_messages, normalize
-from app.tts_service import iter_tts_pcm
 
 app = FastAPI(title="VOSS AI", docs_url=None, redoc_url=None)
 
@@ -161,71 +158,3 @@ def intent(req: IntentRequest):
         "llm_ms": int(1000 * (time.monotonic() - t0)),
         "model": model,
     }
-
-
-# T10: /ai/tts는 ROS speech_out 전용이며 외부에 노출하지 않는다.
-TTS_MAX_TEXT_LENGTH = 500
-TTS_MEDIA_TYPE = "application/octet-stream"
-TTS_LOGGER = logging.getLogger(__name__)
-
-
-class TTSRequest(BaseModel):
-    text: str
-
-
-def _continue_tts_stream(
-    first_chunk: bytes,
-    remaining: Iterator[bytes],
-) -> Iterator[bytes]:
-    """첫 PCM 조각에 이어 나머지 음성을 전송한다."""
-    try:
-        yield first_chunk
-        yield from remaining
-    except Exception as error:
-        # 응답 전송 후에는 HTTP 상태를 변경할 수 없다.
-        TTS_LOGGER.error(
-            "TTS_STREAM_FAILED: %s",
-            type(error).__name__,
-        )
-        raise
-    finally:
-        remaining.close()
-
-
-@app.post("/ai/tts")
-def tts(request: TTSRequest):
-    """유효한 텍스트를 PCM 스트림으로 바꿔 반환한다."""
-    text = request.text.strip()
-
-    if not text or len(text) > TTS_MAX_TEXT_LENGTH:
-        return _err(400, "TTS_INVALID")
-
-    required = ("TTS_OPENAI_API_KEY", "TTS_MODEL", "TTS_VOICE")
-    if any(not os.getenv(name) for name in required):
-        return _err(503, "TTS_UNAVAILABLE")
-
-    pcm_stream = iter_tts_pcm(text)
-
-    try:
-        first_chunk = next(pcm_stream)
-    except StopIteration:
-        return _err(502, "TTS_ERROR", "Empty audio")
-    except Exception as error:
-        # 외부 SDK의 오류 세부 내용은 응답에 노출하지 않는다.
-        error_name = type(error).__name__
-        TTS_LOGGER.error("TTS_FAILED: %s", error_name)
-
-        pcm_stream.close()
-        if "Timeout" in error_name:
-            return _err(504, "TTS_TIMEOUT", error_name)
-
-        return _err(502, "TTS_ERROR", error_name)
-
-    return StreamingResponse(
-        _continue_tts_stream(first_chunk, pcm_stream),
-        media_type=TTS_MEDIA_TYPE,
-        headers={
-            "Cache-Control": "no-store",
-            "X-Audio-Format": "S16LE;rate=24000;channels=1",
-        },
-    )

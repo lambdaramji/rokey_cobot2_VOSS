@@ -11,5 +11,4 @@
   - 마이크 모드 설치(Ubuntu 24.04, PEP 668): `sudo apt install libportaudio2 && pip install --user --break-system-packages sounddevice`. 없으면 text 모드로 자동 전환되므로 시작 로그에서 "mic 모드" 를 꼭 확인한다.
   - text 모드는 stdin 이 필요해 `ros2 launch` 로는 입력을 받지 못한다. 별도 터미널에서 `ros2 run voss_voice voice_listener --ros-args -p mode:=text`. HMI 텍스트 입력(R-09)은 hmi_bridge 경로로 따로 둔다.
 - 완료 기준: 녹음 20개 전사 ≥ 90%, 지시 20개 중 19개 정확, 발화→응답 ≤ 3초.
-- speech_out 구조(#19, pending #12 결정): TTS 는 OpenAI `gpt-4o-mini-tts`(voice `coral`), FastAPI `POST /ai/tts` 가 24 kHz S16LE mono PCM 을 스트리밍(web_api.md), 노드는 `/voss/voice/say` 수신 → FIFO 큐(`speech_queue.py`, 20개 제한) → 워커 1개가 `tts_client.py`(표준 라이브러리 HTTP) → `audio_player.py`(aplay) 순차 재생. 실패해도 다음 안내는 계속한다. TTS 키는 `TTS_OPENAI_API_KEY`(.env 전용). VT-049(발화→응답 3초)는 전체 루프에서 미실측.
-- 결정 필요: Whisper 크기 → docs/pending-decisions.md #6. 호출어는 ADR-0007(승인), TTS 엔진은 #12 결정
+- 결정 필요: Whisper 크기, TTS 엔진 → docs/pending-decisions.md #6·12. 호출어는 ADR-0007(승인)
