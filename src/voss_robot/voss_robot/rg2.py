@@ -180,7 +180,8 @@ class DryRunRg2:
         if (why := validate(width_mm, force_n)) is not None:
             return GripResult(False, message=f"INVALID: {why}")
         time.sleep(0.3)
-        grip = self.object_mm is not None and width_mm < self.object_mm < self.width
+        # 이미 물체 폭에서 멈춘 채 다시 닫아도(belt_servo VERIFY 재닫기) 쥔 상태 유지 → <= (#41 박병후)
+        grip = self.object_mm is not None and width_mm < self.object_mm <= self.width
         self.width = self.object_mm if grip else width_mm
         return GripResult(True, self.width, grip, "OK")
 

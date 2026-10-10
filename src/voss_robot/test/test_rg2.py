@@ -108,6 +108,15 @@ def test_dry_run_grips_object_between():
     assert g.command(90.0, 14.0).width_actual == 90.0
 
 
+def test_dry_run_reclose_on_held_object_keeps_grip():
+    # belt_servo VERIFY: 쥔 채(폭 == object_mm) 39 mm 를 다시 보내도 grip 유지 (#41)
+    g = DryRunRg2(width_mm=90.0, object_mm=40.5)
+    assert g.command(39.0, 14.0).grip_detected
+    r = g.command(39.0, 14.0)
+    assert r.ok and r.grip_detected and r.width_actual == 40.5
+    assert not g.command(90.0, 14.0).grip_detected  # 열면 놓는다
+
+
 def test_hold_blocks_external_command_and_allows_held():
     rg = Rg2(FakeModbus(), poll_s=0.0)
     assert rg.try_hold()
