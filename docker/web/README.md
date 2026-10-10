@@ -40,7 +40,7 @@ npm run dev
 
 ## 공용 PC 배포
 
-1. PostgreSQL의 **별도 웹 계획 테이블** 생성: `sql/session_plan.sql`. 전용 계획 계정은 `session_plan`만 SELECT/INSERT/UPDATE(필요 시 DELETE)할 수 있게 권한을 설정하고, **조회 계정은 `sort_log` SELECT만** 허용합니다. `sort_log` INSERT 권한은 `sort_logger`에만 줍니다.
+1. 테이블·계정은 **`docker/db/`가 이미 만든다** — `init/01_schema.sql`(`sort_log`, `session_plan`), `init/02_roles.sh`(`voss_web`: `sort_log` SELECT만, `session_plan` 읽기·쓰기). 별도 SQL 을 두지 않는다(스키마 이중화 방지). `sort_log` INSERT 는 `sort_logger` 계정뿐입니다.
 2. `docker/web/.env.example`를 참고해 `docker/web/.env` 파일을 **로컬에서 직접 만들고** 실제 비밀번호와 JDBC URL을 입력합니다. 이 `.env`는 `.gitignore` 대상입니다. 샘플 파일에는 비밀번호를 넣지 마세요.
 3. Mosquitto의 `web` 계정은 `voss/command` 쓰기 및 `voss/#` 읽기 ACL이 필요합니다. 실제 구독 테스트 때 `VOSS_MQTT_ENABLED=true`로 변경합니다.
 4. Docker Compose 호스트 네트워크 사용이 공용 PC/ufw/포트 점유 정책과 맞는지 현장에서 확인합니다. 80 Nginx, 8080 Spring localhost, 1883 Mosquitto, 5432 PostgreSQL localhost입니다.
