@@ -23,6 +23,8 @@ data/recordings/
 data/images/
 # belt_servo 30 Hz 틱 로그(goal 마다 수천 줄). data/servo/attempts/ 는 게이트 증거라 추적한다 (#110)
 data/servo/ticks/
+# belt_servo 실값 파일은 레포 밖 ~/voss_ws/config/ 에 둔다. 실수로 레포 config/ 에 복사해도 커밋되지 않게 (#31 박병후)
+config/belt_servo_real.yaml
 *.bag
 *.db
 *.sqlite

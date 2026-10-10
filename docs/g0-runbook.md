@@ -89,7 +89,7 @@ EOF
 | 4 | sort_logger (**sort_manager 보다 먼저**) | `export VOSS_DB_LOGGER_PASSWORD=<.env 값>` → `ros2 run voss_hmi sort_logger` | 정의석 | `/voss/log/status` STARTING → OK |
 | 5 | box_tracker | `ros2 launch voss_vision box_tracker.launch.py` | 남현지 | 시작 줄 `hand_eye=2026-10-08T11:21:40 moving_verified=True pose_lag=60 ms`, 5초 로그 ≈ 30 Hz·WARN 없음 |
 | 6 | label_reader | `ros2 launch voss_vision label_reader.launch.py python:=$HOME/.venvs/voss_ocr/bin/python` | 남현지 | "OCR 엔진 준비" (판독 준비 완료는 T8 뒤 zone_map 을 받으면) |
-| 7 | belt_servo | `ros2 launch voss_servo belt_servo.launch.py <파라미터 파일>` — 정확한 인자는 박병후 U1 PR 본문(머지 뒤 이 칸 확정) | 박병후 · **비상정지** | `READY` 로그 + 파라미터 sha256 한 줄 |
+| 7 | belt_servo | `ros2 launch voss_servo belt_servo.launch.py params:=~/voss_ws/config/belt_servo_real.yaml log_dir:=$HOME/voss_ws/src/rokey_cobot2_VOSS/data/servo` (#132). 실값 파일 `belt_servo_real.yaml`·`belt_servo_kp0.yaml` 은 레포 밖 `~/voss_ws/config/`(박병후 전달, 커밋 금지). **첫 실기(FF 만)** 는 끝에 `overrides:=~/voss_ws/config/belt_servo_kp0.yaml`. `input.pose_lag_ms` 는 gateway `pose_source` 와 같은 기준으로 잰 값(10/10 재측정, #128). 끌 때는 **gateway 보다 먼저** 끈다 | 박병후(없으면 명령 입력 담당) · **비상정지** | `READY` 로그 + `config_sha256`(T2 와 같은 앞 12자리)·`params_sha256` 한 줄, `ros2 action list` 에 `/voss/servo/track_and_grasp`. `READY 거부: missing=[…]` = 그 키가 null → yaml 에 채움, `invalid=[…]` = 교차 검사 실패(사유가 같이 찍힘) — 둘 다 액션 서버가 안 뜬다 |
 | 8 | sort_manager | `ros2 launch voss_manager sort_manager.launch.py` | 남현지 | voss_config sha256 로그(T2·T6 과 같은 값) |
 | 9 | 명령·관측 | 아래 3·4 | 남현지 | |
 
