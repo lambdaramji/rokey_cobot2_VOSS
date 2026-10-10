@@ -1,4 +1,3 @@
-
 """audio_player: PCM 음성을 Linux 스피커로 출력한다.
 입력: 24kHz 16-bit PCM 바이트 조각.
 출력: 스피커 재생 및 전송 바이트 수.
@@ -13,10 +12,14 @@ PLAY_TIMEOUT_S = 30.0
 APLAY_COMMAND = [
     "aplay",
     "-q",
-    "-t", "raw",
-    "-f", "S16_LE",
-    "-r", "24000",
-    "-c", "1",
+    "-t",
+    "raw",
+    "-f",
+    "S16_LE",
+    "-r",
+    "24000",
+    "-c",
+    "1",
 ]
 
 
@@ -56,14 +59,10 @@ def play_pcm(
         player.stdin.close()
         player.stdin = None
 
-        _, error_output = player.communicate(
-            timeout=PLAY_TIMEOUT_S
-        )
+        _, error_output = player.communicate(timeout=PLAY_TIMEOUT_S)
 
         if player.returncode != 0:
-            message = error_output.decode(
-                "utf-8", errors="replace"
-            )
+            message = error_output.decode("utf-8", errors="replace")
             raise RuntimeError(f"aplay failed: {message}")
 
         if received_bytes == 0:

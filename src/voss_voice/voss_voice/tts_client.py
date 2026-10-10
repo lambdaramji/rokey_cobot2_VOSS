@@ -1,4 +1,3 @@
-
 """tts_client: 로컬 FastAPI에서 PCM 음성을 받아온다.
 입력: 한국어 안내 문장.
 출력: PCM 바이트 조각.
@@ -46,13 +45,9 @@ def stream_tts_audio(text: str) -> Iterator[bytes]:
 
                 yield chunk
     except HTTPError as error:
-        raise TTSClientError(
-            f"TTS HTTP status: {error.code}"
-        ) from error
+        raise TTSClientError(f"TTS HTTP status: {error.code}") from error
     except (URLError, TimeoutError, OSError) as error:
-        raise TTSClientError(
-            f"TTS connection failed: {type(error).__name__}"
-        ) from error
+        raise TTSClientError(f"TTS connection failed: {type(error).__name__}") from error
 
 
 def _validate_audio_headers(headers) -> None:

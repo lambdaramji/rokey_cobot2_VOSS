@@ -1,4 +1,3 @@
-
 """speech_out: ROS 안내 메시지를 스피커로 출력한다.
 입력: /voss/voice/say (std_msgs/String).
 출력: FIFO 음성 재생 및 진단 로그.
@@ -86,28 +85,21 @@ class SpeechOutNode(Node):
         started_at_s = time.monotonic()
         queue_ms = (started_at_s - received_at_s) * 1000
 
-        self.get_logger().info(
-            f"TTS_DISPATCH queue_ms={queue_ms:.0f}"
-        )
+        self.get_logger().info(f"TTS_DISPATCH queue_ms={queue_ms:.0f}")
 
         def log_first_pcm_written() -> None:
             """첫 PCM 전달까지의 시간을 기록한다."""
             written_at_s = time.monotonic()
 
-            receive_to_write_ms = (
-                written_at_s - received_at_s
-            ) * 1000
+            receive_to_write_ms = (written_at_s - received_at_s) * 1000
 
-            dispatch_to_write_ms = (
-                written_at_s - started_at_s
-            ) * 1000
+            dispatch_to_write_ms = (written_at_s - started_at_s) * 1000
 
             self.get_logger().info(
                 "TTS_FIRST_PCM_WRITTEN "
                 f"receive_to_write_ms={receive_to_write_ms:.0f} "
                 f"dispatch_to_write_ms={dispatch_to_write_ms:.0f}"
             )
-
 
         chunks = stream_tts_audio(text)
 
@@ -118,19 +110,14 @@ class SpeechOutNode(Node):
             )
         except Exception as error:
             # 실패해도 다음 안내는 처리한다.
-            self.get_logger().error(
-                f"TTS_FAILED: {type(error).__name__}: {error}"
-            )
+            self.get_logger().error(f"TTS_FAILED: {type(error).__name__}: {error}")
             return
         finally:
             chunks.close()
 
         elapsed_ms = (time.monotonic() - started_at_s) * 1000
 
-        self.get_logger().info(
-            f"TTS_FINISHED bytes={byte_count} "
-            f"elapsed_ms={elapsed_ms:.0f}"
-        )
+        self.get_logger().info(f"TTS_FINISHED bytes={byte_count} elapsed_ms={elapsed_ms:.0f}")
 
     def close(self) -> None:
         """현재 재생 종료 후 워커를 정리한다."""

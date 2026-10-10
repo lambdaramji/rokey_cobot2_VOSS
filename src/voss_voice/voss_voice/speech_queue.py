@@ -1,4 +1,3 @@
-
 """speech_queue: 안내 문장을 도착 순서대로 보관한다.
 입력: ROS에서 받은 문장과 수신 시각.
 출력: FIFO 순서의 SpeechRequest.
@@ -35,9 +34,7 @@ class SpeechQueue:
             return False
 
         try:
-            self._queue.put_nowait(
-                SpeechRequest(cleaned_text, received_at_s)
-            )
+            self._queue.put_nowait(SpeechRequest(cleaned_text, received_at_s))
         except Full:
             return False
 

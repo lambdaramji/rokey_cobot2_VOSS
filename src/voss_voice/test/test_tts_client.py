@@ -1,4 +1,3 @@
-
 """FastAPI TTS 응답 형식과 스트림 수신을 검증한다."""
 
 import io
@@ -37,15 +36,14 @@ def test_tts_client_receives_pcm_in_order(monkeypatch) -> None:
 
     monkeypatch.setattr(tts_client, "urlopen", fake_urlopen)
 
-    received_pcm = b"".join(
-        tts_client.stream_tts_audio("안녕하세요")
-    )
+    received_pcm = b"".join(tts_client.stream_tts_audio("안녕하세요"))
 
     assert received_pcm == expected_pcm
 
 
 def test_tts_client_rejects_wrong_content_type(monkeypatch) -> None:
     """오류 JSON을 PCM 음성으로 잘못 재생하지 않는다."""
+
     def fake_urlopen(request, timeout):
         return FakeAudioResponse(b'{"ok":false}', valid=False)
 
