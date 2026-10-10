@@ -508,7 +508,7 @@ bag 합계 약 60 GB.
 
 - **#41:** 이슈 완료 기준(재시작 없이 60분↑·FAULT 0) 충족, 10/10 안내 8절의 pose ≥ 45 Hz 는 미달(최소 30.2, C2·HOLD1 트레이 안 이동 때) → #41 열어 두고 PL 판단(안내대로면 10/11 `queue_soak`). #41 댓글에 벤치·로그 결과 올림(10/10).
 - **#44:** 15칸 OK → 이 PR 로 닫음. C2 32.3 s(> 30 s)·PICK 미구현은 안내 7절대로 #45·#32 로.
-- **voss_servo (박병후 판단):** G1 의도 시험 LOST 4건과 OK 회차의 마지막 박스 관측 시점 비교("의도 시험" 절) · x ≥ 600 TRACK z 처짐(#13 행) · `hold_width_max_mm` 레포 기본 43.5 → 44.0 (G1 뒤 병후 PR) · belt_servo READY 로그 고정 문구("service 기준").
+- **voss_servo (박병후 판단):** G1 의도 시험 DESCEND 중 LOST 3건(track 26·31·33)과 OK 회차의 마지막 박스 관측 시점 비교("의도 시험" 절) · x ≥ 600 TRACK z 처짐(#13 행) · `hold_width_max_mm` 레포 기본 43.5 → 44.0 (G1 뒤 병후 PR) · belt_servo READY 로그 고정 문구("service 기준").
 - 그리퍼 힘: 14 N 유지(10/10 결정). 박스 찌그러짐 관찰 1건(② 15:26 무렵 실행자 보고, 정도 미기록), 15칸 시험 중에는 이상 없음.
 - box_tracker 주석 "게이트웨이 수신 시각"(joint_states 면 관절을 읽은 시각), hand_eye.yaml `pose_lag_ms_measured: 60.0`·`moving_spread_lag_mm: 2.73`, 런북 T5 — G1 뒤 후속(#140 리뷰, 김학민).
 - 안내 5절 #41 확인 명령은 `launch.log` 대신 노드 로그(`~/.ros/log/python3_<pid>_*.log`)를 봐야 함("#41 로그 확인 명령 시험" 절).
