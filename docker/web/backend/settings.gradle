@@ -1,0 +1,6 @@
+// T13 #22 웹 HMI의 Spring Boot 백엔드 프로젝트를 정의한다.
+// 입력: Gradle 빌드·테스트 명령.
+// 출력: 빌드 결과에 사용할 프로젝트 이름.
+// 근거: docs/adr/0006-web-ai-db-stack.md
+
+rootProject.name = 'voss-web-backend'

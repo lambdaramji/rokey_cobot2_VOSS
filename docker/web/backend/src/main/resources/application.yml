@@ -1,0 +1,12 @@
+# T13 #22 Spring Boot 로컬 HTTP 서버와 MQTT 구독 활성화.
+# 브로커/DB 자격 증명은 .env 또는 실제 환경 변수로만 주입한다.
+# 근거: docs/interfaces/web_api.md, mqtt.md, ADR-0006.
+spring:
+  application:
+    name: voss-web-backend
+server:
+  address: 127.0.0.1
+  port: 8080
+voss:
+  mqtt:
+    enabled: ${VOSS_MQTT_ENABLED:false}

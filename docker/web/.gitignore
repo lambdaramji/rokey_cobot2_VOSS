@@ -1,0 +1,9 @@
+# T13 #22 웹과 컨테이너의 로컬 자격 증명/빌드 산출물을 보호한다.
+.env
+.env.*
+!.env.example
+frontend/node_modules/
+frontend/dist/
+backend/.gradle/
+backend/build/
+*.log
