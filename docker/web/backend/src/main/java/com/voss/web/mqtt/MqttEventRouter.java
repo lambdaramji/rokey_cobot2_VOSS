@@ -1,11 +1,13 @@
-// 확정된 7개 MQTT 입력 토픽을 상태 저장과 SSE 이벤트에 연결한다.
-// 입력: 토픽명과 MQTT JSON payload. 출력: 최신 상태와 SSE.
-// 근거: docs/interfaces/mqtt.md, web_api.md.
+// 확정된 MQTT 수신 토픽을 상태 저장, SSE, 세션 예정 수량에 연결한다.
+// 입력: 토픽명과 MQTT JSON. 출력: 최신 SortState, SSE, session_plan 연결.
+// 근거: docs/interfaces/mqtt.md, web_api.md (#20, #68).
 package com.voss.web.mqtt;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.voss.web.api.ApiException;
+import com.voss.web.db.PlanRepository;
 import com.voss.web.service.LiveEvents;
 import com.voss.web.service.SortStateStore;
 import java.util.Set;
@@ -19,22 +21,26 @@ public class MqttEventRouter {
     private static final Set<String> INPUT_TOPICS = Set.of(
             "voss/state", "voss/result", "voss/zone_map", "voss/robot",
             "voss/command/ack", "voss/log_status");
+
     private final ObjectMapper mapper;
     private final MqttStateMessageHandler stateHandler;
     private final SortStateStore stateStore;
     private final LiveEvents events;
+    private final PlanRepository plans;
     private volatile JsonNode zoneMap;
+    private String lastAttachedSessionId = "";
 
-    /** 원본 메시지를 상태 저장소와 SSE 이벤트 흐름에 연결한다. */
+    /** MQTT 처리기, SSE, 예정 수량 저장소를 연결한다. */
     public MqttEventRouter(ObjectMapper mapper, MqttStateMessageHandler stateHandler,
-                           SortStateStore stateStore, LiveEvents events) {
+                           SortStateStore stateStore, LiveEvents events, PlanRepository plans) {
         this.mapper = mapper;
         this.stateHandler = stateHandler;
         this.stateStore = stateStore;
         this.events = events;
+        this.plans = plans;
     }
 
-    /** 정확히 알려진 토픽의 JSON만 받아 처리한다. */
+    /** 계약에 정의된 토픽과 JSON 객체만 처리한다. */
     public void receive(String topic, String payload) {
         if (!INPUT_TOPICS.contains(topic)) { return; }
         if (payload == null || payload.isBlank()) { return; }
@@ -48,19 +54,35 @@ public class MqttEventRouter {
             if ("voss/zone_map".equals(topic)) { zoneMap = json.deepCopy(); }
             events.publish(toEventName(topic), json);
         } catch (JsonProcessingException exception) {
-            LOGGER.warn("{}: MQTT JSON을 분석하지 못했습니다.", topic);
+            LOGGER.warn("{}: MQTT JSON 분석에 실패했습니다.", topic);
         }
     }
 
-    /** 유효한 SortState만 최신 상태에 반영하고 SSE로 보낸다. */
+    /** 상태를 먼저 SSE에 전송하여 DB 접속 지연으로 화면 반영을 막지 않는다. */
     private void handleState(String payload, JsonNode json) {
         SortStateStore.StateSnapshot before = stateStore.getLatestState().orElse(null);
         stateHandler.handle(payload);
         SortStateStore.StateSnapshot after = stateStore.getLatestState().orElse(null);
-        if (after != null && after != before) { events.publish("state", json); }
+        if (after == null || after == before) { return; }
+
+        events.publish("state", json);
+        attachPlanForNewSession(after.message().sessionId());
     }
 
-    /** 정식 동 이름이 최근 zone_map에 있는지 확인한다. */
+    /** 새 세션의 첫 상태 수신 시 next를 붙이고, DB 실패 시 다음 상태에서 재시도한다. */
+    private synchronized void attachPlanForNewSession(String sessionId) {
+        if (sessionId == null || sessionId.isEmpty()) { return; }
+        if (sessionId.equals(lastAttachedSessionId)) { return; }
+        try {
+            plans.attachPending(sessionId);
+            lastAttachedSessionId = sessionId;
+        } catch (ApiException exception) {
+            // 화면의 상태 SSE는 유지하고 다음 정상 수신 때 연결을 다시 시도한다 (web_api.md).
+            LOGGER.warn("새 세션 예정 수량 연결 실패: {}", exception.code());
+        }
+    }
+
+    /** 정식 동 이름만 허용하며 별칭은 명령 입력에 사용하지 않는다. */
     public boolean isCanonicalDong(String dong) {
         JsonNode current = zoneMap;
         if (current == null || !current.path("entries").isArray()) { return false; }
@@ -70,7 +92,7 @@ public class MqttEventRouter {
         return false;
     }
 
-    /** 토픽을 계약된 SSE 이벤트 이름으로 변환한다. */
+    /** MQTT 토픽을 SSE 이름으로 바꾸되 command/ack만 별도 이름을 쓴다. */
     private String toEventName(String topic) {
         if ("voss/command/ack".equals(topic)) { return "command_ack"; }
         return topic.substring("voss/".length());

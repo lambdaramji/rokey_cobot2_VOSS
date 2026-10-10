@@ -4,6 +4,7 @@
 package com.voss.web.mqtt;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.voss.web.db.PlanRepository;
 import com.voss.web.service.LiveEvents;
 import com.voss.web.service.MqttLinkStatusStore;
 import com.voss.web.service.SortStateStore;
@@ -11,13 +12,14 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 class MqttEventRouterTest {
     private final ObjectMapper mapper = new ObjectMapper();
     private final SortStateStore stateStore = new SortStateStore();
     private final MqttEventRouter router = new MqttEventRouter(mapper,
             new MqttStateMessageHandler(mapper, stateStore), stateStore,
-            new LiveEvents(mapper, new MqttLinkStatusStore()));
+            new LiveEvents(mapper, new MqttLinkStatusStore()), mock(PlanRepository.class));
 
     /** 명세에 없는 상태는 최신값으로 저장하지 않는다. */
     @Test

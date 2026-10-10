@@ -4,6 +4,7 @@
 package com.voss.web.mqtt;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.voss.web.db.PlanRepository;
 import com.voss.web.service.LiveEvents;
 import com.voss.web.service.MqttLinkStatusStore;
 import com.voss.web.service.SortStateStore;
@@ -26,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 @SpringBootTest(properties = "voss.mqtt.enabled=false")
 class MqttSubscriberConfigTest {
@@ -82,7 +84,7 @@ class MqttSubscriberConfigTest {
         SortStateStore stateStore = new SortStateStore();
         MqttStateMessageHandler stateHandler = new MqttStateMessageHandler(mapper, stateStore);
         MqttEventRouter router = new MqttEventRouter(mapper, stateHandler, stateStore,
-                new LiveEvents(mapper, new MqttLinkStatusStore()));
+                new LiveEvents(mapper, new MqttLinkStatusStore()), mock(PlanRepository.class));
         MessageHandler consumer = config.mqttStateMessageConsumer(router);
         consumer.handleMessage(new GenericMessage<>(VALID_STATE_JSON,
                 Map.of(MqttHeaders.RECEIVED_TOPIC, "voss/state")));

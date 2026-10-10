@@ -1,6 +1,7 @@
-// 웹 고유 테이블 session_plan의 수량만 관리한다.
-// 입력: session_id·planned. 출력: 예정 수량 조회 및 저장.
-// 근거: docs/interfaces/web_api.md (sort_log 작성 금지).
+// Spring Boot의 session_plan만 조회·변경한다. sort_log에는 쓰지 않는다.
+// 입력: session_id와 planned, 새 SortState.session_id.
+// 출력: 예정 수량 또는 next → 실제 세션에 연결된 DB 기록.
+// 근거: docs/interfaces/web_api.md (#68), ADR-0006.
 package com.voss.web.db;
 
 import java.sql.Connection;
@@ -12,29 +13,23 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class PlanRepository {
     private static final int DEFAULT_PLANNED = 10;
+    private static final String NEXT_SESSION = "next";
     private final DbAccess db;
 
-    /** session_plan 접근 권한이 있는 DB 접속 도구를 받는다. */
+    /** session_plan 접근 도구를 받는다. */
     public PlanRepository(DbAccess db) { this.db = db; }
 
-    /** 세션별 값을 먼저 확인하고, 없으면 next 또는 기본값을 사용한다. */
+    /** 읽기 전용으로 예정 수량을 조회한다. 새 세션 연결은 MQTT 수신 때만 한다. */
     public int planned(String session) {
-        String key = session.isEmpty() ? "next" : session;
+        String key = session.isEmpty() ? NEXT_SESSION : session;
         Integer value = read(key);
         if (value != null) { return value; }
-        if (!session.isEmpty()) {
-            Integer nextValue = read("next");
-            if (nextValue != null) {
-                attachPending(session);
-                return nextValue;
-            }
-        }
         return DEFAULT_PLANNED;
     }
 
-    /** 세션이 없으면 next에 저장해 첫 세션에서도 쓸 수 있도록 한다. */
+    /** 첫 start 전에는 next에, 시작 후에는 실제 session_id에 저장한다. */
     public void save(String session, int planned) {
-        String key = session.isEmpty() ? "next" : session;
+        String key = session.isEmpty() ? NEXT_SESSION : session;
         String sql = "INSERT INTO session_plan(session_id, planned, updated_at) VALUES (?, ?, NOW()) "
                 + "ON CONFLICT (session_id) DO UPDATE SET planned=EXCLUDED.planned, updated_at=NOW()";
         try (Connection connection = db.openPlan();
@@ -53,8 +48,9 @@ public class PlanRepository {
         }
     }
 
-    /** 첫 세션 조회 시 예정 수량 next를 실제 session_id로 옮긴다. */
-    private void attachPending(String session) {
+    /** 새 MQTT 세션 수신 시 next를 붙인다. 기존 세션값은 덮어쓰지 않는다. */
+    public void attachPending(String session) {
+        if (session == null || session.isEmpty()) { return; }
         String insert = "INSERT INTO session_plan (session_id, planned, updated_at) "
                 + "SELECT ?, planned, NOW() FROM session_plan WHERE session_id='next' "
                 + "ON CONFLICT (session_id) DO NOTHING";
@@ -76,7 +72,7 @@ public class PlanRepository {
         }
     }
 
-    /** 저장한 수량을 조회하며 미등록 값은 null로 구분한다. */
+    /** 지정된 세션 행을 조회하고 없으면 null을 반환한다. */
     private Integer read(String key) {
         try (Connection connection = db.openPlan();
              PreparedStatement statement = connection.prepareStatement(
