@@ -1,5 +1,6 @@
 """fsm.py 전이 시험 (ROS 없이). 전이표 번호는 design/U1-dd.md 2절."""
 
+import pytest
 from voss_servo.fsm import FsmState, GripperReply, StopResult, TickEvent
 
 from voss_servo import fsm
@@ -227,3 +228,75 @@ def test_input_flags_invalid_then_silence_is_lost_not_stale() -> None:
         lost_timeout=0.5, stale_timeout=0.3,
     )  # fmt: skip
     assert lost and not stale  # 끊김은 LOST 로 분류된다
+
+
+# --- U5: x 여유 사전 검사 (design/U5-dd.md 2절, 전이 11b) ---
+
+
+def test_aligned_without_room_ends_out_of_reach() -> None:
+    tr = step(at(fsm.TRACK), TickEvent(aligned=True, grasp_room=False))
+    assert tr.terminal and (tr.reason, tr.cause) == (fsm.OUT_OF_REACH, fsm.REACH_GRASP_ROOM)
+    assert tr.actions == ()  # 하강도 그리퍼도 없다
+
+
+def test_aligned_with_room_descends() -> None:
+    assert (
+        step(at(fsm.TRACK), TickEvent(aligned=True)).state.phase == fsm.DESCEND
+    )  # 기본 = 여유 있음
+    tr = step(at(fsm.TRACK), TickEvent(aligned=True, grasp_room=True))
+    assert tr.state.phase == fsm.DESCEND and not tr.terminal
+
+
+def test_no_room_ignored_outside_track() -> None:
+    # 여유 검사는 TRACK → DESCEND 들어갈 때 한 번만. 이미 내려가는 중이면 보지 않는다
+    assert (
+        step(at(fsm.PREPARE), TickEvent(gripper=OPENED, grasp_room=False)).state.phase == fsm.TRACK
+    )
+    tr = step(at(fsm.DESCEND, 0), TickEvent(at_grasp_height=True, grasp_room=False))
+    assert tr.state.phase == fsm.GRASP
+    assert not step(at(fsm.GRASP, 1), TickEvent(grasp_room=False)).terminal
+
+
+# --- U5: 코드로 들어온 그리퍼 실패 (grip.py 가 message 를 코드로 바꿔 넘긴다) ---
+
+
+@pytest.mark.parametrize("code", ["BUSY", "UNAVAILABLE", "TIMEOUT", "INVALID", "UNKNOWN"])
+def test_gripper_failure_codes_are_device_error(code) -> None:
+    reply = GripperReply(ok=False, width_mm=0.0, grip_detected=False, message=code)
+    tr = step(at(fsm.GRASP, 1), TickEvent(gripper=reply))
+    assert (tr.reason, tr.cause) == (fsm.DEVICE_ERROR, f"GRIPPER_{code}")
+    assert tr.actions == ()
+
+
+# --- U5: 끝나는 전이에는 행동이 없다 ("grasped=false 면 개방 없음"의 FSM 쪽 보장) ---
+
+_TERMINAL_CASES = [
+    (at(fsm.VERIFY, 1), TickEvent(gripper=HELD), 3, fsm.OK),
+    (at(fsm.GRASP, 1), TickEvent(gripper=EMPTY), 1, fsm.GRASP_FAILED),
+    (at(fsm.VERIFY, 1), TickEvent(gripper=EMPTY), 1, fsm.GRASP_FAILED),  # 떨어뜨림
+    (at(fsm.GRASP, 3), TickEvent(gripper=WIDE), 3, fsm.GRASP_FAILED),
+    (
+        at(fsm.GRASP, 1),
+        TickEvent(gripper=GripperReply(False, 0.0, False, "TIMEOUT")),
+        3,
+        fsm.DEVICE_ERROR,
+    ),
+    (at(fsm.TRACK), TickEvent(aligned=True, grasp_room=False), 3, fsm.OUT_OF_REACH),
+    (at(fsm.TRACK), TickEvent(reach="X_MAX"), 3, fsm.OUT_OF_REACH),
+    (at(fsm.TRACK), TickEvent(box_lost=True), 3, fsm.LOST),
+    (at(fsm.TRACK), TickEvent(box_stale=True), 3, fsm.STALE_INPUT),
+    (FsmState(fsm.GRASP, 1, True), TickEvent(stop_result=StopResult(fsm.STOP_OK)), 3, fsm.CANCELED),
+    (
+        FsmState(fsm.GRASP, 1, True),
+        TickEvent(stop_result=StopResult(fsm.STOP_FAILED, "TIMEOUT")),
+        3,
+        fsm.DEVICE_ERROR,
+    ),
+]
+
+
+@pytest.mark.parametrize(("state", "ev", "max_attempts", "reason"), _TERMINAL_CASES)
+def test_terminal_transitions_have_no_actions(state, ev, max_attempts, reason) -> None:
+    tr = step(state, ev, max_attempts)
+    assert tr.terminal and tr.reason == reason
+    assert tr.actions == ()  # 끝난 뒤 개방·닫기 요청이 나갈 길이 없다

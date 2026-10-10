@@ -1,7 +1,9 @@
 """params.py 기동 검사 시험 (ROS 없이)."""
 
 import array
+from pathlib import Path
 
+import yaml
 from voss_servo.params import check_params, params_digest, ready_log_line
 
 
@@ -18,7 +20,7 @@ def valid_values() -> dict:
         "config_sha256": "abc",
         "grasp.tcp_z_below_top_mm": 19.0,
         "grasp.hold_width_min_mm": 39.5,
-        "grasp.hold_width_max_mm": 41.5,
+        "grasp.hold_width_max_mm": 43.5,
         "reach.x_min_mm": -107.0,
         "reach.x_max_mm": 638.0,
         "control.kp_per_s": 0.0,
@@ -44,6 +46,10 @@ def valid_values() -> dict:
         "input.pose_lag_ms": 60.0,
         "input.pose_extrap_max_ms": 200.0,
         "input.blind_entry_max_age_s": 0.15,
+        # U5 그리퍼 값 (design/U5-dd.md 5절)
+        "grasp.close_time_max_s": 2.1,
+        "grasp.room_margin_mm": 10.0,
+        "gripper_timeout_s": 3.0,
     }
 
 
@@ -271,3 +277,47 @@ def test_null_strings_in_cross_checked_keys_do_not_crash() -> None:
         values[k] = "null"
     report = check_params(values)  # 예외 없이
     assert not report.ready and not report.invalid and "z.height_tol_mm" in report.missing
+
+
+# --- U5 그리퍼 값 (design/U5-dd.md 5절·E9) ---
+
+U5_KEYS = ["grasp.close_time_max_s", "grasp.room_margin_mm", "gripper_timeout_s"]
+
+
+def test_u5_keys_missing_refuse_ready() -> None:
+    values = valid_values()
+    for k in U5_KEYS:
+        del values[k]  # 넘어오지 않음
+    report = check_params(values)
+    assert not report.ready and sorted(report.missing) == sorted(U5_KEYS)
+
+
+def test_gripper_timeout_not_above_close_time_rejected() -> None:
+    values = valid_values()
+    values["gripper_timeout_s"] = 2.1  # 닫힘 최대와 같으면 정상 닫힘도 시간초과
+    assert "gripper_timeout_s" in invalid_keys(values)
+
+
+def test_hold_max_not_below_pre_open_rejected() -> None:
+    values = valid_values()
+    values["grasp.hold_width_max_mm"] = 90.0
+    assert "grasp.hold_width_max_mm" in invalid_keys(values)
+
+
+def test_hold_min_not_above_grasp_width_rejected() -> None:
+    values = valid_values()
+    values["grasp.hold_width_min_mm"] = 39.0  # 명령 폭과 같으면 빈손(38.x)과 가깝다
+    assert "grasp.hold_width_min_mm" in invalid_keys(values)
+
+
+def test_default_yaml_has_t34_and_gripper_values() -> None:
+    path = Path(__file__).resolve().parents[1] / "config" / "belt_servo.yaml"
+    p = yaml.safe_load(path.read_text())["belt_servo"]["ros__parameters"]
+    g = p["grasp"]
+    # measurements-1008 #14 (T34) 근거 값과 제안값
+    assert (g["hold_width_min_mm"], g["hold_width_max_mm"], g["close_time_max_s"]) == (
+        39.5,
+        43.5,
+        2.1,
+    )
+    assert (g["room_margin_mm"], p["gripper_timeout_s"]) == (10.0, 3.0)
