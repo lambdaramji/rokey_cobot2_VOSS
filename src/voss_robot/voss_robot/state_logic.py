@@ -47,6 +47,7 @@ class Inputs:
     tcp_note: str = (
         ""  # 컨트롤러 TCP 등록이 voss_config 와 다를 때 (예 "TCP 등록 없음(플랜지 모드)")
     )
+    rg2_note: str = ""  # 가짜 RG2 (rg2_dry_run) 일 때 — 상태가 정상으로 보여도 손가락은 안 움직인다
 
 
 @dataclass(frozen=True)
@@ -100,6 +101,8 @@ def decide(i: Inputs) -> State:
         parts.append("RG2 읽기 실패")
     if i.rg2_safety:
         parts.append("RG2 safety_err")
+    if i.rg2_note:
+        parts.append(i.rg2_note)
     if i.tcp_note:
         parts.append(
             i.tcp_note

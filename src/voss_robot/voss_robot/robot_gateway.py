@@ -26,7 +26,7 @@ from voss_msgs.msg import RobotState
 from voss_msgs.srv import Gripper, MoveToZone
 from voss_robot.call_queue import SerialCallQueue
 from voss_robot.config_params import ZONES
-from voss_robot.doosan import DEFAULT_PREFIX, DoosanError, DryRunDoosan
+from voss_robot.doosan import DEFAULT_PREFIX, DoosanError, DryRunDoosan, emulator_running
 from voss_robot.geometry import (
     controller_tcp_offset,
     flange_to_ros_pose,
@@ -137,14 +137,20 @@ class RobotGatewayNode(Node):
         host = self.declare_parameter("rg2_host", "192.168.1.1").value
         port = int(self.declare_parameter("rg2_port", 502).value)
         rg2_timeout = float(self.declare_parameter("rg2_timeout_s", 6.0).value)
-        # 두산은 real(에뮬레이터 포함), RG2 만 가짜 — 에뮬레이터 가상 실험용(#41 박병후). 실기에서는 false
+        # 두산은 에뮬레이터(mode:=virtual), RG2 만 가짜 — 에뮬레이터 가상 실험용(#41 박병후). 실기 금지
         self.rg2_dry_run = bool(self.declare_parameter("rg2_dry_run", False).value)
-        if self.dry_run or self.rg2_dry_run:
+        # 두산 real 인데 RG2 가 가짜인 상태. 기동·RobotState.detail·5 초 로그에 계속 보인다(#139 리뷰 박병후)
+        self.rg2_fake_note = (
+            "RG2 FAKE(rg2_dry_run)" if self.rg2_dry_run and not self.dry_run else ""
+        )
+        if self.rg2_fake_note:
+            self._require_emulator(prefix)
+        if self.dry_run or self.rg2_dry_run:  # 가짜 RG2 에서는 rg2_host·rg2_port 를 쓰지 않는다
             # 가짜 물체 폭(RG2 보고값 mm, 0 이하 = 물체 없음). 닫힘 명령 폭보다 커야 grip_detected —
             # 실측 31 mm 면 파지는 명령 39 → 보고 40.3~40.6 mm(measurements #8)라 40.5 정도를 준다
             obj = float(self.declare_parameter("dry_run_object_mm", 0.0).value)
             self.rg2 = DryRunRg2(object_mm=obj if obj > 0.0 else None)
-            if self.rg2_dry_run and not self.dry_run:
+            if self.rg2_fake_note:
                 self.get_logger().warn(
                     "RG2 가짜(rg2_dry_run) — 실제 그리퍼는 움직이지 않는다. 실기에서는 끈다"
                 )
@@ -243,12 +249,33 @@ class RobotGatewayNode(Node):
         g_state = MutuallyExclusiveCallbackGroup()
         self.create_timer(0.5, self._on_state_timer, callback_group=g_state)
         mode = "dry_run (두산·RG2 연결 안 함)" if self.dry_run else f"real {prefix}"
+        if self.rg2_fake_note:
+            mode += f" + {self.rg2_fake_note}"
         self.get_logger().info(
             f"robot_gateway started: {mode}, pose {rate:.0f} Hz, servo watchdog "
             f"{1e3 * sp.watchdog_s:.0f} ms, max {sp.max_speed_mm_s:.0f} mm/s, TCP z ≥ "
             f"{sp.z_min_mm:.1f} mm, x {sp.x_range_mm[0]:.0f}~{sp.x_range_mm[1]:.0f} mm, acc {self.servo_acc}"
         )
         threading.Thread(target=self._startup_tcp_check, daemon=True).start()
+
+    def _require_emulator(self, prefix: str, wait_s: float = 3.0) -> None:
+        """rg2_dry_run 은 두산 에뮬레이터에서만. 그래프에 에뮬레이터 노드가 없으면(실기) 기동하지 않는다.
+
+        실 로봇에 가짜 RG2 를 붙이면 개방이 OK 로 보고돼도 손가락이 안 열린다(비상정지 복구 ⑤). 그래프 조회는
+        spin 없이 되지만 디스커버리에 시간이 걸려 wait_s 동안 다시 본다."""
+        end = time.monotonic() + wait_s
+        while True:
+            if emulator_running(self.get_node_names_and_namespaces(), prefix):
+                return
+            if time.monotonic() > end:
+                break
+            time.sleep(0.2)
+        msg = (
+            f"rg2_dry_run 거부: 두산 에뮬레이터 노드({prefix.split('/')[1]}/virtual_node)가 없다 — "
+            "실기로 보인다. 실기에서는 rg2_dry_run 을 빼고 띄운다(브링업 mode:=virtual 에서만)"
+        )
+        self.get_logger().fatal(msg)
+        raise RuntimeError(msg)
 
     def _ctrl_tcp(self):
         """컨트롤러 등록 TCP 를 재서 move_line·ikin 에 보낼 오프셋을 정한다. 큐 작업 스레드에서.
@@ -409,6 +436,8 @@ class RobotGatewayNode(Node):
 
     def _log_stats(self) -> None:
         """5 초마다 pose 발행 주기·RTT·큐 대기 (MC-004 로그)."""
+        if self.rg2_fake_note:  # 기동 한 줄은 스크롤로 사라진다 → 계속 보이게
+            self.get_logger().warn(f"{self.rg2_fake_note} — 실제 그리퍼는 움직이지 않는다")
         s = self._stats
         if s["n"]:
             rtt, wait = s["rtt"], s["wait"]
@@ -489,6 +518,7 @@ class RobotGatewayNode(Node):
             stopped=self.stopped,
             last_alarm=self.dsr.last_alarm,
             tcp_note=self._tcp_note,
+            rg2_note=self.rg2_fake_note,
         )
         st = decide(i)
         with self._slock:

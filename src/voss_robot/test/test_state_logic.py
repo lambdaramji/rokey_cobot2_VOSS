@@ -62,3 +62,9 @@ def test_tcp_note_in_detail():
     note = "TCP 등록 없음(플랜지 모드 — 펜던트 공간 제한이 핑거 끝을 못 막음)"
     st = decide(ok(tcp_note=note))
     assert note in st.detail and st.state == "READY"
+
+
+def test_rg2_fake_note_in_detail():
+    """두산 real + 가짜 RG2(rg2_dry_run)는 상태가 READY 여도 detail 에 보인다(#139)."""
+    st = decide(ok(rg2_note="RG2 FAKE(rg2_dry_run)"))
+    assert "RG2 FAKE" in st.detail and st.state == "READY"
