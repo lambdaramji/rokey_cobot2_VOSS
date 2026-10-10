@@ -50,7 +50,7 @@
 ## #13 조건 (recheck_view)
 - 핸드아이(#4)·tcp_offset_mm·zones.recheck.pose 로 "카메라 광축이 트레이 중심 위, 송장 면(박스 윗면, TCP z 33)까지 300 mm" 인 자세를 계산하고, 펜던트에서 그 TCP 값을 입력해 이동했다(툴 GripperDA_v1, 오프셋 (1.382, 2.684, 246.642), 회전 0). 화면 확인 뒤 조정 없음. 값은 펜던트 **입력값**(소수 1자리)을 변환한 것.
 - 그리퍼는 운용과 같이 열림(PLACE 가 pre_open 90 으로 연 뒤 VIEW 는 그리퍼를 건드리지 않는다). 핑거 끝은 트레이 테두리 위 약 80 mm, 화면 맨 아래 끝에 노란 핑거 끝이 조금 보이지만 칸 1(세로 590~800 px)과 떨어져 있다.
-- 교시 때 펜던트 제어권 강제 회수 → 브링업·게이트웨이 끔. `/voss/robot/pose` 는 VIEW 자세에서 받지 못했다(복귀 뒤 관측 자세 값). VIEW 자세 pose 는 첫 `MoveToZone(RECHECK, VIEW)` 실기 때 확인.
+- 교시 때 펜던트 제어권 강제 회수 → 브링업·게이트웨이 끔. `/voss/robot/pose` 는 VIEW 자세에서 받지 못했다(복귀 뒤 관측 자세 값). VIEW 자세 pose 는 첫 `MoveToZone(RECHECK, VIEW)` 실기 때 확인. → **10/10 17:28 확인**: `/voss/robot/pose` (517.94, −39.32, 120.51) mm, 위 교시값과 차 ≤ 0.04 mm (measurements-1010 #7).
 - 카메라 `realsense2_camera_node` 1920×1080×30, 노출 60, WB 4600.0(10/08 설정). 촬영 `tools/calib/grab_frames.py`: EMPTY, S0_0701~0703, S1_0701~0703, BOTH(칸 0 = 0701, 칸 1 = 0702), S0_BLUR, S0_R180, S0_TILT(약 20°) + camera_info.yaml. S1_0703 은 트레이 밖 오른쪽 아래에 손이 찍힘(판독 영역 밖).
 - 첫 촬영은 박스를 모두 트레이 중심(두 칸 사이)에 놓아 칸 0·1 장면을 다시 찍었다. 첫 촬영분은 공용 PC `~/voss_data/1008/recheck_view/_center_placed/`(Drive 미업로드).
 - 송장 긴 변이 기준 170 px 에 가깝다. 판독에 모자라면 view_pose z 를 20~30 mm 낮추면 약 190~200 px (핑거 끝·테두리 여유 약 50~60 mm).
