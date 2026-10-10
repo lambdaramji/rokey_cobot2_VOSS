@@ -145,7 +145,9 @@ class RobotGatewayNode(Node):
             obj = float(self.declare_parameter("dry_run_object_mm", 0.0).value)
             self.rg2 = DryRunRg2(object_mm=obj if obj > 0.0 else None)
             if self.rg2_dry_run and not self.dry_run:
-                self.get_logger().warn("RG2 가짜(rg2_dry_run) — 실제 그리퍼는 움직이지 않는다. 실기에서는 끈다")
+                self.get_logger().warn(
+                    "RG2 가짜(rg2_dry_run) — 실제 그리퍼는 움직이지 않는다. 실기에서는 끈다"
+                )
         else:
             from pymodbus.client import ModbusTcpClient
 
