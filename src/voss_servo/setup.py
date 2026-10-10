@@ -27,6 +27,7 @@ setup(
             "belt_servo = voss_servo.belt_servo:main",
             "fake_box = voss_servo.fake_box:main",  # sim 전용 (U3)
             "sim_check = voss_servo.sim_check:main",  # sim 전용 (U3)
+            "gate_summary = voss_servo.gate_summary:main",  # G1 게이트 집계 (U6)
         ],
     },
 )
