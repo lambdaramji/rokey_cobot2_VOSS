@@ -137,11 +137,15 @@ class RobotGatewayNode(Node):
         host = self.declare_parameter("rg2_host", "192.168.1.1").value
         port = int(self.declare_parameter("rg2_port", 502).value)
         rg2_timeout = float(self.declare_parameter("rg2_timeout_s", 6.0).value)
-        if self.dry_run:
+        # 두산은 real(에뮬레이터 포함), RG2 만 가짜 — 에뮬레이터 가상 실험용(#41 박병후). 실기에서는 false
+        self.rg2_dry_run = bool(self.declare_parameter("rg2_dry_run", False).value)
+        if self.dry_run or self.rg2_dry_run:
             # 가짜 물체 폭(RG2 보고값 mm, 0 이하 = 물체 없음). 닫힘 명령 폭보다 커야 grip_detected —
             # 실측 31 mm 면 파지는 명령 39 → 보고 40.3~40.6 mm(measurements #8)라 40.5 정도를 준다
             obj = float(self.declare_parameter("dry_run_object_mm", 0.0).value)
             self.rg2 = DryRunRg2(object_mm=obj if obj > 0.0 else None)
+            if self.rg2_dry_run and not self.dry_run:
+                self.get_logger().warn("RG2 가짜(rg2_dry_run) — 실제 그리퍼는 움직이지 않는다. 실기에서는 끈다")
         else:
             from pymodbus.client import ModbusTcpClient
 

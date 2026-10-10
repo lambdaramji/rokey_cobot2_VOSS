@@ -2,6 +2,7 @@
 
 개인 PC (두산 없이):  ros2 launch voss_robot robot_gateway.launch.py [dry_run_object_mm:=40.5]
 실기 (사람이 비상정지 옆에서, 브링업 뒤):  ... dry_run:=false [servo_z_min_mm:=<TCP z 하한 mm>]
+에뮬레이터(mode:=virtual, RG2 없음):  ... dry_run:=false rg2_dry_run:=true [dry_run_object_mm:=40.5]
 config 기본 = ~/voss_ws/config/voss_config.yaml (레포 config/ 를 복사한 호스트 사본).
 """
 
@@ -25,6 +26,12 @@ def _gateway(context):
     obj = LaunchConfiguration("dry_run_object_mm").perform(context)
     if obj:  # dry_run 가짜 RG2 의 물체 폭(보고값 mm). 비우면 물체 없음 → grip_detected 항상 false
         params["dry_run_object_mm"] = float(obj)
+    if LaunchConfiguration("rg2_dry_run").perform(context).lower() == "true":
+        params["rg2_dry_run"] = True  # 두산 real + RG2 가짜 (에뮬레이터 가상 실험, #41)
+    for key in ("rg2_host", "rg2_port"):  # 비우면 노드 기본값(192.168.1.1:502)
+        val = LaunchConfiguration(key).perform(context)
+        if val:
+            params[key] = int(val) if key == "rg2_port" else val
     zone_vel = LaunchConfiguration("zone_vel_mm_s").perform(context)
     if zone_vel:  # MoveToZone 선속도. 첫 실기는 낮게. 비우면 노드 기본값(100 mm/s, 45 deg/s)
         params["zone_vel"] = [float(zone_vel), 45.0]
@@ -47,6 +54,9 @@ def generate_launch_description() -> LaunchDescription:
             DeclareLaunchArgument("zone_vel_mm_s", default_value=""),
             DeclareLaunchArgument("pose_source", default_value=""),
             DeclareLaunchArgument("dry_run_object_mm", default_value=""),
+            DeclareLaunchArgument("rg2_dry_run", default_value="false"),
+            DeclareLaunchArgument("rg2_host", default_value=""),
+            DeclareLaunchArgument("rg2_port", default_value=""),
             DeclareLaunchArgument("config", default_value="~/voss_ws/config/voss_config.yaml"),
             OpaqueFunction(function=_gateway),
         ]
