@@ -383,3 +383,27 @@ def test_stopping_does_not_poll_gripper(ready_node) -> None:
     ev = n._build_event(ctx, n._now())
     assert ev.gripper is None  # 보지 않는다
     assert ctx.grip_call.busy_at is None and len(cli.requests) == 1  # BUSY 재요청 준비도 안 함
+
+
+def test_shutdown_mid_goal_logs_node_shutdown(ready_node, tmp_path) -> None:
+    """goal 중 종료 → GOAL_END cause NODE_SHUTDOWN (INTERNAL_EXCEPTION 과 구분), 결과 봉투도 채워진다."""
+    import json
+
+    from voss_servo.belt_servo import GoalCtx
+
+    from voss_servo import fsm
+
+    n = ready_node
+    now = n._now()
+    state, _ = fsm.start()
+    ctx = GoalCtx(FakeHandle(), "g1", 7, state, start=now, vision_since=now)
+    n._ctx = ctx
+    n._finish_on_shutdown()
+    assert ctx.done.done() and ctx.done.result() == (False, fsm.DEVICE_ERROR, 0)
+    n._finish_on_shutdown()  # 두 번 불러도 안전 (이미 끝난 goal)
+    ends = [
+        json.loads(line)
+        for f in (tmp_path / "attempts").iterdir()
+        for line in f.read_text().splitlines()
+    ]
+    assert [e["cause"] for e in ends if e["event"] == "GOAL_END"] == ["NODE_SHUTDOWN"]
