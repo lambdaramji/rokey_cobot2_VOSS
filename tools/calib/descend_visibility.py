@@ -1,15 +1,21 @@
 """하강 중 송장이 화면 아래 끝에 걸려 box_tracker 가 버리기 시작하는 TCP 높이 — belt_servo `vision_cutoff_above_top_mm` 근거.
 
-카메라가 공구축에서 약 8 cm 옆이라 TCP 가 박스 위로 내려가면 송장이 화면 아래로 빠진다. box_tracker 는 가장자리에
-걸린 송장을 내지 않으므로(box_detect `border_px`, 중심이 치우침) 그 높이부터 BoxTrack 이 끊긴다. belt_servo 는
-`vision_cutoff_above_top_mm` 아래만 비전 사각으로 보므로, 끊긴 높이가 그보다 위면 그 사이를 하강하는 동안
-`lost_timeout_s` 가 돌아 LOST 가 난다(10/10 G1 기울어진 박스 하강 LOST, #30).
+카메라가 공구축에서 약 8 cm 옆(벨트 하류 쪽에서 보면 박스가 화면 아래로 간다)이라 TCP 가 박스 위로 내려가면 송장이
+화면 아래 끝으로 빠진다. box_tracker 는 가장자리에 걸린 송장을 내지 않으므로(box_detect `border_px`, 중심이 치우침)
+그 높이부터 BoxTrack 이 끊긴다. belt_servo 는 `vision_cutoff_above_top_mm` 아래만 비전 사각으로 보므로, 끊긴 높이가
+그보다 위면 그 사이를 하강하는 동안 `lost_timeout_s` 가 돈다.
 
-계산(핸드아이 모델, 로봇과 무관): TCP 를 박스 윗면 중심 위(정렬 허용 오차만큼 벗어남 포함)에 관측 자세 방향으로 두고
-송장(40 × 25 mm, 긴 변 = 벨트 방향, 박스 회전각만큼 돌림)의 네 꼭짓점을 `T_tcp_camera`·K·왜곡으로 투영한다.
-핸드아이 오차(≤ 5 mm 제안값)는 이 거리에서 수십 px 이라 여유가 몇 px 인 결과는 녹화(tools/vision/box_overlay.py)로 확인한다.
+계산(핸드아이 모델, 로봇과 무관): TCP 를 박스 윗면 중심에서 벨트 방향으로 `--tcp-ahead` mm 앞(하류)에, 정렬 허용 오차만큼
+더 벗어난 곳까지 관측 자세 방향으로 두고, 송장(40 × 25 mm, 긴 변 = 벨트 방향, 박스 회전각만큼 돌림)의 네 꼭짓점을
+`T_tcp_camera`·K·왜곡으로 투영한다. 관측 자세에서는 실측 호모그래피(`tcp_pixel_at_observe`)와 2~11 px 안으로 맞는다.
 
-  python3 tools/calib/descend_visibility.py [--approach 40 --cutoff 10 --descend-mps 0.05 --lost-s 0.5]
+**10/10 G1 실측과 비교(measurements-1010 "의도 시험"):** OK·LOST 회차 모두 마지막 BoxTrack 이 z 110.9~112.4
+(윗면 +10~11.6, 사각 10 바로 위)였다. `--tcp-ahead 0`(TCP 가 박스 중심 바로 위)이면 이 모델은 반듯한 박스도 +37 에서
+빠진다고 내므로 실측과 맞지 않는다 — `--tcp-ahead 10` 이면 +10.9 로 맞는다(하강 중 TCP 가 박스보다 약 10 mm 하류,
+추정). 끊기는 높이는 벨트 방향 위치 1 mm 에 약 2.6 mm 바뀌므로 결과는 이 값에 민감하다 → 실제 끊긴 프레임은
+녹화를 `tools/vision/box_overlay.py` 로 재생해 확인한다.
+
+  python3 tools/calib/descend_visibility.py [--tcp-ahead 10] [--approach 40 --cutoff 10 --descend-mps 0.05 --lost-s 0.5]
 """
 
 import argparse
@@ -84,6 +90,8 @@ def main() -> None:
     ap.add_argument(
         "--tol-cross", type=float, default=5.0, help="정렬 허용 가로 mm align_tol_cross_mm"
     )
+    ap.add_argument("--tcp-ahead", type=float, default=0.0,
+                    help="하강 중 TCP 가 박스 중심보다 벨트 하류로 앞선 mm (10/10 실측과 맞추면 약 10)")  # fmt: skip
     ap.add_argument("--border", type=int, default=4, help="box_detect border_px")
     ap.add_argument("--yaws", default="0,10,15,20,30,45", help="박스 회전각(°), 쉼표")
     args = ap.parse_args()
@@ -101,8 +109,9 @@ def main() -> None:
     size = tuple(int(x) for x in he.get("image_size", [1920, 1080]))
     yaws = [float(y) for y in args.yaws.split(",")]
     lim = size[1] - args.border
-    offsets = [(0.0, 0.0)] + [
-        (sa * args.tol_along, sc * args.tol_cross) for sa in (1, -1) for sc in (1, -1)
+    a0 = args.tcp_ahead
+    offsets = [(a0, 0.0)] + [
+        (a0 + sa * args.tol_along, sc * args.tol_cross) for sa in (1, -1) for sc in (1, -1)
     ]
 
     heights = [
@@ -114,14 +123,27 @@ def main() -> None:
         args.cutoff,
         0,
     ]
-    print(f"송장 아래 끝 v (TCP 가 박스 중심 바로 위, 화면 {size[1]}, 버림 ≥ {lim})")
+    print(
+        f"송장 아래 끝 v (TCP 가 박스 중심보다 벨트 하류 {a0:g} mm, 화면 {size[1]}, 버림 ≥ {lim})"
+    )
     print("회전 \\ 윗면+mm " + "".join(f"{h:>7.0f}" for h in heights))
     for yaw in yaws:
         row = []
         for hh in heights:
-            uv = label_px(hh, yaw, 0.0, 0.0, **geo)
+            uv = label_px(hh, yaw, a0, 0.0, **geo)
             row.append("      -" if uv is None else f"{uv[:, 1].max():7.0f}")
         print(f"{yaw:5.0f}°        " + "".join(row))
+
+    print(
+        "\n벨트 방향 어긋남(TCP 가 박스보다 하류 mm)별 끊기기 시작 높이(윗면 기준) — 결과가 이 값에 민감하다"
+    )
+    print(" 회전 \\ 하류 mm " + "".join(f"{x:>7g}" for x in (0, 5, 10, 15)))
+    for yaw in yaws:
+        cells = []
+        for x in (0, 5, 10, 15):
+            c = cut_height(geo, yaw, x, 0.0, size, args.border, args.approach + 20, -19.0)
+            cells.append("      -" if c is None else f"{c:+7.1f}")
+        print(f"{yaw:5.0f}°         " + "".join(cells))
 
     print(f"\n하강 {args.approach:g} → 사각 {args.cutoff:g} mm, {args.descend_mps * 1000:g} mm/s, LOST {args.lost_s:g} s "
           f"(정렬 오차 벨트 ±{args.tol_along:g}·가로 ±{args.tol_cross:g} mm 네 귀퉁이 + 중심)")  # fmt: skip
@@ -151,7 +173,8 @@ def main() -> None:
                   f"{need - (args.approach - 5):g} mm 는 {(need - (args.approach - 5)) / (args.descend_mps * 1000):.2f} s "
                   f"(LOST {args.lost_s:g} s 미만이면 괜찮다), 아니면 approach 를 올린다")  # fmt: skip
     print(
-        "\n※ 핸드아이 모델 값. 여유가 몇 px 이면 핸드아이 오차 안이다 — G1 녹화를 box_overlay.py 로 재생해 실제 끊긴 높이를 본다."
+        "\n※ 핸드아이 모델 값. 10/10 실측(마지막 관측 윗면 +10~11.6)은 --tcp-ahead 약 10 과 맞는다 — "
+        "실제 끊긴 높이는 G1 녹화를 box_overlay.py 로 재생해 본다."
     )
 
 

@@ -4,7 +4,7 @@
   - 관측 자세 정지: `belt_plane.pixel_to_base_xy` + `config/belt_homography.yaml` (ADR-0003, `calib_hull_px` 밖은 무효).
   - **이동 중: G0 필수.** 핸드아이(`config/hand_eye.yaml` 10/08 확정, `moving_verified: true`, 수직 공구에서만 유효) + **촬영 시각 + `pose_lag_ms`(60) 의 pose**(보간, 아직 없으면 80 ms 까지 앞으로 외삽) + 박스 윗면 평면 교점(`HAND_EYE`). calibration.md·ADR-0003 10/08.
   - 카메라 USB 가 끊기면 box_tracker 는 살아 있어 sort_manager 가 모른다 → 5초 로그의 Hz 를 본다(25 Hz 밑이면 WARN).
-- **하강 중 끊김**(10/10 G1 기울어진 박스 하강 LOST): 카메라가 공구축에서 약 8 cm 옆이라 TCP 가 박스 위로 내려가면 송장이 화면 아래 끝으로 빠지고, 가장자리에 걸린 송장은 내지 않으므로(`border_px`) 그 높이부터 BoxTrack 이 끊긴다. 핸드아이 모델로는 반듯한 박스도 윗면 +40 mm 에서 아래 끝 v ≈ 1071(화면 1080), 30° 회전이면 ≈ 1088 → belt_servo `vision_cutoff_above_top_mm`(제안 10) 은 너무 낮다(`tools/calib/descend_visibility.py`). 실제 끊긴 높이는 `tools/vision/box_overlay.py`(버린 이유 = `box_detect.detect_candidates`, detect_boxes 와 같은 판정)로 G1 녹화에서 본다.
+- **하강 중 끊김**: 카메라가 공구축에서 약 8 cm 옆이라 TCP 가 박스 위로 내려가면 송장이 화면 아래 끝으로 빠지고, 가장자리에 걸린 송장은 내지 않으므로(`border_px`) 그 높이부터 BoxTrack 이 끊긴다. 10/10 G1 은 OK·LOST(기울인 박스) 회차 모두 마지막 BoxTrack 이 z 110.9~112.4(윗면 +10~11.6, belt_servo 사각 10 바로 위)라 하강 중 시야는 사각 높이까지 유지됐다(measurements-1010 의도 시험) — LOST 차이는 그 뒤(servo 판정). 핸드아이 모델(`tools/calib/descend_visibility.py`)은 TCP 가 박스 중심 바로 위면 +37 을 내고, TCP 가 약 10 mm 하류면 실측과 맞는다(추정, 벨트 방향 1 mm 에 끊김 높이 약 2.6 mm). 반듯한 박스도 끊김 높이와 사각 10 사이 여유가 거의 없다. 실제 끊긴 프레임은 `tools/vision/box_overlay.py`(버린 이유 = `box_detect.detect_candidates`, detect_boxes 와 같은 판정)로 g1_s1 녹화에서 본다.
 - 추론 지연 예산: 검출 ≤ 20 ms, 루프 ≤ 100 ms. 지연 측정 로그를 남긴다.
 - OCR: 분류코드(5.5 mm, 약 30 px)·동 이름(4.5 mm) 만 읽는다. 받는 사람은 무시. 편집거리 퍼지 매칭은 순수 함수로 두고 pytest.
 - 녹화 영상 재생 모드(`playback:=<file>`)를 둬서 로봇 없이 개발.
