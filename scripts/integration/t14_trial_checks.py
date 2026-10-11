@@ -56,3 +56,43 @@ def last_pcm_latency_ms(log_text: str) -> int | None:
     if not matches:
         return None
     return int(matches[-1])
+
+
+TEST_NODE_NAMES = frozenset({
+    "voice_listener", "intent_parser", "sort_manager", "speech_out"
+})
+TEST_PROCESS_LAUNCHERS = frozenset({
+    "python", "python3", "python3.12", "ros2"
+})
+
+
+def matching_isolated_test_nodes(
+    command_line: bytes, environment: bytes
+) -> set[str]:
+    """로컬 ROS 179 시험 노드의 명령줄만 확인해 종료 대상을 선정한다."""
+    from pathlib import Path
+
+    variables = set(environment.split(b"\0"))
+    if b"ROS_DOMAIN_ID=179" not in variables:
+        return set()
+    if b"ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST" not in variables:
+        return set()
+
+    arguments = [
+        item.decode(errors="replace") for item in command_line.split(b"\0") if item
+    ]
+    if not arguments:
+        return set()
+
+    executable = Path(arguments[0]).name
+    if executable in TEST_NODE_NAMES:
+        return {executable}
+    if executable not in TEST_PROCESS_LAUNCHERS:
+        return set()
+
+    found: set[str] = set()
+    for argument in arguments[1:]:
+        name = Path(argument).name
+        if name in TEST_NODE_NAMES:
+            found.add(name)
+    return found
