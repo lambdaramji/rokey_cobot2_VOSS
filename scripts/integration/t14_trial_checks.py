@@ -37,3 +37,22 @@ def expected_history_say(session_id: str | None, says: list[str]) -> str | None:
             if sentence.startswith("보류는 ") and sentence.endswith("개입니다."):
                 return sentence
     return None
+
+def history_scope(session_id: str) -> str:
+    """현재 세션이 없으면 읽기 전용 전체 이력 조회 범위로 바꾼다."""
+    if session_id == "":
+        return "all"
+    return session_id
+
+
+def count_finished_playbacks(log_text: str) -> int:
+    """이번 시험 speech_out 로그의 PCM 재생 완료 횟수를 반환한다."""
+    return log_text.count(FINISHED_MARKER)
+
+
+def last_pcm_latency_ms(log_text: str) -> int | None:
+    """마지막 음성 재생의 첫 PCM 전달 지연을 반환한다."""
+    matches = FIRST_PCM_PATTERN.findall(log_text)
+    if not matches:
+        return None
+    return int(matches[-1])
