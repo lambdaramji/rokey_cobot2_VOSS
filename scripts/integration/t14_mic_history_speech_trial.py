@@ -14,6 +14,11 @@ from threading import Thread
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
+import numpy as np
+
+from voss_voice.http_client import post_stt
+from voss_voice.listen_logic import to_wav
+
 import rclpy
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.qos import QoSProfile, ReliabilityPolicy
@@ -35,6 +40,8 @@ from t14_manager_tts_trial import (
 from t14_trial_checks import expected_history_say, first_pcm_latency_ms, tts_finished
 
 API_SESSION_URL = "http://127.0.0.1:8080/api/sessions/current"
+AI_HEALTH_URL = "http://127.0.0.1:8000/ai/health"
+WHISPER_PREPARE_TIMEOUT_S = 90.0
 MIC_LOG_MARKER = "voice_listener: mic 모드"
 MIC_FALLBACK_MARKER = "voice_listener: text 모드"
 MIC_START_TIMEOUT_S = 15.0
@@ -66,6 +73,42 @@ class MicHistoryProbe(TrialProbe):
     def _on_say(self, message: String) -> None:
         """이력 조회 결과로 음성 안내가 나왔는지 기록한다."""
         self.says.append(message.data)
+
+
+def check_audio_input() -> None:
+    """실제 마이크가 없으면 Whisper 시험을 시작하지 않는다."""
+    try:
+        import sounddevice as sound_device
+    except ImportError as error:
+        raise RuntimeError("sounddevice 모듈 없음") from error
+    try:
+        sound_device.query_devices(kind="input")
+    except Exception as error:
+        raise RuntimeError(f"Nodes PC 마이크 장치 확인 실패: {type(error).__name__}") from error
+
+
+def prepare_whisper() -> None:
+    """실제 음성 입력 전에 무음 WAV로 Whisper 모델을 미리 적재한다."""
+    try:
+        with urlopen(AI_HEALTH_URL, timeout=5.0) as response:
+            payload = json.load(response)
+    except (HTTPError, URLError, TimeoutError, OSError, ValueError) as error:
+        raise RuntimeError("FastAPI /ai/health 연결 실패") from error
+    if not payload.get("ok"):
+        raise RuntimeError("FastAPI /ai/health 상태 실패")
+    if payload.get("whisper_loaded"):
+        print("PASS: Whisper 모델 준비됨", flush=True)
+        return
+
+    print("Whisper medium 초기 적재 중 (무음 WAV, 녹음 없음)...", flush=True)
+    silent_samples = np.zeros(16000, dtype=np.int16)
+    response = post_stt(
+        to_wav(silent_samples),
+        timeout_s=WHISPER_PREPARE_TIMEOUT_S,
+    )
+    if response is None:
+        raise RuntimeError("Whisper 모델 사전 적재 실패 (/ai/stt)")
+    print("PASS: Whisper 모델 준비 완료", flush=True)
 
 
 def fetch_current_session() -> str | None:
@@ -199,6 +242,8 @@ def main() -> None:
         raise SystemExit(f"설정 파일 없음: {CONFIG_PATH}")
     if shutil.which("aplay") is None:
         raise SystemExit("aplay 없음: Nodes PC 스피커 설정 필요")
+    check_audio_input()
+    prepare_whisper()
 
     rclpy.init()
     node = MicHistoryProbe()
