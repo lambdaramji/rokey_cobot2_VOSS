@@ -38,7 +38,15 @@ from voss_robot.pose_source import StartupCheck, fresh
 from voss_robot.rg2 import DryRunRg2, Rg2
 from voss_robot.servo_guard import ServoGuard, ServoParams
 from voss_robot.state_logic import Inputs, decide
-from voss_robot.zone_motion import SAFE_Z_MM, pick_grip_ok, pick_pose, plan_move, slot_pose
+from voss_robot.zone_motion import (
+    SAFE_Z_MM,
+    TravelCache,
+    pick_grip_ok,
+    pick_pose,
+    plan_move,
+    search_travel_z,
+    slot_pose,
+)
 
 
 class _ZoneError(RuntimeError):
@@ -226,6 +234,16 @@ class RobotGatewayNode(Node):
         # move_line 은 TCP 직선 이동 — 출발–목표 선분에서 이만큼 벗어나면 move_stop 하고 LIMIT
         self.path_tol = float(self.declare_parameter("zone_path_tol_mm", 15.0).value)
         self._cmd_off = list(self.tcp)  # _run_path 가 매번 잰 컨트롤러 TCP 오프셋으로 바꾼다
+        # 이동 높이(_travel_z) 결과를 칸별로 다시 쓴다 — 닿지 않는 높이의 ikin 이 큐를 ~100 ms 씩 잡아 경로 계산
+        # 2.5 s 동안 pose 가 10 Hz 로 떨어졌다(10/10 C2, #147). 기동 때 관측 자세에 있으면 구역 칸을 미리 계산
+        self._tz_cache = (
+            TravelCache() if self.declare_parameter("zone_travel_cache", True).value else None
+        )
+        self._tz_ik = 0  # ikin 호출 수 (미리 계산 로그용)
+        self._warm_idle = (
+            threading.Event()
+        )  # 미리 계산 중엔 비움 → MoveToZone 이 끝날 때까지 기다린다
+        self._warm_idle.set()
         self._tcp_note = ""  # RobotState.detail: 컨트롤러 TCP 가 voss_config 와 다를 때
         self._mlock = threading.Lock()  # 모션 자원(MoveToZone)
         self._zone_action = ""
@@ -323,11 +341,70 @@ class RobotGatewayNode(Node):
         self._set_tcp_note(off)
         if off is not None:
             self.get_logger().info(f"컨트롤러 TCP 등록 {why}")
+            self._prewarm_travel()
         else:
             self.get_logger().error(
                 f"컨트롤러 TCP 등록이 {why} — 모르는 TCP 라 MoveToZone 을 거부한다(NOT_CONFIGURED). "
                 "펜던트 툴·TCP 를 GripperDA_v1 또는 없음으로"
             )
+
+    def _prewarm_travel(self) -> None:
+        """기동 때 한 번: 관측 자세에 있으면 구역 칸·관측·VIEW 의 이동 높이를 미리 찾아 둔다(#147).
+        그동안 큐가 ikin 으로 차서 pose 가 낮다 — MoveToZone 과 같이 모션을 잡고 state BUSY(action PREWARM)로
+        둔다: servo_cmd 는 busy 로 거부, sort_manager 는 준비 안 됨(#153 리뷰). MoveToZone 요청은 끝날 때까지 기다린다."""
+        if self._tz_cache is None or len(self.observe) != 6:
+            return
+        if not self._mlock.acquire(blocking=False):
+            return
+        self._warm_idle.clear()
+        t0, n0 = time.monotonic(), self._tz_ik
+        try:
+            with self._glock:
+                servo = self.guard.active
+                if not servo:
+                    self.guard.motion_busy = True
+            if servo:
+                self.get_logger().info("이동 높이 미리 계산 안 함: servo_cmd 추종 중")
+                return
+            self._zone_action = "PREWARM"
+            self._update_state()
+            off, _why, cur, sol = self.queue.submit(self._ctrl_tcp).result(timeout=5.0)
+            if off is None:
+                return
+            if max(abs(a - b) for a, b in zip(cur[:3], self.observe[:3], strict=True)) > 30.0:
+                self.get_logger().info(
+                    "이동 높이 미리 계산 안 함: 관측 자세가 아님(MoveToZone 때 칸마다 찾음)"
+                )
+                return
+            self._cmd_off = off
+            targets = [list(self.observe)]
+            slots = 0
+            for zc in self.zones.values():
+                if zc["view"] is not None:
+                    targets.append(list(zc["view"]))
+                if not (zc["pose"] and zc["grid"]):
+                    continue
+                stage = slot_pose(zc["pose"], zc["grid"], 0)
+                for k in range(int(zc["grid"][0]) * int(zc["grid"][1])):
+                    t = slot_pose(zc["pose"], zc["grid"], k)
+                    slots += 1
+                    if self._travel_z(t, sol) is None:
+                        self._in_tray(t, stage, sol)
+            for t in targets:
+                self._travel_z(t, sol)
+            self.get_logger().info(
+                f"이동 높이 미리 계산: 칸 {slots}개, ikin {self._tz_ik - n0}회, "
+                f"{time.monotonic() - t0:.1f} s (저장 {len(self._tz_cache)}개)"
+            )
+        except Exception as e:  # 큐 응답 없음 등 — MoveToZone 때 다시 찾는다
+            self.get_logger().warn(f"이동 높이 미리 계산 실패: {e}")
+        finally:
+            with self._glock:
+                self.guard.motion_busy = False
+            self._zone_action = ""
+            self._mlock.release()
+            self._warm_idle.set()
+            self._update_state()
 
     def _set_tcp_note(self, off) -> None:
         """잰 컨트롤러 TCP 를 RobotState.detail 에 남긴다(같음이면 비움)."""
@@ -609,6 +686,7 @@ class RobotGatewayNode(Node):
             except ValueError as e:
                 return fail(f"INVALID: {e}")
         # 자원: 모션(servo·MoveToZone)과 RG2(PLACE·PICK 은 함께 점유). 같은 자원 두 번째 요청은 BUSY
+        self._warm_idle.wait(30.0)  # 기동 직후 이동 높이 미리 계산 중이면 끝날 때까지
         if not self._mlock.acquire(blocking=False):
             return fail("BUSY: move_to_zone 진행 중")
         held = False
@@ -728,21 +806,36 @@ class RobotGatewayNode(Node):
         가장 높은 플랜지 z. TCP z 가 min_tcp_z(기본 최저 이동 높이)보다 낮아지면 None. ikin 은 한 번씩 큐로
         보낸다(그 사이 pose 읽기가 끊기지 않게)."""
         floor = self.min_travel_tcp_z if min_tcp_z is None else min_tcp_z
-        z = self.safe_z
-        while True:
-            flange = [xy_pose[0], xy_pose[1], z, *xy_pose[3:]]
-            # 툴 길이 246.642 라 10 mm 단계가 TCP 69.96 처럼 떨어진다
-            if flange_to_tcp(flange, self.tcp)[2] < floor - 0.5:
-                return None
-            if self._ik_ok(flange, sol):
-                return z
-            z -= 10.0
 
-    def _ik_ok(self, flange, sol: int) -> bool:
-        """플랜지 posx 가 지금 관절 배치(sol)로 풀리고 J3 여유가 있는지. ikin 은 컨트롤러 등록 TCP 기준이라
-        _run_path 가 잰 오프셋(_cmd_off)으로 바꿔 보낸다."""
+        def at(z):
+            return [xy_pose[0], xy_pose[1], z, *xy_pose[3:]]
+
+        ladder, z = [], self.safe_z
+        # 툴 길이 246.642 라 10 mm 단계가 TCP 69.96 처럼 떨어진다
+        while flange_to_tcp(at(z), self.tcp)[2] >= floor - 0.5:
+            ladder.append(z)
+            z -= 10.0
+        cache = self._tz_cache
+        # 같은 칸에서 찾은 값은 ikin 1회로만 다시 본다 — "닿지 않음"이면 하한에서(#147·#153)
+        cached = (
+            cache.get(xy_pose, sol, floor, self._cmd_off) if cache is not None else (False, None)
+        )
+        z, keep = search_travel_z(ladder, lambda z: self._ik_ok(at(z), sol), cached)
+        if cache is not None and keep:
+            cache.put(xy_pose, sol, floor, self._cmd_off, z)
+        return z
+
+    def _ik_ok(self, flange, sol: int) -> bool | None:
+        """플랜지 posx 가 지금 관절 배치(sol)로 풀리고 J3 여유가 있는지. 두산 호출 실패면 None(닿지 않음과
+        구분 — 이동 높이 캐시에 넣지 않는다, #153). ikin 은 컨트롤러 등록 TCP 기준이라 _run_path 가 잰
+        오프셋(_cmd_off)으로 바꿔 보낸다."""
         cmd = flange_to_tcp(flange, self._cmd_off)
-        j = self.queue.submit(lambda: self.dsr.ikin(cmd, sol)).result(timeout=3.0)
+        self._tz_ik += 1
+        try:
+            j = self.queue.submit(lambda: self.dsr.ikin(cmd, sol)).result(timeout=3.0)
+        except DoosanError as e:
+            self.get_logger().warn(f"ikin 호출 실패: {e}")
+            return None
         return j is not None and abs(j[2]) >= self.min_j3_deg
 
     def _in_tray(self, slot_flange, stage, sol: int):
@@ -769,6 +862,7 @@ class RobotGatewayNode(Node):
         수평 이동 높이 = safe_z 와, 출발·도착 x·y 에서 닿는 최고 높이 중 낮은 것. 목표 자세 자체도 풀리는지
         움직이기 전에 확인한다. 먼 칸(출발·도착) 위로 최저 이동 높이가 안 나오면 stage(같은 구역 칸 0) 를
         거쳐 트레이 안에서만 낮게 옆으로 간다. 자세는 늘 수직(구역 자세 그대로)."""
+        t_plan, n_plan = time.monotonic(), self._tz_ik
         try:
             off, why, cur, sol = self.queue.submit(self._ctrl_tcp).result(timeout=5.0)
             if off is None:
@@ -814,6 +908,9 @@ class RobotGatewayNode(Node):
                 f" (트레이 안 TCP ≥ {self.min_in_tray_tcp_z:.0f} 도 안 됨 — 팔이 닿지 않음)"
             )
         hz = min(z0, z1)
+        self.get_logger().info(
+            f"경로 계산 {time.monotonic() - t_plan:.2f} s, ikin {self._tz_ik - n_plan}회 (#147)"
+        )
         if hz < self.safe_z - 0.5:
             self.get_logger().info(
                 f"수평 이동 높이 플랜지 z {hz:.1f} (TCP {hz - self.safe_z + 200:.0f}) — safe_z 에서 안 닿음"

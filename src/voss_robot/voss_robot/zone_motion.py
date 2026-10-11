@@ -11,7 +11,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+
+from voss_robot.geometry import zyz_to_matrix
 
 SAFE_Z_MM = 446.6  # 플랜지 z, TCP z 200 (measurements #6 홈 복귀)
 
@@ -76,3 +78,86 @@ def plan_move(
     if tgt[2] < hz - eps:
         steps.append(("descend", tgt))
     return steps
+
+
+class TravelCache:
+    """gateway _travel_z 결과(이동 높이 플랜지 z, 없으면 None) 보관 (#147).
+
+    _travel_z 는 safe_z 부터 10 mm 씩 ikin 을 부르는데, 닿지 않는 높이의 ikin 하나가 두산 호출 큐를 약 100 ms
+    잡아 그동안 pose 가 약 10 Hz 로 떨어졌다(10/10 C2 경로 계산 2.5 s × 2, #147). 구역 칸 위치는 세션 내내
+    같으므로 한 번 찾은 높이를 다시 쓴다. 같은 칸 = x·y 가 xy_tol mm 안, 회전 행렬 원소 차가 rot_tol 안
+    (ZYZ rx·rz 표기가 달라도 같은 자세면 같다), 관절 배치·하한·명령 오프셋이 같음."""
+
+    def __init__(self, xy_tol: float = 1.0, rot_tol: float = 0.01, max_items: int = 256) -> None:
+        self.xy_tol, self.rot_tol, self.max_items = xy_tol, rot_tol, max_items
+        self._items: list[tuple[tuple, float | None]] = []
+
+    def _key(self, pose: Sequence[float], sol: int, floor: float, off: Sequence[float]) -> tuple:
+        rot = zyz_to_matrix(*(float(v) for v in pose[3:6]))
+        return (
+            float(pose[0]),
+            float(pose[1]),
+            [v for row in rot for v in row],
+            int(sol),
+            round(float(floor), 3),
+            tuple(round(float(v), 3) for v in off),
+        )
+
+    def _same(self, a: tuple, b: tuple) -> bool:
+        return (
+            abs(a[0] - b[0]) <= self.xy_tol
+            and abs(a[1] - b[1]) <= self.xy_tol
+            and max(abs(u - v) for u, v in zip(a[2], b[2], strict=True)) <= self.rot_tol
+            and a[3:] == b[3:]
+        )
+
+    def get(
+        self, pose: Sequence[float], sol: int, floor: float, off: Sequence[float]
+    ) -> tuple[bool, float | None]:
+        """(찾음, 플랜지 z 또는 None). 찾지 못하면 (False, None)."""
+        k = self._key(pose, sol, floor, off)
+        for k2, z in self._items:
+            if self._same(k, k2):
+                return True, z
+        return False, None
+
+    def put(
+        self, pose: Sequence[float], sol: int, floor: float, off: Sequence[float], z: float | None
+    ) -> None:
+        k = self._key(pose, sol, floor, off)
+        self._items = [(k2, z2) for k2, z2 in self._items if not self._same(k, k2)]
+        self._items.append((k, z))
+        del self._items[: max(0, len(self._items) - self.max_items)]
+
+    def __len__(self) -> int:
+        return len(self._items)
+
+
+def search_travel_z(
+    ladder: Sequence[float],
+    ik_ok: Callable[[float], bool | None],
+    cached: tuple[bool, float | None] = (False, None),
+) -> tuple[float | None, bool]:
+    """이동 높이 찾기 → (플랜지 z 또는 None, 저장해도 되는지) (#147·#153).
+
+    ladder = safe_z 부터 하한까지 10 mm 씩 내려가는 플랜지 z, ik_ok(z) = 풀림 True · 안 풀림 False · 호출 실패
+    None. 저장한 값(cached)이 있으면 ikin 1회로만 확인한다 — 높이면 그 높이, "닿지 않음"이면 하한(ladder 끝).
+    ikin 은 지금 관절을 씨앗으로 푸는 수치 풀이라, 미리 계산(관측 자세) 때 안 풀린 칸이 파지 끝 위치에서
+    출발하면 풀릴 수 있다. 확인이 어긋나면 처음부터 찾는다. 찾는 중 호출 실패가 한 번이라도 있으면 결과를
+    저장하지 않는다(서비스 타임아웃이 "닿지 않음"으로 굳지 않게)."""
+    hit, z = cached
+    if hit:
+        if z is not None:
+            if ik_ok(z):
+                return z, False
+        elif not ladder:
+            return None, False
+        elif ik_ok(ladder[-1]) is False:
+            return None, False
+    err = False
+    for zz in ladder:
+        ok = ik_ok(zz)
+        if ok:
+            return zz, not err
+        err = err or ok is None
+    return None, not err
