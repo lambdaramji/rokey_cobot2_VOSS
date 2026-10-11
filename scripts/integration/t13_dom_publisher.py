@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import json
-import statistics
 import time
 import urllib.request
 from datetime import datetime
@@ -50,8 +49,9 @@ def check_ros_is_isolated(node: Node) -> None:
     names = node.get_node_names()
     if any("sort_manager" in name for name in names):
         raise RuntimeError("sort_manager 실행 중: 상태 메시지를 발행하지 않습니다.")
-    if node.get_publishers_info_by_topic(STATE_TOPIC):
-        raise RuntimeError("기존 SortState 발행자가 있어 중단합니다.")
+    for publisher_info in node.get_publishers_info_by_topic(STATE_TOPIC):
+        if publisher_info.node_name != node.get_name():
+            raise RuntimeError("기존 SortState 발행자가 있어 중단합니다.")
 
 
 def make_message(sequence: int, offset_ms: float, uncertainty_ms: float) -> SortState:
