@@ -31,6 +31,7 @@ from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, qos_profile_sensor_data
 from rclpy.signals import SignalHandlerOptions
+from rclpy.time import Time
 from sensor_msgs.msg import CameraInfo, CompressedImage, Image
 
 from voss_msgs.msg import BoxTrack, LabelCrop, SortState
@@ -113,6 +114,8 @@ class BoxTrackerNode(Node):
         )
         self.playback = p("playback", "").value
         self.playback_rate = float(p("playback_rate", 1.0).value)
+        # 재생 시각을 지금 시계로 옮긴다 — 재생으로 sort_manager·belt_servo 를 돌릴 때(voss_dry_run). 기본은 녹화 시각 보존
+        self.playback_restamp = bool(p("playback_restamp", False).value)
         self.assume_observe = bool(p("assume_observe", bool(self.playback)).value)
         self.pose_max_gap = float(p("pose_max_gap_s", 0.04).value)
         # /voss/robot/pose stamp 는 실제 로봇 상태보다 늦다(10/08 약 60 ms) → 촬영 시각 + lag 의 pose 를 쓴다.
@@ -202,6 +205,7 @@ class BoxTrackerNode(Node):
             f"hand_eye={self._he_label()} pose_lag={self.pose_lag * 1000:.0f} ms "
             f"observe_source={self.observe_source} "
             f"input={'playback ' + self.playback if self.playback else image_topic}"
+            f"{' (restamp)' if self.playback and self.playback_restamp else ''}"
         )
 
     def _he_label(self) -> str:
@@ -258,12 +262,16 @@ class BoxTrackerNode(Node):
                     rosbag2_py.ConverterOptions("", ""))  # fmt: skip
         types = {t.name: t.type for t in reader.get_all_topics_and_types()}
         t_wall0 = t_bag0 = None
+        clock = tl.PlaybackClock(self.playback_rate) if self.playback_restamp else None
         n = 0
         while rclpy.ok() and not self.stopping and reader.has_next():
             topic, data, t_bag = reader.read_next()
             kind = types.get(topic, "")
             if kind == "geometry_msgs/msg/PoseStamped" and topic.endswith("/voss/robot/pose"):
-                self._on_pose(deserialize_message(data, PoseStamped))
+                pm = deserialize_message(data, PoseStamped)
+                if clock is not None:
+                    pm.header.stamp = self._restamp(clock, pm.header.stamp)
+                self._on_pose(pm)
                 continue
             if kind == "sensor_msgs/msg/CameraInfo":
                 self._on_info(deserialize_message(data, CameraInfo))
@@ -281,11 +289,16 @@ class BoxTrackerNode(Node):
             wait = (t_bag - t_bag0) * 1e-9 / self.playback_rate - (time.monotonic() - t_wall0)
             if wait > 0:
                 time.sleep(wait)
-            self.process(img, m.header.stamp, live=False)
+            stamp = self._restamp(clock, m.header.stamp) if clock is not None else m.header.stamp
+            self.process(img, stamp, live=False)
             n += 1
         self.get_logger().info(f"재생 끝: 영상 {n} 프레임 ({self.playback})")
         self._log_stats()
         self.done = True
+
+    def _restamp(self, clock: tl.PlaybackClock, stamp):
+        now = self.get_clock().now().nanoseconds * 1e-9
+        return Time(nanoseconds=int(clock(stamp_s(stamp), now) * 1e9)).to_msg()
 
     # ---------------- 처리 ----------------
     def process(self, bgr: np.ndarray, stamp, live: bool) -> None:

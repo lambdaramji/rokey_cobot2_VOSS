@@ -8,6 +8,15 @@
   <license>MIT</license>
   <depend>rclpy</depend>
   <depend>voss_msgs</depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>voss_robot</exec_depend>
+  <exec_depend>voss_servo</exec_depend>
+  <exec_depend>voss_manager</exec_depend>
+  <exec_depend>voss_vision</exec_depend>
+  <exec_depend>voss_voice</exec_depend>
+  <exec_depend>voss_hmi</exec_depend>
+  <!-- realsense2_camera(with_camera)는 공용 PC 에 설치된 외부 패키지 — CI rosdep 이 받지 않게 적지 않는다 -->
   <test_depend>python3-pytest</test_depend>
   <export>
     <build_type>ament_python</build_type>
