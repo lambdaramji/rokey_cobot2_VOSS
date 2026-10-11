@@ -14,7 +14,7 @@
 | 2 | 펜던트 공간 제한 | 12:0x~12:23 | 직육면체 베이스 P1 (−150, −350, −50) · P2 (700, −208, 77), **유효 공간 외부**, 검사 TCP, 마진 0. 조그 하강 **77.45 에서 정지**. A1·C2·HOLD1 PLACE 통과 | 아래 "2." · 펜던트 사진 3장 |
 | 3 | pose 지연 (gateway `pose_source:=joint_states`) | 12:32~12:36 | pose 값 갱신 간격 중앙값 **20 ms**, 고른 lag **15 ms**(기울기 확인 15), 이동 중 RMS 0.11·**최대 0.31 mm**, 정지 최대 0.23 mm (lag 60 이면 이동 최대 2.18 mm) | `pose_lag_js_01/`, `pose_lag_js_01_eval.txt`, `.csv` |
 | 4 | VERIFY 재닫기 (39 mm·14 N) | 13:07~13:12 | 파지 1677 ms·폭 41.1·grip True → LIFT 뒤 재닫기 5회: **167·168·167·173·171 ms, 모두 폭 41.1·grip True**. 처짐 보고 없음 | gateway 로그, `goto/*.csv` |
-| G1 | G1 s1 (sort_manager) | 16:44~17:15 | **20사례 중 20 OK, 모두 시도 1**(gate_summary). 무효 6(의도 시험: 기울임·뒤집기) | 아래 "G1 시리즈 s1"·"의도 시험" |
+| G1 | G1 s1 (sort_manager) | 16:44~17:15 | **20사례 중 20 OK, 모두 시도 1**(gate_summary). 무효 6(의도 시험: 기울임·뒤집기). 17:01 회차를 포함해도 19/20 | 아래 "G1 시리즈 s1"·"의도 시험" |
 | 5 | ① 추종·cancel (Kp 0) | 14:18~14:56 | goal 6회: LOST 2 · OUT_OF_REACH 2 · **CANCELED 2 (STOP_OK, TRACK 1.5 s·4.5 s 뒤 취소)**. Kp 0 전 구간 2회: z 140.8 유지, 벨트 방향 간격 −75~−93 mm, 가로 ≤ 3.8 mm. 취소 때 gateway move_stop 2회 ok | 아래 "5." |
 | G0 | G0 1회차 (런북 4장) | 16:08~16:13 | **box `…-001` 대치동 → B 칸 0 PLACED, TrackAndGrasp OK 시도 1, DB 1행** | 아래 "G0 1회차" |
 | 6 | ② TrackAndGrasp 1회 (Kp 1.0) | 15:26 | **`grasped: true`, `reason: OK`, attempts 1**, 11.4 s. 정렬 TCP x **90.7**(문턱 382.5), DESCEND 2.60 s → z 83.8, GRASP 1.70 s(닫기 1685 ms·폭 41.4·grip True), LIFT 2.70 s → z 148.8, VERIFY 167 ms·폭 41.4. 뒤이어 HOLD 0 PLACE ok 51.4 s | 아래 "6." |
@@ -24,8 +24,8 @@
 | 10 | belt_servo 파라미터 변경 | 12:5x~14:12 | `input.pose_lag_ms` 60 → 15 → **0** (PL 결정·DESIGN r7 DEC-03). 나머지 값은 받은 그대로 | 아래 "10." |
 | 11 | 벨트 속도 | 14:20 | **4.76 cm/s**, 방향 −0.69° (h250 스케치, 업로드 안 함) | `belt_speed.py --bag track_rehearsal_02` |
 | 12 | watchdog 정지 (f04 부산물) | 12:33 | 20 mm/s: 0.24 s·4.98 mm. 48 mm/s: 끊긴 뒤 약 0.25 s 에 정지, 10.3 mm (스크립트 출력 0.756 s·12.12 mm) | `f04/cut_123311·123335*` |
-| 14 | 특이점 영역 안내(두산 3205/3206) | 14:36~15:27 | x ≈ 600 근처 추종 중·x 620 에서 OBSERVE 복귀 중·HOLD 왕복 중 "Change singularity region status" 8회. 실행자 보고: "x +580 까지 이동 후 홈 복귀 때 로봇팔 관절이 걸리는 현상" | 아래 "14." |
 | 13 | x ≥ 600 z 처짐 | 14:37·14:40 | TRACK z 목표 140.8 에서 x 600 → 139.5, x 618 → **136.5** (z 명령 +2 → +6.5 mm/s), 2/2 재현 | 틱 로그 |
+| 14 | 특이점 영역 안내(두산 3205/3206) | 14:36~15:27 | x ≈ 600 근처 추종 중·x 620 에서 OBSERVE 복귀 중·HOLD 왕복 중 "Change singularity region status" 8회. 실행자 보고: "x +580 까지 이동 후 홈 복귀 때 로봇팔 관절이 걸리는 현상" | 아래 "14." |
 
 사건: **14:25 카메라 USB 재연결(프레임 끊김)** · **12:0x 공간 제한 '유효 공간 내부'로 적용 → 보호정지** — 아래 "사건".
 
@@ -158,21 +158,6 @@
 - 간섭(카메라 손목·트레이) 눈 확인: 실행자 보고 없음.
 - 그리퍼 힘: 실행자(김학민)가 **박스가 조금 찌그러져서** 14 N → 12 N 을 검토(15:3x) → 변경 절차(voss_config PR·docs/interfaces·PL 승인·gateway/belt_servo 재기동)가 길어 **14 N 유지로 결정**(15:4x). 참고 근거(ADR-0009): 10/06 시험 3·8·10·12·14 N 중 12 N 부터 미끄러짐 없음(12 N 3회, 14 N 2회), 14 N = "최저 합격 12 N + 여유". 값 위치는 `config/voss_config.yaml` `gripper.force_n`(gateway·belt_servo 둘 다 읽음). 찌그러짐 정도(사진·치수)는 기록 없음.
 
-## 14. 특이점 영역 안내 (두산 3205/3206, gateway 로그)
-
-| 시각 | 상황 | 안내 |
-|---|---|---|
-| 14:36:57 | ① 2회 추종 중, x ≈ 600 근처 (#13 z 처짐 시작 14:36:58 과 같은 때) | Outside → Inside |
-| 14:37:39 · 14:37:41 | x 620 에서 OBSERVE 복귀(22.7 s) | Outside → Inside, Inside → Outside |
-| 14:40:34 | ① 3회 추종 중, x ≈ 600 근처 | Outside → Inside |
-| 14:40:51 · 14:40:53 | OBSERVE 복귀(22.7 s) | Outside → Inside, Inside → Outside |
-| 15:27:14 · 15:27:16 · 15:27:18 | HOLD 0 PLACE 가는 길 | Outside → Inside ×2, Inside → Outside |
-| 15:27:26 · 15:27:29 · 15:27:31 | HOLD 에서 OBSERVE 복귀 | Outside → Inside ×2, Inside → Outside |
-
-- 전체 문구: `1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)` / `3206 … (Inside -> Outside)`.
-- 실행자 보고 "x +580 까지 이동 후 홈 위치 복귀할 때 로봇팔 관절이 걸리는 현상" 과 시각이 겹치는 안내는 위 복귀 행들. *(추측: 특이점 처리 모드 진입 때 관절 속도가 제한되어 걸리는 것처럼 보임)*
-- 10/09 기록: C2 32.6 s · HOLD1 30.2 s (100 mm/s). 오늘 HOLD0 51.4 s 는 30 mm/s(`zone_vel_mm_s:=30`).
-
 ## 10. belt_servo 파라미터
 
 - 받은 파일: 박병후 Slack 첨부 `belt_servo_real.yaml`·`belt_servo_kp0.yaml` → `~/voss_ws/config/`. `hold_width_max_mm` 43.5 → **44.0**(15:5x, 박병후 결정 — 김학민 15:53 안내로 전달, GitHub 문서 근거는 찾지 못함). 44.0 적용 오프라인 READY: kp0 `0010a217011a`, Kp1 **`215e6274f074`**, 파일 sha256 `87fb481552bb…`. 적용은 belt_servo 재기동 뒤(14:58 기동 노드는 43.5).
@@ -207,6 +192,21 @@
 | ~618 | 136.5 | 136.6 | +6.3~6.5 |
 
 - `tcp_pose_m`(측정 pose)도 같은 값(외삽 아님). 이 위치의 베이스 거리 ≈ √(618² + 284²) ≈ 680 mm, 10/06 기록 "최대 리치 697 mm". *(추측: 팔이 펴지는 구간에서 speedl z 추종 한계)*
+
+## 14. 특이점 영역 안내 (두산 3205/3206, gateway 로그)
+
+| 시각 | 상황 | 안내 |
+|---|---|---|
+| 14:36:57 | ① 2회 추종 중, x ≈ 600 근처 (#13 z 처짐 시작 14:36:58 과 같은 때) | Outside → Inside |
+| 14:37:39 · 14:37:41 | x 620 에서 OBSERVE 복귀(22.7 s) | Outside → Inside, Inside → Outside |
+| 14:40:34 | ① 3회 추종 중, x ≈ 600 근처 | Outside → Inside |
+| 14:40:51 · 14:40:53 | OBSERVE 복귀(22.7 s) | Outside → Inside, Inside → Outside |
+| 15:27:14 · 15:27:16 · 15:27:18 | HOLD 0 PLACE 가는 길 | Outside → Inside ×2, Inside → Outside |
+| 15:27:26 · 15:27:29 · 15:27:31 | HOLD 에서 OBSERVE 복귀 | Outside → Inside ×2, Inside → Outside |
+
+- 전체 문구: `1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)` / `3206 … (Inside -> Outside)`.
+- 실행자 보고 "x +580 까지 이동 후 홈 위치 복귀할 때 로봇팔 관절이 걸리는 현상" 과 시각이 겹치는 안내는 위 복귀 행들. *(추측: 특이점 처리 모드 진입 때 관절 속도가 제한되어 걸리는 것처럼 보임)*
+- 10/09 기록: C2 32.6 s · HOLD1 30.2 s (100 mm/s). 오늘 HOLD0 51.4 s 는 30 mm/s(`zone_vel_mm_s:=30`).
 
 ## 사건
 
@@ -402,6 +402,7 @@
 - 시험 뒤 sort_manager 는 LOST 마다 PAUSED → T8 재기동 반복(세션 e4bd·696d·e86f·eb6e). 17:10:39 `명령 거부: PAUSED 에서는 resume`.
 
 **gate_summary 최종 집계**(`--exclude 4b20ee34 636e5fc2 37b0182c e4ba943c babd92db ad7f6404`, 나머지 인자 같음) → `~/voss_data/1010/g1_s1_gate_summary_final.md`: **20사례 중 20 성공(100 %), 최초 시도 성공 20, 무효 6**, reason OK 20, 분모 밖 선언 전 9건. 사람이 센 본 측정 20회 = 표 20회.
+- **17:01 회차(track 26, LOST)를 무효로 빼지 않고 20회차로 두어도 19/20(95 %)** — 아래 "이전 집계"(무효 지정 없음)와 같은 값. 무효 지정과 관계없이 기준 14/20 을 넘는다(PL 남현지 #145 리뷰).
 
 (이전 집계, 무효 지정 없음 → `~/voss_data/1010/g1_s1_gate_summary.md`, 17:04):
 - 20사례 중 **19 성공**, 최초 시도 성공 19, 무효 0(지정 안 함), reason OK 19·LOST 1, 자동 힌트 L 1. 분모 밖: 선언 전 9건.
