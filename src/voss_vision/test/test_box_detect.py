@@ -1,9 +1,9 @@
-"""box_detect (seg) — 합성 프레임 시험: 벨트 위 박스, 빈 벨트, 손(라벨 없음), 가장자리 걸림."""
+"""box_detect (seg) — 합성 프레임 시험: 벨트 위 박스, 빈 벨트, 손(라벨 없음), 가장자리 걸림, 버린 이유."""
 
 import cv2
 import numpy as np
 import pytest
-from voss_vision.box_detect import SegParams, detect_boxes
+from voss_vision.box_detect import SegParams, detect_boxes, detect_candidates
 
 LABEL = (172, 106)  # 관측 자세 송장 px (긴 변, 짧은 변)
 
@@ -55,3 +55,50 @@ def test_label_near_edge_but_whole_is_reported(v: int) -> None:
 def test_no_belt_no_detection() -> None:
     img = np.full((1080, 1920, 3), 200, np.uint8)
     assert detect_boxes(img, SegParams()) == []
+
+
+def passed(img):
+    return [c.det for c in detect_candidates(img)[1] if c.reason == ""]
+
+
+def on_belt(cands):
+    # 벨트 열 범위 양옆 여유(belt_margin_px)에 걸린 밝은 바닥 띠는 빼고 본다 — 위아래 끝에 닿아 border
+    return [c for c in cands if 995 < c.rect[0] + c.rect[2] / 2 < 1265]
+
+
+@pytest.mark.parametrize("box_at", [None, (1130, 600), (1130, 40), (1130, 1079 - 60)])
+def test_candidates_pass_equals_detect_boxes(box_at) -> None:
+    img = frame(box_at, 25)
+    assert passed(img) == detect_boxes(img)
+
+
+def test_label_cut_by_bottom_edge_reason_border() -> None:
+    # 하강하면 송장이 화면 아래 끝으로 빠진다 — 버린 이유가 가장자리로 나와야 한다(#30 하강 LOST)
+    roi, cands = detect_candidates(frame((1130, 1079 - 40)))
+    assert roi is not None and roi[0] <= 995 and roi[1] >= 1265
+    cands = on_belt(cands)
+    assert [c.reason for c in cands] == ["border"]
+    x, y, w, h = cands[0].rect
+    assert y + h >= 1079 - 4 and cands[0].det is None
+
+
+def test_square_white_reason_aspect_and_small_reason_area() -> None:
+    img = frame()
+    cv2.rectangle(img, (1060, 300), (1200, 440), (250, 250, 250), -1)  # 정사각 흰 종이
+    cv2.rectangle(img, (1100, 800), (1110, 810), (250, 250, 250), -1)  # 반사 점
+    by = {c.reason: c for c in on_belt(detect_candidates(img)[1])}
+    assert set(by) == {"aspect", "area"}
+    assert by["aspect"].aspect == pytest.approx(1.0, abs=0.05) and by["aspect"].rot is not None
+    assert by["area"].rot is None
+
+
+def test_hollow_label_reason_fill() -> None:
+    img = frame()
+    lab = cv2.boxPoints(((1130.0, 600.0), (106, 172), 0))
+    cv2.polylines(img, [np.int32(lab)], True, (250, 250, 250), 12)  # 테두리만 흰 사각형
+    reasons = [c.reason for c in on_belt(detect_candidates(img)[1])]
+    assert reasons == ["fill"]
+
+
+def test_no_belt_candidates_none() -> None:
+    assert detect_candidates(np.full((1080, 1920, 3), 200, np.uint8)) == (None, [])

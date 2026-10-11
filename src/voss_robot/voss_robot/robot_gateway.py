@@ -6,7 +6,7 @@
 지금 있는 것: /voss/robot/pose (TCP, base_link), /voss/robot/servo_cmd → speedl_stream(ADR-0010,
 만료 watchdog → 0 속도 + 항상 move_stop, TCP z 하한·x 범위·속도 상한), /voss/robot/stop,
 /voss/robot/gripper (RG2 Modbus 직접, ADR-0005), /voss/robot/state (RobotState),
-/voss/robot/move_to_zone (PLACE·OBSERVE·VIEW, PICK 은 10/13).
+/voss/robot/move_to_zone (PLACE·OBSERVE·VIEW·PICK — PICK 은 재확인 칸에서 집어 이동 높이로, #45).
 """
 
 import threading
@@ -26,7 +26,7 @@ from voss_msgs.msg import RobotState
 from voss_msgs.srv import Gripper, MoveToZone
 from voss_robot.call_queue import SerialCallQueue
 from voss_robot.config_params import ZONES
-from voss_robot.doosan import DEFAULT_PREFIX, DoosanError, DryRunDoosan
+from voss_robot.doosan import DEFAULT_PREFIX, DoosanError, DryRunDoosan, emulator_running
 from voss_robot.geometry import (
     controller_tcp_offset,
     flange_to_ros_pose,
@@ -38,7 +38,15 @@ from voss_robot.pose_source import StartupCheck, fresh
 from voss_robot.rg2 import DryRunRg2, Rg2
 from voss_robot.servo_guard import ServoGuard, ServoParams
 from voss_robot.state_logic import Inputs, decide
-from voss_robot.zone_motion import SAFE_Z_MM, plan_move, slot_pose
+from voss_robot.zone_motion import (
+    SAFE_Z_MM,
+    TravelCache,
+    pick_grip_ok,
+    pick_pose,
+    plan_move,
+    search_travel_z,
+    slot_pose,
+)
 
 
 class _ZoneError(RuntimeError):
@@ -137,11 +145,23 @@ class RobotGatewayNode(Node):
         host = self.declare_parameter("rg2_host", "192.168.1.1").value
         port = int(self.declare_parameter("rg2_port", 502).value)
         rg2_timeout = float(self.declare_parameter("rg2_timeout_s", 6.0).value)
-        if self.dry_run:
+        # 두산은 에뮬레이터(mode:=virtual), RG2 만 가짜 — 에뮬레이터 가상 실험용(#41 박병후). 실기 금지
+        self.rg2_dry_run = bool(self.declare_parameter("rg2_dry_run", False).value)
+        # 두산 real 인데 RG2 가 가짜인 상태. 기동·RobotState.detail·5 초 로그에 계속 보인다(#139 리뷰 박병후)
+        self.rg2_fake_note = (
+            "RG2 FAKE(rg2_dry_run)" if self.rg2_dry_run and not self.dry_run else ""
+        )
+        if self.rg2_fake_note:
+            self._require_emulator(prefix)
+        if self.dry_run or self.rg2_dry_run:  # 가짜 RG2 에서는 rg2_host·rg2_port 를 쓰지 않는다
             # 가짜 물체 폭(RG2 보고값 mm, 0 이하 = 물체 없음). 닫힘 명령 폭보다 커야 grip_detected —
             # 실측 31 mm 면 파지는 명령 39 → 보고 40.3~40.6 mm(measurements #8)라 40.5 정도를 준다
             obj = float(self.declare_parameter("dry_run_object_mm", 0.0).value)
             self.rg2 = DryRunRg2(object_mm=obj if obj > 0.0 else None)
+            if self.rg2_fake_note:
+                self.get_logger().warn(
+                    "RG2 가짜(rg2_dry_run) — 실제 그리퍼는 움직이지 않는다. 실기에서는 끈다"
+                )
         else:
             from pymodbus.client import ModbusTcpClient
 
@@ -175,6 +195,20 @@ class RobotGatewayNode(Node):
             }
         self.pre_open = float(self.declare_parameter("gripper.pre_open_mm", 90.0).value)
         self.grip_force = float(self.declare_parameter("gripper.force_n", 12.0).value)
+        self.grasp_width = float(self.declare_parameter("gripper.grasp_width_mm", 39.0).value)
+        # PICK(재확인 칸에서 집기): 놓기 칸 자세 + dz. 놓기 자세는 쥔 박스 밑면 +5 라 핑거 끝은 바닥 약 +13.
+        # 10/11 실기 재확인 칸 0: dz 3·0 은 박스 윗모서리(집음 폭 39.9·39.8), −5·−8 은 몸통(40.6), −8 바닥 접촉 없음.
+        # 성공 보고폭 범위는 belt_servo hold_width_min/max 와 같은 근거(빈손 최대 38.7, 10/10 쥔 폭 40.6~41.5·회전 최대 43.0)
+        # 보고폭으로는 윗모서리 파지를 못 거른다(dz +3 이 39.9·grip True 로 통과) → 안전장치는 dz 다.
+        # zones.recheck.pose z 를 다시 교시하면 dz 도 실기로 다시 확인한다(#148 리뷰 박병후)
+        self.pick_dz = float(self.declare_parameter("zone_pick_dz_mm", -8.0).value)
+        self.pick_width = [
+            float(v) for v in self.declare_parameter("zone_pick_width_mm", [39.5, 44.0]).value
+        ]
+        if len(self.pick_width) != 2 or not self.pick_width[0] < self.pick_width[1]:
+            raise RuntimeError(
+                f"zone_pick_width_mm 는 [하한, 상한](하한 < 상한): {self.pick_width}"
+            )
         self.safe_z = float(self.declare_parameter("zone_safe_z_mm", SAFE_Z_MM).value)
         # 먼 구역(C·HOLD)은 safe_z 에서 팔이 닿지 않는다(10/08 실기 1206). 수평 이동 높이를 구역마다 ikin 으로
         # 낮추되, 이 TCP z 보다 낮아지면 거부한다(박스 밑면 = TCP − 8, 트레이 테두리 ≈ TCP 50 → 약 60 mm 여유)
@@ -200,6 +234,16 @@ class RobotGatewayNode(Node):
         # move_line 은 TCP 직선 이동 — 출발–목표 선분에서 이만큼 벗어나면 move_stop 하고 LIMIT
         self.path_tol = float(self.declare_parameter("zone_path_tol_mm", 15.0).value)
         self._cmd_off = list(self.tcp)  # _run_path 가 매번 잰 컨트롤러 TCP 오프셋으로 바꾼다
+        # 이동 높이(_travel_z) 결과를 칸별로 다시 쓴다 — 닿지 않는 높이의 ikin 이 큐를 ~100 ms 씩 잡아 경로 계산
+        # 2.5 s 동안 pose 가 10 Hz 로 떨어졌다(10/10 C2, #147). 기동 때 관측 자세에 있으면 구역 칸을 미리 계산
+        self._tz_cache = (
+            TravelCache() if self.declare_parameter("zone_travel_cache", True).value else None
+        )
+        self._tz_ik = 0  # ikin 호출 수 (미리 계산 로그용)
+        self._warm_idle = (
+            threading.Event()
+        )  # 미리 계산 중엔 비움 → MoveToZone 이 끝날 때까지 기다린다
+        self._warm_idle.set()
         self._tcp_note = ""  # RobotState.detail: 컨트롤러 TCP 가 voss_config 와 다를 때
         self._mlock = threading.Lock()  # 모션 자원(MoveToZone)
         self._zone_action = ""
@@ -237,12 +281,33 @@ class RobotGatewayNode(Node):
         g_state = MutuallyExclusiveCallbackGroup()
         self.create_timer(0.5, self._on_state_timer, callback_group=g_state)
         mode = "dry_run (두산·RG2 연결 안 함)" if self.dry_run else f"real {prefix}"
+        if self.rg2_fake_note:
+            mode += f" + {self.rg2_fake_note}"
         self.get_logger().info(
             f"robot_gateway started: {mode}, pose {rate:.0f} Hz, servo watchdog "
             f"{1e3 * sp.watchdog_s:.0f} ms, max {sp.max_speed_mm_s:.0f} mm/s, TCP z ≥ "
             f"{sp.z_min_mm:.1f} mm, x {sp.x_range_mm[0]:.0f}~{sp.x_range_mm[1]:.0f} mm, acc {self.servo_acc}"
         )
         threading.Thread(target=self._startup_tcp_check, daemon=True).start()
+
+    def _require_emulator(self, prefix: str, wait_s: float = 3.0) -> None:
+        """rg2_dry_run 은 두산 에뮬레이터에서만. 그래프에 에뮬레이터 노드가 없으면(실기) 기동하지 않는다.
+
+        실 로봇에 가짜 RG2 를 붙이면 개방이 OK 로 보고돼도 손가락이 안 열린다(비상정지 복구 ⑤). 그래프 조회는
+        spin 없이 되지만 디스커버리에 시간이 걸려 wait_s 동안 다시 본다."""
+        end = time.monotonic() + wait_s
+        while True:
+            if emulator_running(self.get_node_names_and_namespaces(), prefix):
+                return
+            if time.monotonic() > end:
+                break
+            time.sleep(0.2)
+        msg = (
+            f"rg2_dry_run 거부: 두산 에뮬레이터 노드({prefix.split('/')[1]}/virtual_node)가 없다 — "
+            "실기로 보인다. 실기에서는 rg2_dry_run 을 빼고 띄운다(브링업 mode:=virtual 에서만)"
+        )
+        self.get_logger().fatal(msg)
+        raise RuntimeError(msg)
 
     def _ctrl_tcp(self):
         """컨트롤러 등록 TCP 를 재서 move_line·ikin 에 보낼 오프셋을 정한다. 큐 작업 스레드에서.
@@ -276,11 +341,70 @@ class RobotGatewayNode(Node):
         self._set_tcp_note(off)
         if off is not None:
             self.get_logger().info(f"컨트롤러 TCP 등록 {why}")
+            self._prewarm_travel()
         else:
             self.get_logger().error(
                 f"컨트롤러 TCP 등록이 {why} — 모르는 TCP 라 MoveToZone 을 거부한다(NOT_CONFIGURED). "
                 "펜던트 툴·TCP 를 GripperDA_v1 또는 없음으로"
             )
+
+    def _prewarm_travel(self) -> None:
+        """기동 때 한 번: 관측 자세에 있으면 구역 칸·관측·VIEW 의 이동 높이를 미리 찾아 둔다(#147).
+        그동안 큐가 ikin 으로 차서 pose 가 낮다 — MoveToZone 과 같이 모션을 잡고 state BUSY(action PREWARM)로
+        둔다: servo_cmd 는 busy 로 거부, sort_manager 는 준비 안 됨(#153 리뷰). MoveToZone 요청은 끝날 때까지 기다린다."""
+        if self._tz_cache is None or len(self.observe) != 6:
+            return
+        if not self._mlock.acquire(blocking=False):
+            return
+        self._warm_idle.clear()
+        t0, n0 = time.monotonic(), self._tz_ik
+        try:
+            with self._glock:
+                servo = self.guard.active
+                if not servo:
+                    self.guard.motion_busy = True
+            if servo:
+                self.get_logger().info("이동 높이 미리 계산 안 함: servo_cmd 추종 중")
+                return
+            self._zone_action = "PREWARM"
+            self._update_state()
+            off, _why, cur, sol = self.queue.submit(self._ctrl_tcp).result(timeout=5.0)
+            if off is None:
+                return
+            if max(abs(a - b) for a, b in zip(cur[:3], self.observe[:3], strict=True)) > 30.0:
+                self.get_logger().info(
+                    "이동 높이 미리 계산 안 함: 관측 자세가 아님(MoveToZone 때 칸마다 찾음)"
+                )
+                return
+            self._cmd_off = off
+            targets = [list(self.observe)]
+            slots = 0
+            for zc in self.zones.values():
+                if zc["view"] is not None:
+                    targets.append(list(zc["view"]))
+                if not (zc["pose"] and zc["grid"]):
+                    continue
+                stage = slot_pose(zc["pose"], zc["grid"], 0)
+                for k in range(int(zc["grid"][0]) * int(zc["grid"][1])):
+                    t = slot_pose(zc["pose"], zc["grid"], k)
+                    slots += 1
+                    if self._travel_z(t, sol) is None:
+                        self._in_tray(t, stage, sol)
+            for t in targets:
+                self._travel_z(t, sol)
+            self.get_logger().info(
+                f"이동 높이 미리 계산: 칸 {slots}개, ikin {self._tz_ik - n0}회, "
+                f"{time.monotonic() - t0:.1f} s (저장 {len(self._tz_cache)}개)"
+            )
+        except Exception as e:  # 큐 응답 없음 등 — MoveToZone 때 다시 찾는다
+            self.get_logger().warn(f"이동 높이 미리 계산 실패: {e}")
+        finally:
+            with self._glock:
+                self.guard.motion_busy = False
+            self._zone_action = ""
+            self._mlock.release()
+            self._warm_idle.set()
+            self._update_state()
 
     def _set_tcp_note(self, off) -> None:
         """잰 컨트롤러 TCP 를 RobotState.detail 에 남긴다(같음이면 비움)."""
@@ -403,6 +527,8 @@ class RobotGatewayNode(Node):
 
     def _log_stats(self) -> None:
         """5 초마다 pose 발행 주기·RTT·큐 대기 (MC-004 로그)."""
+        if self.rg2_fake_note:  # 기동 한 줄은 스크롤로 사라진다 → 계속 보이게
+            self.get_logger().warn(f"{self.rg2_fake_note} — 실제 그리퍼는 움직이지 않는다")
         s = self._stats
         if s["n"]:
             rtt, wait = s["rtt"], s["wait"]
@@ -483,6 +609,7 @@ class RobotGatewayNode(Node):
             stopped=self.stopped,
             last_alarm=self.dsr.last_alarm,
             tcp_note=self._tcp_note,
+            rg2_note=self.rg2_fake_note,
         )
         st = decide(i)
         with self._slock:
@@ -511,6 +638,8 @@ class RobotGatewayNode(Node):
     # ---------------- MoveToZone (voss_msgs.md) ----------------
     def _on_move_to_zone(self, req, res):
         """PLACE: 구역 칸에 놓고 OBSERVE 로 돌아온 뒤 응답(placed_stamp = RG2 개방 완료). OBSERVE·VIEW: 이동만.
+        PICK: 열고 → 칸 위 파지 높이로 → 닫아 확인 → 든 채 수직 상승(이동 높이)에서 응답. 확인 실패면 그 자리에서
+        열고(박스는 칸에 그대로) 올라간 뒤 GRIP_FAIL. placed_stamp 0.
         실패 message: BUSY / INVALID / NOT_CONFIGURED / LIMIT(컨트롤러 알람) / TIMEOUT / GRIP_FAIL /
         RETURN_FAILED(개방 후 복귀 실패, placed_stamp 채움) / STOPPED(stop 이 끊음, 개방 후면 placed_stamp 채움)."""
         zone, mode = req.zone.strip().upper(), req.mode.strip().upper()
@@ -527,9 +656,12 @@ class RobotGatewayNode(Node):
             return fail(f"INVALID: mode {req.mode}")
         if zone == "OBSERVE" and mode:
             return fail('INVALID: OBSERVE 는 mode "" 만 (이동만, #96)')
-        if mode == "PICK":
-            return fail("NOT_CONFIGURED: PICK 은 아직 구현 전 (10/13 재확인 흐름)")
         place = mode in ("", "PLACE") and zone != "OBSERVE"
+        pick = mode == "PICK"
+        if (
+            pick and zone != "RECHECK"
+        ):  # C·HOLD 처럼 safe_z 에서 안 닿는 칸이면 쥔 채 트레이 안에 멈춘다
+            return fail("INVALID: PICK 은 RECHECK 만 (재확인 칸에서 집기, MC-017)")
         stage = None
         label = "PLACE" if place else (mode or "MOVE")
         if zone == "OBSERVE":
@@ -549,9 +681,12 @@ class RobotGatewayNode(Node):
             try:
                 target = slot_pose(zc["pose"], zc["grid"], int(req.slot))
                 stage = slot_pose(zc["pose"], zc["grid"], 0)  # 트레이 안 이동의 출입구(−X 끝 칸)
+                if pick:
+                    target = pick_pose(target, self.pick_dz)
             except ValueError as e:
                 return fail(f"INVALID: {e}")
-        # 자원: 모션(servo·MoveToZone)과 RG2(PLACE 는 함께 점유). 같은 자원 두 번째 요청은 BUSY
+        # 자원: 모션(servo·MoveToZone)과 RG2(PLACE·PICK 은 함께 점유). 같은 자원 두 번째 요청은 BUSY
+        self._warm_idle.wait(30.0)  # 기동 직후 이동 높이 미리 계산 중이면 끝날 때까지
         if not self._mlock.acquire(blocking=False):
             return fail("BUSY: move_to_zone 진행 중")
         held = False
@@ -567,7 +702,7 @@ class RobotGatewayNode(Node):
                 if time.monotonic() >= deadline:
                     return fail("BUSY: servo_cmd 추종 중")
                 time.sleep(0.02)
-            if place:
+            if place or pick:
                 if not self.rg2.try_hold():
                     return fail("BUSY: gripper 동작 중")
                 held = True
@@ -578,7 +713,39 @@ class RobotGatewayNode(Node):
             self.get_logger().info(f"move_to_zone {zone} 칸 {req.slot} {label} 시작")
             placed = None
             try:
+                if pick:
+                    # 상승 높이를 쥐기 전에 구한다 — 안 풀리면 쥔 채 멈추는 대신 움직이기 전에 거부(#148 리뷰 박병후)
+                    lift = self._lift_pose(target)
+                    # 내려가기 전에 연다(VIEW·OBSERVE 높이 — 아래에 아무것도 없다)
+                    try:
+                        w, _busy, grip, _safety = self.rg2.status()
+                    except Exception as e:
+                        return fail(f"GRIP_FAIL: RG2 상태 읽기 {e}")
+                    if grip:  # 무언가를 쥔 채면 사전 개방에서 떨어뜨린다(자동 개방 금지, MC-014)
+                        return fail(f"GRIP_FAIL: 이미 쥐고 있다(폭 {w:.1f} mm) — 열지 않고 거부")
+                    g = self.rg2.command_held(self.pre_open, self.grip_force)
+                    if not g.ok:
+                        return fail(f"GRIP_FAIL: 사전 개방 {g.message}")
                 self._run_path(target, stage)
+                if pick:
+                    g = self.rg2.command_held(self.grasp_width, self.grip_force)
+                    why = pick_grip_ok(
+                        g.ok,
+                        g.grip_detected,
+                        g.width_actual,
+                        self.pick_width[0],
+                        self.pick_width[1],
+                    )
+                    if why:
+                        return fail(f"GRIP_FAIL: 집기 확인 실패 — {why}{self._pick_retreat(lift)}")
+                    self.get_logger().info(
+                        f"move_to_zone {zone} 칸 {req.slot} PICK 집음: 폭 {g.width_actual:.1f} mm, grip True"
+                    )
+                    # 든 채 수직 상승. 실패하면 박스를 든 채 멈춘다(자동 개방 금지, MC-014)
+                    try:
+                        self._run_path(lift)
+                    except _ZoneError as e:
+                        return fail(f"{e} (박스를 쥔 채 멈춤)")
                 if place:
                     g = self.rg2.command_held(self.pre_open, self.grip_force)
                     if not g.ok:
@@ -605,26 +772,70 @@ class RobotGatewayNode(Node):
             self._mlock.release()
             self._update_state()
 
+    def _lift_pose(self, flange):
+        """flange x·y 위 이동 높이(_travel_z: safe_z 부터 닿는 곳까지). 움직이기 전에 부른다 — 컨트롤러 TCP 등록과
+        관절 배치를 재고(_run_path 와 같은 확인), ikin 명령 좌표 기준(_cmd_off)을 맞춘다."""
+        try:
+            off, why, _, sol = self.queue.submit(self._ctrl_tcp).result(timeout=5.0)
+        except Exception as e:  # 큐 응답 없음
+            raise _ZoneError(f"TIMEOUT: 상승 높이 계산 {e}") from e
+        if off is None:
+            raise _ZoneError(f"NOT_CONFIGURED: 컨트롤러 TCP 등록이 {why}")
+        self._cmd_off = off
+        z = self._travel_z(flange, sol)
+        if z is None:
+            raise _ZoneError(
+                f"LIMIT: 칸 위로 TCP z ≥ {self.min_travel_tcp_z:.0f} mm 까지 올라갈 수 없다"
+            )
+        return [flange[0], flange[1], z, *flange[3:]]
+
+    def _pick_retreat(self, lift) -> str:
+        """PICK 확인 실패: 파지 높이(박스 밑면 = 바닥)에서 열어 박스를 칸에 그대로 두고 lift 까지 올라간다.
+        문제가 생기면 그 자리에 멈추고 설명을 돌려준다(GRIP_FAIL 메시지 뒤에 붙임)."""
+        g = self.rg2.command_held(self.pre_open, self.grip_force)
+        if not g.ok:
+            return f" / 개방 실패 {g.message} — 칸 위 파지 높이에 멈춤"
+        try:
+            self._run_path(lift)
+        except _ZoneError as e:
+            return f" / 열었으나 상승 실패 {e}"
+        return " / 열고 상승함(박스는 칸에 그대로)"
+
     def _travel_z(self, xy_pose, sol: int, min_tcp_z: float | None = None) -> float | None:
         """xy_pose(플랜지) 의 x·y 위에서 safe_z 부터 10 mm 씩 내려가며, 지금 관절 배치로 풀리고 J3 여유가 있는
         가장 높은 플랜지 z. TCP z 가 min_tcp_z(기본 최저 이동 높이)보다 낮아지면 None. ikin 은 한 번씩 큐로
         보낸다(그 사이 pose 읽기가 끊기지 않게)."""
         floor = self.min_travel_tcp_z if min_tcp_z is None else min_tcp_z
-        z = self.safe_z
-        while True:
-            flange = [xy_pose[0], xy_pose[1], z, *xy_pose[3:]]
-            # 툴 길이 246.642 라 10 mm 단계가 TCP 69.96 처럼 떨어진다
-            if flange_to_tcp(flange, self.tcp)[2] < floor - 0.5:
-                return None
-            if self._ik_ok(flange, sol):
-                return z
-            z -= 10.0
 
-    def _ik_ok(self, flange, sol: int) -> bool:
-        """플랜지 posx 가 지금 관절 배치(sol)로 풀리고 J3 여유가 있는지. ikin 은 컨트롤러 등록 TCP 기준이라
-        _run_path 가 잰 오프셋(_cmd_off)으로 바꿔 보낸다."""
+        def at(z):
+            return [xy_pose[0], xy_pose[1], z, *xy_pose[3:]]
+
+        ladder, z = [], self.safe_z
+        # 툴 길이 246.642 라 10 mm 단계가 TCP 69.96 처럼 떨어진다
+        while flange_to_tcp(at(z), self.tcp)[2] >= floor - 0.5:
+            ladder.append(z)
+            z -= 10.0
+        cache = self._tz_cache
+        # 같은 칸에서 찾은 값은 ikin 1회로만 다시 본다 — "닿지 않음"이면 하한에서(#147·#153)
+        cached = (
+            cache.get(xy_pose, sol, floor, self._cmd_off) if cache is not None else (False, None)
+        )
+        z, keep = search_travel_z(ladder, lambda z: self._ik_ok(at(z), sol), cached)
+        if cache is not None and keep:
+            cache.put(xy_pose, sol, floor, self._cmd_off, z)
+        return z
+
+    def _ik_ok(self, flange, sol: int) -> bool | None:
+        """플랜지 posx 가 지금 관절 배치(sol)로 풀리고 J3 여유가 있는지. 두산 호출 실패면 None(닿지 않음과
+        구분 — 이동 높이 캐시에 넣지 않는다, #153). ikin 은 컨트롤러 등록 TCP 기준이라 _run_path 가 잰
+        오프셋(_cmd_off)으로 바꿔 보낸다."""
         cmd = flange_to_tcp(flange, self._cmd_off)
-        j = self.queue.submit(lambda: self.dsr.ikin(cmd, sol)).result(timeout=3.0)
+        self._tz_ik += 1
+        try:
+            j = self.queue.submit(lambda: self.dsr.ikin(cmd, sol)).result(timeout=3.0)
+        except DoosanError as e:
+            self.get_logger().warn(f"ikin 호출 실패: {e}")
+            return None
         return j is not None and abs(j[2]) >= self.min_j3_deg
 
     def _in_tray(self, slot_flange, stage, sol: int):
@@ -651,6 +862,7 @@ class RobotGatewayNode(Node):
         수평 이동 높이 = safe_z 와, 출발·도착 x·y 에서 닿는 최고 높이 중 낮은 것. 목표 자세 자체도 풀리는지
         움직이기 전에 확인한다. 먼 칸(출발·도착) 위로 최저 이동 높이가 안 나오면 stage(같은 구역 칸 0) 를
         거쳐 트레이 안에서만 낮게 옆으로 간다. 자세는 늘 수직(구역 자세 그대로)."""
+        t_plan, n_plan = time.monotonic(), self._tz_ik
         try:
             off, why, cur, sol = self.queue.submit(self._ctrl_tcp).result(timeout=5.0)
             if off is None:
@@ -696,6 +908,9 @@ class RobotGatewayNode(Node):
                 f" (트레이 안 TCP ≥ {self.min_in_tray_tcp_z:.0f} 도 안 됨 — 팔이 닿지 않음)"
             )
         hz = min(z0, z1)
+        self.get_logger().info(
+            f"경로 계산 {time.monotonic() - t_plan:.2f} s, ikin {self._tz_ik - n_plan}회 (#147)"
+        )
         if hz < self.safe_z - 0.5:
             self.get_logger().info(
                 f"수평 이동 높이 플랜지 z {hz:.1f} (TCP {hz - self.safe_z + 200:.0f}) — safe_z 에서 안 닿음"
@@ -713,17 +928,31 @@ class RobotGatewayNode(Node):
             )  # 핑거 끝(/voss/robot/pose 와 같은 기준) — 도착 판정
             seq0 = self.dsr.alarm_seq
             try:
-                try:
-                    self.queue.submit(
-                        lambda c=cmd: self.dsr.move_line_async(c, self.zone_vel, self.zone_acc)
-                    ).result(timeout=2.0)
-                except Exception as e:
-                    raise _ZoneError(f"TIMEOUT: move_line({name}) {e}") from e
+                self._send_move(name, cmd)
                 self._wait_arrive(name, tcp[:3], seq0)
             except _ZoneError as e:
                 if not str(e).startswith("STOPPED"):  # stop 은 이미 move_stop 을 보냈다
                     self._zone_halt(f"{name}: {e}")
                 raise
+
+    def _send_move(self, name: str, cmd) -> None:
+        """move_line(ASYNC) 한 구간을 큐로 보낸다. stop 이 먼저 왔으면 보내지 않고 STOPPED.
+
+        stop 의 move_stop 은 그 순간 움직이는 것만 멈춘다. 그리퍼 동작(닫기 약 1.7 s) 중에 온 stop 뒤에 다음 구간을
+        보내면 아무도 멈추지 않아 끝까지 간다 → 큐 작업 안에서 확인해 stop 과 송신 사이 틈을 없앤다. stop 전에 큐에
+        이미 들어가 있던 move_line 도 여기서 막힌다(#148 리뷰 박병후)."""
+
+        def send():
+            if self._abort.is_set():
+                raise _ZoneError(f"STOPPED: {name} 전 stop")
+            self.dsr.move_line_async(cmd, self.zone_vel, self.zone_acc)
+
+        try:
+            self.queue.submit(send).result(timeout=2.0)
+        except _ZoneError:
+            raise
+        except Exception as e:
+            raise _ZoneError(f"TIMEOUT: move_line({name}) {e}") from e
 
     def _zone_halt(self, why: str) -> None:
         """MoveToZone 이동 중 실패: move_line 이 계속 가지 않게 move_stop (speedl 은 보내지 않는다)."""
