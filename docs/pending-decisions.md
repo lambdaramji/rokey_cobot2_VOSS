@@ -15,7 +15,7 @@
 | 9 | RG2 제어 경로: Modbus TCP 직접 vs onrobot ROS 2 드라이버 | 김학민 | 10/06 | SR-HW-02, SR-SW-05 | 결정 | robot_gateway 안에서 Modbus TCP 직접. WebLogic DIO 는 펜던트 시험용 예비 (10/06) / ADR-0005 |
 | 10 | 흐린 송장 인쇄 농도 | 김학민 | 10/07 | SR-HW-07 | 결정 | 농도가 아니라 **번짐(blur) 처리**로 만든다. S07-01 역삼동 1종, 인쇄 시트 2장 중 1장을 시연 박스에 부착(BRD 2.4 "흐린 송장 1"). 10/06 촬영본 기준 번짐이 약해 판독될 수 있음 → T18(#27) 결과로 정도를 다시 본다 (10/06, `VOSS_송장_인쇄.docx`) |
 | 11 | 시연 송장 받는 사람 이름 목록 | 김학민 | 10/07 | SR-HW-07 | 결정 | 팀원 4명 이름(남현지·김학민·정의석·박병후)을 돌려 쓴다. 시연 박스 10개 = S07-01·02·03 각 3 + 흐린 S07-01 1, 10/06 부착 완료(10/06 인수인계 Slack, T17 촬영 bag A_MIX_01) |
-| 12 | TTS 엔진 (로컬 / OpenAI TTS) | 정의석 | 10/08 | SR-SW-13 | 결정 | OpenAI `gpt-4o-mini-tts`, voice `coral`. FastAPI `/ai/tts`에서 PCM 생성 후 ROS `speech_out`에서 로컬 재생. 10/10 실제 음성 출력·FIFO 검증 완료. 전체 루프 3초 기준 VT-049는 미실측. |
+| 12 | TTS 엔진 (로컬 / OpenAI TTS) | 정의석 | 10/08 | SR-SW-13 | 결정 | OpenAI `gpt-4o-mini-tts`, voice `coral`. FastAPI `/ai/tts`에서 PCM 생성 후 ROS `speech_out`에서 로컬 재생. 10/10 실제 음성 출력·FIFO 검증 완료. 전체 루프 3초 기준 VT-049는 미실측 / ADR-0013 |
 | 13 | 웹 HMI 스택·실행 위치, MQTT JSON 스키마 | 정의석 | 10/08 | SR-SW-17, SR-IF-10 | 결정 | React+Spring Boot+FastAPI+Nginx, 컨테이너(ADR-0006). Mosquitto=공용 PC 호스트 1883, MQTT 7개 토픽·QoS·retained·command args/ack 확정. 개발 때만 wlo1/1883 디버그 개방, 시연 때 차단 (`mqtt.md`, #20, 10/08) |
 | 14 | 작업 로그 DB 종류 | 정의석 | 10/09 | SR-SW-18 | 결정 | PostgreSQL 컨테이너, writer=sort_logger (ADR-0006, 10/06) |
 | 15 | 분류코드 끝 두 자리 ↔ 동 매핑 | 김학민·남현지 | 10/07 | SR-HW-07 | 결정 | S07-01 역삼동 / S07-02 대치동 / S07-03 청담동 (10/05) |
