@@ -13,7 +13,16 @@ mkdir -p docker/mqtt/secrets
 chmod 700 docker/mqtt/secrets
 ```
 
-Mosquitto 공식 `mosquitto_passwd` 유틸리티로 로컬 `docker/mqtt/secrets/passwd` 파일을 생성하고 `web`, `bridge`, `debug` 사용자를 등록한다. 명령 인수에 실제 암호를 적지 말고, 대화형 입력을 사용한다. 세 사용자 암호는 서로 달라야 한다. 컨테이너 사용자에게 passwd 해시 파일 읽기 권한이 필요하다.
+Mosquitto 공식 유틸리티로 `web`, `bridge`, `debug` 사용자를 대화형으로 생성한다. 세 계정의 암호는 서로 달라야 한다.
+
+```bash
+docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD/docker/mqtt/secrets:/secrets" eclipse-mosquitto:2 mosquitto_passwd -c /secrets/passwd web
+docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD/docker/mqtt/secrets:/secrets" eclipse-mosquitto:2 mosquitto_passwd /secrets/passwd bridge
+docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD/docker/mqtt/secrets:/secrets" eclipse-mosquitto:2 mosquitto_passwd /secrets/passwd debug
+chmod 644 docker/mqtt/secrets/passwd
+```
+
+`-c`는 처음 한 번만 사용해야 기존 계정이 지워지지 않는다. 컨테이너 사용자(UID 1883)가 마운트한 암호 해시 파일을 읽을 수 있도록 파일 권한은 644로 두며, 호스트 `secrets/` 디렉터리는 700으로 유지한다. 비밀번호 자체는 터미널 인수나 로그에 출력하지 않는다.
 
 ```bash
 docker compose -f docker/mqtt/compose.yml up -d
