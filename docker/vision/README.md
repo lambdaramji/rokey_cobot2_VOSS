@@ -14,6 +14,9 @@ box_tracker(OpenCV 분할, ADR-0011 — GPU 불필요)와 label_reader(PaddleOCR
 | `compose.gpu.yml` | 덧붙임: `:gpu` 이미지, label_reader 만 GPU(`ocr_device:=gpu:0`, nvidia 장치 예약) |
 | `.env.example` | 경로·인자. `cp .env.example .env` 뒤 고친다(`.env` 는 커밋 안 함) |
 
+## 이미지에 들어 있는 것 — 바꾸면 다시 빌드
+마운트되는 건 `config/` 의 `voss_config.yaml`·`belt_homography.yaml`·`hand_eye.yaml` 뿐이다. **voss_vision 코드와 `src/voss_vision/config/box_tracker.yaml`·`label_reader.yaml`**(`pose_lag_ms`·`detector`·`observe_source`·seg 임계·OCR 설정)은 빌드 때 이미지에 들어간다 — 레포에서 고쳤으면 `up -d --build`. 실제로 쓰는 값은 컨테이너 로그로 확인한다: `docker compose logs box_tracker | grep 'box_tracker started'` 의 `pose_lag=… ms`·`detector=…`(런북 T5 정상 표시와 같은 줄).
+
 ## 도메인 — 셸 값이 먼저
 compose 는 **셸에 export 된 변수를 `.env` 보다 먼저** 쓴다. 컨테이너는 compose 를 실행한 셸의 `ROS_DOMAIN_ID`·`ROS_AUTOMATIC_DISCOVERY_RANGE` 를 그대로 따른다(호스트 노드와 같아진다 — 공용 PC 는 30·범위 없음 = SUBNET). 셸에 도메인이 없으면 `entrypoint.sh` 가 77·LOCALHOST(시험)로 띄워, 운용 노드와 안 보이는 쪽으로 실패한다. 두 값은 `.env` 에 적지 않는다 — 셸 30 에 `.env` 의 LOCALHOST 만 섞이면 호스트와 다른 discovery 설정으로 뜬다.
 
@@ -63,7 +66,15 @@ docker compose -f compose.yml -f compose.gpu.yml up -d --build
 docker compose logs -f label_reader       # "OCR 엔진 준비 gpu:0 …", 판독 준비 완료
 nvidia-smi                                # AI 컨테이너(Whisper)와 같이 띄운 상태의 VRAM → measurements
 ```
-확인할 것(22-4, measurements 에 기록): GPU 컨테이너 기동, OCR 1장 시간(호스트 CPU 약 3 s 대비), VRAM(비전 + Whisper), box_tracker 30 Hz·카메라→발행 지연(≤ 100 ms). 카메라 노드는 호스트에서 띄운다(USB, 런북 T3).
+확인할 것(22-4, measurements 에 기록):
+- GPU 컨테이너 기동, 로그 첫 줄(`ROS_DOMAIN_ID=30 RANGE=(기본 SUBNET) … CYCLONEDDS_URI=file:///etc/voss/cyclonedds.xml`)
+- OCR 1장 시간(label_reader `OCR N ms`, 호스트 CPU 약 3 s 대비), VRAM(비전 + AI 컨테이너 Whisper 같이 띄운 `nvidia-smi`)
+- box_tracker 30 Hz·카메라→발행 지연 ≤ 100 ms(5초 통계 줄)
+- **servo 쪽(박병후 #159 리뷰):** 컨테이너 box_tracker 로 TrackAndGrasp 를 돌린 회차의 belt_servo 틱 `obs_age_s` 분포를 10/10 G1(호스트 box_tracker)과 비교, OCR(GPU) 판독 중에도 belt_servo 틱·`servo_cmd` 30 Hz 유지. GPU 를 못 써 CPU OCR 로 돌면 `label_reader` 에 `cpus:` 제한을 검토
+- OpenCV 판: 컨테이너 `docker compose run --rm box_tracker python3 -c "import cv2; print(cv2.__version__)"` ↔ 호스트 `python3 -c "import cv2; print(cv2.__version__)"`(다르면 같은 bag 에서 검출 결과 비교)
+- 이미지: `docker image inspect voss-vision:gpu --format '{{.Id}}'`, 베이스 `docker image inspect ros:jazzy-ros-base-noble --format '{{index .RepoDigests 0}}'` — 시연 전 마지막 빌드 이미지는 다시 빌드하지 않는다(떠다니는 태그)
+
+카메라 노드는 호스트에서 띄운다(USB, 런북 T3).
 
 ## 문제가 생기면
 - **호스트에서 토픽이 안 보임:** `docker compose logs` 첫 줄 `[voss-vision] ROS_DOMAIN_ID=… RANGE=… CYCLONEDDS_URI=…` 를 호스트 셸(`echo $ROS_DOMAIN_ID $ROS_AUTOMATIC_DISCOVERY_RANGE $CYCLONEDDS_URI`)과 맞춰 본다 — 도메인·범위가 같은지, `CYCLONEDDS_XML` 이 호스트 `CYCLONEDDS_URI` 의 파일인지.
