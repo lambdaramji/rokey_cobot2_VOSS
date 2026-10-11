@@ -35,7 +35,10 @@ public class MqttCommandPublisher {
     /** 링크 DOWN 이후에도 실제 발행 재시도로 복구를 확인한다. */
     public void publish(Map<String,Object> command) {
         MessageChannel outbound = channel.getIfAvailable();
-        if (outbound == null) { throw unavailable(); }
+        if (outbound == null) {
+            markLinkDown();
+            throw unavailable();
+        }
         try {
             String payload = mapper.writeValueAsString(command);
             boolean sent = outbound.send(MessageBuilder.withPayload(payload).build(), 1500);
