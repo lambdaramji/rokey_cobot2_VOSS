@@ -1,5 +1,7 @@
 # G1 게이트 — 추종 파지 20사례 (10/10 오후, 공용 PC)
 
+> **10/10 결과: 통과** — s1 20사례 중 20 성공(최초 시도 20, 무효 6), A안 유지. 회차표는 `docs/measurements-1010.md`, 판정은 ADR-0002 "판정".
+
 **판정 기준**(ADR-0002, SRD v1.0 SYS-PF-001·VT-045): **재시도 포함 이동 중 픽업 20사례 중 14 이상(70 %)**. 최초 시도와 재시도를 구분해 기록하고 **분모를 고정**한다. 미달이어도 자동 전환하지 않는다 — 측정 직후 게이트 회의에서 전원이 정하고 PL 이 ADR-0002 에 기록한다.
 
 > 로봇·벨트·그리퍼를 움직이는 명령은 모두 사람이 비상정지 옆에서 실행한다(CLAUDE.md 규칙 6). 역할·비상정지·벨트 정지 담당과 기동 순서는 `docs/g0-runbook.md` 그대로다. **G0 를 통과한 뒤에 G1 을 한다.**
@@ -18,7 +20,7 @@
 **고정 조건**(바뀌면 측정을 멈추고 새 시리즈로 다시 20회):
 - 벨트 h250(10/08 실측 4.77 cm/s, measurements-1008 #10). 아두이노는 레포 `conveyor_test` 스케치
 - 박스 방향: 46 mm 변 = 벨트 방향, 송장 위(ADR-0009). 투입: 상류 표시선, 앞 박스 처리가 끝난 뒤
-- 카메라 1920×1080·노출 6 ms·WB 4600. box_tracker `detector: seg`(ADR-0011)·`observe_source: hand_eye`·`pose_lag_ms: 60`, `config/hand_eye.yaml`·`belt_homography.yaml` 그대로
+- 카메라 1920×1080·노출 6 ms·WB 4600. box_tracker `detector: seg`(ADR-0011)·`observe_source: hand_eye`·`pose_lag_ms: 15`(#140, gateway `pose_source:=joint_states` 기준 — 60 은 `service` 기준이던 #140 전 값), `config/hand_eye.yaml`·`belt_homography.yaml` 그대로
 - belt_servo 파라미터 파일과 sha256, main 커밋 해시 — 시작 전에 기록
 
 ## 2. 시작 전 확인
