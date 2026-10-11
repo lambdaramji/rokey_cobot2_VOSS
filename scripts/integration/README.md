@@ -53,3 +53,30 @@ sort_manager/로봇 전체 루프는 후속이며, 김학민 현장 안전 담�
 →상태·결과→HMI/DB와 TTS 응답을 실제로 1회씩 확인한다.
 별도 도메인의 mock 경로와 단독 REST/TTS 시험은 준비·부분 검증이지
 T14 전체 루프 완료나 실로봇 구동 완료 증거가 아니다.
+
+## T14 비구동 4유형 실행 (T13 지연 실측 후)
+
+**Nodes PC**: 기존 메인 도메인의 ROS 노드는 그대로 두고,
+시험 스크립트와 자식 voice_listener(text)·intent_parser만 `179` 도메인에서 실행한다.
+
+```bash
+cd ~/collaboration/rokey_cobot2_VOSS-t13
+git pull --ff-only origin feat/22-web-hmi-initial
+source /opt/ros/jazzy/setup.bash
+colcon build --packages-up-to voss_voice --symlink-install
+source install/setup.bash
+
+# 이 명령 줄에만 시험용 ROS 격리 설정 적용 (현재 셸 ROS_DOMAIN_ID를 변경하지 않음).
+ROS_DOMAIN_ID=179 ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST \\
+  python3 scripts/integration/t14_voice_dry_run.py
+```
+
+- 실제 `voice_listener(mode=text)`·`intent_parser`와 Web PC 실시간 `/ai/intent`,
+  `/api/stats` HTTP 경로를 호출한다. 시작·우선·답변 Intent는 **모의 manager에만** 도달한다.
+- `query_history`는 현재 Web HMI `NO_SESSION`이면
+  `기록을 조회할 수 없습니다.` 안내를 정확히 반환하는지 검사한다. 이것은
+  이력 정상 조회 성공 검증이 아니라 NO_SESSION 폴백 검증이다.
+- ROS_DOMAIN_ID 179에 **어떤 기존 노드라도 보이면 중단**한다.
+- 4/4는 텍스트 폴백/Intent/TTS 안내 토픽의 선행 시험 결과이며,
+  실제 TTS 오디오 재생·마이크 호출어·Whisper STT·실제 sort_manager 접수·HMI 전체 루프의 완료와 다르다.
+- 오류 로그: `~/.local/state/voss-t14/{voice_listener,intent_parser}.log`.
