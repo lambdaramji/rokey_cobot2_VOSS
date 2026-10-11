@@ -79,3 +79,47 @@ ROS_DOMAIN_ID=179 ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST python3 scripts/integr
 - 4/4는 텍스트 폴백/Intent/TTS 안내 토픽의 선행 시험 결과이며,
   실제 TTS 오디오 재생·마이크 호출어·Whisper STT·실제 sort_manager 접수·HMI 전체 루프의 완료와 다르다.
 - 오류 로그: `~/.local/state/voss-t14/{voice_listener,intent_parser}.log`.
+
+## T14 실제 manager 접수 + 실제 TTS 스피커 동시 시험 (격리, 비구동)
+
+**목적/제약:** `sort_manager` **실제 노드**의 IDLE 상태 priority(역삼동) 수락을
+관리자 로그로 증명하고, **실제 `speech_out`**이 FastAPI `/ai/tts`를 호출해
+Nodes PC `aplay`로 스피커 재생을 완료하는지 한 번에 검증한다.
+실제 manager의 IDLE priority는 `/voss/voice/say`를 생성하지 않기 때문에,
+**TTS 문장만 시험기가 발행**한다. manager→고유 안내 Say→TTS 전체 연결
+완료라고 판정하지 않는다. 실제 robot_gateway·TrackAndGrasp·MoveToZone을
+연결하거나 `start`·`stop`을 보내지 않는다.
+
+**PC:** 오직 **Nodes PC `ms-03@ms-03`** 터미널에서 실행.
+Web PC의 기존 FastAPI `8000` 포트/SSH 터널·Docker·MQTT·DB를 재설정하지 않는다.
+사전 조건: 기존 분리 PC SSH `127.0.0.1:8000` 포워드 유지, Nodes PC에서
+`aplay` 사용 가능하고 스피커 연결/음량 설정, 실제 ROS 도메인과 구분되는
+`ROS_DOMAIN_ID=179`+로컬 탐색. 격리 도메인에 이미 노드가 있으면
+새 시험은 **중단**하고 자동으로 다른 노드를 종료하지 않는다.
+
+```bash
+# [Nodes PC — ms-03@ms-03]
+cd ~/collaboration/rokey_cobot2_VOSS-t13 || exit 1
+git pull --ff-only origin feat/22-web-hmi-initial || exit 1
+source /opt/ros/jazzy/setup.bash
+colcon build --packages-up-to voss_manager voss_voice --symlink-install || exit 1
+source install/setup.bash
+
+# ROS 없이 실행 가능한 순수 판정 함수 3개 시험 (pytest가 설치된 경우)
+python3 -m pytest -q scripts/integration/test_t14_trial_checks.py
+
+# 실제 manager·speech_out, 로봇 비구동/격리
+ROS_DOMAIN_ID=179 ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST \\
+  python3 scripts/integration/t14_manager_tts_trial.py
+```
+
+성공은 두 로그 증거로 판정한다: `sort_manager.log`에
+`intent priority → priority '역삼동': True`, `speech_out.log`에
+`TTS_FIRST_PCM_WRITTEN`과 `TTS_FINISHED`. 시험기는 PCM 전달 지연을 출력한다.
+**최종 실제 음성 청취는 현장 사람이 직접 확인**한다(로그만으로 소리가 들리는지
+보장하지 않는다). 관련 로그는 `~/.local/state/voss-t14/manager-tts/`.
+
+**실제 실로봇 T14 전체 검증:** 남현지 PL과 김학민 안전 담당자가 현장에서
+로봇 안전 점검/비상정지 준비를 마친 후 기존 공식 ROS 도메인의 실제 manager,
+TTS, HMI/DB 상태를 별도 검증한다. 이 스크립트 2건 PASS만으로
+T14 #23 전체 완료 처리 금지.
