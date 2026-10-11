@@ -208,16 +208,24 @@ def parser_subscriber_ready(node: TrialProbe) -> bool:
 
 
 def stop_processes(processes: list[subprocess.Popen]) -> None:
-    """이번 스크립트가 생성한 노드만 종료하고 기존 노드는 건드리지 않는다."""
-    for process in processes:
-        if process.poll() is None:
-            process.terminate()
+    """이번 시험의 ROS 부모·자식 프로세스 그룹만 종료해 잔여 노드를 방지한다."""
     for process in processes:
         try:
-            process.wait(timeout=3)
+            os.killpg(process.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            continue
+
+    for process in processes:
+        try:
+            process.wait(timeout=4.0)
         except subprocess.TimeoutExpired:
-            process.kill()
+            # 이번 시험이 만든 세션의 자식만 강제 종료한다.
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
             process.wait()
+
 
 
 def verify_manager_priority(node: TrialProbe, processes: list[subprocess.Popen]) -> None:
