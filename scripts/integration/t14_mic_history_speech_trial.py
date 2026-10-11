@@ -35,8 +35,6 @@ from t14_manager_tts_trial import (
 from t14_trial_checks import expected_history_say, first_pcm_latency_ms, tts_finished
 
 API_SESSION_URL = "http://127.0.0.1:8080/api/sessions/current"
-HISTORY_SENTENCE = "보류 몇 개야"
-SAY_NO_SESSION = "기록을 조회할 수 없습니다."
 MIC_LOG_MARKER = "voice_listener: mic 모드"
 MIC_FALLBACK_MARKER = "voice_listener: text 모드"
 MIC_START_TIMEOUT_S = 15.0
@@ -171,9 +169,9 @@ def run_history(node: MicHistoryProbe, processes: list) -> None:
     delay_ms = first_pcm_latency_ms(speech_log)
     if delay_ms is None:
         raise RuntimeError("TTS 첫 PCM 로그가 없음")
-    print(f"PASS: 실제 이력 안내 → speech_out 완료 ({delay_ms} ms)", flush=True)
     if delay_ms > MAX_FIRST_PCM_MS:
-        print(f"FAIL: 첫 PCM {delay_ms} ms > {MAX_FIRST_PCM_MS} ms")
+        raise RuntimeError(f"첫 PCM 지연 {delay_ms} ms > {MAX_FIRST_PCM_MS} ms")
+    print(f"PASS: 실제 이력 안내 → speech_out 완료 ({delay_ms} ms)", flush=True)
     if session_id == "":
         print("판정: NO_SESSION 폴백 PASS (DB 정상 집계 검증 아님)")
     else:
