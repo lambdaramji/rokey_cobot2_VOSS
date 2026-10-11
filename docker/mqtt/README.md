@@ -19,10 +19,19 @@ Mosquitto 공식 유틸리티로 `web`, `bridge`, `debug` 사용자를 대화형
 docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD/docker/mqtt/secrets:/secrets" eclipse-mosquitto:2 mosquitto_passwd -c /secrets/passwd web
 docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD/docker/mqtt/secrets:/secrets" eclipse-mosquitto:2 mosquitto_passwd /secrets/passwd bridge
 docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD/docker/mqtt/secrets:/secrets" eclipse-mosquitto:2 mosquitto_passwd /secrets/passwd debug
-chmod 644 docker/mqtt/secrets/passwd
 ```
 
-`-c`는 처음 한 번만 사용해야 기존 계정이 지워지지 않는다. 컨테이너 사용자(UID 1883)가 마운트한 암호 해시 파일을 읽을 수 있도록 파일 권한은 644로 두며, 호스트 `secrets/` 디렉터리는 700으로 유지한다. 비밀번호 자체는 터미널 인수나 로그에 출력하지 않는다.
+`-c`는 처음 한 번만 사용해야 기존 계정이 지워지지 않는다. Mosquitto 2.1.x는 비밀번호·ACL 파일이 다른 사용자에게 공개되는 설정을 경고하므로 파일 소유자를 컨테이너의 mosquitto 사용자로 바꾸고 읽기 권한을 제한한다.
+
+```bash
+MOSQUITTO_UID="$(docker run --rm --entrypoint id eclipse-mosquitto:2 -u mosquitto)"
+MOSQUITTO_GID="$(docker run --rm --entrypoint id eclipse-mosquitto:2 -g mosquitto)"
+sudo install -o "$MOSQUITTO_UID" -g "$MOSQUITTO_GID" -m 600 docker/mqtt/acl docker/mqtt/secrets/acl
+sudo chown "$MOSQUITTO_UID:$MOSQUITTO_GID" docker/mqtt/secrets/passwd
+sudo chmod 600 docker/mqtt/secrets/passwd
+```
+
+기존 컨테이너가 켜져 있다면 `docker exec voss_mosquitto id -u mosquitto`, `id -g mosquitto`로 UID/GID를 확인해도 된다. Git에 추적되는 원본 `docker/mqtt/acl`의 소유권은 바꾸지 않는다. 런타임 사본 `docker/mqtt/secrets/acl`과 `passwd`는 `.gitignore`로 보호한다. 비밀번호 자체는 터미널 인수나 로그에 출력하지 않는다.
 
 ```bash
 docker compose -f docker/mqtt/compose.yml up -d
