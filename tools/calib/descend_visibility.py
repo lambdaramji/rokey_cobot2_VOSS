@@ -9,13 +9,13 @@
 더 벗어난 곳까지 관측 자세 방향으로 두고, 송장(40 × 25 mm, 긴 변 = 벨트 방향, 박스 회전각만큼 돌림)의 네 꼭짓점을
 `T_tcp_camera`·K·왜곡으로 투영한다. 관측 자세에서는 실측 호모그래피(`tcp_pixel_at_observe`)와 2~11 px 안으로 맞는다.
 
-**10/10 G1 실측과 비교(measurements-1010 "의도 시험"):** OK·LOST 회차 모두 마지막 BoxTrack 이 z 110.9~112.4
-(윗면 +10~11.6, 사각 10 바로 위)였다. `--tcp-ahead 0`(TCP 가 박스 중심 바로 위)이면 이 모델은 반듯한 박스도 +37 에서
-빠진다고 내므로 실측과 맞지 않는다 — `--tcp-ahead 10` 이면 +10.9 로 맞는다(하강 중 TCP 가 박스보다 약 10 mm 하류,
-추정). 끊기는 높이는 벨트 방향 위치 1 mm 에 약 2.6 mm 바뀌므로 결과는 이 값에 민감하다 → 실제 끊긴 프레임은
-녹화를 `tools/vision/box_overlay.py` 로 재생해 확인한다.
+**10/10 G1 실측과 비교(measurements-1010 의도 시험, g1_s1 을 `tools/vision/box_overlay.py` 로 재생):** 실제 마지막 BoxTrack 은
+OK·LOST 모두 DESCEND 뒤 0.26~0.47 s, 윗면 +31~37 mm — 이 모델의 `--tcp-ahead 0`(TCP 가 박스 중심 바로 위) 0° +37.4 와 맞는다.
+끊기는 높이는 벨트 방향 위치 1 mm 에 약 2.6 mm 바뀐다(민감도 표). 시간 계산은 하강 속도를 일정하게 둔 보수적 값이다 —
+실측은 OK 20회 사각 진입 때 관측 나이 0.40~0.48 s(lost 0.5 s), 기울인 박스 3회 0.56~0.59 s 로 LOST.
+(belt_servo 틱의 `visible` 은 마지막 메시지를 lost_timeout 까지 유지하므로 실제 관측 시각이 아니다.)
 
-  python3 tools/calib/descend_visibility.py [--tcp-ahead 10] [--approach 40 --cutoff 10 --descend-mps 0.05 --lost-s 0.5]
+  python3 tools/calib/descend_visibility.py [--approach 40 --cutoff 10 --descend-mps 0.05 --lost-s 0.5]
 """
 
 import argparse
@@ -91,7 +91,7 @@ def main() -> None:
         "--tol-cross", type=float, default=5.0, help="정렬 허용 가로 mm align_tol_cross_mm"
     )
     ap.add_argument("--tcp-ahead", type=float, default=0.0,
-                    help="하강 중 TCP 가 박스 중심보다 벨트 하류로 앞선 mm (10/10 실측과 맞추면 약 10)")  # fmt: skip
+                    help="하강 중 TCP 가 박스 중심보다 벨트 하류로 앞선 mm (10/10 녹화 재생은 0 과 맞음)")  # fmt: skip
     ap.add_argument("--border", type=int, default=4, help="box_detect border_px")
     ap.add_argument("--yaws", default="0,10,15,20,30,45", help="박스 회전각(°), 쉼표")
     args = ap.parse_args()
@@ -173,8 +173,8 @@ def main() -> None:
                   f"{need - (args.approach - 5):g} mm 는 {(need - (args.approach - 5)) / (args.descend_mps * 1000):.2f} s "
                   f"(LOST {args.lost_s:g} s 미만이면 괜찮다), 아니면 approach 를 올린다")  # fmt: skip
     print(
-        "\n※ 핸드아이 모델 값. 10/10 실측(마지막 관측 윗면 +10~11.6)은 --tcp-ahead 약 10 과 맞는다 — "
-        "실제 끊긴 높이는 G1 녹화를 box_overlay.py 로 재생해 본다."
+        "\n※ 핸드아이 모델 값. 10/10 g1_s1 재생의 실제 마지막 BoxTrack(윗면 +31~37 mm)은 --tcp-ahead 0 과 맞는다 — "
+        "새 조건은 녹화를 box_overlay.py 로 재생해 본다."
     )
 
 
