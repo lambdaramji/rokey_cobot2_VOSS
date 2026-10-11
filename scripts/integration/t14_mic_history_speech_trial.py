@@ -26,6 +26,7 @@ from std_msgs.msg import String
 
 from t14_manager_tts_trial import (
     CONFIG_PATH,
+    cleanup_previous_test_nodes,
     SAFE_DOMAIN_ID,
     TrialProbe,
     manager_accepted_priority,
@@ -242,6 +243,7 @@ def main() -> None:
         raise SystemExit(f"설정 파일 없음: {CONFIG_PATH}")
     if shutil.which("aplay") is None:
         raise SystemExit("aplay 없음: Nodes PC 스피커 설정 필요")
+    cleanup_previous_test_nodes()
     check_audio_input()
     prepare_whisper()
 
