@@ -163,3 +163,36 @@ text 폴백을 탐지하고 **실패** 처리한다. 로컬 FastAPI `/ai/stt`를
 로그: `~/.local/state/voss-t14/manager-tts/`. 격리 도메인에 기존 노드가 남아
 있으면 자동 종료하지 않고 중단한다. 환경에 문제가 생겨도 Web PC 컨테이너,
 SSH 터널, 메인 ROS 도메인의 서비스를 재시작하지 않는다.
+
+## T14 실제 DB 집계 안내 + 실제 manager 자체 Say→TTS (연속 비구동)
+
+Web API 계약 `docs/interfaces/web_api.md`를 따르며 **읽기 전용 GET만** 사용한다.
+Nodes PC에서 SSH 로컬 8080/8000 포워드가 기존에 열려 있어야 한다.
+현재 세션이 있으면 `intent_parser`의 정규 `held_count` 조회를 사용한다.
+현재 세션이 없다면 `NO_SESSION`을 우회하거나 세션을 위조하지 않는다.
+대신 명시적인 `session_id=all`로 PostgreSQL 실제 전체 이력 집계를 읽어
+시험기 Say로 TTS를 재생하며 **전체 이력 조회와 현재 세션 음성 이력 조회를 구분**한다.
+
+실제 manager의 별도 Say는 가짜 readiness/MoveToZone 서비스가 OBSERVE 이동을
+`T14_SIMULATED_OBSERVE_FAILURE`로 거절하도록 해서 실제 manager FSM의
+`관측 자세로 가지 못해 일시정지했습니다.`를 생성한다. 가짜 서비스만
+ROS_DOMAIN_ID=179에서 뜨므로 로봇 구동 없음. DB·MQTT에 쓰지 않는다.
+
+```bash
+# [Nodes PC - ms-03@ms-03]
+cd ~/collaboration/rokey_cobot2_VOSS-t13 || exit 1
+git pull --ff-only origin feat/22-web-hmi-initial || exit 1
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+python3 -m pytest -q scripts/integration/test_t14_trial_checks.py || exit 1
+ROS_DOMAIN_ID=179 ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST python3 scripts/integration/t14_db_manager_say_trial.py
+```
+
+성공 근거는 manager 자체 `/voss/voice/say` 내용, manager OBSERVE 실패 로그,
+첫 번째 PCM 재생 완료, 실 DB 조회 `held_count`와 생성된 문장 일치,
+두 번째 PCM 재생 완료다. 두 안내가 스피커에서 들렸는지 사람의 청각 확인 필요.
+로그 `~/.local/state/voss-t14/manager-tts/`.
+
+기존 격리 노드가 남아 있으면 시작 전 **중단**되며 자동으로 남의 프로세스를
+종료하지 않는다. `start` 명령은 반드시 가짜 준비/서비스가 있는 격리
+도메인에서만 시험기가 실행한다.
