@@ -9,7 +9,7 @@
 - Spring Boot: `GET /api/stream` SSE(상태·결과·zone_map·robot·command_ack·log_status·link), `POST /api/commands`, `GET /api/stats`, `GET /api/sessions/current`, `PUT /api/sessions/current/plan`, `GET /api/results`, `GET /api/export.csv`.
 - MQTT: `voss/state`, `voss/result`, `voss/zone_map`, `voss/robot`, `voss/command/ack`, `voss/log_status` 구독; `voss/command` 발행(총 7개 토픽). QoS 1/1/1/0/1/1, 명령 발행 QoS 1; retained는 브로커 토픽 계약에 따름.
 - SQL: `sort_log`는 조회 전용 연결만 사용하고, 투입 수량은 별도 `session_plan` 테이블에서 관리.
-- 원격 접근: `stop` 이외 명령은 Nginx가 덮어쓴 `X-Real-IP`가 localhost일 때만 허용. `X-Forwarded-For`는 무시.
+- 원격 접근: `stop` 이외 명령은 Nginx가 덮어쓴 `X-Real-IP`가 localhost일 때만 허용. `X-Forwarded-For`는 무시. **단, SSH가 127.0.0.1:8080에 직접 연결되면 Nginx를 거치지 않으므로 이 헤더만으로 원격 접속자를 인증할 수 없다.**
 
 ## 사용자 PC에서 테스트
 
@@ -37,6 +37,8 @@ npm run dev
 ```
 
 브라우저에서 `http://127.0.0.1:5173`을 엽니다. Vite는 `/api`를 localhost:8080으로 전달합니다. 실제 MQTT/DB 환경 변수를 설정하지 않았다면 연결 DOWN·DB_ERROR 표시가 정상이며, 가짜 데이터를 채우지 않습니다.
+
+**실로봇 시험 및 시연에서는 `VOSS_NONSTOP_COMMANDS_ENABLED=false`를 반드시 유지한다.** 원격 start/resume/priority/answer/reset_zone 허용은 공식 `web_api.md` 계약과 다르므로 PL·안전 담당자 승인 및 별도 인증(토큰 등) 없이는 활성화하지 않는다. 로컬 명령 처리 코드 변경은 이 문서 정리 범위에 포함하지 않는다.
 
 ## 공용 PC 배포
 
@@ -69,4 +71,5 @@ docker compose logs --tail=100 backend frontend
 - `voss/command`의 HTTP 202는 **브로커 전달**을 의미하며 manager의 접수/로봇 동작 완료가 아닙니다. `command_ack`와 `state`/`result`로 따로 표시합니다.
 - 현재 세션은 `SortState.session_id`만 기준으로 하며 첫 `start` 전 `""`입니다. 암묵적인 결과·통계·CSV 조회에는 `404 NO_SESSION`을 반환합니다. 현재 세션 요약은 `""`·planned·0 건으로 반환합니다(DB 서비스가 접속 가능한 경우).
 - `session_plan`의 `next` 예정 수량은 새 세션이 처음 조회될 때 실제 session_id로 옮깁니다. 첫 상태 수신 직후가 아니라 첫 DB 조회 시점에 반영되는 구현이므로 팀 계약의 엄격한 트리거와 차이가 있습니다. 실제 통합시험에서 확인 후 필요하면 인터페이스 변경 없이 처리 시점을 맞추세요.
+- MQTT compose는 `./secrets/acl`을 마운트합니다. 실제 기동 전 `docker/mqtt/README.md`에 따라 Git의 `docker/mqtt/acl`을 `docker/mqtt/secrets/acl`로 **권한 제한 복사**해야 합니다. `secrets/` 사본과 비밀번호는 커밋하지 않습니다.
 - 실제 DB 환경 변수, 보안 계정과 네트워크는 파일에 포함돼 있지 않습니다. 테스트 완료 전 시연 준비 완료라고 판단하지 마세요.
