@@ -23,7 +23,7 @@ belt:
 gripper:   # 폭은 RG2 보고값. 실측 안쪽 간격: 보고 90 → 80 mm, 빈손 보고 39 → 28 mm(10/08), 박스 파지 보고 40.3 → 30 mm(10/06) — 차이 10~11 mm 의 관측 특성이라 보정식으로 쓰지 않는다 (measurements #8)
   pre_open_mm: 90
   grasp_width_mm: 39
-  force_n: 14.0
+  force_n: 12.0            # 10/11 14 → 12 (ADR-0009, voss_config.md 변경 이력)
 ocr:
   confidence_min: 0.6
   codes: {"S07-01": "역삼동", "S07-02": "대치동", "S07-03": "청담동"}

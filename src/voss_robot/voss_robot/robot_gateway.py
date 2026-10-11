@@ -174,7 +174,7 @@ class RobotGatewayNode(Node):
                 "view": view if len(view) == 6 else None,
             }
         self.pre_open = float(self.declare_parameter("gripper.pre_open_mm", 90.0).value)
-        self.grip_force = float(self.declare_parameter("gripper.force_n", 14.0).value)
+        self.grip_force = float(self.declare_parameter("gripper.force_n", 12.0).value)
         self.safe_z = float(self.declare_parameter("zone_safe_z_mm", SAFE_Z_MM).value)
         # 먼 구역(C·HOLD)은 safe_z 에서 팔이 닿지 않는다(10/08 실기 1206). 수평 이동 높이를 구역마다 ikin 으로
         # 낮추되, 이 TCP z 보다 낮아지면 거부한다(박스 밑면 = TCP − 8, 트레이 테두리 ≈ TCP 50 → 약 60 mm 여유)
