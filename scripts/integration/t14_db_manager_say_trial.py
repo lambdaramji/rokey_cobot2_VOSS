@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import signal
 import time
 from threading import Thread
@@ -278,7 +279,7 @@ def stop_owned_process_groups(processes: list) -> None:
     for process in processes:
         try:
             process.wait(timeout=4.0)
-        except TimeoutError:
+        except subprocess.TimeoutExpired:
             os.killpg(process.pid, signal.SIGKILL)
             process.wait()
     time.sleep(1.0)
@@ -294,6 +295,7 @@ def main() -> None:
         raise SystemExit(f"설정 파일 없음: {CONFIG_PATH}")
     # 데이터 유무/REST 접근을 먼저 확인하되 실제 DB 쓰기와 세션 생성은 하지 않는다.
     get_json("/api/sessions/current")
+    read_real_db_count()
 
     rclpy.init()
     probe = FakeHardwareProbe()
