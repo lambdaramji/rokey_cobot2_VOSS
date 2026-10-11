@@ -1,5 +1,5 @@
 # 비전 컨테이너 (T22 #31, 남현지) — box_tracker·label_reader 를 서비스 하나씩. 실행은 사람이 한다(README.md).
-#   cd docker/vision && cp .env.example .env      # 도메인·경로 확인 (기본 도메인 77 = 시험용)
+#   cd docker/vision && cp .env.example .env      # 경로 확인. 도메인은 셸 값(셸에 없으면 77 = 시험용)
 #   docker compose up -d --build                   # CPU (개인 PC)
 #   docker compose -f compose.yml -f compose.gpu.yml up -d --build   # GPU (공용 PC, OCR 만 GPU)
 #   docker compose logs -f box_tracker             # 5 초 통계 로그(Hz·검출·지연)
@@ -13,9 +13,11 @@ x-build: &build
     OCR_DEVICE: cpu
 
 x-env: &env
-  # 셸 값 → .env → 기본 77·LOCALHOST(시험) 순. 공용 PC 는 셸 30 을 따른다 — 아무 값도 없으면 안 보이는 쪽(77)으로 실패한다
-  ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-77}
-  ROS_AUTOMATIC_DISCOVERY_RANGE: ${ROS_AUTOMATIC_DISCOVERY_RANGE:-LOCALHOST}
+  # 셸 값 → .env 순으로 그대로 넘긴다. 공용 PC 는 셸 30·범위 없음(rmw 기본 SUBNET)을 그대로 따라 호스트 노드와 같아진다.
+  # 도메인이 아무 데도 없으면 entrypoint.sh 가 77·LOCALHOST(시험)로 — 운용 노드와 안 보이는 쪽으로 실패한다.
+  # 범위에 기본값을 두지 않는다: 두면 셸 도메인 30 에 LOCALHOST 가 섞여 호스트와 다른 discovery 설정으로 뜬다
+  ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-}
+  ROS_AUTOMATIC_DISCOVERY_RANGE: ${ROS_AUTOMATIC_DISCOVERY_RANGE:-}
   RMW_IMPLEMENTATION: rmw_cyclonedds_cpp
 
 x-config: &config
@@ -37,7 +39,7 @@ x-dds: &dds
 x-logs: &logs
   type: bind
   source: ${VOSS_LOG_DIR:-${HOME}/voss_data/logs/vision}   # 노드 로그(~/.ros/log) — 컨테이너가 root 라 파일 주인도 root
-  target: /root/.ros/log
+  target: /root/.ros/log                                     # 폴더가 없으면 docker 가 root 소유로 만든다 → README 대로 먼저 mkdir -p
 
 services:
   box_tracker:

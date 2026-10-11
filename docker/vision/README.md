@@ -15,10 +15,10 @@ box_tracker(OpenCV 분할, ADR-0011 — GPU 불필요)와 label_reader(PaddleOCR
 | `.env.example` | 경로·인자. `cp .env.example .env` 뒤 고친다(`.env` 는 커밋 안 함) |
 
 ## 도메인 — 셸 값이 먼저
-compose 는 **셸에 export 된 변수를 `.env` 보다 먼저** 쓴다. 그래서 컨테이너는 보통 compose 를 실행한 셸의 `ROS_DOMAIN_ID` 를 따른다(호스트 노드와 같아진다). 셸에도 `.env` 에도 없으면 77·LOCALHOST(시험)로, 운용 노드와 안 보이는 쪽으로 실패한다.
+compose 는 **셸에 export 된 변수를 `.env` 보다 먼저** 쓴다. 컨테이너는 compose 를 실행한 셸의 `ROS_DOMAIN_ID`·`ROS_AUTOMATIC_DISCOVERY_RANGE` 를 그대로 따른다(호스트 노드와 같아진다 — 공용 PC 는 30·범위 없음 = SUBNET). 셸에 도메인이 없으면 `entrypoint.sh` 가 77·LOCALHOST(시험)로 띄워, 운용 노드와 안 보이는 쪽으로 실패한다. 두 값은 `.env` 에 적지 않는다 — 셸 30 에 `.env` 의 LOCALHOST 만 섞이면 호스트와 다른 discovery 설정으로 뜬다.
 
 ## 개인 PC 시험 (CPU, 녹화 재생, 도메인 77) — 터미널 4개
-`ros2 launch`·`ros2 topic hz/echo` 는 Ctrl+C 전까지 끝나지 않으니 **터미널마다 하나씩**. 순서 **B → A → C → D**(zone_map 을 먼저 내면 label_reader 가 크롭을 "준비 전 버림" 하지 않는다). 처음 한 번은 `cp .env.example .env` 와 `docker compose build`(몇 분).
+`ros2 launch`·`ros2 topic hz/echo` 는 Ctrl+C 전까지 끝나지 않으니 **터미널마다 하나씩**. 순서 **B → A → C → D**(zone_map 을 먼저 내면 label_reader 가 크롭을 "준비 전 버림" 하지 않는다). 처음 한 번은 `cp .env.example .env`, `mkdir -p ~/voss_data/logs/vision`(없으면 docker 가 root 소유로 만들어 `~/voss_data` 에 녹화를 못 쓴다), `docker compose build`(몇 분).
 
 **B — sort_manager (zone_map 발행용, 먼저)**
 ```bash
@@ -57,7 +57,8 @@ ros2 topic hz /voss/vision/box                     # 박스가 보일 때 약 30
 ```bash
 cd ~/voss_ws/src/rokey_cobot2_VOSS/docker/vision
 cp .env.example .env    # VOSS_CONFIG_HOST=${HOME}/voss_ws/config, BOX_TRACKER_ARGS= (비움 = 카메라 실시간)
-# 셸 ROS_DOMAIN_ID=30 (~/.bashrc) 그대로
+mkdir -p ~/voss_data/logs/vision
+# 셸 ROS_DOMAIN_ID=30·CYCLONEDDS_URI (~/.bashrc) 그대로. 로그 첫 줄이 RANGE=(기본 SUBNET)·CYCLONEDDS_URI=file:///etc/voss/cyclonedds.xml 인지 본다
 docker compose -f compose.yml -f compose.gpu.yml up -d --build
 docker compose logs -f label_reader       # "OCR 엔진 준비 gpu:0 …", 판독 준비 완료
 nvidia-smi                                # AI 컨테이너(Whisper)와 같이 띄운 상태의 VRAM → measurements
@@ -65,6 +66,7 @@ nvidia-smi                                # AI 컨테이너(Whisper)와 같이 �
 확인할 것(22-4, measurements 에 기록): GPU 컨테이너 기동, OCR 1장 시간(호스트 CPU 약 3 s 대비), VRAM(비전 + Whisper), box_tracker 30 Hz·카메라→발행 지연(≤ 100 ms). 카메라 노드는 호스트에서 띄운다(USB, 런북 T3).
 
 ## 문제가 생기면
-- **호스트에서 토픽이 안 보임:** 셸·컨테이너 `ROS_DOMAIN_ID` 가 같은지(`docker compose logs` 첫 줄 `[voss-vision] ROS_DOMAIN_ID=…`), `CYCLONEDDS_XML` 이 호스트 노드가 쓰는 파일인지, `ROS_AUTOMATIC_DISCOVERY_RANGE` 가 같은지.
-- **`bind source path does not exist`:** `.env` 의 `VOSS_CONFIG_HOST`·`CYCLONEDDS_XML` 경로가 틀림(일부러 빈 폴더를 만들지 않게 해 두었다).
+- **호스트에서 토픽이 안 보임:** `docker compose logs` 첫 줄 `[voss-vision] ROS_DOMAIN_ID=… RANGE=… CYCLONEDDS_URI=…` 를 호스트 셸(`echo $ROS_DOMAIN_ID $ROS_AUTOMATIC_DISCOVERY_RANGE $CYCLONEDDS_URI`)과 맞춰 본다 — 도메인·범위가 같은지, `CYCLONEDDS_XML` 이 호스트 `CYCLONEDDS_URI` 의 파일인지.
+- **`bind source path does not exist`:** `.env` 의 `VOSS_CONFIG_HOST`·`CYCLONEDDS_XML` 경로가 틀림(일부러 빈 폴더를 만들지 않게 해 두었다). 호스트에 CycloneDDS 설정 파일이 아예 없는 PC 는 `CYCLONEDDS_XML=/dev/null`(컨테이너도 Cyclone 기본값).
+- **`~/voss_data` 에 녹화가 안 써짐(Permission denied):** `mkdir -p` 없이 처음 띄워 docker 가 root 소유로 만든 것 — `sudo chown -R $USER: ~/voss_data`.
 - **노드 로그 파일 주인이 root:** 컨테이너가 root 로 돈다. 지울 때는 `sudo`.
