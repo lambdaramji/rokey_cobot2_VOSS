@@ -16,7 +16,7 @@ def test_repo_config_values():
     assert p["zones.A.grid"] == [3.0, 1.0, 60.0, 0.0]
     assert p["zones.HOLD.grid"] == [2.0, 1.0, 60.0, 0.0]  # config 키 hold → 대문자 HOLD
     assert p["zones.C.grid"] == [3.0, 1.0, 50.0, -30.0]  # 10/08 칸 −80/−30/+20
-    assert p["gripper.force_n"] == 14.0
+    assert p["gripper.force_n"] == 12.0
     assert len(p["config_sha256"]) == 12
 
 
