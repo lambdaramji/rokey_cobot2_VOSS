@@ -73,7 +73,7 @@ def test_two_playbacks_are_required_for_two_announcements() -> None:
 def test_cleanup_matches_only_local_domain_179_test_node() -> None:
     """격리된 기존 intent_parser와 speech_out만 자동 정리 대상으로 인정한다."""
     environment = b"ROS_DOMAIN_ID=179\0ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST\0"
-    command = b"/usr/bin/python3\0/home/ms-03/voss/install/voss_voice/lib/voss_voice/speech_out\0"
+    command = b"/usr/bin/python3\0/opt/voss-test/install/voss_voice/lib/voss_voice/speech_out\0"
     assert matching_isolated_test_nodes(command, environment) == {"speech_out"}
     assert matching_isolated_test_nodes(
         b"/opt/ros/bin/ros2\0run\0voss_manager\0sort_manager\0", environment
