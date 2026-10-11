@@ -379,7 +379,7 @@
 | 무효 | 17:01:21 | …-45d2-010 | 26 | S07-01 역삼동 0.50→0.56 (CODE_ONLY, LOW_CONF) | LOST / BOX_MISSING | 0 | false | — (FAILED reason=LOST → PAUSED) | **의도 시험(박스를 벨트와 비스듬히 투입)** → 무효 ①, 아래 "의도 시험" |
 | 20 | 17:15:00 | `20261010T171422-3407-001` | 34 | S07-02 대치동 1.00 AGREE | OK | 1 | true | B0 PLACED(17:15:20) | 세션 `20261010T171422-3407`(start 17:14:22, T8 재기동 뒤). 단계: PREPARE 0 → TRACK 0.20 → DESCEND 3.20(x 85, 간격 −3.0·가로 0.1) → GRASP 5.80(z 84) → LIFT 7.93 → VERIFY 10.63, 11.37 s |
 
-- 20회차 틱(goal `4b20ee34`): PREPARE 0.00 → TRACK 0.17 → **DESCEND 3.43 s**(TCP x 78.0, z 141.5, 벨트 방향 간격 −3.0 mm = 허용 3 의 경계, 가로 0.4) → 4.33 s 이후 박스 관측 없음(틱 visible 비어 있음) → **4.80 s LOST(BOX_MISSING)**, 시도 0(GRASP 전). box_tracker 같은 때: 17:01:18 창 box 118(hand_eye), 17:01:23 창 box 42, 17:01:28 창 box 0 — 영상 27.8~30 Hz, `Hz < 25` 0. label_reader track 26: 0.50·0.54·0.66 CODE_ONLY → 투표 0.56.
+- 17:01 회차(무효) 틱(goal `4b20ee34`): PREPARE 0.00 → TRACK 0.17 → **DESCEND 3.43 s**(TCP x 78.0, z 141.5, 벨트 방향 간격 −3.0 mm = 허용 3 의 경계, 가로 0.4) → **3.71 s 마지막 BoxTrack**(TCP 윗면 +36.3 mm) → 4.30 s 까지 틱 `visible` True(마지막 메시지 유지, 아래 "비교") → 4.33 s reason LOST(z 110.2) → **4.80 s LOST(BOX_MISSING)**, 시도 0(GRASP 전). box_tracker 같은 때: 17:01:18 창 box 118(hand_eye), 17:01:23 창 box 42, 17:01:28 창 box 0 — 영상 27.8~30 Hz, `Hz < 25` 0. label_reader track 26: 0.50·0.54·0.66 CODE_ONLY → 투표 0.56.
 - g1-gate 1절 정의: 무효 ① "박스를 정한 위치·방향과 다르게 놓음". 실행자(김학민): 17:01 회차(track 26)와 17:06~17:10 goal 5개는 **일부러 기울이거나 뒤집어 본 시험** → 무효로 빼고 17:15 회차를 20회차로 기록.
 - 11~20 동안 box_tracker `Hz < 25` 0회.
 
@@ -389,15 +389,26 @@
 
 | GOAL_END | goal | track | 세션 / box_id | OCR | reason | 시도 | 끝난 phase | 틱 요약 |
 |---|---|---|---|---|---|---|---|---|
-| 17:01:21 | `4b20ee34` | 26 | 45d2-010 | S07-01 역삼동 0.50~0.66 CODE_ONLY(투표 0.56) | LOST / BOX_MISSING | 0 | DESCEND | DESCEND 3.43 s(x 78, 간격 −3.0), DESCEND+0.87 s(z 111.0) 마지막 관측, 4.80 s LOST. 실행자: 벨트와 비스듬히 |
-| 17:06:58 | `636e5fc2` | 28 | `20261010T170639-e4bd-001` | S07-01 역삼동 1.00 AGREE **(180° 뒤집힘)** | LOST / BOX_MISSING | 0 | TRACK | 시작 간격 **+31.9 mm**(박스가 TCP 하류), 가로 1.6. 0.50 s 마지막 관측, 1.00 s LOST |
+| 17:01:21 | `4b20ee34` | 26 | 45d2-010 | S07-01 역삼동 0.50~0.66 CODE_ONLY(투표 0.56) | LOST / BOX_MISSING | 0 | DESCEND | DESCEND 3.43 s(x 78, 간격 −3.0), 마지막 BoxTrack 3.71 s(DESCEND+0.28, 윗면 +36.3), 4.80 s LOST. 실행자: 벨트와 비스듬히 |
+| 17:06:58 | `636e5fc2` | 28 | `20261010T170639-e4bd-001` | S07-01 역삼동 1.00 AGREE **(180° 뒤집힘)** | LOST / BOX_MISSING | 0 | TRACK | 시작 간격 **+31.9 mm**(박스가 TCP 하류), 가로 1.6. 마지막 BoxTrack 은 goal 시작 0.24 s **전**(0.50 s 까지 `visible` 유지), 1.00 s LOST |
 | (goal 없음) | — | 29 | — | S07-01 역삼동 1.00 AGREE (180° 뒤집힘) | — | — | — | label_reader 판독만 기록 |
-| 17:07:32 | `37b0182c` | 30 | `20261010T170721-696d-001` | S07-01 역삼동 1.00 AGREE (180° 뒤집힘) | LOST / BOX_MISSING | 0 | TRACK | 시작 간격 **+34.0**, 가로 **8.4**. 0.50 s 마지막 관측, 1.00 s LOST |
-| 17:08:17 | `e4ba943c` | 31 | `20261010T170805-e86f-001` | S07-01 역삼동 1.00 AGREE | LOST / BOX_MISSING | 0 | DESCEND | DESCEND 3.17 s(x 84, 간격 −2.9·가로 0.2), DESCEND+0.83 s(z 112.4) 마지막 관측, 4.53 s LOST |
-| 17:09:42 | `babd92db` | 32 | `20261010T170916-eb6e-001` | S07-01 역삼동 1.00 AGREE | **OK** | 1 | VERIFY | DESCEND 3.37(x 86), GRASP 5.97(z 84), VERIFY 10.90 → A0 PLACED |
-| 17:10:10 | `ad7f6404` | 33 | `20261010T170916-eb6e-002` | S07-02 대치동 1.00 AGREE | LOST / BOX_MISSING | 0 | DESCEND | DESCEND 3.10 s(x 81, 간격 −3.0·가로 0.0), DESCEND+0.83 s(z 112.4) 마지막 관측, 4.43 s LOST |
+| 17:07:32 | `37b0182c` | 30 | `20261010T170721-696d-001` | S07-01 역삼동 1.00 AGREE (180° 뒤집힘) | LOST / BOX_MISSING | 0 | TRACK | 시작 간격 **+34.0**, 가로 **8.4**. 마지막 BoxTrack 은 goal 시작 0.24 s **전**(0.50 s 까지 `visible` 유지), 1.00 s LOST |
+| 17:08:17 | `e4ba943c` | 31 | `20261010T170805-e86f-001` | S07-01 역삼동 1.00 AGREE | LOST / BOX_MISSING | 0 | DESCEND | DESCEND 3.17 s(x 84, 간격 −2.9·가로 0.2), 마지막 BoxTrack 3.42 s(DESCEND+0.26, 윗면 +37.1), 4.53 s LOST |
+| 17:09:42 | `babd92db` | 32 | `20261010T170916-eb6e-001` | S07-01 역삼동 1.00 AGREE | **OK** | 1 | VERIFY | DESCEND 3.37(x 86), 마지막 BoxTrack 3.68(DESCEND+0.31, 윗면 +35.1), 사각 진입 4.23(z 111.9), GRASP 5.97(z 84), VERIFY 10.90 → A0 PLACED |
+| 17:10:10 | `ad7f6404` | 33 | `20261010T170916-eb6e-002` | S07-02 대치동 1.00 AGREE | LOST / BOX_MISSING | 0 | DESCEND | DESCEND 3.10 s(x 81, 간격 −3.0·가로 0.0), 마지막 BoxTrack 3.37 s(DESCEND+0.27, 윗면 +36.6), 4.43 s LOST |
 
-- 비교(같은 틱 로그): 성공 회차(본 측정 19 `72422cfa`, 시험 32, 20회차 34)도 마지막 박스 관측은 DESCEND+0.83~0.87 s, z 110.9~112.3 으로 같다. 차이: 성공 회차는 그 뒤에도 하강이 이어져 z 83.8~83.9 에 도달, LOST 회차는 마지막 관측 뒤 틱에 TCP 기록이 없고 0.5 s(`lost_timeout_s`) 뒤 LOST. *(판정은 박병후 — voss_servo)*
+- 비교(틱 로그 + g1_s1 bag 을 `tools/vision/box_overlay.py`(#149)로 재생, 10/11): **실제 마지막 BoxTrack 은 OK·LOST 모두 DESCEND 시작 0.26~0.41 s 뒤, TCP 윗면 +31~37 mm** 다. 그 뒤 송장 후보는 화면 아래 끝(v 1076)에 걸려 가장자리 판정으로 버려지고 끝까지 다시 나오지 않는다.
+
+  | 회차 | 결과 | 마지막 BoxTrack (DESCEND 뒤) | 그때 TCP 윗면 | 이후 |
+  |---|---|---|---|---|
+  | 본 측정 19 `72422cfa` (track 25) | OK | 0.41 s | 약 +31 (틱 z 131.7, bag 구간 밖) | 사각 진입 z 111.5 → z 83.7 |
+  | 시험 32 `babd92db` | OK | 0.31 s | +35.1 | 사각 진입 z 111.9 → z 83.6 |
+  | 17:01 `4b20ee34` (26) | LOST | 0.28 s | +36.3 | 사각 전 z 112.1 에서 LOST → 정지 z 96.5 |
+  | 시험 31 `e4ba943c` | LOST | 0.26 s | +37.1 | 사각 전 z 113.3 에서 LOST → 정지 z 96.7 |
+  | 시험 33 `ad7f6404` | LOST | 0.27 s | +36.6 | 사각 전 z 113.9 에서 LOST → 정지 z 97.1 |
+
+- 틱의 `visible` 은 "사각 아님 + 마지막으로 받은 메시지가 valid"(`belt_servo.py`)라 새 프레임이 없어도 `lost_timeout_s`(0.5) 가 지날 때까지 True 로 남는다. **처음 적은 "OK·LOST 모두 DESCEND+0.83~0.87 s, z 110.9~112.4 마지막 관측" 은 이 마지막 `visible` 틱이었고 실제 관측이 아니다(10/11 정정).** LOST 회차의 "틱에 TCP 기록 없음" 도 `tcp_now_m`·`tcp_target_m` 등이 비는 것이고 `tcp_pose_m` 은 남아 있다.
+- 차이: OK 회차는 마지막 `visible` 틱 바로 다음 틱(0.03~0.04 s 뒤)에 `vision_blind`(사각)로 들어가 하강을 이었다. LOST 회차는 사각에 들어가기 전(z 112.1~113.9)에 box_lost 가 먼저 났다. 비스듬히 넣은 회차는 마지막 BoxTrack 이 조금 이르다(0.26~0.28 s, OK 0.31~0.41 s). *(판정은 박병후 — voss_servo)*
 - 이 시험들 동안 box_tracker `Hz < 25` 0.
 - 시험 뒤 sort_manager 는 LOST 마다 PAUSED → T8 재기동 반복(세션 e4bd·696d·e86f·eb6e). 17:10:39 `명령 거부: PAUSED 에서는 resume`.
 
