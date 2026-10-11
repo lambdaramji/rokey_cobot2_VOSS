@@ -1,7 +1,14 @@
 """MoveToZone 경로 — 격자 칸(measurements #6), 수직 상승 → 수평 → 수직 하강(T35)."""
 
 import pytest
-from voss_robot.zone_motion import SAFE_Z_MM, plan_move, slot_offset, slot_pose
+from voss_robot.zone_motion import (
+    SAFE_Z_MM,
+    pick_grip_ok,
+    pick_pose,
+    plan_move,
+    slot_offset,
+    slot_pose,
+)
 
 A = [213.49, 165.23, 258.27, 35.36, -180.0, -54.64]  # voss_config zones.A (플랜지)
 OBS = [-11.51, -271.11, 450.16, 85.25, -179.07, -6.03]
@@ -65,3 +72,21 @@ def test_offset_moves_slots_toward_minus_x():
     assert [slot_offset([2, 1, 60, -30], s)[0] for s in range(2)] == [-60.0, 0.0]
     assert slot_offset([1, 1, 60, -60], 0) == (-60.0, 0.0)
     assert slot_offset([3, 1, 60], 2) == (60.0, 0.0)  # offset 없으면 0
+
+
+RECHECK = [446.17, -69.04, 260.65, 169.44, -180.0, 79.38]  # voss_config zones.recheck (플랜지)
+
+
+def test_pick_pose_is_slot_pose_plus_dz():
+    """PICK 파지 = 놓기 칸 자세(핑거 끝 바닥 +5) + 3 mm → 박스 밑면 +8 (voss_msgs.md MoveToZone PICK)."""
+    p = pick_pose(slot_pose(RECHECK, [2, 1, 60], 1), 3.0)
+    assert p == pytest.approx([476.17, -69.04, 263.65, *RECHECK[3:]])
+
+
+def test_pick_grip_ok_needs_detect_and_width_range():
+    assert pick_grip_ok(True, True, 41.1, 39.5, 44.0) == ""  # 10/10 벨트 VERIFY 폭
+    assert pick_grip_ok(True, True, 39.5, 39.5, 44.0) == ""  # 경계 포함
+    assert "응답" in pick_grip_ok(False, True, 41.1, 39.5, 44.0)
+    assert "grip 없음" in pick_grip_ok(True, False, 38.7, 39.5, 44.0)  # 빈손
+    assert "밖" in pick_grip_ok(True, True, 45.2, 39.5, 44.0)  # 비스듬히 쥠
+    assert "밖" in pick_grip_ok(True, True, 39.0, 39.5, 44.0)

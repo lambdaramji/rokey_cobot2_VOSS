@@ -34,6 +34,25 @@ def slot_pose(zone_pose: Sequence[float], grid: Sequence[float], slot: int) -> l
     return [p[0] + dx, p[1] + dy, *p[2:]]
 
 
+def pick_pose(slot_flange: Sequence[float], dz_mm: float) -> list[float]:
+    """PICK 파지 자세 = 놓기 칸 자세 + dz. 놓기 자세는 핑거 끝이 트레이 바닥 +5 mm(10/06 교시)이고 PICK 은
+    핑거 끝 = 박스 밑면 +8 mm(voss_msgs.md MoveToZone, 벨트 파지와 같은 겹침 19 mm) → dz 기본 +3."""
+    p = [float(v) for v in slot_flange]
+    return [p[0], p[1], p[2] + float(dz_mm), *p[3:]]
+
+
+def pick_grip_ok(ok: bool, detected: bool, width_mm: float, lo: float, hi: float) -> str:
+    """PICK 닫힘 결과 판정. 통과면 "", 아니면 이유(GRIP_FAIL 메시지 뒤에 붙인다).
+    성공 = 닫힘 완료 + grip_detected + 보고폭이 [lo, hi] (voss_msgs.md MoveToZone PICK, belt_servo 와 같은 기준)."""
+    if not ok:
+        return "닫힘 응답 실패"
+    if not detected:
+        return f"grip 없음(폭 {width_mm:.1f} mm)"
+    if not lo <= width_mm <= hi:
+        return f"폭 {width_mm:.1f} mm 가 {lo:.1f}~{hi:.1f} 밖"
+    return ""
+
+
 def plan_move(
     current: Sequence[float], target: Sequence[float], safe_z: float = SAFE_Z_MM, eps: float = 0.5
 ) -> list[tuple[str, list[float]]]:
