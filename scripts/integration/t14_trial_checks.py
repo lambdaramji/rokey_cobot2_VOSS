@@ -23,3 +23,17 @@ def first_pcm_latency_ms(log_text: str) -> int | None:
 def tts_finished(log_text: str) -> bool:
     """PCM 플레이어가 오류 없이 끝났는지 로그를 검사한다."""
     return FINISHED_MARKER in log_text
+
+
+def expected_history_say(session_id: str | None, says: list[str]) -> str | None:
+    """세션이 없으면 NO_SESSION만, 세션이 있으면 집계 안내만 인정한다."""
+    if session_id == "":
+        for sentence in says:
+            if sentence == "기록을 조회할 수 없습니다.":
+                return sentence
+        return None
+    if session_id:
+        for sentence in says:
+            if sentence.startswith("보류는 ") and sentence.endswith("개입니다."):
+                return sentence
+    return None
