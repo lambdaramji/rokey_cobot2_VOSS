@@ -11,18 +11,18 @@ import os
 import shutil
 import subprocess
 import time
+from collections.abc import Callable
 from pathlib import Path
 from threading import Thread
-from typing import Callable
 
 import rclpy
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from std_msgs.msg import String
-from voss_msgs.msg import Intent, SortState, ZoneMap
-
 from t14_trial_checks import first_pcm_latency_ms, manager_accepted_priority, tts_finished
+
+from voss_msgs.msg import Intent, SortState, ZoneMap
 
 SAFE_DOMAIN_ID = "179"
 CONFIG_PATH = Path(__file__).resolve().parents[2] / "config" / "voss_config.yaml"
@@ -51,19 +51,11 @@ class TrialProbe(Node):
         self.zone_received = False
         self.idle_received = False
         self.priority_received = False
-        self.transcript_pub = self.create_publisher(
-            String, "/voss/voice/transcript", QOS_EVENTS
-        )
+        self.transcript_pub = self.create_publisher(String, "/voss/voice/transcript", QOS_EVENTS)
         self.say_pub = self.create_publisher(String, "/voss/voice/say", QOS_EVENTS)
-        self.create_subscription(
-            ZoneMap, "/voss/sort/zone_map", self._on_zones, QOS_ZONE
-        )
-        self.create_subscription(
-            SortState, "/voss/sort/state", self._on_state, QOS_EVENTS
-        )
-        self.create_subscription(
-            Intent, "/voss/voice/intent", self._on_intent, QOS_EVENTS
-        )
+        self.create_subscription(ZoneMap, "/voss/sort/zone_map", self._on_zones, QOS_ZONE)
+        self.create_subscription(SortState, "/voss/sort/state", self._on_state, QOS_EVENTS)
+        self.create_subscription(Intent, "/voss/voice/intent", self._on_intent, QOS_EVENTS)
 
     def _on_zones(self, message: ZoneMap) -> None:
         """실제 관리자가 설정한 역삼동 구역이 발행됐는지 확인한다."""
@@ -76,11 +68,7 @@ class TrialProbe(Node):
 
     def _on_intent(self, message: Intent) -> None:
         """허용 목록으로 검증된 priority Intent를 관측한다."""
-        if (
-            message.type == "priority"
-            and message.dong == "역삼동"
-            and message.box_id == ""
-        ):
+        if message.type == "priority" and message.dong == "역삼동" and message.box_id == "":
             self.priority_received = True
 
 
@@ -164,9 +152,7 @@ def stop_processes(processes: list[subprocess.Popen]) -> None:
             process.wait()
 
 
-def verify_manager_priority(
-    node: TrialProbe, processes: list[subprocess.Popen]
-) -> None:
+def verify_manager_priority(node: TrialProbe, processes: list[subprocess.Popen]) -> None:
     """실제 manager가 ROS priority를 수락했는지 로그로 검증한다."""
     # start/stop은 장비 호출이 가능하다. 격리 시험에서는 priority만 보낸다.
     node.transcript_pub.publish(String(data=PRIORITY_SENTENCE))
@@ -180,15 +166,12 @@ def verify_manager_priority(
     print("PASS: 실제 sort_manager priority(역삼동) 접수", flush=True)
 
 
-def verify_speech_out(
-    node: TrialProbe, processes: list[subprocess.Popen]
-) -> None:
+def verify_speech_out(node: TrialProbe, processes: list[subprocess.Popen]) -> None:
     """실제 speech_out가 TTS를 스피커에 전달하고 종료했는지 검증한다."""
     # manager는 IDLE priority에서 Say를 만들지 않는다. 시험기 문장을 발행한다.
     node.say_pub.publish(String(data=SPOKEN_SENTENCE))
     wait_until(
-        lambda: tts_finished(read_log("speech_out"))
-        or "TTS_FAILED:" in read_log("speech_out"),
+        lambda: tts_finished(read_log("speech_out")) or "TTS_FAILED:" in read_log("speech_out"),
         "실제 speech_out 오디오",
         TTS_TIMEOUT_S,
         processes,
@@ -208,10 +191,12 @@ def verify_speech_out(
 def run_trial(node: TrialProbe, processes: list[subprocess.Popen]) -> None:
     """실제 관리자 접수와 실제 음성 재생을 하나의 비구동 시험으로 확인한다."""
     wait_until(
-        lambda: node.zone_received
-        and node.idle_received
-        and parser_subscriber_ready(node)
-        and speech_subscriber_ready(node),
+        lambda: (
+            node.zone_received
+            and node.idle_received
+            and parser_subscriber_ready(node)
+            and speech_subscriber_ready(node)
+        ),
         "노드 준비",
         STARTUP_TIMEOUT_S,
         processes,
@@ -248,18 +233,22 @@ def main() -> None:
             start_process(
                 "sort_manager",
                 [
-                    "ros2", "run", "voss_manager", "sort_manager",
-                    "--ros-args", "-p", f"config_path:={CONFIG_PATH}",
-                    "-p", "home_first:=false",
+                    "ros2",
+                    "run",
+                    "voss_manager",
+                    "sort_manager",
+                    "--ros-args",
+                    "-p",
+                    f"config_path:={CONFIG_PATH}",
+                    "-p",
+                    "home_first:=false",
                 ],
             )
         )
         children.append(
             start_process("intent_parser", ["ros2", "run", "voss_voice", "intent_parser"])
         )
-        children.append(
-            start_process("speech_out", ["ros2", "run", "voss_voice", "speech_out"])
-        )
+        children.append(start_process("speech_out", ["ros2", "run", "voss_voice", "speech_out"]))
         run_trial(probe, children)
     except (RuntimeError, OSError) as error:
         print(f"FAIL: {error}")

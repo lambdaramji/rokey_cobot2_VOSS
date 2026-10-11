@@ -19,6 +19,7 @@ from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from std_msgs.msg import String
+
 from voss_msgs.msg import Intent, SortState, ZoneMap, ZoneMapEntry
 
 SAFE_TEST_DOMAIN_ID = "179"
@@ -31,6 +32,7 @@ LOG_DIR = Path.home() / ".local/state/voss-t14"
 @dataclass(frozen=True)
 class Trial:
     """시험할 음성 문장과 기대되는 모의 manager 출력이다."""
+
     title: str
     transcript: str
     state: str
@@ -42,8 +44,7 @@ class Trial:
 TRIALS = (
     Trial("운전", "작업 시작해", "IDLE", "start"),
     Trial("우선", "역삼동부터 분류해", "RUNNING", "priority", dong="역삼동"),
-    Trial("답변", "대치동", "ASKING", "answer", dong="대치동",
-          answer_box_id=SAMPLE_BOX_ID),
+    Trial("답변", "대치동", "ASKING", "answer", dong="대치동", answer_box_id=SAMPLE_BOX_ID),
     Trial("이력", "보류 몇 개야", "IDLE", "query_history"),
 )
 
@@ -228,8 +229,7 @@ def main() -> None:
         processes.append(parser)
         listener = start_child(
             "voice_listener",
-            ["ros2", "run", "voss_voice", "voice_listener",
-             "--ros-args", "-p", "mode:=text"],
+            ["ros2", "run", "voss_voice", "voice_listener", "--ros-args", "-p", "mode:=text"],
         )
         processes.append(listener)
 

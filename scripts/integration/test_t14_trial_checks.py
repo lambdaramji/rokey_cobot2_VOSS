@@ -17,7 +17,12 @@ def test_manager_priority_requires_real_acceptance_log() -> None:
 def test_first_pcm_latency_requires_speech_out_evidence() -> None:
     """실제 PCM 쓰기 로그만 지연 수치로 인정한다."""
     assert first_pcm_latency_ms("TTS_DISPATCH queue_ms=10") is None
-    assert first_pcm_latency_ms("TTS_FIRST_PCM_WRITTEN receive_to_write_ms=712 dispatch_to_write_ms=700") == 712
+    assert (
+        first_pcm_latency_ms(
+            "TTS_FIRST_PCM_WRITTEN receive_to_write_ms=712 dispatch_to_write_ms=700"
+        )
+        == 712
+    )
 
 
 def test_tts_only_passes_after_playback_finishes() -> None:
