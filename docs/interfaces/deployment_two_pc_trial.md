@@ -5,14 +5,14 @@
 
 ## 변경 전 / 변경 제안
 
-| 항목 | 기존 계약 | 현재 시험 배치 제안 | 영향받는 상대·승인 필요 |
+| 항목 | 기존 계약 | 현재 시험 배치 제안 (주소는 자리표시자) | 영향받는 상대·승인 필요 |
 |---|---|---|---|
-| Nodes PC | 공용 PC에 모든 서비스 | `172.24.3.240`: ROS/비전, 마이크·voice_listener·intent_parser·speech_out, hmi_bridge·sort_logger | 남현지 PL, 김학민 |
-| Web PC | 별도 서버 위치 미적용 | `172.24.0.51`: docker/ai (Whisper·LLM·TTS), docker/web (React·Spring Boot), docker/db, Mosquitto | 남현지 PL, 김학민, 정의석 |
+| Nodes PC | 공용 PC에 모든 서비스 | `<NODES_PC_IP>`: ROS/비전, 마이크·voice_listener·intent_parser·speech_out, hmi_bridge·sort_logger | 남현지 PL, 김학민 |
+| Web PC | 별도 서버 위치 미적용 | `<WEB_PC_IP>`: docker/ai (Whisper·LLM·TTS), docker/web (React·Spring Boot), docker/db, Mosquitto | 남현지 PL, 김학민, 정의석 |
 | MQTT 브로커 (#20) | 공용 PC 127.0.0.1:1883 | Web PC **127.0.0.1:1883**; Nodes PC는 SSH 로컬 포워드 `127.0.0.1:1883 → Web PC:1883` | 정의석·김학민 |
 | HTTP API (#68) | Nodes PC localhost 8000·8080 | Web PC 127.0.0.1:8000·8080, Nodes PC는 SSH 로컬 포워드로 동일 포트 접속 | 정의석·남현지 |
 | DB (#21) | Nodes PC localhost 5432 | Web PC 127.0.0.1:5432, Nodes PC 127.0.0.1:**5432** → Web PC:5432 (Nodes PC의 기존 PostgreSQL 서비스 정지 및 Docker 정리 후 포트 일치) | 정의석·김학민 |
-| 웹 운전 명령 (#68) | **공용 PC 로컬만** start/resume/priority/answer/reset_zone, stop은 어디서든 | Web PC의 로컬 브라우저를 공용 PC로 간주하면 안 됨. **비구동 통합 시험에서는 비-stop 명령 기본 차단**. 현장 승인 후 Nodes PC 브라우저 원격 IP `172.24.3.240`만 추가 확인하는 방식은 **제안**이며 IP만으로 사용자를 인증할 수 없어 추가 보안 검토 필요 | 남현지 PL·김학민 안전 승인 필수 |
+| 웹 운전 명령 (#68) | **공용 PC 로컬만** start/resume/priority/answer/reset_zone, stop은 어디서든 | Web PC의 로컬 브라우저를 공용 PC로 간주하면 안 됨. **비구동 통합 시험에서는 비-stop 명령 기본 차단**. **원격 비-stop 명령은 승인 전 절대 허용하지 않음**. Nodes PC에서 localhost:8080 SSH 포워드로 직접 접속하면 `X-Real-IP`를 임의 지정할 수 있어 IP 기반 허용 목록은 신뢰할 수 없음. 원격 필요 시 PL·안전 담당 승인과 공유 토큰 등 별도 인증 계약 변경 선행 | 남현지 PL·김학민 안전 승인 필수 |
 
 ## 유지할 계약 (변경하지 않음)
 
@@ -21,7 +21,7 @@
 - FastAPI `/ai`는 Nginx로 공개하지 않음. Web PC localhost 바인드, SSH 인증 경로를 통해 Nodes PC 음성 노드만 사용.
 - Mosquitto `allow_anonymous false`; Web PC localhost 전용 listener, `web`/ `bridge`/ `debug` ACL 유지. 자격 증명은 커밋하지 않음.
 - `stop`은 LLM과 zone_map을 기다리지 않고 로컬에서 판정; 웹의 stop은 원격 차단 예외 유지.
-- 로봇 제어망 `192.168.1.0/24`에 웹 서비스 포트를 열지 않음.
+- 로봇 제어망에는 웹 서비스 포트를 열지 않음. 실제 망 주소/호스트 식별자는 현장 `.env`와 비공개 런북에만 보관.
 
 ## 임시 시험용 SSH 포워드 (Nodes PC → Web PC)
 
@@ -31,6 +31,8 @@
 127.0.0.1:1883  -> Web PC 127.0.0.1:1883   MQTT broker
 127.0.0.1:5432  -> Web PC 127.0.0.1:5432   sort_logger (db_port 기본값 5432 유지)
 ```
+
+**시연 기본 배치는 ADR-0006의 공용 PC 단일 구성 유지**. 2 PC 방식은 비구동 통합 시험 한정 제안이며, 시연 배치를 바꾸려면 남현지 PL·김학민 안전 담당자의 사전 승인과 ADR/인터페이스 개정이 필요하다. 결정 기한·담당은 팀 협의 필요(TBD). Wi-Fi/SSH 터널 장애 시 sort_logger의 DB commit/G0 증거가 실패할 수 있으며, G1 조건이나 시연 구성에 바로 적용하지 않는다.
 
 `ssh -N -o ExitOnForwardFailure=yes`로 터널 실패 시 기동을 중단한다. Web PC 22번 SSH 인증/호스트 키를 현장에서 확인한다. Wi-Fi 평균 RTT 약 74~80ms, 최대 284ms(2026-10-11 ICMP 실측)는 참고일 뿐 앱 지연 보장값이 아니다.
 
