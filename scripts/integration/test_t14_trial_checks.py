@@ -1,13 +1,13 @@
 """T14 manager/TTS 로그 판정의 오탐을 막는다."""
 
 from t14_trial_checks import (
-    expected_history_say,
     count_finished_playbacks,
+    expected_history_say,
+    first_pcm_latency_ms,
     history_scope,
     last_pcm_latency_ms,
-    matching_isolated_test_nodes,
-    first_pcm_latency_ms,
     manager_accepted_priority,
+    matching_isolated_test_nodes,
     tts_finished,
 )
 
@@ -46,7 +46,9 @@ def test_history_without_session_only_accepts_no_session_response() -> None:
 def test_history_with_session_requires_count_sentence() -> None:
     """세션이 있으면 집계 실패 안내로 통과시키지 않는다."""
     assert expected_history_say("20261011T121525-1ab9", ["기록을 조회할 수 없습니다."]) is None
-    assert expected_history_say("20261011T121525-1ab9", ["보류는 3개입니다."]) == "보류는 3개입니다."
+    assert (
+        expected_history_say("20261011T121525-1ab9", ["보류는 3개입니다."]) == "보류는 3개입니다."
+    )
 
 
 def test_history_without_session_information_cannot_pass() -> None:
@@ -73,7 +75,9 @@ def test_cleanup_matches_only_local_domain_179_test_node() -> None:
     environment = b"ROS_DOMAIN_ID=179\0ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST\0"
     command = b"/usr/bin/python3\0/home/ms-03/voss/install/voss_voice/lib/voss_voice/speech_out\0"
     assert matching_isolated_test_nodes(command, environment) == {"speech_out"}
-    assert matching_isolated_test_nodes(b"/opt/ros/bin/ros2\0run\0voss_manager\0sort_manager\0", environment) == {"sort_manager"}
+    assert matching_isolated_test_nodes(
+        b"/opt/ros/bin/ros2\0run\0voss_manager\0sort_manager\0", environment
+    ) == {"sort_manager"}
 
 
 def test_cleanup_never_matches_actual_robot_domain() -> None:

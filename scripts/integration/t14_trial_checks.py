@@ -38,6 +38,7 @@ def expected_history_say(session_id: str | None, says: list[str]) -> str | None:
                 return sentence
     return None
 
+
 def history_scope(session_id: str) -> str:
     """현재 세션이 없으면 읽기 전용 전체 이력 조회 범위로 바꾼다."""
     if session_id == "":
@@ -58,17 +59,11 @@ def last_pcm_latency_ms(log_text: str) -> int | None:
     return int(matches[-1])
 
 
-TEST_NODE_NAMES = frozenset({
-    "voice_listener", "intent_parser", "sort_manager", "speech_out"
-})
-TEST_PROCESS_LAUNCHERS = frozenset({
-    "python", "python3", "python3.12", "ros2"
-})
+TEST_NODE_NAMES = frozenset({"voice_listener", "intent_parser", "sort_manager", "speech_out"})
+TEST_PROCESS_LAUNCHERS = frozenset({"python", "python3", "python3.12", "ros2"})
 
 
-def matching_isolated_test_nodes(
-    command_line: bytes, environment: bytes
-) -> set[str]:
+def matching_isolated_test_nodes(command_line: bytes, environment: bytes) -> set[str]:
     """로컬 ROS 179 시험 노드의 명령줄만 확인해 종료 대상을 선정한다."""
     from pathlib import Path
 
@@ -78,9 +73,7 @@ def matching_isolated_test_nodes(
     if b"ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST" not in variables:
         return set()
 
-    arguments = [
-        item.decode(errors="replace") for item in command_line.split(b"\0") if item
-    ]
+    arguments = [item.decode(errors="replace") for item in command_line.split(b"\0") if item]
     if not arguments:
         return set()
 

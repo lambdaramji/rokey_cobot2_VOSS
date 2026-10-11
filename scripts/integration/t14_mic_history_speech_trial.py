@@ -15,20 +15,15 @@ from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
 import numpy as np
-
-from voss_voice.http_client import post_stt
-from voss_voice.listen_logic import to_wav
-
 import rclpy
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 from std_msgs.msg import String
-
 from t14_manager_tts_trial import (
     CONFIG_PATH,
-    cleanup_previous_test_nodes,
     SAFE_DOMAIN_ID,
     TrialProbe,
+    cleanup_previous_test_nodes,
     manager_accepted_priority,
     parser_subscriber_ready,
     read_log,
@@ -39,6 +34,8 @@ from t14_manager_tts_trial import (
     wait_until,
 )
 from t14_trial_checks import expected_history_say, first_pcm_latency_ms, tts_finished
+from voss_voice.http_client import post_stt
+from voss_voice.listen_logic import to_wav
 
 API_SESSION_URL = "http://127.0.0.1:8080/api/sessions/current"
 AI_HEALTH_URL = "http://127.0.0.1:8000/ai/health"
@@ -60,12 +57,8 @@ class MicHistoryProbe(TrialProbe):
         self.transcripts: list[str] = []
         self.says: list[str] = []
         qos = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
-        self.create_subscription(
-            String, "/voss/voice/transcript", self._on_transcript, qos
-        )
-        self.create_subscription(
-            String, "/voss/voice/say", self._on_say, qos
-        )
+        self.create_subscription(String, "/voss/voice/transcript", self._on_transcript, qos)
+        self.create_subscription(String, "/voss/voice/say", self._on_say, qos)
 
     def _on_transcript(self, message: String) -> None:
         """마이크·Whisper 결과가 ROS로 전달됐는지 기록한다."""
@@ -134,6 +127,7 @@ def fetch_current_session() -> str | None:
 
 def wait_for_mic(processes: list) -> None:
     """마이크 모드만 인정하고 텍스트 폴백이면 시험을 중단한다."""
+
     def mic_started() -> bool:
         log_text = read_log("voice_listener")
         if MIC_FALLBACK_MARKER in log_text:
@@ -145,6 +139,7 @@ def wait_for_mic(processes: list) -> None:
 
 def wait_for_voice_connections(node: MicHistoryProbe, processes: list) -> None:
     """실제 manager·parser·speech_out·voice_listener 연결을 확인한다."""
+
     def all_ready() -> bool:
         publisher_info = node.get_publishers_info_by_topic("/voss/voice/transcript")
         microphone_ready = any(info.node_name == "voice_listener" for info in publisher_info)
@@ -190,9 +185,7 @@ def run_history(node: MicHistoryProbe, processes: list) -> None:
     def history_transcribed() -> bool:
         return any("보류" in text and "몇" in text for text in node.transcripts)
 
-    wait_until(
-        history_transcribed, "마이크/Whisper 이력 문장", MIC_COMMAND_TIMEOUT_S, processes
-    )
+    wait_until(history_transcribed, "마이크/Whisper 이력 문장", MIC_COMMAND_TIMEOUT_S, processes)
     wait_until(
         lambda: expected_history_say(session_id, node.says) is not None,
         "REST 이력 안내",
@@ -203,9 +196,10 @@ def run_history(node: MicHistoryProbe, processes: list) -> None:
     print(f"이력 안내: {sentence}", flush=True)
 
     wait_until(
-        lambda: tts_finished(read_log("speech_out"))
-        or "TTS_FAILED:" in read_log("speech_out"),
-        "이력 TTS 재생", SPEECH_TIMEOUT_S, processes,
+        lambda: tts_finished(read_log("speech_out")) or "TTS_FAILED:" in read_log("speech_out"),
+        "이력 TTS 재생",
+        SPEECH_TIMEOUT_S,
+        processes,
     )
     speech_log = read_log("speech_out")
     if "TTS_FAILED:" in speech_log:
@@ -257,22 +251,50 @@ def main() -> None:
         executor.add_node(node)
         runner = Thread(target=executor.spin, daemon=True)
         runner.start()
-        processes.append(start_process(
-            "sort_manager",
-            ["ros2", "run", "voss_manager", "sort_manager",
-             "--ros-args", "-p", f"config_path:={CONFIG_PATH}", "-p", "home_first:=false"],
-        ))
-        processes.append(start_process(
-            "intent_parser", ["ros2", "run", "voss_voice", "intent_parser"],
-        ))
-        processes.append(start_process(
-            "speech_out", ["ros2", "run", "voss_voice", "speech_out"],
-        ))
-        processes.append(start_process(
-            "voice_listener",
-            ["ros2", "run", "voss_voice", "voice_listener",
-             "--ros-args", "-p", "mode:=mic", "-p", "require_wake:=true"],
-        ))
+        processes.append(
+            start_process(
+                "sort_manager",
+                [
+                    "ros2",
+                    "run",
+                    "voss_manager",
+                    "sort_manager",
+                    "--ros-args",
+                    "-p",
+                    f"config_path:={CONFIG_PATH}",
+                    "-p",
+                    "home_first:=false",
+                ],
+            )
+        )
+        processes.append(
+            start_process(
+                "intent_parser",
+                ["ros2", "run", "voss_voice", "intent_parser"],
+            )
+        )
+        processes.append(
+            start_process(
+                "speech_out",
+                ["ros2", "run", "voss_voice", "speech_out"],
+            )
+        )
+        processes.append(
+            start_process(
+                "voice_listener",
+                [
+                    "ros2",
+                    "run",
+                    "voss_voice",
+                    "voice_listener",
+                    "--ros-args",
+                    "-p",
+                    "mode:=mic",
+                    "-p",
+                    "require_wake:=true",
+                ],
+            )
+        )
         run_all(node, processes)
     except (RuntimeError, OSError) as error:
         print(f"FAIL: {error}", flush=True)

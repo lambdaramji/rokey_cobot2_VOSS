@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
 import signal
+import subprocess
 import time
 from threading import Thread
 from urllib.error import HTTPError, URLError
@@ -24,16 +24,12 @@ from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 from std_msgs.msg import String
-from voss_msgs.action import TrackAndGrasp
-from voss_msgs.msg import BoxTrack, LabelRead, SortState, ZoneMap
-from voss_msgs.srv import Command, MoveToZone
-
 from t14_manager_tts_trial import (
     CONFIG_PATH,
-    cleanup_previous_test_nodes,
     LOG_DIR,
-    require_isolation,
+    cleanup_previous_test_nodes,
     read_log,
+    require_isolation,
     start_process,
     wait_until,
 )
@@ -43,6 +39,10 @@ from t14_trial_checks import (
     last_pcm_latency_ms,
 )
 from voss_voice.intent_logic import stats_sentence
+
+from voss_msgs.action import TrackAndGrasp
+from voss_msgs.msg import BoxTrack, LabelRead, SortState, ZoneMap
+from voss_msgs.srv import Command, MoveToZone
 
 API_BASE = "http://127.0.0.1:8080"
 MANAGER_SAY = "관측 자세로 가지 못해 일시정지했습니다."
@@ -102,19 +102,23 @@ class FakeHardwareProbe(Node):
         self.manager_says: list[str] = []
         self.last_move_zone = ""
         self._pose_pub = self.create_publisher(
-            PoseStamped, "/voss/robot/pose",
+            PoseStamped,
+            "/voss/robot/pose",
             QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT),
         )
         self._log_pub = self.create_publisher(String, "/voss/log/status", QOS_EVENTS)
         # 판독 데이터를 보내지 않는다. ready용으로 publisher 존재만 제공한다.
         self._box_pub = self.create_publisher(
-            BoxTrack, "/voss/vision/box",
+            BoxTrack,
+            "/voss/vision/box",
             QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT),
         )
         self._label_pub = self.create_publisher(LabelRead, "/voss/vision/label", QOS_EVENTS)
         self.create_service(MoveToZone, "/voss/robot/move_to_zone", self._fail_move)
         self._servo_server = ActionServer(
-            self, TrackAndGrasp, "/voss/servo/track_and_grasp",
+            self,
+            TrackAndGrasp,
+            "/voss/servo/track_and_grasp",
             execute_callback=self._reject_grasp_execution,
             goal_callback=self._deny_grasp_goal,
         )
@@ -171,10 +175,12 @@ def voice_connections_ready(node: FakeHardwareProbe) -> bool:
 def run_start_in_simulation(node: FakeHardwareProbe, processes: list) -> None:
     """가짜 준비 조건에서만 실제 manager를 시작해 실패 안내를 발생시킨다."""
     wait_until(
-        lambda: node.idle_ready
-        and node.zone_received
-        and node.start_client.service_is_ready()
-        and voice_connections_ready(node),
+        lambda: (
+            node.idle_ready
+            and node.zone_received
+            and node.start_client.service_is_ready()
+            and voice_connections_ready(node)
+        ),
         "가짜 준비·실제 manager/speech_out 연결",
         STARTUP_TIMEOUT_S,
         processes,
@@ -190,8 +196,10 @@ def run_start_in_simulation(node: FakeHardwareProbe, processes: list) -> None:
 def wait_playback(processes: list, expected_finishes: int, label: str) -> None:
     """실제 speech_out의 새 PCM 재생 완료 및 3초 안의 첫 PCM을 확인한다."""
     wait_until(
-        lambda: count_finished_playbacks(read_log("speech_out")) >= expected_finishes
-        or "TTS_FAILED:" in read_log("speech_out"),
+        lambda: (
+            count_finished_playbacks(read_log("speech_out")) >= expected_finishes
+            or "TTS_FAILED:" in read_log("speech_out")
+        ),
         label,
         TTS_TIMEOUT_S,
         processes,
@@ -231,9 +239,9 @@ def verify_real_db_speech(node: FakeHardwareProbe, processes: list) -> None:
 
     if scope != "all":
         # 실제 현재 세션이 있으면 intent_parser의 정규 REST 조회 경로를 탄다.
-        processes.append(start_process(
-            "intent_parser", ["ros2", "run", "voss_voice", "intent_parser"]
-        ))
+        processes.append(
+            start_process("intent_parser", ["ros2", "run", "voss_voice", "intent_parser"])
+        )
         wait_until(
             lambda: any(
                 info.node_name == "intent_parser"
@@ -309,16 +317,28 @@ def main() -> None:
         executor.add_node(probe)
         thread = Thread(target=executor.spin, daemon=True)
         thread.start()
-        processes.append(start_process(
-            "speech_out", ["ros2", "run", "voss_voice", "speech_out"],
-        ))
-        processes.append(start_process(
-            "sort_manager", [
-                "ros2", "run", "voss_manager", "sort_manager",
-                "--ros-args", "-p", f"config_path:={CONFIG_PATH}",
-                "-p", "home_first:=true",
-            ],
-        ))
+        processes.append(
+            start_process(
+                "speech_out",
+                ["ros2", "run", "voss_voice", "speech_out"],
+            )
+        )
+        processes.append(
+            start_process(
+                "sort_manager",
+                [
+                    "ros2",
+                    "run",
+                    "voss_manager",
+                    "sort_manager",
+                    "--ros-args",
+                    "-p",
+                    f"config_path:={CONFIG_PATH}",
+                    "-p",
+                    "home_first:=true",
+                ],
+            )
+        )
         verify_real_manager_say(probe, processes)
         verify_real_db_speech(probe, processes)
         print("=== T14 DB 이력 음성 + manager 자체 안내 비구동 연속시험 종료 ===")

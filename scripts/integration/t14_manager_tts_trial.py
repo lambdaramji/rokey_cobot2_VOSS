@@ -8,8 +8,8 @@
 from __future__ import annotations
 
 import os
-import signal
 import shutil
+import signal
 import subprocess
 import time
 from collections.abc import Callable
@@ -225,7 +225,6 @@ def stop_processes(processes: list[subprocess.Popen]) -> None:
             except ProcessLookupError:
                 pass
             process.wait()
-
 
 
 def verify_manager_priority(node: TrialProbe, processes: list[subprocess.Popen]) -> None:
