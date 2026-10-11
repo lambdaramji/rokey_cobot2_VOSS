@@ -164,28 +164,13 @@ def stop_processes(processes: list[subprocess.Popen]) -> None:
             process.wait()
 
 
-def run_trial(node: TrialProbe, processes: list[subprocess.Popen]) -> None:
-    """실제 관리자 priority 접수, 실제 TTS 오디오 재생을 연속 시험한다."""
-    wait_until(
-        lambda: (
-            node.zone_received
-            and node.idle_received
-            and parser_subscriber_ready(node)
-            and speech_subscriber_ready(node)
-        ),
-        "노드 준비",
-        STARTUP_TIMEOUT_S,
-        processes,
-    )
-
+def verify_manager_priority(
+    node: TrialProbe, processes: list[subprocess.Popen]
+) -> None:
+    """실제 manager가 ROS priority를 수락했는지 로그로 검증한다."""
     # start/stop은 장비 호출이 가능하다. 격리 시험에서는 priority만 보낸다.
     node.transcript_pub.publish(String(data=PRIORITY_SENTENCE))
-    wait_until(
-        lambda: node.priority_received,
-        "Intent 파싱",
-        INTENT_TIMEOUT_S,
-        processes,
-    )
+    wait_until(lambda: node.priority_received, "Intent 파싱", INTENT_TIMEOUT_S, processes)
     wait_until(
         lambda: manager_accepted_priority(read_log("sort_manager")),
         "실제 sort_manager 접수",
@@ -194,19 +179,20 @@ def run_trial(node: TrialProbe, processes: list[subprocess.Popen]) -> None:
     )
     print("PASS: 실제 sort_manager priority(역삼동) 접수", flush=True)
 
-    # manager는 IDLE에서 priority를 받아도 Say를 만들지 않는다.
-    # TTS 재생은 시험기가 표준 Say 토픽을 발행해 별도로 확인한다.
+
+def verify_speech_out(
+    node: TrialProbe, processes: list[subprocess.Popen]
+) -> None:
+    """실제 speech_out가 TTS를 스피커에 전달하고 종료했는지 검증한다."""
+    # manager는 IDLE priority에서 Say를 만들지 않는다. 시험기 문장을 발행한다.
     node.say_pub.publish(String(data=SPOKEN_SENTENCE))
     wait_until(
-        lambda: (
-            tts_finished(read_log("speech_out"))
-            or "TTS_FAILED:" in read_log("speech_out")
-        ),
+        lambda: tts_finished(read_log("speech_out"))
+        or "TTS_FAILED:" in read_log("speech_out"),
         "실제 speech_out 오디오",
         TTS_TIMEOUT_S,
         processes,
     )
-
     speech_log = read_log("speech_out")
     if "TTS_FAILED:" in speech_log:
         raise RuntimeError("TTS 실패: speech_out.log 확인")
@@ -215,8 +201,23 @@ def run_trial(node: TrialProbe, processes: list[subprocess.Popen]) -> None:
         raise RuntimeError("첫 PCM 전달 지연 로그가 없습니다.")
     print(f"PASS: speech_out PCM 재생 완료, 첫 PCM 전달 {delay_ms} ms", flush=True)
     if delay_ms > MAX_FIRST_PCM_MS:
-        print(f"주의: 첫 PCM 전달 지연 {delay_ms} ms > {MAX_FIRST_PCM_MS} ms")
+        print(f"FAIL: 첫 PCM 지연 {delay_ms} ms > {MAX_FIRST_PCM_MS} ms")
     print("청각 확인 필요: Nodes PC 스피커에서 T14 안내가 실제 들렸는지 확인하세요.")
+
+
+def run_trial(node: TrialProbe, processes: list[subprocess.Popen]) -> None:
+    """실제 관리자 접수와 실제 음성 재생을 하나의 비구동 시험으로 확인한다."""
+    wait_until(
+        lambda: node.zone_received
+        and node.idle_received
+        and parser_subscriber_ready(node)
+        and speech_subscriber_ready(node),
+        "노드 준비",
+        STARTUP_TIMEOUT_S,
+        processes,
+    )
+    verify_manager_priority(node, processes)
+    verify_speech_out(node, processes)
     print("=== T14 실제 manager 접수 + 실제 TTS 재생 경로 확인 ===")
     print("범위: 격리 도메인 IDLE 우선순위 접수 + 시험기 Say 출력.")
     print("미검증: manager 자체 Say 생성→TTS, 실로봇·마이크·HMI 통합.")
