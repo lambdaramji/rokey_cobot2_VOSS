@@ -109,7 +109,7 @@ source install/setup.bash
 python3 -m pytest -q scripts/integration/test_t14_trial_checks.py
 
 # 실제 manager·speech_out, 로봇 비구동/격리
-ROS_DOMAIN_ID=179 ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST \\
+ROS_DOMAIN_ID=179 ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST \
   python3 scripts/integration/t14_manager_tts_trial.py
 ```
 
