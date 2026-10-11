@@ -409,6 +409,7 @@
 
 - 틱의 `visible` 은 "사각 아님 + 마지막으로 받은 메시지가 valid"(`belt_servo.py`)라 새 프레임이 없어도 `lost_timeout_s`(0.5) 가 지날 때까지 True 로 남는다. **처음 적은 "OK·LOST 모두 DESCEND+0.83~0.87 s, z 110.9~112.4 마지막 관측" 은 이 마지막 `visible` 틱이었고 실제 관측이 아니다(10/11 정정).** LOST 회차의 "틱에 TCP 기록 없음" 도 `tcp_now_m`·`tcp_target_m` 등이 비는 것이고 `tcp_pose_m` 은 남아 있다.
 - 차이: OK 회차는 마지막 `visible` 틱 바로 다음 틱(0.03~0.04 s 뒤)에 `vision_blind`(사각)로 들어가 하강을 이었다. LOST 회차는 사각에 들어가기 전(z 112.1~113.9)에 box_lost 가 먼저 났다. 비스듬히 넣은 회차는 마지막 BoxTrack 이 조금 이르다(0.26~0.28 s, OK 0.31~0.41 s). *(판정은 박병후 — voss_servo)*
+- G1 s1 OK 20회 전체(같은 틱 로그): 마지막 BoxTrack **DESCEND+0.37~0.47 s**, 사각 진입 z 110.1~112.2, 사각 진입 직전 틱의 `obs_age_s` **0.40~0.48 s**. LOST 3회(26·31·33)는 `obs_age_s` 0.56~0.59 s 의 다음 틱에서 LOST — 20회 모두 시야가 하강 초반(윗면 +30 대)에 끊기고 사각에 먼저 들어가 성공했다.
 - 이 시험들 동안 box_tracker `Hz < 25` 0.
 - 시험 뒤 sort_manager 는 LOST 마다 PAUSED → T8 재기동 반복(세션 e4bd·696d·e86f·eb6e). 17:10:39 `명령 거부: PAUSED 에서는 resume`.
 
