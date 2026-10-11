@@ -148,8 +148,9 @@ ROS_DOMAIN_ID=179 ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST python3 scripts/integr
 **2)** `헬로 로키, 보류 몇 개야`를 각각 한 번 말한다. 키보드 입력을
 마이크로 간주하지 않는다. 마이크/보이스 패키지가 없거나 입력 장치가 없으면
 text 폴백을 탐지하고 **실패** 처리한다. 로컬 FastAPI `/ai/stt`를 실제 호출한다.
-첫 마이크 STT는 Whisper 초기 적재 때문에 오래 걸릴 수 있으므로
-대기 상한 85 s(시험 대기값; 서비스의 STT timeout 자체는 5 s)다.
+마이크 입력 전에 무음 WAV로 Whisper를 사전 적재한다(녹음 파일 생성 없음).
+사전 적재 HTTP 상한은 90초이고, 발화 입력 대기 상한은 85초다.
+음성 노드 자체 STT timeout은 5초로 유지한다.
 실제 manager priority 수락과 ROS 이력 안내 `/voss/voice/say`·`speech_out`
 첫 PCM ≤3 s·재생 완료를 검증한다. 음성 청취 여부는 사람이 판정한다.
 
