@@ -123,3 +123,42 @@ ROS_DOMAIN_ID=179 ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST \
 로봇 안전 점검/비상정지 준비를 마친 후 기존 공식 ROS 도메인의 실제 manager,
 TTS, HMI/DB 상태를 별도 검증한다. 이 스크립트 2건 PASS만으로
 T14 #23 전체 완료 처리 금지.
+
+## T14 후속 1회 통합: 실제 마이크 → Whisper → manager + 이력 → TTS
+
+**모두 Nodes PC에서만 실행.** 별도 ROS_DOMAIN_ID=179과 LOCALHOST 탐색이 필수.
+이 시험은 실제 `voice_listener(mode=mic)`, `intent_parser`, `sort_manager`,
+`speech_out`를 실행한다. 실제 로봇/서보/게이트웨이 서비스·액션에는 연결하지
+않으며, `start`·`resume`·`stop`·`answer` 명령은 시험에서 발행하지 않는다.
+manager는 IDLE에서 `priority`만 접수한다. `hmi_bridge`를 별도 도메인에서 실행해
+공유 MQTT 상태를 오염시키지 않는다.
+
+```bash
+# [Nodes PC — ms-03@ms-03] Web PC 작업 없음
+cd ~/collaboration/rokey_cobot2_VOSS-t13 || exit 1
+git pull --ff-only origin feat/22-web-hmi-initial || exit 1
+source /opt/ros/jazzy/setup.bash
+colcon build --packages-up-to voss_manager voss_voice --symlink-install || exit 1
+source install/setup.bash
+python3 -m pytest -q scripts/integration/test_t14_trial_checks.py || exit 1
+ROS_DOMAIN_ID=179 ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST python3 scripts/integration/t14_mic_history_speech_trial.py
+```
+
+스크립트 화면이 지시하는 때 마이크에 **1)** `헬로 로키, 역삼동부터 분류해`,
+**2)** `헬로 로키, 보류 몇 개야`를 각각 한 번 말한다. 키보드 입력을
+마이크로 간주하지 않는다. 마이크/보이스 패키지가 없거나 입력 장치가 없으면
+text 폴백을 탐지하고 **실패** 처리한다. 로컬 FastAPI `/ai/stt`를 실제 호출한다.
+첫 마이크 STT는 Whisper 초기 적재 때문에 오래 걸릴 수 있으므로
+대기 상한 85 s(시험 대기값; 서비스의 STT timeout 자체는 5 s)다.
+실제 manager priority 수락과 ROS 이력 안내 `/voss/voice/say`·`speech_out`
+첫 PCM ≤3 s·재생 완료를 검증한다. 음성 청취 여부는 사람이 판정한다.
+
+이력 데이터는 동일 Web PC의 Spring Boot `GET /api/sessions/current`를 먼저
+읽는다. 현재 세션이 없으면 `GET /api/stats`의 `NO_SESSION` 폴백 안내
+`기록을 조회할 수 없습니다.`만 검사하여 **실제 DB 집계 검증 미완료**라고 표시한다.
+현재 세션이 있으면 `보류는 N개입니다.` 안내를 검사하지만 정확한 DB 행 수와의
+일치 여부는 별도 검증이 필요하다. HMI React 화면 DOM 반영과 manager가
+자체 생성한 안내를 TTS로 보내는 경로, 실로봇 움직임은 이 시험 범위 밖이다.
+로그: `~/.local/state/voss-t14/manager-tts/`. 격리 도메인에 기존 노드가 남아
+있으면 자동 종료하지 않고 중단한다. 환경에 문제가 생겨도 Web PC 컨테이너,
+SSH 터널, 메인 ROS 도메인의 서비스를 재시작하지 않는다.
