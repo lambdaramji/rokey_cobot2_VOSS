@@ -75,7 +75,7 @@ class CommandControllerTest {
     @Test
     void testWebPcLocalStartIsRejectedWhenOperatorIsNodesPc() throws Exception {
         ReflectionTestUtils.setField(controller, "nonstopCommandsEnabled", true);
-        ReflectionTestUtils.setField(controller, "operatorIp", "172.24.3.240");
+        ReflectionTestUtils.setField(controller, "operatorIp", "192.0.2.10");
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("X-Real-IP", "127.0.0.1");
         ApiException error = assertThrows(ApiException.class, () ->
@@ -88,9 +88,9 @@ class CommandControllerTest {
     @Test
     void testNodesPcOperatorStartIsAllowedWhenExplicitlyEnabled() throws Exception {
         ReflectionTestUtils.setField(controller, "nonstopCommandsEnabled", true);
-        ReflectionTestUtils.setField(controller, "operatorIp", "172.24.3.240");
+        ReflectionTestUtils.setField(controller, "operatorIp", "192.0.2.10");
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.addHeader("X-Real-IP", "172.24.3.240");
+        request.addHeader("X-Real-IP", "192.0.2.10");
         var response = controller.command(
                 mapper.readTree("{\"type\":\"start\",\"args\":{}}"), request);
         assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
