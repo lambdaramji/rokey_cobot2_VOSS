@@ -6,7 +6,8 @@ seg 파라미터(`src/voss_vision/config/box_tracker.yaml`)다.
 
 녹화 재생(주) — G1 bag(g0-runbook 3절 녹화 명령의 토픽). voss_msgs 가 빌드된 워크스페이스를 source 한다:
   source /opt/ros/jazzy/setup.bash && source ~/voss_ws/install/setup.bash
-  python3 tools/vision/box_overlay.py ~/voss_data/1010/g1_05 [--start 12 --end 30] [--out g1_05.mp4] [--csv g1_05.csv] [--show]
+  python3 tools/vision/box_overlay.py ~/voss_data/1010/g1_s1_clips/t26 [--start 12 --end 30] [--out t26.mp4] [--csv t26.csv] [--show]
+  (잘라낸 bag 은 액션 feedback·status 의 message definition 이 비어 있을 수 있다 — 이 도구는 설치된 voss_msgs 로 읽어 상관없다)
 실시간 — 공용 PC, 10/11 통합부터. 게이트 측정 중에는 띄우지 않는다(영상 구독이 하나 더 붙어 부하가 는다):
   python3 tools/vision/box_overlay.py --live [--candidates] [--hz 10] [--out live.mp4]
 
