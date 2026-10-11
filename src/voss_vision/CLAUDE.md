@@ -3,6 +3,7 @@
 - 깊이 사용 금지. RGB + 박스 높이 27 mm. 픽셀 → 베이스 변환은 비전 단일 책임 → `BoxTrack.position_base`(관측 박스 윗면 중심, m. TCP 목표 아님 — 서보가 계산).
   - 관측 자세 정지: `belt_plane.pixel_to_base_xy` + `config/belt_homography.yaml` (ADR-0003, `calib_hull_px` 밖은 무효).
   - **이동 중: G0 필수.** 핸드아이(`config/hand_eye.yaml` 10/08 확정, `moving_verified: true`, 수직 공구에서만 유효) + **촬영 시각 + `pose_lag_ms`(60) 의 pose**(보간, 아직 없으면 80 ms 까지 앞으로 외삽) + 박스 윗면 평면 교점(`HAND_EYE`). calibration.md·ADR-0003 10/08.
+  - **`pose_lag_ms` 다시 재기**: pose 소스(#118 `service`/`joint_states`)를 바꾸면 stamp 의미가 바뀌므로 `tools/calib/pose_lag_eval.py`(계산 `pose_lag.py`)로 다시 잰다. 합성 시험: 계단 pose(0.1 s)에 지연 60 ms 면 고른 lag ≈ 90 ms·이동 최대 1.7 mm, 부드러운 pose·지연 0 이면 0 ms·0.3 mm — 계단은 갱신 간격 절반쯤 지연을 더한다.
   - 카메라 USB 가 끊기면 box_tracker 는 살아 있어 sort_manager 가 모른다 → 5초 로그의 Hz 를 본다(25 Hz 밑이면 WARN).
 - 추론 지연 예산: 검출 ≤ 20 ms, 루프 ≤ 100 ms. 지연 측정 로그를 남긴다.
 - OCR: 분류코드(5.5 mm, 약 30 px)·동 이름(4.5 mm) 만 읽는다. 받는 사람은 무시. 편집거리 퍼지 매칭은 순수 함수로 두고 pytest.
