@@ -1,0 +1,21 @@
+// T13 #22 Spring Boot REST·SSE·MQTT 및 PostgreSQL 조회 의존성.
+// 입력: Java 21 소스와 JUnit 테스트.
+// 출력: 실행 JAR와 테스트 결과.
+// 근거: ADR-0006, docs/interfaces/web_api.md, mqtt.md.
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.5.16'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+group = 'com.voss'
+version = '0.1.0-SNAPSHOT'
+java { toolchain { languageVersion = JavaLanguageVersion.of(21) } }
+repositories { mavenCentral() }
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.integration:spring-integration-mqtt'
+    implementation 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5'
+    runtimeOnly 'org.postgresql:postgresql'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+tasks.named('test') { useJUnitPlatform() }

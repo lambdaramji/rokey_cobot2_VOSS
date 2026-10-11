@@ -1,0 +1,12 @@
+# Gradle 실행 중 자동 생성되는 캐시·빌드 파일
+.gradle/
+build/
+
+# 실제 비밀 설정은 Git에 올리지 않는다.
+.env
+.env.*
+!.env.example
+
+# 개인 개발 도구 설정
+.idea/
+*.iml
