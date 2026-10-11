@@ -7,6 +7,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.voss.web.api.ApiException;
 import com.voss.web.service.MqttLinkStatusStore;
+import com.voss.web.service.LiveEvents;
 import java.util.Map;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -20,30 +21,47 @@ public class MqttCommandPublisher {
     private final ObjectProvider<MessageChannel> channel;
     private final MqttLinkStatusStore link;
     private final ObjectMapper mapper;
+    private final LiveEvents events;
 
     /** 선택적으로 구성된 MQTT 발행 채널을 받는다. */
     public MqttCommandPublisher(@Qualifier("mqttCommandChannel") ObjectProvider<MessageChannel> channel,
-                                MqttLinkStatusStore link, ObjectMapper mapper) {
+                                MqttLinkStatusStore link, ObjectMapper mapper, LiveEvents events) {
         this.channel = channel;
         this.link = link;
         this.mapper = mapper;
+        this.events = events;
     }
 
-    /** 브로커 연결을 확인한 뒤 QoS 1로 명령을 전달한다. */
+    /** 링크 DOWN 이후에도 실제 발행 재시도로 복구를 확인한다. */
     public void publish(Map<String,Object> command) {
-        if (link.getStatus() != MqttLinkStatusStore.MqttLinkStatus.UP) { throw unavailable(); }
         MessageChannel outbound = channel.getIfAvailable();
         if (outbound == null) { throw unavailable(); }
         try {
             String payload = mapper.writeValueAsString(command);
             boolean sent = outbound.send(MessageBuilder.withPayload(payload).build(), 1500);
-            if (!sent) { throw unavailable(); }
+            if (!sent) {
+                markLinkDown();
+                throw unavailable();
+            }
+            markLinkUp();
         } catch (JsonProcessingException exception) {
             throw unavailable();
         } catch (org.springframework.messaging.MessagingException exception) {
-            link.markDisconnected();
+            markLinkDown();
             throw unavailable();
         }
+    }
+
+    /** 발행 성공·실패를 링크 SSE에 즉시 반영한다. */
+    private void markLinkUp() {
+        if (link.getStatus() == MqttLinkStatusStore.MqttLinkStatus.UP) { return; }
+        link.markConnected();
+        events.publishLink();
+    }
+
+    private void markLinkDown() {
+        link.markDisconnected();
+        events.publishLink();
     }
 
     /** MQTT_DOWN을 공통 HTTP 오류로 표현한다. */
