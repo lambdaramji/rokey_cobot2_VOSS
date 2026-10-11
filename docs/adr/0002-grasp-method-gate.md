@@ -20,15 +20,15 @@
 belt_servo 의 액션 인터페이스(`/voss/servo/track_and_grasp`)는 A·B 어느 쪽이든 동일하게 유지해 sort_manager 가 영향받지 않게 한다.
 
 ## 판정 (2026-10-10, G1 게이트) — 통과, A안 유지
-- **측정:** G1 시리즈 s1, **20사례 중 20 성공(100 %), 최초 시도 성공 20, 무효 6** (measurements-1010 "G1 시리즈 s1"·"의도 시험", 집계 gate_summary #137). 벨트 h250(실측 4.76 cm/s), main `9aa1162`, belt_servo `params_sha256` `215e6274f074…`(Kp 1.0, 쥔 폭 39.5~44.0, `input.pose_lag_ms` 0), box_tracker `pose_lag_ms` 15(#140), gateway `pose_source:=joint_states`, goal 경로 sort_manager.
+- **측정:** G1 시리즈 s1, **20사례 중 20 성공(100 %), 최초 시도 성공 20, 무효 6** (measurements-1010 "G1 시리즈 s1"·"의도 시험", 집계 gate_summary #137). 벨트 h250(실측 4.76 cm/s), main `9aa1162`, belt_servo `params_sha256` `215e6274f074…`(Kp 1.0, 쥔 폭 39.5~44.0, `input.pose_lag_ms` 0, `retry.max_attempts` 1 — 재시도 꺼짐, U9 전), 그리퍼 39 mm·14 N, box_tracker `pose_lag_ms` 15(#140), gateway `pose_source:=joint_states`, goal 경로 sort_manager.
 - **무효 6:** 실행자가 일부러 박스를 비스듬히 넣거나 뒤집은 시험(g1-gate 1절 무효 ① "정한 위치·방향과 다르게 놓음"). 이 중 17:01 회차(track 26, DESCEND 중 LOST)는 결과가 나온 뒤 의도 시험으로 분류됐다 — **이 회차를 분모에 넣어도 19/20(95 %)으로 판정은 같다.**
 - **실패 원인:** 분모 20 안 0. (17:01 회차를 넣으면 L 1)
 - **성공 확인:** 20/20 모두 result `OK`·`grasped=true`·VERIFY 재닫기 `grip_detected` True, 이어서 적재(PLACED 19, 10회차는 재확인 칸 적재 뒤 PICK 미구현으로 HELD — 파지와 무관). g1-gate 1절의 "영상에서 안전 높이까지 들려 있음"은 회차별 기록이 따로 없어 적재 결과로 대신했다.
 - **결정: 통과 — A안(폐루프 FF+P) 유지.** B안(개루프) 준비는 하지 않는다.
 - **이유:** 기준 14/20(70 %, ADR-0012 승인값)을 어느 집계로도 크게 넘는다(20/20 또는 19/20).
 - **남은 위험**(결정에는 영향 없음, 후속):
-  - 비스듬히 넣은 박스 4회 중 DESCEND LOST 3, 뒤집은 박스 2회 TRACK LOST(시작 간격 +32~34 mm). 시연은 박스 방향을 정한 대로 넣는 투입 규칙으로 관리하고(T23 시연 대본), 원인 판정은 박병후(#36).
+  - 비스듬히 넣은 박스 4회 중 DESCEND LOST 3, 뒤집은 박스 2회 TRACK LOST(시작 간격 +32~34 mm). 시연은 박스 방향을 정한 대로 넣는 투입 규칙으로 관리한다(T23 시연 대본). 원인 확인: 기울인 박스 DESCEND LOST 는 박병후(#36), 뒤집은 박스 TRACK LOST(마지막 BoxTrack 이 goal 시작 0.24 s 전 — servo 추종 전에 관측이 끊김)는 남현지(vision·sort_manager).
   - 벨트 속도는 h250 한 가지에서만 쟀다. 속도를 바꾸면 다시 잰다(g1-gate 고정 조건).
-  - **하강 중 시야 여유가 매우 적다.** g1_s1 녹화 재생(#149 도구, 10/11 김학민)으로 실제 마지막 BoxTrack 은 OK·LOST 모두 DESCEND 뒤 0.26~0.47 s, 윗면 +31~37 mm 이고(송장이 화면 아래 끝에 걸려 버려짐), belt_servo 는 윗면 + 10 mm 부터 사각으로 본다. OK 20회는 사각 진입 때 관측 나이 0.40~0.48 s 로 `lost_timeout_s` 0.5 s 에 **0.02~0.10 s 여유**로 통과했고, 기울인 박스 3회는 0.56~0.59 s 로 LOST 였다(measurements-1010 의도 시험 비교). 하강 속도·벨트 속도·박스 자세가 조금만 바뀌어도 반듯한 박스가 LOST 날 수 있어 **10/13 전체 루프 통합 전에 servo 쪽 대응**(예: `vision_cutoff_above_top_mm` 를 끊기는 높이 위로, 또는 사각 판정·`lost_timeout_s` 조정 — 박병후 판단)을 정한다. 판정(통과)은 바꾸지 않는다 — 측정 조건 그대로 20/20 이다.
-- **영향:** 없음 — belt_servo·액션 인터페이스 그대로. 일정: 10/13 전체 루프 통합 그대로.
+  - **하강 중 시야 여유가 매우 적다.** g1_s1 녹화 재생(#149 도구, 10/11 김학민)으로 실제 마지막 BoxTrack 은 OK·LOST 모두 DESCEND 뒤 0.26~0.47 s, 윗면 +31~37 mm 이고(송장이 화면 아래 끝에 걸려 버려짐), belt_servo 는 윗면 + 10 mm 부터 사각으로 본다. OK 20회는 사각 진입 때 관측 나이 0.40~0.48 s 로 `lost_timeout_s` 0.5 s 에 **0.02~0.10 s 여유**로 통과했고, 기울인 박스 3회는 0.56~0.59 s 로 LOST 였다(measurements-1010 의도 시험 비교). 하강 속도·벨트 속도·박스 자세가 조금만 바뀌어도 반듯한 박스가 LOST 날 수 있어 **10/13 전체 루프 통합 전에 servo 쪽 대응**(예: `vision_cutoff_above_top_mm` 를 끊기는 높이 위로, 또는 사각 판정·`lost_timeout_s` 조정 — 박병후 판단)을 정한다. 판정(통과)은 바꾸지 않는다 — 측정 조건 그대로 20/20 이다. servo 파라미터(박병후 계획 `vision_cutoff_above_top_mm` 10 → 30)나 그리퍼 힘(#152 14 → 12 N)을 바꾸면 위 sha 는 새 조건의 근거가 되지 않으므로, **h250 에서 반듯한 박스 10회 이상 다시 재고**(gate_summary) 결과를 measurements 에 붙인다. 판정은 다시 하지 않는다.
+- **영향:** 인터페이스 영향 없음(액션 `/voss/servo/track_and_grasp` 그대로). belt_servo 파라미터는 위 대응으로 바뀔 수 있다. 일정: 10/13 전체 루프 통합 그대로.
 - 결정자 전원(2026-10-11 Slack 👍 4/4: 김학민 · 박병후 · 정의석 · 남현지), 기록 PL 남현지.
