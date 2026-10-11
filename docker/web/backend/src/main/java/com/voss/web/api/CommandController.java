@@ -4,6 +4,7 @@
 package com.voss.web.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.voss.web.mqtt.MqttCommandPublisher;
 import com.voss.web.mqtt.MqttEventRouter;
 import com.voss.web.service.SortStateStore;
@@ -13,7 +14,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,14 +29,6 @@ public class CommandController {
     private final MqttEventRouter router;
     private final SortStateStore states;
     private final TimeProvider clock;
-
-    // 2대 PC 시험 중에는 웹 PC의 localhost를 공용 PC로 오인하지 않는다.
-    // 비-stop 명령은 별도 현장 승인 후에만 열 수 있다 (deployment_two_pc_trial.md).
-    @Value("${VOSS_NONSTOP_COMMANDS_ENABLED:false}")
-    private boolean nonstopCommandsEnabled;
-
-    @Value("${VOSS_OPERATOR_IP:127.0.0.1}")
-    private String operatorIp = "127.0.0.1";
 
     /** 명령 발행과 zone_map·현재 질문 정보를 연결한다. */
     public CommandController(MqttCommandPublisher publisher, MqttEventRouter router,
@@ -54,10 +46,13 @@ public class CommandController {
         if (!request.isObject() || !request.path("type").isTextual()) { throw invalid(); }
         String type = request.path("type").asText();
         if (!COMMAND_TYPES.contains(type)) { throw invalid(); }
-        if (!"stop".equals(type) && (!nonstopCommandsEnabled || !isOperator(servletRequest))) {
+        if (!"stop".equals(type) && !isOperator(servletRequest)) {
             throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN_REMOTE", "공용 PC에서만 제어할 수 있습니다.");
         }
         JsonNode args = request.get("args");
+        if (args == null && "stop".equals(type)) {
+            args = JsonNodeFactory.instance.objectNode();
+        }
         if (args == null || !args.isObject()) { throw invalid(); }
         validate(type, args);
         JsonNode raw = request.path("raw_text");
@@ -74,11 +69,10 @@ public class CommandController {
         return ResponseEntity.accepted().body(Map.of("ok", true, "command_id", commandId));
     }
 
-    /** Nginx가 덮어쓴 X-Real-IP와 지정된 운영자 PC만 비교한다. IP는 강한 인증이 아니다. */
+    /** 비-stop 명령은 공용 PC의 로컬 Nginx 헤더에서만 허용한다 (web_api.md #68). */
     private boolean isOperator(HttpServletRequest request) {
         String realIp = request.getHeader("X-Real-IP");
-        if (operatorIp.equals(realIp)) { return true; }
-        return "127.0.0.1".equals(operatorIp) && "::1".equals(realIp);
+        return "127.0.0.1".equals(realIp) || "::1".equals(realIp);
     }
 
     /** 명령별 허용 인자 외에는 ROS로 전달하지 않는다. */
