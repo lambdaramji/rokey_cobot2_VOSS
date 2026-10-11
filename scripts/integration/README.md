@@ -67,8 +67,7 @@ colcon build --packages-up-to voss_voice --symlink-install
 source install/setup.bash
 
 # 이 명령 줄에만 시험용 ROS 격리 설정 적용 (현재 셸 ROS_DOMAIN_ID를 변경하지 않음).
-ROS_DOMAIN_ID=179 ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST \\
-  python3 scripts/integration/t14_voice_dry_run.py
+ROS_DOMAIN_ID=179 ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST python3 scripts/integration/t14_voice_dry_run.py
 ```
 
 - 실제 `voice_listener(mode=text)`·`intent_parser`와 Web PC 실시간 `/ai/intent`,
