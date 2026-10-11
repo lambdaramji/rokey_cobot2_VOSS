@@ -7,6 +7,7 @@ from voss_robot.zone_motion import (
     pick_grip_ok,
     pick_pose,
     plan_move,
+    search_travel_z,
     slot_offset,
     slot_pose,
 )
@@ -135,3 +136,54 @@ def test_travel_cache_put_replaces_and_caps():
     c.put([100.0, *C2[1:]], 2, 120.0, OFF, 446.6)
     c.put([200.0, *C2[1:]], 2, 120.0, OFF, 446.6)
     assert len(c) == 2 and not c.get(C2, 2, 120.0, OFF)[0]  # 가장 오래된 것부터 버림
+
+
+LADDER = [446.6, 436.6, 426.6, 416.6, 406.6, 396.6]  # safe_z 부터 하한까지 10 mm 씩
+
+
+class FakeIk:
+    """ik_ok(z) 대역: reach 이하 높이만 풀림, error 높이는 호출 실패(None). 부른 높이를 남긴다."""
+
+    def __init__(self, reach=None, error=()):
+        self.reach, self.error, self.calls = reach, set(error), []
+
+    def __call__(self, z):
+        self.calls.append(z)
+        if z in self.error:
+            return None
+        return self.reach is not None and z <= self.reach + 1e-6
+
+
+def test_search_finds_highest_reachable_and_keeps():
+    ik = FakeIk(reach=416.6)
+    assert search_travel_z(LADDER, ik) == (416.6, True)
+    assert search_travel_z(LADDER, FakeIk()) == (None, True)  # 닿지 않음도 저장한다
+
+
+def test_search_cached_height_one_ikin():
+    ik = FakeIk(reach=416.6)
+    assert search_travel_z(LADDER, ik, (True, 416.6)) == (416.6, False)
+    assert ik.calls == [416.6]
+
+
+def test_search_cached_none_probes_floor_once():
+    """#153: 저장한 "닿지 않음"은 하한 높이 ikin 1회로만 다시 본다."""
+    ik = FakeIk()
+    assert search_travel_z(LADDER, ik, (True, None)) == (None, False)
+    assert ik.calls == [396.6]
+
+
+def test_search_cached_none_but_reachable_now_researches():
+    """#153: 미리 계산(관측 자세 씨앗) 때 None → 파지 끝 위치에서는 풀림 → 처음부터 찾아 새 값을 저장."""
+    ik = FakeIk(reach=406.6)
+    assert search_travel_z(LADDER, ik, (True, None)) == (406.6, True)
+    assert ik.calls[0] == 396.6 and ik.calls[1:] == LADDER[:5]
+
+
+def test_search_call_error_is_not_kept():
+    """#153: 두산 호출 실패(타임아웃 등)가 섞이면 "닿지 않음"·낮은 높이로 굳지 않게 저장하지 않는다."""
+    assert search_travel_z(LADDER, FakeIk(error={436.6})) == (None, False)
+    assert search_travel_z(LADDER, FakeIk(reach=416.6, error={446.6})) == (416.6, False)
+    # 저장한 None 을 확인하다 호출 실패 → 처음부터
+    ik = FakeIk(reach=426.6, error={396.6})
+    assert search_travel_z(LADDER, ik, (True, None)) == (426.6, True)

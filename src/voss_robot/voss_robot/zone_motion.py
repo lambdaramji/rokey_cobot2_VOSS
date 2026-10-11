@@ -11,7 +11,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 from voss_robot.geometry import zyz_to_matrix
 
@@ -131,3 +131,33 @@ class TravelCache:
 
     def __len__(self) -> int:
         return len(self._items)
+
+
+def search_travel_z(
+    ladder: Sequence[float],
+    ik_ok: Callable[[float], bool | None],
+    cached: tuple[bool, float | None] = (False, None),
+) -> tuple[float | None, bool]:
+    """이동 높이 찾기 → (플랜지 z 또는 None, 저장해도 되는지) (#147·#153).
+
+    ladder = safe_z 부터 하한까지 10 mm 씩 내려가는 플랜지 z, ik_ok(z) = 풀림 True · 안 풀림 False · 호출 실패
+    None. 저장한 값(cached)이 있으면 ikin 1회로만 확인한다 — 높이면 그 높이, "닿지 않음"이면 하한(ladder 끝).
+    ikin 은 지금 관절을 씨앗으로 푸는 수치 풀이라, 미리 계산(관측 자세) 때 안 풀린 칸이 파지 끝 위치에서
+    출발하면 풀릴 수 있다. 확인이 어긋나면 처음부터 찾는다. 찾는 중 호출 실패가 한 번이라도 있으면 결과를
+    저장하지 않는다(서비스 타임아웃이 "닿지 않음"으로 굳지 않게)."""
+    hit, z = cached
+    if hit:
+        if z is not None:
+            if ik_ok(z):
+                return z, False
+        elif not ladder:
+            return None, False
+        elif ik_ok(ladder[-1]) is False:
+            return None, False
+    err = False
+    for zz in ladder:
+        ok = ik_ok(zz)
+        if ok:
+            return zz, not err
+        err = err or ok is None
+    return None, not err

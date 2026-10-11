@@ -28,6 +28,10 @@ class DoosanError(RuntimeError):
     """두산 서비스 실패(응답 없음·success=false·서비스 없음)."""
 
 
+class DoosanRejected(DoosanError):
+    """컨트롤러가 응답했지만 success=false — 응답 없음·서비스 없음과 구분한다(ikin 닿지 않음, #153)."""
+
+
 # move_stop stop_mode: DR_QSTOP (Quick stop, Stop Category 2) — ADR-0010 "Quick stop"
 STOP_QSTOP = 1
 
@@ -185,7 +189,7 @@ class GuardedCaller:
         self.misses = 0
         res = fut.result()
         if res is None or not getattr(res, "success", False):
-            raise DoosanError(f"success=false: {client.srv_name}")
+            raise DoosanRejected(f"success=false: {client.srv_name}")
         return res
 
     def _miss(self) -> None:
@@ -346,7 +350,7 @@ class RosDoosan:
         return [float(v) for v in d[:6]], int(d[6])
 
     def ikin(self, tcp_posx: Sequence[float], sol: int) -> list[float] | None:
-        """TCP posx → 관절(deg). 못 풀면 None. 큐 작업 스레드에서만.
+        """TCP posx → 관절(deg). 못 풀면 None, 호출 실패는 DoosanError(닿지 않음과 구분, #153). 큐 작업 스레드에서만.
 
         두산 ikin 은 닿지 않는 자세에도 success=True 와 수렴하지 않은 관절값을 돌려준다(±350° 초과 — 10/08
         핸드아이 계획, 범위 안의 그럴듯한 값 — 10/08 HOLD +30 TCP 100 에서 move_line 1206). 결과는 지금 관절을
@@ -362,7 +366,7 @@ class RosDoosan:
             f = self._fk_srv.Request()
             f.pos, f.ref = j, 0
             back = self.caller.call(self._fk, f)
-        except DoosanError:
+        except DoosanRejected:  # 응답 없음·서비스 없음은 그대로 올린다
             return None
         err = sum(
             (a - float(b)) ** 2 for a, b in zip(tcp_posx[:3], back.conv_posx[:3], strict=True)

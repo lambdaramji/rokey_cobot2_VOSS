@@ -44,6 +44,7 @@ from voss_robot.zone_motion import (
     pick_grip_ok,
     pick_pose,
     plan_move,
+    search_travel_z,
     slot_pose,
 )
 
@@ -349,7 +350,8 @@ class RobotGatewayNode(Node):
 
     def _prewarm_travel(self) -> None:
         """기동 때 한 번: 관측 자세에 있으면 구역 칸·관측·VIEW 의 이동 높이를 미리 찾아 둔다(#147).
-        그동안 pose 는 낮아지지만 servo·MoveToZone 전이라 쓰는 곳이 없다. MoveToZone 요청은 끝날 때까지 기다린다."""
+        그동안 큐가 ikin 으로 차서 pose 가 낮다 — MoveToZone 과 같이 모션을 잡고 state BUSY(action PREWARM)로
+        둔다: servo_cmd 는 busy 로 거부, sort_manager 는 준비 안 됨(#153 리뷰). MoveToZone 요청은 끝날 때까지 기다린다."""
         if self._tz_cache is None or len(self.observe) != 6:
             return
         if not self._mlock.acquire(blocking=False):
@@ -357,6 +359,15 @@ class RobotGatewayNode(Node):
         self._warm_idle.clear()
         t0, n0 = time.monotonic(), self._tz_ik
         try:
+            with self._glock:
+                servo = self.guard.active
+                if not servo:
+                    self.guard.motion_busy = True
+            if servo:
+                self.get_logger().info("이동 높이 미리 계산 안 함: servo_cmd 추종 중")
+                return
+            self._zone_action = "PREWARM"
+            self._update_state()
             off, _why, cur, sol = self.queue.submit(self._ctrl_tcp).result(timeout=5.0)
             if off is None:
                 return
@@ -388,8 +399,12 @@ class RobotGatewayNode(Node):
         except Exception as e:  # 큐 응답 없음 등 — MoveToZone 때 다시 찾는다
             self.get_logger().warn(f"이동 높이 미리 계산 실패: {e}")
         finally:
+            with self._glock:
+                self.guard.motion_busy = False
+            self._zone_action = ""
             self._mlock.release()
             self._warm_idle.set()
+            self._update_state()
 
     def _set_tcp_note(self, off) -> None:
         """잰 컨트롤러 TCP 를 RobotState.detail 에 남긴다(같음이면 비움)."""
@@ -791,30 +806,36 @@ class RobotGatewayNode(Node):
         가장 높은 플랜지 z. TCP z 가 min_tcp_z(기본 최저 이동 높이)보다 낮아지면 None. ikin 은 한 번씩 큐로
         보낸다(그 사이 pose 읽기가 끊기지 않게)."""
         floor = self.min_travel_tcp_z if min_tcp_z is None else min_tcp_z
-        if self._tz_cache is not None:  # 같은 칸에서 찾은 높이 — 풀리는지 한 번만 다시 본다(#147)
-            hit, z = self._tz_cache.get(xy_pose, sol, floor, self._cmd_off)
-            if hit and (z is None or self._ik_ok([xy_pose[0], xy_pose[1], z, *xy_pose[3:]], sol)):
-                return z
-        z = self.safe_z
-        while True:
-            flange = [xy_pose[0], xy_pose[1], z, *xy_pose[3:]]
-            # 툴 길이 246.642 라 10 mm 단계가 TCP 69.96 처럼 떨어진다
-            if flange_to_tcp(flange, self.tcp)[2] < floor - 0.5:
-                z = None
-                break
-            if self._ik_ok(flange, sol):
-                break
+
+        def at(z):
+            return [xy_pose[0], xy_pose[1], z, *xy_pose[3:]]
+
+        ladder, z = [], self.safe_z
+        # 툴 길이 246.642 라 10 mm 단계가 TCP 69.96 처럼 떨어진다
+        while flange_to_tcp(at(z), self.tcp)[2] >= floor - 0.5:
+            ladder.append(z)
             z -= 10.0
-        if self._tz_cache is not None:
-            self._tz_cache.put(xy_pose, sol, floor, self._cmd_off, z)
+        cache = self._tz_cache
+        # 같은 칸에서 찾은 값은 ikin 1회로만 다시 본다 — "닿지 않음"이면 하한에서(#147·#153)
+        cached = (
+            cache.get(xy_pose, sol, floor, self._cmd_off) if cache is not None else (False, None)
+        )
+        z, keep = search_travel_z(ladder, lambda z: self._ik_ok(at(z), sol), cached)
+        if cache is not None and keep:
+            cache.put(xy_pose, sol, floor, self._cmd_off, z)
         return z
 
-    def _ik_ok(self, flange, sol: int) -> bool:
-        """플랜지 posx 가 지금 관절 배치(sol)로 풀리고 J3 여유가 있는지. ikin 은 컨트롤러 등록 TCP 기준이라
-        _run_path 가 잰 오프셋(_cmd_off)으로 바꿔 보낸다."""
+    def _ik_ok(self, flange, sol: int) -> bool | None:
+        """플랜지 posx 가 지금 관절 배치(sol)로 풀리고 J3 여유가 있는지. 두산 호출 실패면 None(닿지 않음과
+        구분 — 이동 높이 캐시에 넣지 않는다, #153). ikin 은 컨트롤러 등록 TCP 기준이라 _run_path 가 잰
+        오프셋(_cmd_off)으로 바꿔 보낸다."""
         cmd = flange_to_tcp(flange, self._cmd_off)
         self._tz_ik += 1
-        j = self.queue.submit(lambda: self.dsr.ikin(cmd, sol)).result(timeout=3.0)
+        try:
+            j = self.queue.submit(lambda: self.dsr.ikin(cmd, sol)).result(timeout=3.0)
+        except DoosanError as e:
+            self.get_logger().warn(f"ikin 호출 실패: {e}")
+            return None
         return j is not None and abs(j[2]) >= self.min_j3_deg
 
     def _in_tray(self, slot_flange, stage, sol: int):
