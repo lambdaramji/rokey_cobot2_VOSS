@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 
 @dataclass
 class ServoParams:
-    watchdog_s: float = 0.2  # F-04 제안값(PR #84). 실측 후 확정
+    watchdog_s: float = 0.2  # F-04 실측(ADR-0010)
     max_speed_mm_s: float = 100.0  # 선속도 크기 상한 (벨트 48 mm/s 추종 + 보정 여유)
     # 벨트 위 파지 TCP z = 송장 윗면 100.8 − 19 = 81.8 mm, 벨트 면 ≈ 100.8 − 27 = 73.8 mm → 그 사이 78 mm
     z_min_mm: float = 78.0
