@@ -5,6 +5,7 @@ from t14_trial_checks import (
     count_finished_playbacks,
     history_scope,
     last_pcm_latency_ms,
+    matching_isolated_test_nodes,
     first_pcm_latency_ms,
     manager_accepted_priority,
     tts_finished,
@@ -65,3 +66,28 @@ def test_two_playbacks_are_required_for_two_announcements() -> None:
     assert count_finished_playbacks(log) == 1
     assert last_pcm_latency_ms(log) == 1550
     assert count_finished_playbacks(log + "TTS_FINISHED bytes=16000\n") == 2
+
+
+def test_cleanup_matches_only_local_domain_179_test_node() -> None:
+    """격리된 기존 intent_parser와 speech_out만 자동 정리 대상으로 인정한다."""
+    environment = b"ROS_DOMAIN_ID=179\0ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST\0"
+    command = b"/usr/bin/python3\0/home/ms-03/voss/install/voss_voice/lib/voss_voice/speech_out\0"
+    assert matching_isolated_test_nodes(command, environment) == {"speech_out"}
+    assert matching_isolated_test_nodes(b"/opt/ros/bin/ros2\0run\0voss_manager\0sort_manager\0", environment) == {"sort_manager"}
+
+
+def test_cleanup_never_matches_actual_robot_domain() -> None:
+    """동일한 노드 이름이라도 실제 로봇 도메인을 종료 대상으로 삼지 않는다."""
+    executable = b"/usr/bin/python3\0/opt/lib/voss_manager/sort_manager\0"
+    environment = b"ROS_DOMAIN_ID=30\0ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST\0"
+    assert matching_isolated_test_nodes(executable, environment) == set()
+
+
+def test_cleanup_requires_localhost_discovery_and_known_node_name() -> None:
+    """LOCALHOST 탐색이 아니거나 모르는 노드는 종료하지 않는다."""
+    command = b"/usr/bin/python3\0/opt/lib/voss_voice/intent_parser\0"
+    missing_localhost = b"ROS_DOMAIN_ID=179\0ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET\0"
+    assert matching_isolated_test_nodes(command, missing_localhost) == set()
+    isolated = b"ROS_DOMAIN_ID=179\0ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST\0"
+    assert matching_isolated_test_nodes(b"/usr/bin/python3\0/api/something.py\0", isolated) == set()
+    assert matching_isolated_test_nodes(b"/usr/bin/bash\0sort_manager\0", isolated) == set()
