@@ -57,8 +57,7 @@ export default function App() {
   const sessionId = state?.session_id ?? summary?.session_id ?? '';
   const dongs = useMemo(()=>zoneMap?.entries.map(entry=>entry.dong) ?? [],[zoneMap]);
   const controlEnabled = isLocal && mqtt === 'UP' && !busy;
-  // 정지 명령은 다른 요청의 busy 상태나 stale 링크 표시로 막지 않는다 (web_api.md).
-  const stopEnabled = true;
+  // stop은 busy·연결 표시와 무관하게 언제든 시도한다 (web_api.md).
 
   /** 공식 통계/이력은 항상 REST DB에서 다시 읽으며 메모리 MQTT 수치로 대체하지 않는다. */
   const refresh = useCallback(async () => {
@@ -163,7 +162,7 @@ export default function App() {
       <div className="main-grid">
         <div className="stack">
           <section className="panel"><div className="section-heading"><div><span className="eyebrow">01 / CONTROL</span><h2>운전 및 분류 제어</h2></div><span className="micro-note">시작·이동 명령은 공용 PC 로컬에서만</span></div>
-            <div className="button-cluster"><button className="action primary" disabled={!controlEnabled} onClick={()=>void command('start')}>▶ &nbsp; 시작</button><button className="action danger" disabled={!stopEnabled} onClick={()=>void command('stop')}>■ &nbsp; 정지</button><button className="action subdued" disabled={!controlEnabled} onClick={()=>void command('resume')}>↻ &nbsp; 재개</button></div>
+            <div className="button-cluster"><button className="action primary" disabled={!controlEnabled} onClick={()=>void command('start')}>▶ &nbsp; 시작</button><button className="action danger" onClick={()=>void command('stop')}>■ &nbsp; 정지</button><button className="action subdued" disabled={!controlEnabled} onClick={()=>void command('resume')}>↻ &nbsp; 재개</button></div>
             <div className="form-grid"><div className="field"><label htmlFor="planned">투입 예정 수량</label><div className="inline-input"><input id="planned" type="number" min="1" max="100" value={plannedText} onChange={event=>{setPlannedText(event.target.value);editingPlan.current=true;}}/><button disabled={busy} onClick={()=>void savePlan()}>저장</button></div></div><div className="field"><label htmlFor="priority">동별 우선 분류</label><div className="inline-input"><select id="priority" value={selectedDong} onChange={event=>setSelectedDong(event.target.value)}><option value="">동 선택</option>{dongs.map(dong=><option key={dong} value={dong}>{dong}</option>)}</select><button disabled={!controlEnabled||!selectedDong} onClick={()=>void command('priority',{dong:selectedDong})}>적용</button></div></div></div>
             <div className="form-grid"><div className="field"><label htmlFor="answer">작업자 답변 · 질문 박스 {state?.box_id||'없음'}</label><div className="inline-input"><select id="answer" value={answerDong} disabled={answerHold} onChange={event=>setAnswerDong(event.target.value)}><option value="">동 선택</option>{dongs.map(dong=><option key={dong} value={dong}>{dong}</option>)}</select><button disabled={!controlEnabled||displayState!=='ASKING'||!state?.box_id||(!answerHold&&!answerDong)} onClick={()=>void command('answer',answerHold?{box_id:state?.box_id??'',zone:'HOLD'}:{box_id:state?.box_id??'',dong:answerDong})}>답변</button></div><label className="checkbox"><input type="checkbox" checked={answerHold} onChange={event=>setAnswerHold(event.target.checked)}/> HOLD로 보류</label></div><div className="field"><label htmlFor="zone">구역 초기화</label><div className="inline-input"><select id="zone" value={selectedZone} onChange={event=>setSelectedZone(event.target.value)}>{ZONES.map(zone=><option key={zone}>{zone}</option>)}</select><button disabled={!controlEnabled} onClick={()=>void command('reset_zone',{zone:selectedZone})}>초기화</button></div></div></div>
             <p className="inline-notice" role="status">{notice}</p>
