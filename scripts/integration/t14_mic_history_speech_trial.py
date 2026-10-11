@@ -10,8 +10,6 @@ from __future__ import annotations
 import json
 import os
 import shutil
-import time
-from pathlib import Path
 from threading import Thread
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
@@ -23,7 +21,6 @@ from std_msgs.msg import String
 
 from t14_manager_tts_trial import (
     CONFIG_PATH,
-    PRIORITY_SENTENCE,
     SAFE_DOMAIN_ID,
     TrialProbe,
     manager_accepted_priority,
@@ -35,7 +32,7 @@ from t14_manager_tts_trial import (
     stop_processes,
     wait_until,
 )
-from t14_trial_checks import first_pcm_latency_ms, tts_finished
+from t14_trial_checks import expected_history_say, first_pcm_latency_ms, tts_finished
 
 API_SESSION_URL = "http://127.0.0.1:8080/api/sessions/current"
 HISTORY_SENTENCE = "보류 몇 개야"
@@ -47,7 +44,6 @@ MIC_COMMAND_TIMEOUT_S = 85.0
 MANAGER_RECEIVE_TIMEOUT_S = 8.0
 SPEECH_TIMEOUT_S = 45.0
 MAX_FIRST_PCM_MS = 3000
-TEST_LOG_DIR = Path.home() / ".local/state/voss-t14/mic-history"
 
 
 class MicHistoryProbe(TrialProbe):
@@ -139,20 +135,6 @@ def run_priority(node: MicHistoryProbe, processes: list) -> None:
     )
     print("PASS: 마이크→Whisper→intent_parser→실제 manager 접수", flush=True)
     print(f"Whisper 전사: {node.transcripts[-1] if node.transcripts else '(관측 없음)'}")
-
-
-def expected_history_say(session_id: str | None, says: list[str]) -> str | None:
-    """세션이 없으면 NO_SESSION만, 세션이 있으면 정상 집계 안내만 인정한다."""
-    if session_id == "":
-        for text in says:
-            if text == SAY_NO_SESSION:
-                return text
-        return None
-    if session_id:
-        for text in says:
-            if text.startswith("보류는 ") and text.endswith("개입니다."):
-                return text
-    return None
 
 
 def run_history(node: MicHistoryProbe, processes: list) -> None:
@@ -249,7 +231,7 @@ def main() -> None:
         run_all(node, processes)
     except (RuntimeError, OSError) as error:
         print(f"FAIL: {error}", flush=True)
-        print(f"시험 로그: {TEST_LOG_DIR} 또는 기존 manager-tts 로그 경로", flush=True)
+        print("시험 로그: ~/.local/state/voss-t14/manager-tts/", flush=True)
         raise SystemExit(1) from error
     finally:
         stop_processes(processes)
