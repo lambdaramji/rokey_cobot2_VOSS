@@ -2,6 +2,9 @@
 
 from t14_trial_checks import (
     expected_history_say,
+    count_finished_playbacks,
+    history_scope,
+    last_pcm_latency_ms,
     first_pcm_latency_ms,
     manager_accepted_priority,
     tts_finished,
@@ -48,3 +51,17 @@ def test_history_with_session_requires_count_sentence() -> None:
 def test_history_without_session_information_cannot_pass() -> None:
     """세션 REST가 실패하면 응답이 있어도 성공으로 판정하지 않는다."""
     assert expected_history_say(None, ["보류는 3개입니다."]) is None
+
+
+def test_all_scope_only_without_current_session() -> None:
+    """빈 세션에서만 all을 사용하며 정상 세션을 유지한다."""
+    assert history_scope("") == "all"
+    assert history_scope("20261011T123000-abcd") == "20261011T123000-abcd"
+
+
+def test_two_playbacks_are_required_for_two_announcements() -> None:
+    """manager와 DB 안내 각각 실제 재생 완료를 요구한다."""
+    log = "TTS_FIRST_PCM_WRITTEN receive_to_write_ms=1550\nTTS_FINISHED bytes=12000\n"
+    assert count_finished_playbacks(log) == 1
+    assert last_pcm_latency_ms(log) == 1550
+    assert count_finished_playbacks(log + "TTS_FINISHED bytes=16000\n") == 2
