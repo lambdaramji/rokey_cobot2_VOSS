@@ -15,7 +15,7 @@
    `T13 관측 준비 완료` 문구가 보이면 다음 단계로 넘어간다.
 2. **Nodes PC** (일반 ROS 도메인, 재기동 필요 없음):
    ```bash
-      source /opt/ros/jazzy/setup.bash
+   source /opt/ros/jazzy/setup.bash
    source install/setup.bash
    python3 scripts/integration/t13_dom_publisher.py
    ```
