@@ -30,6 +30,7 @@ export default function App() {
   const [stateReceivedAt,setStateReceivedAt] = useState<number|null>(null);
   const [zoneMap,setZoneMap] = useState<ZoneMap|null>(null);
   const [robot,setRobot] = useState<RobotState|null>(null);
+  const [robotReceivedAt,setRobotReceivedAt] = useState<number|null>(null);
   const [latestResult,setLatestResult] = useState<SortResult|null>(null);
   const [logStatus,setLogStatus] = useState('UNKNOWN');
   const [mqtt,setMqtt] = useState<LinkStatus>('DOWN');
@@ -48,11 +49,16 @@ export default function App() {
   const [busy,setBusy] = useState(false);
   const [clock,setClock] = useState(Date.now());
   const isLocal = LOCAL_HOSTS.has(location.hostname);
-  const displayState:DisplayState = stateReceivedAt !== null && clock-stateReceivedAt < TIMEOUT_MS ? (state?.state ?? 'UNKNOWN') : 'UNKNOWN';
+  const displayState:DisplayState = sseConnected && stateReceivedAt !== null && clock-stateReceivedAt < TIMEOUT_MS ? (state?.state ?? 'UNKNOWN') : 'UNKNOWN';
+  const robotFresh = sseConnected && mqtt === 'UP' && robotReceivedAt !== null && clock-robotReceivedAt < TIMEOUT_MS;
+  const displayRobot = robotFresh ? robot : null;
+  const displayLogStatus = sseConnected ? logStatus : 'UNKNOWN';
+  const displayMqtt = sseConnected ? mqtt : 'DOWN';
   const sessionId = state?.session_id ?? summary?.session_id ?? '';
   const dongs = useMemo(()=>zoneMap?.entries.map(entry=>entry.dong) ?? [],[zoneMap]);
   const controlEnabled = isLocal && mqtt === 'UP' && !busy;
-  const stopEnabled = mqtt === 'UP' && !busy;
+  // 정지 명령은 다른 요청의 busy 상태나 stale 링크 표시로 막지 않는다 (web_api.md).
+  const stopEnabled = true;
 
   /** 공식 통계/이력은 항상 REST DB에서 다시 읽으며 메모리 MQTT 수치로 대체하지 않는다. */
   const refresh = useCallback(async () => {
@@ -84,14 +90,23 @@ export default function App() {
   useEffect(()=>{
     const stream = new EventSource('/api/stream');
     stream.onopen=()=>setSseConnected(true);
-    stream.onerror=()=>setSseConnected(false);
+    stream.onerror=()=>{
+      setSseConnected(false);
+      setMqtt('DOWN');
+      setLogStatus('UNKNOWN');
+      setRobotReceivedAt(null);
+      setStateReceivedAt(null);
+    };
     stream.addEventListener('state',(event)=>{
       const data = JSON.parse((event as MessageEvent).data) as SortState;
       setState(data);
       setStateReceivedAt(Date.now());
     });
     stream.addEventListener('zone_map',(event)=>setZoneMap(JSON.parse((event as MessageEvent).data) as ZoneMap));
-    stream.addEventListener('robot',(event)=>setRobot(JSON.parse((event as MessageEvent).data) as RobotState));
+    stream.addEventListener('robot',(event)=>{
+      setRobot(JSON.parse((event as MessageEvent).data) as RobotState);
+      setRobotReceivedAt(Date.now());
+    });
     stream.addEventListener('result',(event)=>{setLatestResult(JSON.parse((event as MessageEvent).data) as SortResult);void refresh();});
     stream.addEventListener('log_status',(event)=>setLogStatus(JSON.parse((event as MessageEvent).data).status ?? 'UNKNOWN'));
     stream.addEventListener('link',(event)=>setMqtt(JSON.parse((event as MessageEvent).data).mqtt === 'UP' ? 'UP':'DOWN'));
@@ -135,7 +150,7 @@ export default function App() {
     <aside className="sidebar">
       <div className="brand"><div className="brand-symbol">V</div><div><strong>VOSS</strong><small>C-3 SORTING SYSTEM</small></div></div>
       <div className="navigation"><span className="nav-on">▣ &nbsp; 관제 대시보드</span><span>◈ &nbsp; 운전 및 분류</span><span>◷ &nbsp; 처리 이력</span></div>
-      <div className="sidebar-bottom"><span className="eyebrow">SYSTEM STATUS</span><p><span className={`status-led ${mqtt==='UP'?'is-up':''}`}/> MQTT {mqtt}</p><p><span className={`status-led ${sseConnected?'is-up':''}`}/> 실시간 SSE {sseConnected?'연결':'끊김'}</p><p><span className={`status-led ${logStatus==='OK'?'is-up':''}`}/> DB Logger {logStatus}</p><div className="muted tiny">공식 기록: PostgreSQL sort_log</div></div>
+      <div className="sidebar-bottom"><span className="eyebrow">SYSTEM STATUS</span><p><span className={`status-led ${displayMqtt==='UP'?'is-up':''}`}/> MQTT {displayMqtt}</p><p><span className={`status-led ${sseConnected?'is-up':''}`}/> 실시간 SSE {sseConnected?'연결':'끊김'}</p><p><span className={`status-led ${displayLogStatus==='OK'?'is-up':''}`}/> DB Logger {displayLogStatus}</p><div className="muted tiny">공식 기록: PostgreSQL sort_log</div></div>
     </aside>
     <main className="workspace">
       <header className="top-bar"><div><div className="eyebrow">OPERATION CENTER / LIVE MONITORING</div><h1>물류 분류 관제</h1><p className="subhead">로봇 동작, 박스 판독과 세션 기록을 한눈에 확인하세요.</p></div><div className="header-end"><span className="clock-label">{new Date(clock).toLocaleString('ko-KR')}</span><span className={`live-pill ${sseConnected?'connected':'disconnected'}`}>{sseConnected?'● LIVE':'● OFFLINE'}</span></div></header>
@@ -158,7 +173,7 @@ export default function App() {
           <section className="panel"><div className="section-heading"><div><span className="eyebrow">03 / HISTORY</span><h2>최근 분류 이력</h2></div><a className="text-link" href={`/api/export.csv?session_id=${encodeURIComponent(sessionId||'all')}`}>CSV 다운로드 ↗</a></div><div className="table-scroll"><table><thead><tr><th>박스 ID</th><th>동</th><th>분류</th><th>구역</th><th>시각</th></tr></thead><tbody>{items.length?items.map((item,index)=><tr key={`${item.box_id??'box'}-${index}`}><td>{item.box_id??'—'}</td><td>{item.dong??'—'}</td><td><span className={`chip ${item.result==='HELD'?'warning':''}`}>{String(item.result??item.outcome??'—')}</span></td><td>{item.zone??'—'}</td><td>{displayTime(item.finished_at)}</td></tr>):<tr><td colSpan={5} className="no-rows">표시할 이력이 없습니다.</td></tr>}</tbody></table></div></section>
         </div>
         <div className="stack">
-          <section className="panel"><div className="section-heading"><div><span className="eyebrow">ROBOT / TELEMETRY</span><h2>로봇 및 장비 상태</h2></div><span className={`chip ${robot?.connected&&mqtt==='UP'?'':'warning'}`}>{robot?.connected&&mqtt==='UP'?'CONNECTED':'NOT CONFIRMED'}</span></div><div className="robot-visual"><div className="robot-icon">◈</div><div><span className="eyebrow">ROBOT GATEWAY</span><strong>{robot?.state??'UNKNOWN'}</strong><small>{robot?.action??'상태 수신 대기'}</small></div></div><div className="key-values"><div><span>그리퍼 너비</span><strong>{typeof robot?.gripper_width_mm==='number'?`${robot.gripper_width_mm} mm`:'—'}</strong></div><div><span>오류 코드</span><strong>{robot?.error_code||'—'}</strong></div><div><span>준비 여부</span><strong>{displayState==='UNKNOWN'?'UNKNOWN':state?.ready?'READY':`NOT READY (${state?.not_ready?.join(', ')||'원인 없음'})`}</strong></div><div><span>현재 트랙</span><strong>{displayState==='UNKNOWN'?'—':state?.track_id??'—'}</strong></div></div></section>
+          <section className="panel"><div className="section-heading"><div><span className="eyebrow">ROBOT / TELEMETRY</span><h2>로봇 및 장비 상태</h2></div><span className={`chip ${displayRobot?.connected&&displayMqtt==='UP'?'':'warning'}`}>{robot?.connected&&mqtt==='UP'?'CONNECTED':'NOT CONFIRMED'}</span></div><div className="robot-visual"><div className="robot-icon">◈</div><div><span className="eyebrow">ROBOT GATEWAY</span><strong>{displayRobot?.state??'UNKNOWN'}</strong><small>{displayRobot?.action??'상태 수신 대기'}</small></div></div><div className="key-values"><div><span>그리퍼 너비</span><strong>{typeof displayRobot?.gripper_width_mm==='number'?`${displayRobot.gripper_width_mm} mm`:'—'}</strong></div><div><span>오류 코드</span><strong>{displayRobot?.error_code||'—'}</strong></div><div><span>준비 여부</span><strong>{displayState==='UNKNOWN'?'UNKNOWN':state?.ready?'READY':`NOT READY (${state?.not_ready?.join(', ')||'원인 없음'})`}</strong></div><div><span>현재 트랙</span><strong>{displayState==='UNKNOWN'?'—':state?.track_id??'—'}</strong></div></div></section>
           <section className="panel"><div className="section-heading"><div><span className="eyebrow">OCR / LAST RESULT</span><h2>최근 판독 결과</h2></div><span className="micro-note">MQTT voss/result</span></div><div className="ocr-card"><small>최근 처리 박스</small><strong>{latestResult?.box_id??'아직 처리된 박스가 없습니다'}</strong><div className="ocr-line"><span>인식 동</span><b>{latestResult?.dong??'—'}</b></div><div className="ocr-line"><span>분류 구역</span><b>{latestResult?.zone??'—'}</b></div><div className="ocr-line"><span>분류 결과</span><b>{latestResult?.outcome??'—'}</b></div><div className="ocr-line"><span>인식 신뢰도</span><b>{typeof latestResult?.confidence==='number'?`${(latestResult.confidence*100).toFixed(1)}%`:'—'}</b></div><div className="ocr-line"><span>원문</span><b>{latestResult?.raw_text??'—'}</b></div></div></section>
           <section className="panel"><div className="section-heading"><div><span className="eyebrow">EXCEPTIONS / HOLD</span><h2>보류 목록</h2></div><span className="count-badge">{held.length}건 표시</span></div><div className="hold-list">{held.length?held.map((item,index)=><div className="hold-item" key={`${item.box_id??'held'}-${index}`}><div><strong>{item.box_id??'—'}</strong><small>{item.dong??item.reason??'동 판독 대기'}</small></div><span>{item.zone??'HOLD'}</span></div>):<p className="empty">보류 중인 기록이 없습니다.</p>}</div></section>
         </div>
