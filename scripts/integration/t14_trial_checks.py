@@ -3,7 +3,7 @@
 import re
 
 PRIORITY_LOG = "intent priority → priority '역삼동': True"
-FIRST_PCM_PATTERN = re.compile(r"TTS_FIRST_PCM_WRITTEN receive_to_write_ms=(\\d+)")
+FIRST_PCM_PATTERN = re.compile(r"TTS_FIRST_PCM_WRITTEN receive_to_write_ms=(\d+)")
 FINISHED_MARKER = "TTS_FINISHED bytes="
 
 
