@@ -1,12 +1,20 @@
 """호스트 전체 기동 (T22 #31) — g0-runbook 2절 T2~T8 의 호스트 노드 + 음성 3노드 + hmi_bridge 를 launch 하나로.
 실행은 사람이 한다. dry_run:=false 는 로봇이 움직인다 — 비상정지 옆에서(CLAUDE.md 규칙 6).
 
-  ros2 launch voss_bringup voss_host.launch.py                   # dry_run(가짜 로봇·가짜 RG2) — 기본
-  ros2 launch voss_bringup voss_host.launch.py dry_run:=false    # 실기: T1 두산 브링업(학민)을 먼저, 비전은 docker/vision
+  ros2 launch voss_bringup voss_host.launch.py                   # dry_run(가짜 로봇·가짜 RG2) — 기본. 도메인 30 이면 거부
+  ros2 launch voss_bringup voss_host.launch.py dry_run:=false    # 실기: T1·T2(학민)를 먼저 따로, 비전은 docker/vision
 
 넣지 않는 것: T1 두산 브링업(외부 패키지·컨트롤러 IP — 공개 레포에 적지 않는다), 비전(기본은 컨테이너 docker/vision,
 호스트에서 띄우려면 with_vision:=true). camera·logger·voice·hmi 는 auto = 실기(dry_run:=false)일 때만 켠다.
 config_dir(기본 VOSS_CONFIG_DIR, 없으면 ~/voss_ws/config)의 voss_config.yaml·belt_servo_real.yaml 을 쓴다.
+실값 파일이 없는 개인 PC 의 dry_run 은 servo_params:=<voss_servo share>/config/belt_servo_sim.yaml 또는 with_servo:=false.
+
+dry_run 은 운용 도메인(ROS_DOMAIN_ID 30)에서 거부한다 — 가짜 gateway(가짜 /voss/robot/pose·READY·늘 성공하는
+move_to_zone)와 belt_servo·sort_manager 가 진짜 노드 옆에 하나 더 뜬다. 시험은 다른 도메인(예 77)에서.
+robot_gateway(T2)는 with_gateway:=auto = dry_run 일 때만 이 launch 에 넣는다. 실기는 학민이 런북 T1·T2 를 따로 띄워
+No-Go 줄(pose_source joint_states 확인·컨트롤러 TCP 등록 #121·이동 높이 계산)을 본 뒤 이 launch 를 띄운다 — FAULT 때
+gateway 만 다시 띄우고(런북 6절), Ctrl+C 로 이 launch 를 내려도 gateway 는 남아 watchdog 이 정지시킨다(7절 순서).
+실기 Ctrl+C 전에: /voss/sort/command stop → PAUSED·로봇 OBSERVE 정지 확인 → 벨트 12 V 끄기(런북 7절).
 sort_logger 는 VOSS_DB_LOGGER_PASSWORD 를 셸 환경에서 받는다(런북 T4). 기동 순서는 런북과 같게 actions 를 놓지만
 운전 시작은 sort_manager 의 준비 판단(ROBOT·SERVO·VISION·OCR·LOG 모두 READY)이 막는다 — start 는 사람이 따로 보낸다.
 """
@@ -42,6 +50,11 @@ CAMERA_PARAMS = {
 ARGS = [
     ("config_dir", DEFAULT_CONFIG_DIR, "voss_config.yaml·belt_servo_real.yaml 이 있는 폴더"),
     ("dry_run", "true", "true = 가짜 로봇·RG2 (기본). false = 실기"),
+    (
+        "with_gateway",
+        "auto",
+        "auto | true | false — robot_gateway(T2). auto 는 dry_run 일 때만(실기는 런북 T2 를 따로)",
+    ),
     ("pose_source", "joint_states", "gateway pose 소스 (런북 T2, #140)"),
     ("dry_run_object_mm", "", "dry_run 가짜 RG2 물체 폭 (비우면 gateway 기본)"),
     (
@@ -91,6 +104,21 @@ def on(value: str, dry_run: bool) -> bool:
     raise ValueError(f"auto | true | false 만 받는다: {value!r}")
 
 
+def gateway_on(value: str, dry_run: bool) -> bool:
+    """robot_gateway 를 이 launch 에 넣을지. auto 는 dry_run 일 때만 — 실기는 런북 T2 로 따로 띄운다."""
+    return on(value, not dry_run)
+
+
+def refuse_dry_run_on_operating_domain(dry_run: bool, env: dict) -> None:
+    """dry_run 은 도메인 30 에서 띄우지 않는다 (ROS 없음, pytest 대상). voss_dry_run 의 refuse_operating_domain 과 같은 규칙."""
+    if dry_run and env.get("ROS_DOMAIN_ID", "0").strip() == "30":
+        raise RuntimeError(
+            "voss_host 거부: dry_run(가짜 로봇)을 ROS_DOMAIN_ID 30(운용 도메인)에서 — 가짜 pose·move_to_zone 과 "
+            "belt_servo·sort_manager 가 진짜 노드와 섞인다. 실기는 dry_run:=false, "
+            "시험은 export ROS_DOMAIN_ID=77 ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST 뒤 다시"
+        )
+
+
 def host_plan(a: dict[str, str]) -> list[Step]:
     """인자 → 런북 순서의 동작 목록 (ROS 없음, pytest 대상)."""
     dry = a["dry_run"].strip().lower() != "false"
@@ -100,7 +128,8 @@ def host_plan(a: dict[str, str]) -> list[Step]:
           "config": os.path.join(cfg, "voss_config.yaml")}  # fmt: skip
     if a["dry_run_object_mm"]:
         gw["dry_run_object_mm"] = a["dry_run_object_mm"]
-    steps.append(Step("include", "voss_robot", "robot_gateway.launch.py", gw))  # T2
+    if gateway_on(a["with_gateway"], dry):  # T2
+        steps.append(Step("include", "voss_robot", "robot_gateway.launch.py", gw))
     if on(a["with_camera"], dry):  # T3
         steps.append(
             Step(
@@ -143,14 +172,22 @@ def to_action(s: Step):
 
 def _setup(context):
     a = {n: context.launch_configurations[n] for n, _, _ in ARGS}
-    steps = host_plan(a)
     dry = a["dry_run"].strip().lower() != "false"
+    refuse_dry_run_on_operating_domain(dry, dict(os.environ))
+    steps = host_plan(a)
     names = ", ".join(s.name or s.target.replace(".launch.py", "") for s in steps)
     notes = [LogInfo(msg=f"voss_host: {'dry_run(가짜 로봇)' if dry else '실기'} — {names}")]
     if not dry:
         notes.append(
             LogInfo(
                 msg="voss_host: 실기 — 로봇이 움직일 수 있다. 비상정지 옆에서, T1 두산 브링업이 먼저 떠 있어야 한다"
+            )
+        )
+    if not dry and not gateway_on(a["with_gateway"], dry):
+        notes.append(
+            LogInfo(
+                msg="voss_host: robot_gateway 는 넣지 않았다 — 런북 T2 로 따로 띄워 No-Go 줄을 확인한 뒤여야 한다. "
+                "끄기 전 /voss/sort/command stop → PAUSED·OBSERVE 정지 확인 → 벨트 끄기"
             )
         )
     if on(a["with_logger"], dry) and not os.environ.get("VOSS_DB_LOGGER_PASSWORD"):
