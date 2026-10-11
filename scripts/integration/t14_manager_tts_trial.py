@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import os
+import signal
 import shutil
 import subprocess
 import time
@@ -20,7 +21,12 @@ from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from std_msgs.msg import String
-from t14_trial_checks import first_pcm_latency_ms, manager_accepted_priority, tts_finished
+from t14_trial_checks import (
+    first_pcm_latency_ms,
+    manager_accepted_priority,
+    matching_isolated_test_nodes,
+    tts_finished,
+)
 
 from voss_msgs.msg import Intent, SortState, ZoneMap
 
@@ -70,6 +76,68 @@ class TrialProbe(Node):
         """허용 목록으로 검증된 priority Intent를 관측한다."""
         if message.type == "priority" and message.dong == "역삼동" and message.box_id == "":
             self.priority_received = True
+
+
+def stale_test_processes() -> dict[int, set[str]]:
+    """현재 사용자 소유의 ROS 179/LOCALHOST 시험 노드 PID만 찾는다."""
+    selected: dict[int, set[str]] = {}
+    for process_dir in Path("/proc").iterdir():
+        if not process_dir.name.isdigit():
+            continue
+        process_id = int(process_dir.name)
+        if process_id == os.getpid():
+            continue
+        try:
+            if process_dir.stat().st_uid != os.getuid():
+                continue
+            status = (process_dir / "status").read_text(errors="replace")
+            if "State:\tZ" in status:
+                continue
+            commands = (process_dir / "cmdline").read_bytes()
+            environment = (process_dir / "environ").read_bytes()
+        except (PermissionError, FileNotFoundError, ProcessLookupError):
+            continue
+        names = matching_isolated_test_nodes(commands, environment)
+        if names:
+            selected[process_id] = names
+    return selected
+
+
+def cleanup_previous_test_nodes() -> None:
+    """실제 로봇 도메인을 제외한 기존 격리 시험 노드만 안전하게 정리한다."""
+    if os.environ.get("ROS_DOMAIN_ID") != SAFE_DOMAIN_ID:
+        raise RuntimeError("자동 정리는 ROS_DOMAIN_ID=179에서만 허용")
+    if os.environ.get("ROS_AUTOMATIC_DISCOVERY_RANGE") != "LOCALHOST":
+        raise RuntimeError("자동 정리는 LOCALHOST 탐색에서만 허용")
+
+    old_processes = stale_test_processes()
+    if not old_processes:
+        print("PASS: 이전 격리 시험 노드 없음", flush=True)
+        return
+
+    for process_id, names in old_processes.items():
+        try:
+            os.kill(process_id, signal.SIGTERM)
+            print(
+                f"이전 격리 시험 노드 자동 종료 요청: PID {process_id} / {sorted(names)}",
+                flush=True,
+            )
+        except ProcessLookupError:
+            continue
+        except PermissionError as error:
+            raise RuntimeError(f"기존 시험 PID {process_id} 종료 권한 없음") from error
+
+    deadline = time.monotonic() + 6.0
+    while time.monotonic() < deadline:
+        remaining = stale_test_processes()
+        if not remaining:
+            print("PASS: 이전 격리 시험 노드 정리 완료", flush=True)
+            time.sleep(2.0)
+            return
+        time.sleep(0.2)
+
+    # 안전상 SIGKILL 대신 중단하고 수동 원인 확인을 요청한다.
+    raise RuntimeError(f"이전 격리 노드가 종료되지 않아 시험 중단: {remaining}")
 
 
 def require_isolation(node: Node) -> None:
@@ -219,6 +287,7 @@ def main() -> None:
     if shutil.which("aplay") is None:
         raise SystemExit("aplay 없음: Nodes PC 음성 출력 패키지 설치 확인 필요")
 
+    cleanup_previous_test_nodes()
     rclpy.init()
     probe = TrialProbe()
     executor = MultiThreadedExecutor(num_threads=2)
