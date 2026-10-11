@@ -179,10 +179,16 @@ class RobotGatewayNode(Node):
         # PICK(재확인 칸에서 집기): 놓기 칸 자세 + dz. 놓기 자세는 쥔 박스 밑면 +5 라 핑거 끝은 바닥 약 +13.
         # 10/11 실기 재확인 칸 0: dz 3·0 은 박스 윗모서리(집음 폭 39.9·39.8), −5·−8 은 몸통(40.6), −8 바닥 접촉 없음.
         # 성공 보고폭 범위는 belt_servo hold_width_min/max 와 같은 근거(빈손 최대 38.7, 10/10 쥔 폭 40.6~41.5·회전 최대 43.0)
+        # 보고폭으로는 윗모서리 파지를 못 거른다(dz +3 이 39.9·grip True 로 통과) → 안전장치는 dz 다.
+        # zones.recheck.pose z 를 다시 교시하면 dz 도 실기로 다시 확인한다(#148 리뷰 박병후)
         self.pick_dz = float(self.declare_parameter("zone_pick_dz_mm", -8.0).value)
         self.pick_width = [
             float(v) for v in self.declare_parameter("zone_pick_width_mm", [39.5, 44.0]).value
         ]
+        if len(self.pick_width) != 2 or not self.pick_width[0] < self.pick_width[1]:
+            raise RuntimeError(
+                f"zone_pick_width_mm 는 [하한, 상한](하한 < 상한): {self.pick_width}"
+            )
         self.safe_z = float(self.declare_parameter("zone_safe_z_mm", SAFE_Z_MM).value)
         # 먼 구역(C·HOLD)은 safe_z 에서 팔이 닿지 않는다(10/08 실기 1206). 수평 이동 높이를 구역마다 ikin 으로
         # 낮추되, 이 TCP z 보다 낮아지면 거부한다(박스 밑면 = TCP − 8, 트레이 테두리 ≈ TCP 50 → 약 60 mm 여유)
@@ -539,6 +545,10 @@ class RobotGatewayNode(Node):
             return fail('INVALID: OBSERVE 는 mode "" 만 (이동만, #96)')
         place = mode in ("", "PLACE") and zone != "OBSERVE"
         pick = mode == "PICK"
+        if (
+            pick and zone != "RECHECK"
+        ):  # C·HOLD 처럼 safe_z 에서 안 닿는 칸이면 쥔 채 트레이 안에 멈춘다
+            return fail("INVALID: PICK 은 RECHECK 만 (재확인 칸에서 집기, MC-017)")
         stage = None
         label = "PLACE" if place else (mode or "MOVE")
         if zone == "OBSERVE":
@@ -589,7 +599,10 @@ class RobotGatewayNode(Node):
             self.get_logger().info(f"move_to_zone {zone} 칸 {req.slot} {label} 시작")
             placed = None
             try:
-                if pick:  # 내려가기 전에 연다(VIEW·OBSERVE 높이 — 아래에 아무것도 없다)
+                if pick:
+                    # 상승 높이를 쥐기 전에 구한다 — 안 풀리면 쥔 채 멈추는 대신 움직이기 전에 거부(#148 리뷰 박병후)
+                    lift = self._lift_pose(target)
+                    # 내려가기 전에 연다(VIEW·OBSERVE 높이 — 아래에 아무것도 없다)
                     try:
                         w, _busy, grip, _safety = self.rg2.status()
                     except Exception as e:
@@ -610,15 +623,13 @@ class RobotGatewayNode(Node):
                         self.pick_width[1],
                     )
                     if why:
-                        return fail(
-                            f"GRIP_FAIL: 집기 확인 실패 — {why}{self._pick_retreat(target)}"
-                        )
+                        return fail(f"GRIP_FAIL: 집기 확인 실패 — {why}{self._pick_retreat(lift)}")
                     self.get_logger().info(
                         f"move_to_zone {zone} 칸 {req.slot} PICK 집음: 폭 {g.width_actual:.1f} mm, grip True"
                     )
                     # 든 채 수직 상승. 실패하면 박스를 든 채 멈춘다(자동 개방 금지, MC-014)
                     try:
-                        self._run_path(self._lift_pose(target))
+                        self._run_path(lift)
                     except _ZoneError as e:
                         return fail(f"{e} (박스를 쥔 채 멈춤)")
                 if place:
@@ -648,11 +659,15 @@ class RobotGatewayNode(Node):
             self._update_state()
 
     def _lift_pose(self, flange):
-        """flange x·y 위 이동 높이(_travel_z: safe_z 부터 닿는 곳까지). 큐 작업으로 관절 배치를 다시 잰다."""
+        """flange x·y 위 이동 높이(_travel_z: safe_z 부터 닿는 곳까지). 움직이기 전에 부른다 — 컨트롤러 TCP 등록과
+        관절 배치를 재고(_run_path 와 같은 확인), ikin 명령 좌표 기준(_cmd_off)을 맞춘다."""
         try:
-            _, _, _, sol = self.queue.submit(self._ctrl_tcp).result(timeout=5.0)
+            off, why, _, sol = self.queue.submit(self._ctrl_tcp).result(timeout=5.0)
         except Exception as e:  # 큐 응답 없음
             raise _ZoneError(f"TIMEOUT: 상승 높이 계산 {e}") from e
+        if off is None:
+            raise _ZoneError(f"NOT_CONFIGURED: 컨트롤러 TCP 등록이 {why}")
+        self._cmd_off = off
         z = self._travel_z(flange, sol)
         if z is None:
             raise _ZoneError(
@@ -660,14 +675,14 @@ class RobotGatewayNode(Node):
             )
         return [flange[0], flange[1], z, *flange[3:]]
 
-    def _pick_retreat(self, target) -> str:
-        """PICK 확인 실패: 파지 높이(박스 밑면 = 바닥)에서 열어 박스를 칸에 그대로 두고 올라간다.
+    def _pick_retreat(self, lift) -> str:
+        """PICK 확인 실패: 파지 높이(박스 밑면 = 바닥)에서 열어 박스를 칸에 그대로 두고 lift 까지 올라간다.
         문제가 생기면 그 자리에 멈추고 설명을 돌려준다(GRIP_FAIL 메시지 뒤에 붙임)."""
         g = self.rg2.command_held(self.pre_open, self.grip_force)
         if not g.ok:
             return f" / 개방 실패 {g.message} — 칸 위 파지 높이에 멈춤"
         try:
-            self._run_path(self._lift_pose(target))
+            self._run_path(lift)
         except _ZoneError as e:
             return f" / 열었으나 상승 실패 {e}"
         return " / 열고 상승함(박스는 칸에 그대로)"
@@ -780,17 +795,31 @@ class RobotGatewayNode(Node):
             )  # 핑거 끝(/voss/robot/pose 와 같은 기준) — 도착 판정
             seq0 = self.dsr.alarm_seq
             try:
-                try:
-                    self.queue.submit(
-                        lambda c=cmd: self.dsr.move_line_async(c, self.zone_vel, self.zone_acc)
-                    ).result(timeout=2.0)
-                except Exception as e:
-                    raise _ZoneError(f"TIMEOUT: move_line({name}) {e}") from e
+                self._send_move(name, cmd)
                 self._wait_arrive(name, tcp[:3], seq0)
             except _ZoneError as e:
                 if not str(e).startswith("STOPPED"):  # stop 은 이미 move_stop 을 보냈다
                     self._zone_halt(f"{name}: {e}")
                 raise
+
+    def _send_move(self, name: str, cmd) -> None:
+        """move_line(ASYNC) 한 구간을 큐로 보낸다. stop 이 먼저 왔으면 보내지 않고 STOPPED.
+
+        stop 의 move_stop 은 그 순간 움직이는 것만 멈춘다. 그리퍼 동작(닫기 약 1.7 s) 중에 온 stop 뒤에 다음 구간을
+        보내면 아무도 멈추지 않아 끝까지 간다 → 큐 작업 안에서 확인해 stop 과 송신 사이 틈을 없앤다. stop 전에 큐에
+        이미 들어가 있던 move_line 도 여기서 막힌다(#148 리뷰 박병후)."""
+
+        def send():
+            if self._abort.is_set():
+                raise _ZoneError(f"STOPPED: {name} 전 stop")
+            self.dsr.move_line_async(cmd, self.zone_vel, self.zone_acc)
+
+        try:
+            self.queue.submit(send).result(timeout=2.0)
+        except _ZoneError:
+            raise
+        except Exception as e:
+            raise _ZoneError(f"TIMEOUT: move_line({name}) {e}") from e
 
     def _zone_halt(self, why: str) -> None:
         """MoveToZone 이동 중 실패: move_line 이 계속 가지 않게 move_stop (speedl 은 보내지 않는다)."""
