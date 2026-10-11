@@ -3,6 +3,7 @@
 import pytest
 from voss_robot.zone_motion import (
     SAFE_Z_MM,
+    TravelCache,
     pick_grip_ok,
     pick_pose,
     plan_move,
@@ -90,3 +91,47 @@ def test_pick_grip_ok_needs_detect_and_width_range():
     assert "grip 없음" in pick_grip_ok(True, False, 38.7, 39.5, 44.0)  # 빈손
     assert "밖" in pick_grip_ok(True, True, 45.2, 39.5, 44.0)  # 비스듬히 쥠
     assert "밖" in pick_grip_ok(True, True, 39.0, 39.5, 44.0)
+
+
+C2 = [655.3, -101.4, 260.5, 35.0, 180.0, -54.0]  # 플랜지, 자세 표기는 ZYZ (rx − rz = 89)
+OFF = [1.382, 2.684, 246.642]
+
+
+def test_travel_cache_hits_same_slot_within_tolerance():
+    """#147: 같은 칸(x·y 1 mm 안, 같은 자세·관절 배치·하한·오프셋)이면 저장한 높이를 돌려준다."""
+    c = TravelCache()
+    assert c.get(C2, 2, 120.0, OFF) == (False, None)
+    c.put(C2, 2, 120.0, OFF, None)  # 닿지 않음도 저장한다(가장 비싼 경우)
+    c.put(C2, 2, 60.0, OFF, 306.6)
+    near = [C2[0] + 0.4, C2[1] - 0.6, 14.4, *C2[3:]]  # 놓은 뒤 잰 현재 위치(z 는 상관없음)
+    assert c.get(near, 2, 120.0, OFF) == (True, None)
+    assert c.get(near, 2, 60.0, OFF) == (True, 306.6)
+    assert len(c) == 2
+
+
+def test_travel_cache_same_rotation_other_zyz_notation():
+    """ry = 180 이면 rx − rz 만 의미가 있다 — 표기가 달라도 같은 자세면 같은 칸."""
+    c = TravelCache()
+    c.put(C2, 2, 120.0, OFF, 396.6)
+    other = [*C2[:3], 159.0, 180.0, 70.0]  # 159 − 70 = 89
+    assert c.get(other, 2, 120.0, OFF) == (True, 396.6)
+
+
+def test_travel_cache_misses_other_slot_sol_floor_offset():
+    c = TravelCache()
+    c.put(C2, 2, 120.0, OFF, 396.6)
+    assert not c.get([C2[0] + 50.0, *C2[1:]], 2, 120.0, OFF)[0]  # 옆 칸
+    assert not c.get([*C2[:3], 35.0, 180.0, -40.0], 2, 120.0, OFF)[0]  # 14° 돈 자세
+    assert not c.get(C2, 3, 120.0, OFF)[0]  # 관절 배치
+    assert not c.get(C2, 2, 60.0, OFF)[0]  # 하한(트레이 안)
+    assert not c.get(C2, 2, 120.0, [0.0, 0.0, 0.0])[0]  # 컨트롤러 TCP 등록 없음(플랜지 모드)
+
+
+def test_travel_cache_put_replaces_and_caps():
+    c = TravelCache(max_items=2)
+    c.put(C2, 2, 120.0, OFF, 396.6)
+    c.put(C2, 2, 120.0, OFF, 386.6)
+    assert c.get(C2, 2, 120.0, OFF) == (True, 386.6) and len(c) == 1
+    c.put([100.0, *C2[1:]], 2, 120.0, OFF, 446.6)
+    c.put([200.0, *C2[1:]], 2, 120.0, OFF, 446.6)
+    assert len(c) == 2 and not c.get(C2, 2, 120.0, OFF)[0]  # 가장 오래된 것부터 버림
