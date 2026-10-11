@@ -14,6 +14,14 @@ import time
 from collections.abc import Sequence
 
 DEFAULT_PREFIX = "/dsr01/dsr_controller2/"  # doosan-robot2 31750d6, 10/07 실기 브링업에서 확인(#55)
+# dsr_bringup2 run_emulator 의 노드 이름. 브링업 mode:=virtual 일 때만 뜬다(실기 mode:=real 에는 없음)
+EMULATOR_NODE = "virtual_node"
+
+
+def emulator_running(names_and_namespaces, prefix: str = DEFAULT_PREFIX) -> bool:
+    """그래프에 두산 에뮬레이터 노드가 있나. prefix "/dsr01/dsr_controller2/" → ("virtual_node", "/dsr01")."""
+    ns = "/" + prefix.strip("/").split("/")[0]
+    return (EMULATOR_NODE, ns) in [tuple(x) for x in names_and_namespaces]
 
 
 class DoosanError(RuntimeError):
