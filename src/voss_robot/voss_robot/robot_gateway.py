@@ -176,9 +176,10 @@ class RobotGatewayNode(Node):
         self.pre_open = float(self.declare_parameter("gripper.pre_open_mm", 90.0).value)
         self.grip_force = float(self.declare_parameter("gripper.force_n", 14.0).value)
         self.grasp_width = float(self.declare_parameter("gripper.grasp_width_mm", 39.0).value)
-        # PICK(재확인 칸에서 집기): 놓기 칸 자세 + dz(핑거 끝 바닥 +5 → 박스 밑면 +8), 성공 보고폭 범위는
-        # belt_servo hold_width_min/max 와 같은 근거(빈손 최대 38.7, 10/10 쥔 폭 40.6~41.5·회전 최대 43.0)
-        self.pick_dz = float(self.declare_parameter("zone_pick_dz_mm", 3.0).value)
+        # PICK(재확인 칸에서 집기): 놓기 칸 자세 + dz. 놓기 자세는 쥔 박스 밑면 +5 라 핑거 끝은 바닥 약 +13.
+        # 10/11 실기 재확인 칸 0: dz 3·0 은 박스 윗모서리(집음 폭 39.9·39.8), −5·−8 은 몸통(40.6), −8 바닥 접촉 없음.
+        # 성공 보고폭 범위는 belt_servo hold_width_min/max 와 같은 근거(빈손 최대 38.7, 10/10 쥔 폭 40.6~41.5·회전 최대 43.0)
+        self.pick_dz = float(self.declare_parameter("zone_pick_dz_mm", -8.0).value)
         self.pick_width = [
             float(v) for v in self.declare_parameter("zone_pick_width_mm", [39.5, 44.0]).value
         ]

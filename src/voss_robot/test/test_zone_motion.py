@@ -78,9 +78,9 @@ RECHECK = [446.17, -69.04, 260.65, 169.44, -180.0, 79.38]  # voss_config zones.r
 
 
 def test_pick_pose_is_slot_pose_plus_dz():
-    """PICK 파지 = 놓기 칸 자세(핑거 끝 바닥 +5) + 3 mm → 박스 밑면 +8 (voss_msgs.md MoveToZone PICK)."""
-    p = pick_pose(slot_pose(RECHECK, [2, 1, 60], 1), 3.0)
-    assert p == pytest.approx([476.17, -69.04, 263.65, *RECHECK[3:]])
+    """PICK 파지 = 놓기 칸 자세 − 8 mm (10/11 실기, voss_msgs.md MoveToZone PICK)."""
+    p = pick_pose(slot_pose(RECHECK, [2, 1, 60], 1), -8.0)
+    assert p == pytest.approx([476.17, -69.04, 252.65, *RECHECK[3:]])
 
 
 def test_pick_grip_ok_needs_detect_and_width_range():
