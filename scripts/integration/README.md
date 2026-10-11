@@ -5,6 +5,8 @@
 2대 PC 배치는 `docs/interfaces/deployment_two_pc_trial.md`의 **시험 제안**으로,
 현장 PL·안전 승인 전 확정된 정식 배포 계약을 대체하지 않는다.
 
+**실행 위치:** 아래의 Nodes PC 명령은 각 PC에서 **해당 레포 루트로 이동한 뒤** 실행한다. 개인 홈 디렉터리 경로는 문서에 기록하지 않는다.
+
 ## T13 — 12회 ROS 발행 → Web PC React DOM 실측
 
 **전제:** Nodes PC의 `hmi_bridge`·`sort_logger`, Web PC Mosquitto·Spring Boot·React가 이미 실행 중.
@@ -15,8 +17,7 @@
    `T13 관측 준비 완료` 문구가 보이면 다음 단계로 넘어간다.
 2. **Nodes PC** (일반 ROS 도메인, 재기동 필요 없음):
    ```bash
-   cd ~/collaboration/rokey_cobot2_VOSS-t13
-   source /opt/ros/jazzy/setup.bash
+      source /opt/ros/jazzy/setup.bash
    source install/setup.bash
    python3 scripts/integration/t13_dom_publisher.py
    ```
@@ -60,7 +61,6 @@ T14 전체 루프 완료나 실로봇 구동 완료 증거가 아니다.
 시험 스크립트와 자식 voice_listener(text)·intent_parser만 `179` 도메인에서 실행한다.
 
 ```bash
-cd ~/collaboration/rokey_cobot2_VOSS-t13
 git pull --ff-only origin feat/22-web-hmi-initial
 source /opt/ros/jazzy/setup.bash
 colcon build --packages-up-to voss_voice --symlink-install
@@ -90,7 +90,7 @@ Nodes PC `aplay`로 스피커 재생을 완료하는지 한 번에 검증한다.
 완료라고 판정하지 않는다. 실제 robot_gateway·TrackAndGrasp·MoveToZone을
 연결하거나 `start`·`stop`을 보내지 않는다.
 
-**PC:** 오직 **Nodes PC `ms-03@ms-03`** 터미널에서 실행.
+**PC:** 오직 **Nodes PC `<Nodes PC>`** 터미널에서 실행.
 Web PC의 기존 FastAPI `8000` 포트/SSH 터널·Docker·MQTT·DB를 재설정하지 않는다.
 사전 조건: 기존 분리 PC SSH `127.0.0.1:8000` 포워드 유지, Nodes PC에서
 `aplay` 사용 가능하고 스피커 연결/음량 설정, 실제 ROS 도메인과 구분되는
@@ -98,8 +98,7 @@ Web PC의 기존 FastAPI `8000` 포트/SSH 터널·Docker·MQTT·DB를 재설정
 자동 SIGTERM으로 정리하고, 정리가 안 되거나 다른 노드가 남아 있으면 새 시험을 **중단**한다.
 
 ```bash
-# [Nodes PC — ms-03@ms-03]
-cd ~/collaboration/rokey_cobot2_VOSS-t13 || exit 1
+# [Nodes PC — <Nodes PC>]
 git pull --ff-only origin feat/22-web-hmi-initial || exit 1
 source /opt/ros/jazzy/setup.bash
 colcon build --packages-up-to voss_manager voss_voice --symlink-install || exit 1
@@ -134,8 +133,7 @@ manager는 IDLE에서 `priority`만 접수한다. `hmi_bridge`를 별도 도메�
 공유 MQTT 상태를 오염시키지 않는다.
 
 ```bash
-# [Nodes PC — ms-03@ms-03] Web PC 작업 없음
-cd ~/collaboration/rokey_cobot2_VOSS-t13 || exit 1
+# [Nodes PC — <Nodes PC>] Web PC 작업 없음
 git pull --ff-only origin feat/22-web-hmi-initial || exit 1
 source /opt/ros/jazzy/setup.bash
 colcon build --packages-up-to voss_manager voss_voice --symlink-install || exit 1
@@ -179,8 +177,7 @@ Nodes PC에서 SSH 로컬 8080/8000 포워드가 기존에 열려 있어야 한�
 ROS_DOMAIN_ID=179에서 뜨므로 로봇 구동 없음. DB·MQTT에 쓰지 않는다.
 
 ```bash
-# [Nodes PC - ms-03@ms-03]
-cd ~/collaboration/rokey_cobot2_VOSS-t13 || exit 1
+# [Nodes PC - <Nodes PC>]
 git pull --ff-only origin feat/22-web-hmi-initial || exit 1
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
