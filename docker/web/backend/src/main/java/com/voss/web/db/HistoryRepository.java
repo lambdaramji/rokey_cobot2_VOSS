@@ -9,6 +9,8 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.ZoneId;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class HistoryRepository {
+    private static final ZoneId SEOUL_ZONE = ZoneId.of("Asia/Seoul");
     private final DbAccess db;
     /** 읽기 전용 DB 연결 도구를 전달받는다. */
     public HistoryRepository(DbAccess db) { this.db = db; }
@@ -122,7 +125,9 @@ public class HistoryRepository {
                     Map<String,Object> row = new LinkedHashMap<>();
                     for (int column = 1; column <= metadata.getColumnCount(); column++) {
                         Object value = result.getObject(column);
-                        if (value instanceof Timestamp stamp) { value = stamp.toInstant().toString(); }
+                        if (value instanceof Timestamp stamp) {
+                            value = OffsetDateTime.ofInstant(stamp.toInstant(), SEOUL_ZONE).toString();
+                        }
                         row.put(metadata.getColumnLabel(column), value);
                     }
                     rows.add(row);
