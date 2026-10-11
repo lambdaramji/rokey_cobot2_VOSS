@@ -91,7 +91,8 @@ def main() -> None:
         "--tol-cross", type=float, default=5.0, help="정렬 허용 가로 mm align_tol_cross_mm"
     )
     ap.add_argument("--tcp-ahead", type=float, default=0.0,
-                    help="하강 중 TCP 가 박스 중심보다 벨트 하류로 앞선 mm (10/10 녹화 재생은 0 과 맞음)")  # fmt: skip
+                    help="하강 중 TCP 가 박스 중심보다 벨트 하류로 앞선 mm (10/10 녹화 재생은 0 과 맞음). "
+                         "belt_servo 틱 err_along(박스 − TCP, + = 박스 하류)과 부호가 반대 → --tcp-ahead = −err_along")  # fmt: skip
     ap.add_argument("--border", type=int, default=4, help="box_detect border_px")
     ap.add_argument("--yaws", default="0,10,15,20,30,45", help="박스 회전각(°), 쉼표")
     args = ap.parse_args()
@@ -147,31 +148,46 @@ def main() -> None:
 
     print(f"\n하강 {args.approach:g} → 사각 {args.cutoff:g} mm, {args.descend_mps * 1000:g} mm/s, LOST {args.lost_s:g} s "
           f"(정렬 오차 벨트 ±{args.tol_along:g}·가로 ±{args.tol_cross:g} mm 네 귀퉁이 + 중심)")  # fmt: skip
-    print(" 회전  버리기 시작 높이(최고~최저)  안 보이는 하강 최대  시간 최대  판정")
-    worst = None
+    print(" 회전  끊기기 시작 높이(최고~최저)  안 보이는 하강 최대  시간 최대  판정")
+    worst = None  # 하강 구간(접근 높이 아래)에서 가장 먼저 끊기는 높이
+    track_risk = []  # 접근 높이에서 이미 안 보이는 회전
+    scan_from = (
+        args.approach + 60
+    )  # 접근 높이보다 위부터 찾아야 "이미 끊김"을 +40 으로 자르지 않는다
     for yaw in yaws:
         cuts = [
-            cut_height(geo, yaw, da, dc, size, args.border, args.approach, args.cutoff)
+            cut_height(geo, yaw, da, dc, size, args.border, scan_from, args.cutoff)
             for da, dc in offsets
         ]
         hs = [c for c in cuts if c is not None]  # None = 사각 높이까지 안 걸림
         if not hs:
             print(f"{yaw:5.0f}°  사각 높이까지 안 걸림  0 mm  0.00 s  -")
             continue
+        over = [c for c in hs if c >= args.approach]  # 접근 높이에서 이미 송장이 아래 끝에 걸림
+        inside = [c for c in hs if c < args.approach]
         top = max(hs)
         span = max(0.0, min(top, args.approach) - args.cutoff)
         t = span / (args.descend_mps * 1000)
-        worst = top if worst is None else max(worst, top)
-        print(f"{yaw:5.0f}°  {top:+.1f} ~ {min(hs):+.1f} mm  {span:5.1f} mm  {t:5.2f} s  "
-              f"{'LOST' if t > args.lost_s else '-'}")  # fmt: skip
+        note = "LOST" if t > args.lost_s else "-"
+        if over:
+            note += f" · 접근 높이에서 이미 안 보임 {len(over)}/{len(offsets)} 귀퉁이(TRACK 중 끊김 위험)"
+            track_risk.append(yaw)
+        if inside:
+            worst = max(inside) if worst is None else max(worst, max(inside))
+        print(f"{yaw:5.0f}°  {top:+.1f} ~ {min(hs):+.1f} mm  {span:5.1f} mm  {t:5.2f} s  {note}")
     if worst is not None:
         need = float(np.ceil(worst))
-        print(f"\n사각 높이를 하강 중 가장 먼저 끊기는 높이({worst:+.1f} mm) 이상으로 두면 그 사이 LOST 가 나지 않는다 → "
-              f"후보 {need:g} mm (교차 검사: approach {args.approach:g} > cutoff + 5 이면 cutoff ≤ {args.approach - 5:g})")  # fmt: skip
+        print(f"\n하강 구간에서 가장 먼저 끊기는 높이({worst:+.1f} mm, 접근 높이에서 이미 안 보이는 귀퉁이는 뺌) 이상으로 "
+              f"사각 높이를 두면 그 사이 LOST 가 나지 않는다 → 후보 {need:g} mm "
+              f"(교차 검사: approach {args.approach:g} > cutoff + 5 이면 cutoff ≤ {args.approach - 5:g})")  # fmt: skip
         if need > args.approach - 5:
             print(f"  ⚠ {need:g} 은 approach − 5 를 넘는다 → cutoff {args.approach - 5:g} 로 두면 남는 "
                   f"{need - (args.approach - 5):g} mm 는 {(need - (args.approach - 5)) / (args.descend_mps * 1000):.2f} s "
                   f"(LOST {args.lost_s:g} s 미만이면 괜찮다), 아니면 approach 를 올린다")  # fmt: skip
+    if track_risk:
+        print(f"\n⚠ 회전 {', '.join(f'{y:g}°' for y in track_risk)}: TCP 가 박스보다 뒤처진 귀퉁이에서는 접근 높이"
+              f"(+{args.approach:g})에서 이미 송장이 화면 아래 끝에 걸린다 — 사각 높이로는 해결되지 않는다"
+              f"(TRACK·하강 시작 조건 문제: 접근 높이·정렬)")  # fmt: skip
     print(
         "\n※ 핸드아이 모델 값. 10/10 g1_s1 재생의 실제 마지막 BoxTrack(윗면 +31~37 mm)은 --tcp-ahead 0 과 맞는다 — "
         "새 조건은 녹화를 box_overlay.py 로 재생해 본다."

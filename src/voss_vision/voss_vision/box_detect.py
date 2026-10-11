@@ -53,7 +53,7 @@ REASONS = ("", "area", "border", "aspect", "fill")  # "" = 통과. 판정 순서
 
 @dataclass(frozen=True)
 class Candidate:
-    """흰 연결 성분 하나와 판정 — 진단·시각화용(tools/viz/box_overlay.py). 좌표는 원본 px."""
+    """흰 연결 성분 하나와 판정 — 진단·시각화용(tools/vision/box_overlay.py). 좌표는 원본 px."""
 
     rect: tuple[int, int, int, int]  # 성분의 축정렬 bbox x, y, w, h
     area: float  # px²
