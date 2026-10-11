@@ -30,6 +30,7 @@ from voss_msgs.srv import Command, MoveToZone
 
 from t14_manager_tts_trial import (
     CONFIG_PATH,
+    cleanup_previous_test_nodes,
     LOG_DIR,
     require_isolation,
     read_log,
@@ -293,6 +294,7 @@ def main() -> None:
         raise SystemExit("실물 로봇 보호: LOCALHOST 탐색만 허용")
     if not CONFIG_PATH.is_file():
         raise SystemExit(f"설정 파일 없음: {CONFIG_PATH}")
+    cleanup_previous_test_nodes()
     # 데이터 유무/REST 접근을 먼저 확인하되 실제 DB 쓰기와 세션 생성은 하지 않는다.
     get_json("/api/sessions/current")
     read_real_db_count()
