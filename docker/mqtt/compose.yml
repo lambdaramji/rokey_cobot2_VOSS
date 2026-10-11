@@ -8,7 +8,7 @@ services:
     network_mode: host
     volumes:
       - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
-      - ./acl:/mosquitto/config/acl:ro
+      - ./secrets/acl:/mosquitto/config/acl:ro
       - ./secrets/passwd:/mosquitto/config/passwd:ro
       - mqtt-data:/mosquitto/data
     restart: unless-stopped
