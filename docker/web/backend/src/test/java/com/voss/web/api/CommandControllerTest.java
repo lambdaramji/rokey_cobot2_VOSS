@@ -8,11 +8,9 @@ import com.voss.web.mqtt.MqttCommandPublisher;
 import com.voss.web.mqtt.MqttEventRouter;
 import com.voss.web.service.SortStateStore;
 import com.voss.web.service.TimeProvider;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockHttpServletRequest;
-import org.springframework.test.util.ReflectionTestUtils;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyMap;
@@ -31,7 +29,7 @@ class CommandControllerTest {
     @Test
     void testRemoteStartIsRejectedBeforePublishing() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.addHeader("X-Real-IP", "192.168.0.17");
+        request.addHeader("X-Real-IP", "192.0.2.11");
         ApiException error = assertThrows(ApiException.class, () ->
                 controller.command(mapper.readTree("{\"type\":\"start\",\"args\":{}}"), request));
         assertEquals("FORBIDDEN_REMOTE", error.code());
@@ -43,7 +41,7 @@ class CommandControllerTest {
     @Test
     void testRemoteStopIsAllowed() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.addHeader("X-Real-IP", "192.168.0.17");
+        request.addHeader("X-Real-IP", "192.0.2.11");
         var response = controller.command(mapper.readTree("{\"type\":\"stop\",\"args\":{}}"), request);
         assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
         verify(publisher).publish(anyMap());
@@ -53,46 +51,51 @@ class CommandControllerTest {
     @Test
     void testForgedForwardedForIsNotTrusted() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
-        request.addHeader("X-Real-IP", "10.0.0.7");
+        request.addHeader("X-Real-IP", "192.0.2.13");
         request.addHeader("X-Forwarded-For", "127.0.0.1");
         ApiException error = assertThrows(ApiException.class, () ->
                 controller.command(mapper.readTree("{\"type\":\"resume\",\"args\":{}}"), request));
         assertEquals("FORBIDDEN_REMOTE", error.code());
     }
 
-    /** 로컬 웹 PC라도 시험 기본값으로 비-stop 명령은 거부한다. */
+    /** 로컬 Nginx HMI는 실기 운전 플래그 없이도 start를 발행할 수 있다. */
     @Test
-    void testLocalStartIsRejectedUntilExplicitlyEnabled() throws Exception {
+    void testLocalStartIsAllowedWithDefaultSettings() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("X-Real-IP", "127.0.0.1");
-        ApiException error = assertThrows(ApiException.class, () ->
-                controller.command(mapper.readTree("{\"type\":\"start\",\"args\":{}}"), request));
-        assertEquals("FORBIDDEN_REMOTE", error.code());
-        verify(publisher, never()).publish(anyMap());
-    }
-
-    /** 비-stop 명령을 열더라도 Web PC localhost는 운영자 PC가 아니다. */
-    @Test
-    void testWebPcLocalStartIsRejectedWhenOperatorIsNodesPc() throws Exception {
-        ReflectionTestUtils.setField(controller, "nonstopCommandsEnabled", true);
-        ReflectionTestUtils.setField(controller, "operatorIp", "192.0.2.10");
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        request.addHeader("X-Real-IP", "127.0.0.1");
-        ApiException error = assertThrows(ApiException.class, () ->
-                controller.command(mapper.readTree("{\"type\":\"start\",\"args\":{}}"), request));
-        assertEquals("FORBIDDEN_REMOTE", error.code());
-        verify(publisher, never()).publish(anyMap());
-    }
-
-    /** 현장 승인 후에만 지정된 운영자 PC의 비-stop 명령을 허용할 수 있다. */
-    @Test
-    void testNodesPcOperatorStartIsAllowedWhenExplicitlyEnabled() throws Exception {
-        ReflectionTestUtils.setField(controller, "nonstopCommandsEnabled", true);
-        ReflectionTestUtils.setField(controller, "operatorIp", "192.0.2.10");
-        MockHttpServletRequest request = new MockHttpServletRequest();
-        request.addHeader("X-Real-IP", "192.0.2.10");
         var response = controller.command(
                 mapper.readTree("{\"type\":\"start\",\"args\":{}}"), request);
+        assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
+        verify(publisher).publish(anyMap());
+    }
+
+    /** 원격 운영자 IP는 기존 임시 설정과 무관하게 허용하지 않는다. */
+    @Test
+    void testRemoteOperatorIpCannotEnableStart() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("X-Real-IP", "192.0.2.10");
+        ApiException error = assertThrows(ApiException.class, () ->
+                controller.command(mapper.readTree("{\"type\":\"start\",\"args\":{}}"), request));
+        assertEquals("FORBIDDEN_REMOTE", error.code());
+        verify(publisher, never()).publish(anyMap());
+    }
+
+    /** IPv6 loopback은 같은 공용 PC에서 사용되는 로컬 주소다. */
+    @Test
+    void testLocalIpv6IsAllowed() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("X-Real-IP", "::1");
+        var response = controller.command(
+                mapper.readTree("{\"type\":\"resume\",\"args\":{}}"), request);
+        assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
+    }
+
+    /** stop은 원격에서도 args가 없어도 즉시 전달한다. */
+    @Test
+    void testRemoteStopWithoutArgsIsAccepted() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("X-Real-IP", "192.0.2.12");
+        var response = controller.command(mapper.readTree("{\"type\":\"stop\"}"), request);
         assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
         verify(publisher).publish(anyMap());
     }
@@ -102,7 +105,6 @@ class CommandControllerTest {
     void testUnknownCommandArgsAreRejected() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("X-Real-IP", "127.0.0.1");
-        ReflectionTestUtils.setField(controller, "nonstopCommandsEnabled", true);
         ApiException error = assertThrows(ApiException.class, () ->
                 controller.command(mapper.readTree("{\"type\":\"start\",\"args\":{\"unsafe\":1}}"), request));
         assertEquals("INVALID_QUERY", error.code());
