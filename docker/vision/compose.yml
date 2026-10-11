@@ -1,0 +1,77 @@
+# 비전 컨테이너 (T22 #31, 남현지) — box_tracker·label_reader 를 서비스 하나씩. 실행은 사람이 한다(README.md).
+#   cd docker/vision && cp .env.example .env      # 도메인·경로 확인 (기본 도메인 77 = 시험용)
+#   docker compose up -d --build                   # CPU (개인 PC)
+#   docker compose -f compose.yml -f compose.gpu.yml up -d --build   # GPU (공용 PC, OCR 만 GPU)
+#   docker compose logs -f box_tracker             # 5 초 통계 로그(Hz·검출·지연)
+# 호스트와 같은 DDS 로 붙는다: network host + 같은 ROS_DOMAIN_ID·RMW + 호스트 CycloneDDS 설정 파일(SRD 상호확인 합의).
+name: voss-vision
+
+x-build: &build
+  context: ../..
+  dockerfile: docker/vision/Dockerfile
+  args:
+    OCR_DEVICE: cpu
+
+x-env: &env
+  # 셸 값 → .env → 기본 77·LOCALHOST(시험) 순. 공용 PC 는 셸 30 을 따른다 — 아무 값도 없으면 안 보이는 쪽(77)으로 실패한다
+  ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-77}
+  ROS_AUTOMATIC_DISCOVERY_RANGE: ${ROS_AUTOMATIC_DISCOVERY_RANGE:-LOCALHOST}
+  RMW_IMPLEMENTATION: rmw_cyclonedds_cpp
+
+x-config: &config
+  type: bind
+  source: ${VOSS_CONFIG_HOST:-${HOME}/voss_ws/config}   # voss_config·belt_homography·hand_eye.yaml
+  target: /opt/voss/config
+  read_only: true
+  bind:
+    create_host_path: false   # 경로가 틀리면 빈 폴더를 만들지 말고 바로 실패
+
+x-dds: &dds
+  type: bind
+  source: ${CYCLONEDDS_XML:-${HOME}/.config/cyclonedds/cyclonedds.xml}
+  target: /etc/voss/cyclonedds.xml
+  read_only: true
+  bind:
+    create_host_path: false
+
+x-logs: &logs
+  type: bind
+  source: ${VOSS_LOG_DIR:-${HOME}/voss_data/logs/vision}   # 노드 로그(~/.ros/log) — 컨테이너가 root 라 파일 주인도 root
+  target: /root/.ros/log
+
+services:
+  box_tracker:
+    image: voss-vision:${VISION_TAG:-cpu}
+    build: *build
+    network_mode: host
+    environment:
+      <<: *env
+      BOX_TRACKER_ARGS: ${BOX_TRACKER_ARGS:-}   # 예: playback:=/data/<bag> (도메인 30 이면 노드가 거부)
+    volumes:
+      - *config
+      - *dds
+      - *logs
+      - type: bind
+        source: ${VOSS_DATA:-${HOME}/voss_data}   # 녹화 재생용(읽기 전용)
+        target: /data
+        read_only: true
+    command: ["bash", "-c", "exec ros2 launch voss_vision box_tracker.launch.py $${BOX_TRACKER_ARGS}"]
+    restart: "no"
+
+  label_reader:
+    image: voss-vision:${VISION_TAG:-cpu}
+    build: *build
+    network_mode: host
+    environment:
+      <<: *env
+      OCR_DEVICE: ${OCR_DEVICE:-cpu}   # cpu | gpu:0
+    volumes:
+      - *config
+      - *dds
+      - *logs
+      - paddlex-cache:/root/.paddlex   # PaddleOCR 모델(첫 실행 때 받음, 이미지·레포에 넣지 않음)
+    command: ["bash", "-c", "exec ros2 launch voss_vision label_reader.launch.py ocr_device:=$${OCR_DEVICE}"]
+    restart: "no"
+
+volumes:
+  paddlex-cache:
