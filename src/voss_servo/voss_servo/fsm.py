@@ -3,7 +3,8 @@
 - phase 이름·reason 7종·grasped 의미: src/voss_msgs/action/TrackAndGrasp.action, docs/interfaces/voss_msgs.md
 - GRASP → LIFT = 닫힘 완료 응답 + grip_detected + 보고폭 범위. 닫힘만으로는 LIFT 하지 않는다.
 - 비전 사각 구간: 카메라가 공구축 옆이라 낮은 높이·GRASP·LIFT·VERIFY 에서는 박스가 안 보인다.
-- 설계: src/voss_servo/design/U1-dd.md 2절 (전이표 1~17), U5-dd.md 2절 (11b x 여유).
+- 설계: src/voss_servo/design/U1-dd.md 2절 (전이표 1~17), U5-dd.md 2절 (11b x 여유),
+  U9a-dd.md 2.4 (9b 사각 체류 상한).
 """
 
 from __future__ import annotations
@@ -34,6 +35,8 @@ CANCELED = "CANCELED"
 
 # --- cause (로그용 세부 원인) ---
 REACH_GRASP_ROOM = "REACH_GRASP_ROOM"  # 정렬됐지만 하강·닫힘 동안 x 끝에 닿는다 (U5 HLD D6)
+# DESCEND 사각이 상한보다 오래 감 = 로봇이 안 내려감 (U9a-dd 2.4)
+DESCEND_BLIND_TIMEOUT = "DESCEND_BLIND_TIMEOUT"
 
 # --- 노드에게 시키는 행동 ---
 GRIPPER_OPEN = "GRIPPER_OPEN"
@@ -95,6 +98,7 @@ class TickEvent:
     at_lift_height: bool = False  # U2 가 채움
     gripper: GripperReply | None = None  # 지금 기다리던 호출의 응답 (U5, message = 코드)
     grasp_room: bool = True  # 정렬 순간 하강·닫힘을 끝낼 x 여유가 있나 (U5). 기본 = 있음
+    blind_overstay: bool = False  # DESCEND 사각이 상한을 넘었나 (U9a). 기본 = 아니오
 
 
 @dataclass(frozen=True)
@@ -147,6 +151,22 @@ def is_vision_blind(
     if was_blind:
         return tcp_z_m <= exit_z
     return tcp_z_m <= enter_z
+
+
+def blind_since_next(prev: float | None, phase: str, blind: bool, now: float) -> float | None:
+    """DESCEND 안에서 사각이 시작된 시각을 이어 간다. DESCEND 사각이 아니면 None (U9a-dd 2.3)."""
+    if phase != DESCEND or not blind:
+        return None  # 지운다 — GRASP·재시도 PREPARE 를 지나 다시 DESCEND 에 오면 새로 센다
+    if prev is None:
+        return now  # 이번 틱에 DESCEND 사각이 시작됐다
+    return prev  # 계속 사각: 처음 시각 유지
+
+
+def blind_overstay(blind_since: float | None, now: float, limit_s: float | None) -> bool:
+    """DESCEND 사각 체류가 상한을 넘었나. 같으면 아직 아니다."""
+    if blind_since is None or limit_s is None:
+        return False  # 사각 아님 · 상한 모름 (READY 가 아니면 goal 이 없다 — 방어)
+    return now - blind_since > limit_s
 
 
 def _ref(t: float | None, since: float) -> float:
@@ -229,6 +249,9 @@ def step(
             return _end(state, LOST, "BOX_MISSING")
     if state.phase in REACH_PHASES and ev.reach is not None:
         return _end(state, OUT_OF_REACH, f"REACH_{ev.reach}")
+    # 9b: 사각에서 로봇이 예상보다 오래 안 내려온다 → 로봇·gateway 이상 (U9a-dd 2.4)
+    if state.phase == DESCEND and ev.blind_overstay:
+        return _end(state, DEVICE_ERROR, DESCEND_BLIND_TIMEOUT)
     # 10~17: 정상 진행
     return _advance(state, ev, verdict, grip_cause, max_attempts)
 

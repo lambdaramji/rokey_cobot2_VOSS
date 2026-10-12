@@ -38,7 +38,13 @@ from voss_msgs.msg import BoxTrack
 from voss_msgs.srv import Gripper
 from voss_servo import control, diagnose, fsm, grip
 from voss_servo import log_schema as ls
-from voss_servo.params import PARAM_SPECS, check_params, params_digest, ready_log_line
+from voss_servo.params import (
+    BLIND_DWELL_MARGIN_S,
+    PARAM_SPECS,
+    check_params,
+    params_digest,
+    ready_log_line,
+)
 
 # QoS (topics.md QoS 표). box 구독 depth 5 는 소비자 재량: 박스마다 메시지가 따로 와서
 # depth 1 이면 같은 프레임의 다른 박스 메시지에 내 박스가 밀려날 수 있다 (depth 는 QoS 호환 조건 아님)
@@ -140,6 +146,7 @@ class GoalCtx:
     vision_since: float  # 비전 필요 구간이 시작된 시각 (box 끊김 판정의 기준 시각, 노드 시계)
     done: Future = field(default_factory=Future)  # 결과 봉투 (타이머가 채운다)
     blind: bool = False  # 지난 틱의 사각 판정
+    blind_since: float | None = None  # DESCEND 에서 사각이 시작된 시각 (U9a 체류 상한, 노드 시계)
     last_phase: str = ""  # 마지막으로 feedback 보낸 phase
     stop_future: Any = None  # stop 서비스 call_async 결과
     stop_sent: float | None = None  # stop 요청 보낸 시각
@@ -191,6 +198,7 @@ class BeltServoNode(Node):
         self._ctrl = control.config_from_values(self.values) if self.ready else None
         self.grip_late_discarded = 0  # 버린 늦은 그리퍼 응답 수 (U5 DD E8)
         self._room_need_s = self._grasp_room_need() if self.ready else None  # x 여유 계산용 시간
+        self._blind_max_s = self._blind_dwell_max() if self.ready else None  # 사각 체류 상한 (U9a)
         self._setup_logs()
         self._setup_ros()
 
@@ -243,6 +251,16 @@ class BeltServoNode(Node):
             f"x_max 까지 {need_m * 1000.0:.0f} mm 이상 남아야 DESCEND"
         )
         return need_s
+
+    def _blind_dwell_max(self) -> float:
+        """DESCEND 사각 체류 상한 s. READY 때 한 번 계산하고 기동 로그에 남긴다 (U9a-dd 2.5)."""
+        cutoff_m = float(self._p("z.vision_cutoff_above_top_mm")) / 1000.0  # 사각 진입 높이
+        limit = control.descend_blind_max_s(cutoff_m, self._ctrl)
+        self.get_logger().info(
+            f"사각 체류 상한: DESCEND 사각이 {limit:.2f} s 넘으면 DEVICE_ERROR "
+            f"(하강 예상 {limit - BLIND_DWELL_MARGIN_S:.2f} + 여유 {BLIND_DWELL_MARGIN_S:g})"
+        )
+        return limit
 
     def _setup_logs(self) -> None:
         """틱·시도 로그 파일 경로를 정하고 기동 로그에 절대 경로를 남긴다."""
@@ -486,6 +504,8 @@ class BeltServoNode(Node):
         if ctx.blind and not blind:
             ctx.vision_since = now  # 사각 → 보임: LOST/STALE 시계를 다시 센다
         ctx.blind = blind
+        # DESCEND 사각 시작 시각 (전이 전 phase 기준 — 사각 판정과 같은 기준)
+        ctx.blind_since = fsm.blind_since_next(ctx.blind_since, ctx.state.phase, blind, now)
         box_lost, box_stale, pose_stale = fsm.input_flags(
             now,
             entry.rx if entry else None,
@@ -523,6 +543,7 @@ class BeltServoNode(Node):
             at_lift_height=bool(geo.at_lift_height) if geo else False,
             gripper=gripper,
             grasp_room=self._grasp_room(geo),
+            blind_overstay=fsm.blind_overstay(ctx.blind_since, now, self._blind_max_s),
         )
 
     def _grasp_room(self, geo: control.Geometry | None) -> bool:

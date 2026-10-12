@@ -17,8 +17,8 @@ from typing import Any
 
 import numpy as np
 
-from voss_servo import fsm
-from voss_servo.params import GATEWAY_Z_MIN_MM
+from voss_servo import fsm, grip
+from voss_servo.params import BLIND_DWELL_MARGIN_S, GATEWAY_Z_MIN_MM
 
 # --- xy 규칙 이름 (틱 로그 cmd_rule 에도 그대로 쓴다) ---
 FF_P = "FF_P"  # 벨트 속도 + Kp × 오차
@@ -244,6 +244,17 @@ def grasp_floor_blocked(top_z: float, cfg: ControlConfig) -> bool:
     """
     threshold = top_z + cfg.grasp_dz + cfg.height_tol_m  # at_grasp_height 문턱
     return threshold < cfg.z_min + Z_MIN_MARGIN_M
+
+
+def descend_blind_max_s(cutoff_m: float, cfg: ControlConfig) -> float:
+    """DESCEND 에서 사각에 들어간 뒤 파지 높이까지 걸릴 시간의 상한 s (U9a-dd 2.2).
+
+    예상 하강 시간은 정지 출발 가정이라 이미 내려가는 실제보다 길다 = 안전 쪽.
+    예: cutoff 0.030, grasp_dz −0.019 → 2.439 + 1.0 = 3.44 s (실측 체류 2.10~2.16 s).
+    """
+    dist = cutoff_m - cfg.grasp_dz  # 사각 진입 높이 → 파지 높이 거리 (grasp_dz 는 음수라 더해진다)
+    expect = grip.descend_time_s(dist, cfg.descend_speed, cfg.a_max, cfg.kp_z, cfg.height_tol_m)
+    return expect + BLIND_DWELL_MARGIN_S  # 여유를 더한 상한
 
 
 def xy_rule(phase: str, visible: bool) -> str:

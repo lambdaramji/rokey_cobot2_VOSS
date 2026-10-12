@@ -188,3 +188,48 @@ def test_preflight() -> None:
     assert sc.preflight_problems("30", [])
     problems = sc.preflight_problems("34", ["sim_check", "robot_gateway"])
     assert problems and "robot_gateway" in problems[0]
+
+
+# --- U9a: J12 하강 끊김 판정 (design/U9a-dd.md 4절) ---
+
+
+def descend_rows(cut_t: float, blind_t: float, end_t: float = 1.2) -> list[dict]:
+    """DESCEND 틱: cut_t 까지 매 틱 수신, blind_t 부터 사각 (t 는 DESCEND 시작 기준 s)."""
+    rows, n = [], 0
+    while n / 30.0 <= end_t:
+        t = T0 + n / 30.0
+        rx = T0 + min(n / 30.0, cut_t)  # cut_t 뒤로는 새 메시지가 없다
+        row = tick(t, phase="DESCEND", t_calc_s=t, box_rx_s=rx, vision_blind=n / 30.0 >= blind_t)
+        row["position_base_m"] = [0.0, -0.27, 0.1008]
+        row["tcp_now_m"] = [0.0, -0.27, 0.1408 - 0.02 * n / 30.0]  # 20 mm/s 로 내려간다
+        rows.append(row)
+        n += 1
+    return rows
+
+
+def test_judge_descend_cut_pass() -> None:
+    v = sc.judge_descend_cut(descend_rows(cut_t=0.30, blind_t=0.467), 0.5)
+    assert v.status == "PASS" and "여유" in v.actual  # 최대 나이 약 0.13 → 여유 약 0.37
+    assert "끊김 윗면 +34.0 mm" in v.actual  # 끊긴 순간(0.30 s) 높이, 사각 뒤 틱이 아니다
+
+
+def test_judge_descend_cut_fail_small_margin() -> None:
+    v = sc.judge_descend_cut(descend_rows(cut_t=0.10, blind_t=0.467), 0.5)
+    assert v.status == "FAIL"  # 최대 나이 약 0.33 → 여유 약 0.17 < 0.2
+
+
+def test_judge_descend_cut_fail_no_cut() -> None:
+    v = sc.judge_descend_cut(descend_rows(cut_t=9.0, blind_t=0.467), 0.5)
+    assert v.status == "FAIL" and "경주 없음" in v.actual  # 사각까지 계속 받았다
+
+
+def test_judge_descend_cut_unknown() -> None:
+    assert sc.judge_descend_cut([], 0.5).status == "UNKNOWN"  # DESCEND 틱 없음
+    no_blind = descend_rows(cut_t=0.3, blind_t=9.0)
+    assert sc.judge_descend_cut(no_blind, 0.5).status == "UNKNOWN"  # 사각 틱 없음
+
+
+def test_grasp_profile_has_u9a_cases() -> None:
+    assert sc.PROFILE_CASES["grasp"][-2:] == ("descend_lost", "vanish")
+    assert sc.EXPECT[("grasp", "descend_lost")].reason == "OK"
+    assert sc.EXPECT[("grasp", "vanish")].cause == "BOX_MISSING"

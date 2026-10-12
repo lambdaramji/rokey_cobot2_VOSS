@@ -300,3 +300,100 @@ def test_terminal_transitions_have_no_actions(state, ev, max_attempts, reason) -
     tr = step(state, ev, max_attempts)
     assert tr.terminal and tr.reason == reason
     assert tr.actions == ()  # 끝난 뒤 개방·닫기 요청이 나갈 길이 없다
+
+
+# --- U9a: cutoff 30 히스테리시스 · DESCEND 사각 체류 상한 (design/U9a-dd.md 2.3·2.4·6절) ---
+
+CUT30 = 30.0  # 시연 cutoff (윗면 +30 mm 진입, +35 mm 이탈)
+
+
+@pytest.mark.parametrize("was_blind", [False, True])
+def test_cutoff30_track_band_visible(was_blind) -> None:
+    # TRACK 접근 높이 띠 38~42 mm 에 x≥600 처짐 1.3 mm 가 겹쳐도(38.7) 사각이 아니다
+    top = 0.100
+    assert not fsm.is_vision_blind(fsm.TRACK, top + 0.0387, top, CUT30, was_blind)
+    assert not fsm.is_vision_blind(fsm.TRACK, top + 0.042, top, CUT30, was_blind)
+
+
+def test_cutoff30_exit_needs_above_35() -> None:
+    top = 0.100
+    assert fsm.is_vision_blind(fsm.PREPARE, top + 0.0349, top, CUT30, was_blind=True)  # 아직 안에
+    assert not fsm.is_vision_blind(fsm.PREPARE, top + 0.0351, top, CUT30, was_blind=True)  # 나옴
+
+
+def test_retry_rise_exits_above_35() -> None:
+    # 재시도 PREPARE: 파지 높이(−17)에서 접근 높이(+40)로 1 mm 씩 올라가며 사각이 언제 풀리나
+    top, blind, exit_mm = 0.100, True, None
+    for mm in range(-17, 41):
+        blind = fsm.is_vision_blind(fsm.PREPARE, top + mm / 1000.0, top, CUT30, blind)
+        if not blind and exit_mm is None:
+            exit_mm = mm  # 처음 사각에서 나온 높이
+    assert exit_mm == 36  # +35 초과에서 처음 풀린다 (정수 mm 걸음)
+    assert not blind  # 접근 높이에서는 보인다
+
+
+def test_blind_since_starts_in_descend_blind() -> None:
+    assert fsm.blind_since_next(None, fsm.DESCEND, True, 5.0) == 5.0
+
+
+def test_blind_since_keeps_first_time() -> None:
+    assert fsm.blind_since_next(5.0, fsm.DESCEND, True, 6.0) == 5.0
+
+
+@pytest.mark.parametrize(
+    "phase, blind",
+    [(fsm.DESCEND, False), (fsm.GRASP, True), (fsm.TRACK, True), (fsm.PREPARE, True)],
+)
+def test_blind_since_clears_when_visible_or_other_phase(phase, blind) -> None:
+    assert fsm.blind_since_next(5.0, phase, blind, 6.0) is None
+
+
+def test_blind_since_retry_sequence() -> None:
+    # DESCEND 사각 → GRASP → 재시도 PREPARE(사각) → 다시 DESCEND 사각: 두 번째는 새 시각
+    s = fsm.blind_since_next(None, fsm.DESCEND, True, 1.0)
+    s = fsm.blind_since_next(s, fsm.GRASP, True, 3.0)
+    assert s is None
+    s = fsm.blind_since_next(s, fsm.PREPARE, True, 5.0)
+    assert s is None
+    assert fsm.blind_since_next(s, fsm.DESCEND, True, 9.0) == 9.0
+
+
+def test_blind_overstay_boundary() -> None:
+    limit, dt = 3.44, 1.0 / 30.0
+    assert not fsm.blind_overstay(10.0, 10.0 + limit, limit)  # 같으면 아직 아님
+    assert not fsm.blind_overstay(10.0, 10.0 + limit - dt, limit)  # 1틱 전
+    assert fsm.blind_overstay(10.0, 10.0 + limit + dt, limit)  # 1틱 뒤
+    assert not fsm.blind_overstay(None, 99.0, limit)  # 사각 아님
+    assert not fsm.blind_overstay(10.0, 99.0, None)  # 상한 모름 (방어)
+
+
+def test_step_descend_overstay_device_error() -> None:
+    tr = step(at(fsm.DESCEND), TickEvent(vision_blind=True, blind_overstay=True))
+    assert tr.terminal and tr.reason == fsm.DEVICE_ERROR and tr.cause == fsm.DESCEND_BLIND_TIMEOUT
+
+
+@pytest.mark.parametrize("phase", [fsm.TRACK, fsm.GRASP, fsm.LIFT])
+def test_step_overstay_ignored_outside_descend(phase) -> None:
+    tr = step(at(phase, attempts=1), TickEvent(vision_blind=True, blind_overstay=True))
+    assert not tr.terminal
+
+
+def test_step_overstay_pose_stale_first() -> None:
+    tr = step(at(fsm.DESCEND), TickEvent(pose_stale=True, blind_overstay=True))
+    assert tr.reason == fsm.STALE_INPUT and tr.cause == "POSE_MISSING"
+
+
+def test_step_overstay_reach_first() -> None:
+    tr = step(at(fsm.DESCEND), TickEvent(reach="X_MAX", blind_overstay=True))
+    assert tr.reason == fsm.OUT_OF_REACH and tr.cause == "REACH_X_MAX"
+
+
+def test_step_overstay_cancel_first() -> None:
+    tr = step(at(fsm.DESCEND), TickEvent(cancel_requested=True, blind_overstay=True))
+    assert tr.state.stopping and not tr.terminal
+
+
+def test_step_overstay_wins_over_grasp_height_same_tick() -> None:
+    # 같은 틱에 파지 높이 도달과 겹치면 시간 초과가 이긴다 (보수적, U9a-dd 2.4)
+    tr = step(at(fsm.DESCEND), TickEvent(at_grasp_height=True, blind_overstay=True))
+    assert tr.terminal and tr.cause == fsm.DESCEND_BLIND_TIMEOUT

@@ -342,3 +342,31 @@ def test_u9c_values_pass_cross_checks() -> None:
     assert check_params(values).ready
     values["gripper_timeout_s"] = 2.3  # 닫힘 최대와 같다
     assert "gripper_timeout_s" in invalid_keys(values)
+
+
+# --- U9a: cutoff 30 교차 검사 (design/U9a-dd.md 1절) ---
+
+
+def test_cutoff30_passes_cross_checks() -> None:
+    values = valid_values()
+    values["z.vision_cutoff_above_top_mm"] = 30.0  # 이탈 35 < 접근 40, tol 2 < 40 − 35
+    assert check_params(values).ready
+
+
+def test_cutoff33_fails_height_tol() -> None:
+    values = valid_values()
+    values["z.vision_cutoff_above_top_mm"] = 33.0  # 이탈 38 → 40 − 38 = 2 = tol → 거부
+    assert invalid_keys(values) == ["z.height_tol_mm"]
+
+
+def test_cutoff35_fails_approach() -> None:
+    values = valid_values()
+    values["z.vision_cutoff_above_top_mm"] = 35.0  # 이탈 40 = 접근 40 → 거부
+    assert "z.approach_above_top_mm" in invalid_keys(values)
+
+
+def test_sim_yaml_cutoff_is_30() -> None:
+    node = yaml.safe_load((CONFIG_DIR / "belt_servo_sim.yaml").read_text())["belt_servo"][
+        "ros__parameters"
+    ]
+    assert node["z"]["vision_cutoff_above_top_mm"] == 30.0
