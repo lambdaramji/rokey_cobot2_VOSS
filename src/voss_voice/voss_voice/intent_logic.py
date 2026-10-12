@@ -23,6 +23,11 @@ ROS_TYPES = (
 QUERY_KINDS = ("count_by_dong", "held_count", "remaining_count")
 HOLD = "HOLD"
 DESTINATION_ANSWER_RE = re.compile(r"(.+?)(?:으로|로)보내(?:줘|주세요|줘요|요)?")
+# 질문 중 "읽을 수 없다" 답 → 보류. 공백·문장부호를 지운 뒤 전체 일치(10/12 시연 문형, LLM 없이)
+HOLD_ANSWER_RE = re.compile(
+    r"(?:송장)?(?:확인|판독|인식)(?:이)?(?:불가|안돼|안됨|안됩니다|못해|못함)(?:입니다|이에요|예요|요)?"
+    r"|보류(?:해|해줘|해주세요|로보내|로보내줘|로보내주세요|입니다|요)?"
+)
 
 # 정지 키워드: 공백·문장부호를 지운 뒤 포함 여부로 본다. 오인식으로 멈추는 쪽은 허용한다.
 STOP_KEYWORDS = ("멈춰", "멈추", "정지", "스톱", "스탑", "그만", "stop")
@@ -149,6 +154,22 @@ def decide_bare_dong(
             raw_text=raw_text,
             box_id=sort_box_id,
         ),
+    )
+
+
+def decide_hold_answer(
+    raw_text: str,
+    sort_state: str,
+    sort_box_id: str,
+) -> Decision | None:
+    """'송장 확인 불가'·'보류' 같은 답을 보류(HOLD) 답으로 처리한다. 해당 표현이 아니면 None."""
+    if HOLD_ANSWER_RE.fullmatch(_squash(raw_text)) is None:
+        return None
+    # 질문 중이 아니면 보류 답으로 로봇을 움직이지 않는다.
+    if sort_state != "ASKING" or not sort_box_id:
+        return Decision("say", say=SAY_NO_QUESTION)
+    return Decision(
+        "publish", intent=_intent("answer", zone=HOLD, raw_text=raw_text, box_id=sort_box_id)
     )
 
 

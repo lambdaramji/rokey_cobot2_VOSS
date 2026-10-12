@@ -20,6 +20,7 @@ from voss_voice.intent_logic import (
     decide,
     decide_bare_dong,
     decide_destination_answer,
+    decide_hold_answer,
     is_stop,
     stats_sentence,
     stop_decision,
@@ -83,6 +84,10 @@ class TranscriptFlow:
             # 4. "역삼으로 보내"처럼 목적지를 답했는지 확인한다.
             if d is None:
                 d = decide_destination_answer(text, view, state, box_id)
+
+            # 4-1. "송장 확인 불가"·"보류" 답은 보류로 (LLM 없이)
+            if d is None:
+                d = decide_hold_answer(text, state, box_id)
 
             # 5. 단독 동 이름이 아니라면 기존 GPT-4o 경로를 사용한다.
             if d is None:
