@@ -755,15 +755,28 @@ class RobotGatewayNode(Node):
         return j is not None and abs(j[2]) >= self.min_j3_deg
 
     def _in_tray(self, slot_flange, stage, sol: int, floor: float | None = None):
-        """slot 위로 TCP ≥ 최저 이동 높이가 안 나올 때: (트레이 안 높이 플랜지 z, 칸 0 위 이동 높이) 또는 None.
-        floor = 트레이 안 최저 TCP z(없으면 zone_min_in_tray_tcp_z_mm)."""
+        """slot 위로 TCP ≥ 최저 이동 높이가 안 나올 때: (slot 위 트레이 안 높이 플랜지 z, 칸 0 위 이동 높이,
+        칸 0 위 트레이 안 높이) 또는 None. floor = 트레이 안 최저 TCP z(없으면 zone_min_in_tray_tcp_z_mm).
+
+        slot 위 높이가 공통 트레이 안 높이(60)보다 낮으면(구역 floor, C 칸 5 = TCP 40) 칸 0 위에서는 공통
+        높이까지만 내려가 slot 위로 비스듬히 내려간다 — 칸 0 에서 트레이 깊이 들어가지 않게(10/12 실기 요청).
+        사선 위 점이 안 풀리면 예전처럼 같은 높이로 옆으로."""
         if stage is None or all(
             abs(a - b) < 0.5 for a, b in zip(slot_flange[:2], stage[:2], strict=True)
         ):
             return None
         zi = self._travel_z(slot_flange, sol, self.min_in_tray_tcp_z if floor is None else floor)
         zs = self._travel_z(stage, sol)
-        return None if zi is None or zs is None else (zi, zs)
+        if zi is None or zs is None:
+            return None
+        low = [slot_flange[0], slot_flange[1], zi, *slot_flange[3:]]
+        ze = zi + max(0.0, self.min_in_tray_tcp_z - flange_to_tcp(low, self.tcp)[2])
+        if ze > zi + 0.5 and not all(
+            self._ik_ok([s + k / 10 * (g - s) for s, g in zip([*stage[:2], ze], low[:3])] + low[3:], sol)
+            for k in range(11)
+        ):
+            ze = zi
+        return zi, zs, ze
 
     def _tray_stage(self, flange):
         """flange x·y 가 들어 있는 구역 트레이(안쪽 215 × 145 mm, measurements #6)의 칸 0, 없으면 None."""
@@ -799,20 +812,23 @@ class RobotGatewayNode(Node):
                 raise _ZoneError("LIMIT: 목표 자세에 팔이 닿지 않음 (구역·칸 위치 확인)")
             z0, z1 = self._travel_z(cur, sol), self._travel_z(target_flange, sol)
             pre, post = [], []
+            tray = None  # 로그용 (칸 위 트레이 안 높이, 칸 0 위 높이)
             start, end = cur, target_flange
             if z0 is None and stage is None:
                 stage = self._tray_stage(cur)  # 트레이 안에 멈춘 뒤 OBSERVE 복귀 등
             if z0 is None and (t := self._in_tray(cur, stage, sol, in_tray_z)) is not None:
-                zi, z0 = t  # 놓은 칸에서 트레이 안 높이로 올라가 칸 0 위로 옮긴 뒤 거기서 출발
+                zi, z0, ze = t  # 놓은 칸에서 트레이 안 높이로 올라가 칸 0 위로(비스듬히) 옮긴 뒤 거기서 출발
                 low = [cur[0], cur[1], zi, *cur[3:]]
-                start = [stage[0], stage[1], zi, *cur[3:]]
+                start = [stage[0], stage[1], ze, *cur[3:]]
                 pre = [("rise_in_tray", low)] if cur[2] < zi - 0.5 else []
                 pre.append(("to_stage", start))
+                tray = (zi, ze)
             if z1 is None and (t := self._in_tray(target_flange, stage, sol, in_tray_z)) is not None:
-                zi, z1 = t  # 칸 0 위로 내려와 트레이 안 높이로 목표 칸 위까지 옮긴 뒤 하강
-                end = [stage[0], stage[1], zi, *target_flange[3:]]
+                zi, z1, ze = t  # 칸 0 위로 내려와 트레이 안 높이로 목표 칸 위까지(비스듬히) 옮긴 뒤 하강
+                end = [stage[0], stage[1], ze, *target_flange[3:]]
                 post = [("in_tray", [target_flange[0], target_flange[1], zi, *target_flange[3:]])]
                 post.append(("descend", list(target_flange)))
+                tray = (zi, ze)
         except _ZoneError:
             raise
         except Exception as e:  # 큐 응답 없음
@@ -828,11 +844,10 @@ class RobotGatewayNode(Node):
             self.get_logger().info(
                 f"수평 이동 높이 플랜지 z {hz:.1f} (TCP {hz - self.safe_z + 200:.0f}) — safe_z 에서 안 닿음"
             )
-        if pre or post:
-            zi = (post or pre)[0][1][2]
-            self.get_logger().info(
-                f"트레이 안 이동: 칸 0 위 거쳐 TCP {zi - self.safe_z + 200:.0f} 높이로 옆으로"
-            )
+        if tray is not None:
+            zi, ze = (z - self.safe_z + 200 for z in tray)
+            how = f"TCP {zi:.0f} 높이로 옆으로" if abs(ze - zi) < 0.5 else f"TCP {ze:.0f} → {zi:.0f} 비스듬히"
+            self.get_logger().info(f"트레이 안 이동: 칸 0 위 거쳐 {how}")
         steps = pre + plan_move(start, end, hz) + post
         for name, step in steps:
             cmd = flange_to_tcp(step, self._cmd_off)  # 컨트롤러 등록 TCP 기준 목표
