@@ -62,6 +62,7 @@ def test_place_open_passes_when_set():
     p = gateway_params({"gripper": {"pre_open_mm": 90, "place_open_mm": 50}}, "x")
     assert (p["gripper.pre_open_mm"], p["gripper.place_open_mm"]) == (90.0, 50.0)
     assert "gripper.place_open_mm" not in gateway_params({"gripper": {"pre_open_mm": 90}}, "x")
+    assert gateway_params({"gripper": {"pick_open_mm": 55}}, "x")["gripper.pick_open_mm"] == 55.0
 
 
 def test_wrong_length_is_left_out():

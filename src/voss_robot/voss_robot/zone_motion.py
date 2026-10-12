@@ -11,9 +11,11 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Sequence
 
 SAFE_Z_MM = 446.6  # 플랜지 z, TCP z 200 (measurements #6 홈 복귀)
+ARC_STEP_DEG = 40.0  # 베이스 뒤를 피해 도는 수평 이동의 한 구간 각도
 
 
 def _layers(grid: Sequence[float]) -> tuple[int, float]:
@@ -89,7 +91,35 @@ def plan_move(
     moved = any(abs(a - b) > eps for a, b in zip(last[:3], over[:3], strict=True))
     turned = any(abs(a - b) > 0.05 for a, b in zip(last[3:], over[3:], strict=True))
     if moved or turned:
+        steps += front_arc(last, over, hz)
         steps.append(("over", over))
     if tgt[2] < hz - eps:
         steps.append(("descend", tgt))
     return steps
+
+
+def crosses_back(a: Sequence[float], b: Sequence[float]) -> bool:
+    """x·y 선분 a→b 가 베이스 뒤(−X 반직선, y = 0·x < 0)를 지나는지 — J1 이 ±180° 를 넘는다."""
+    (x1, y1), (x2, y2) = (float(a[0]), float(a[1])), (float(b[0]), float(b[1]))
+    if (y1 > 0) == (y2 > 0) or y1 == y2:
+        return False
+    return x1 + (x2 - x1) * (-y1) / (y2 - y1) < 0.0
+
+
+def front_arc(
+    start: Sequence[float], end: Sequence[float], z: float, step_deg: float = ARC_STEP_DEG
+) -> list[tuple[str, list[float]]]:
+    """수평 이동이 베이스 뒤를 지나면(OBSERVE ↔ 트럭, 10/12 실기: 뒤로 돌다 축 가까이서 느려져 TIMEOUT) 앞쪽
+    (트레이 쪽, +X)으로 도는 경유점 [("arcN", posx)]. 각도는 atan2 그대로 이어 ±180° 를 넘지 않게, 반지름은
+    양 끝 사이를 고르게, 높이 z, 자세는 end. 뒤를 안 지나면 []."""
+    if not crosses_back(start, end):
+        return []
+    ts, te = math.atan2(start[1], start[0]), math.atan2(end[1], end[0])
+    rs, re = math.hypot(start[0], start[1]), math.hypot(end[0], end[1])
+    n = max(2, math.ceil(abs(math.degrees(te - ts)) / step_deg))
+    out = []
+    for k in range(1, n):
+        t = k / n
+        a, r = ts + (te - ts) * t, rs + (re - rs) * t
+        out.append((f"arc{k}", [r * math.cos(a), r * math.sin(a), float(z), *[float(v) for v in end[3:]]]))
+    return out

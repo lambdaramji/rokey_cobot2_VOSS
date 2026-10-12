@@ -200,6 +200,8 @@ class RobotGatewayNode(Node):
         self.place_open = float(
             self.declare_parameter("gripper.place_open_mm", self.pre_open).value
         )
+        # 구역 트레이(3×2)에서 집기 전 여는 폭(보고값). 옆 줄 박스까지 44.5 mm — 90 이면 핑거가 닿는다. 없으면 pre_open
+        self.pick_open = float(self.declare_parameter("gripper.pick_open_mm", self.pre_open).value)
         self.grip_force = float(self.declare_parameter("gripper.force_n", 14.0).value)
         self.grasp_width = float(self.declare_parameter("gripper.grasp_width_mm", 39.0).value)
         # PICK(재확인 칸에서 집기): 놓기 칸 자세 + dz. 놓기 자세는 쥔 박스 밑면 +5 라 핑거 끝은 바닥 약 +13.
@@ -596,9 +598,9 @@ class RobotGatewayNode(Node):
         place = mode in ("", "PLACE") and zone != "OBSERVE"
         pick = mode == "PICK"
         if (
-            pick and zone != "RECHECK"
-        ):  # C·HOLD 처럼 safe_z 에서 안 닿는 칸이면 쥔 채 트레이 안에 멈춘다
-            return fail("INVALID: PICK 은 RECHECK 만 (재확인 칸에서 집기, MC-017)")
+            pick and zone not in ("A", "B", "C", "RECHECK", "HOLD")
+        ):  # 재확인 칸(MC-017) + 팔레타이징: 구역 트레이에서 집어 트럭으로(로컬 10/12)
+            return fail("INVALID: PICK 은 A·B·C·RECHECK·HOLD 만 (트럭·OBSERVE 에서는 집지 않음)")
         stage, via = None, None
         in_tray_z = None  # 이 구역의 트레이 안 최저 높이(없으면 공통 zone_min_in_tray_tcp_z_mm)
         label = "PLACE" if place else (mode or "MOVE")
@@ -656,7 +658,7 @@ class RobotGatewayNode(Node):
             try:
                 if pick:
                     # 상승 높이를 쥐기 전에 구한다 — 안 풀리면 쥔 채 멈추는 대신 움직이기 전에 거부(#148 리뷰 박병후)
-                    lift = self._lift_pose(target)
+                    lift = self._pick_lift(target, stage)
                     # 내려가기 전에 연다(VIEW·OBSERVE 높이 — 아래에 아무것도 없다)
                     try:
                         w, _busy, grip, _safety = self.rg2.status()
@@ -664,7 +666,9 @@ class RobotGatewayNode(Node):
                         return fail(f"GRIP_FAIL: RG2 상태 읽기 {e}")
                     if grip:  # 무언가를 쥔 채면 사전 개방에서 떨어뜨린다(자동 개방 금지, MC-014)
                         return fail(f"GRIP_FAIL: 이미 쥐고 있다(폭 {w:.1f} mm) — 열지 않고 거부")
-                    g = self.rg2.command_held(self.pre_open, self.grip_force)
+                    # 재확인 칸은 옆 박스가 없어 넓게(90), 구역 트레이 3×2 는 옆 줄 박스에 핑거가 닿지 않게 pick_open
+                    opening = self.pre_open if zone == "RECHECK" else self.pick_open
+                    g = self.rg2.command_held(opening, self.grip_force)
                     if not g.ok:
                         return fail(f"GRIP_FAIL: 사전 개방 {g.message}")
                 self._run_path(target, stage, in_tray_z)
@@ -678,13 +682,14 @@ class RobotGatewayNode(Node):
                         self.pick_width[1],
                     )
                     if why:
-                        return fail(f"GRIP_FAIL: 집기 확인 실패 — {why}{self._pick_retreat(lift)}")
+                        back = self._pick_retreat(lift, stage, in_tray_z)
+                        return fail(f"GRIP_FAIL: 집기 확인 실패 — {why}{back}")
                     self.get_logger().info(
                         f"move_to_zone {zone} 칸 {req.slot} PICK 집음: 폭 {g.width_actual:.1f} mm, grip True"
                     )
                     # 든 채 수직 상승. 실패하면 박스를 든 채 멈춘다(자동 개방 금지, MC-014)
                     try:
-                        self._run_path(lift)
+                        self._run_path(lift, stage, in_tray_z)
                     except _ZoneError as e:
                         return fail(f"{e} (박스를 쥔 채 멈춤)")
                 if place:
@@ -730,14 +735,24 @@ class RobotGatewayNode(Node):
             )
         return [flange[0], flange[1], z, *flange[3:]]
 
-    def _pick_retreat(self, lift) -> str:
+    def _pick_lift(self, target, stage):
+        """PICK 뒤 올라갈 자세: 칸 바로 위(TCP ≥ 120)가 안 되면 출입구 칸 위(트레이 안으로 나와 올라감 — C 칸 2·5).
+        움직이기 전에 구한다."""
+        try:
+            return self._lift_pose(target)
+        except _ZoneError:
+            if stage is None or all(abs(a - b) < 0.5 for a, b in zip(target[:2], stage[:2], strict=True)):
+                raise
+            return self._lift_pose(stage)
+
+    def _pick_retreat(self, lift, stage=None, in_tray_z=None) -> str:
         """PICK 확인 실패: 파지 높이(박스 밑면 = 바닥)에서 열어 박스를 칸에 그대로 두고 lift 까지 올라간다.
         문제가 생기면 그 자리에 멈추고 설명을 돌려준다(GRIP_FAIL 메시지 뒤에 붙임)."""
         g = self.rg2.command_held(self.place_open, self.grip_force)
         if not g.ok:
             return f" / 개방 실패 {g.message} — 칸 위 파지 높이에 멈춤"
         try:
-            self._run_path(lift)
+            self._run_path(lift, stage, in_tray_z)
         except _ZoneError as e:
             return f" / 열었으나 상승 실패 {e}"
         return " / 열고 상승함(박스는 칸에 그대로)"
@@ -859,6 +874,15 @@ class RobotGatewayNode(Node):
             how = f"TCP {zi:.0f} 높이로 옆으로" if abs(ze - zi) < 0.5 else f"TCP {ze:.0f} → {zi:.0f} 비스듬히"
             self.get_logger().info(f"트레이 안 이동: 출입구 칸 위 거쳐 {how}")
         steps = pre + plan_move(start, end, hz) + post
+        arcs = [p for n, p in steps if n.startswith("arc")]
+        if arcs:
+            try:
+                reach = all(self._ik_ok(p, sol) for p in arcs)
+            except Exception as e:  # 큐 응답 없음
+                raise _ZoneError(f"TIMEOUT: 경유점 계산 {e}") from e
+            if not reach:
+                raise _ZoneError("LIMIT: 베이스 앞쪽으로 도는 경유점에 팔이 닿지 않음")
+            self.get_logger().info(f"수평 이동이 베이스 뒤를 지나 앞쪽으로 돈다 (경유점 {len(arcs)}개)")
         for name, step in steps:
             cmd = flange_to_tcp(step, self._cmd_off)  # 컨트롤러 등록 TCP 기준 목표
             tcp = flange_to_tcp(

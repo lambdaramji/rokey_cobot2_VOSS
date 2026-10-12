@@ -6,6 +6,7 @@ from voss_robot.zone_motion import (
     pick_grip_ok,
     pick_pose,
     row_stage_slot,
+    crosses_back,
     plan_move,
     slot_offset,
     slot_pose,
@@ -122,3 +123,23 @@ def test_pick_grip_ok_needs_detect_and_width_range():
     assert "grip 없음" in pick_grip_ok(True, False, 38.7, 39.5, 44.0)  # 빈손
     assert "밖" in pick_grip_ok(True, True, 45.2, 39.5, 44.0)  # 비스듬히 쥠
     assert "밖" in pick_grip_ok(True, True, 39.0, 39.5, 44.0)
+
+
+def test_observe_to_truck_goes_round_the_front_not_behind_the_base():
+    # 10/12 실기: OBSERVE → 트럭 직선이 베이스 뒤(−X)를 지나 팔이 반대로 돌고 축 가까이서 느려져 TIMEOUT
+    truck0 = slot_pose([-163.76, 170.18, 258.27, 35.36, -180.0, -54.64], [4, 2, 50, 0, 2, 27, 60], 0)
+    steps = plan_move(OBS, truck0)
+    names = [n for n, _ in steps]
+    assert names[0].startswith("arc") and names[-2:] == ["over", "descend"]  # OBSERVE 는 safe_z 위라 상승 없음
+    pts = [OBS] + [p for _, p in steps]
+    for a, b in zip(pts, pts[1:]):
+        assert not crosses_back(a, b)
+    import math
+    assert min(math.hypot(p[0], p[1]) for n, p in steps if n.startswith("arc")) > 250
+    back = plan_move(truck0, OBS)
+    assert back[0][0] == "rise" and back[1][0].startswith("arc") and back[-1][0] == "over"
+
+
+def test_tray_paths_do_not_get_arcs():
+    for z in (A, slot_pose(A, [3, 2, 60, 0, 2, 27, 60], 0)):
+        assert not any(n.startswith("arc") for n, _ in plan_move(OBS, z) + plan_move(z, OBS))
