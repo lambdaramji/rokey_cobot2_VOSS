@@ -10,6 +10,8 @@
 | measurements-1006.md | 10/06 실측 체크리스트와 결과 | 측정한 사람 |
 | g0-runbook.md | 10/10 G0 실행 절차(전제·공용 PC 준비·기동 순서·확인·증거·문제 대응) | PL |
 | g1-gate.md | 10/10 G1 게이트: 사례·성공 정의, 20회 기록표, 원인 분류, 게이트 회의, ADR-0002 갱신 문구 | PL |
+| sprint2-gate.md | 10/13 18:00 Sprint 2 게이트: 팔레타이징·음성 기동 판정 정의, 전제, 순서, 기록표, 판정 표(ADR-0014) | PL |
+| demo-script.md | 10/15 시연 대본 v2: 역할, 박스 10개 구성, 단계 0~9 발화·기대·통과 조건, 판정 기록표, 뺄 때 | PL 작성 · 운영 김학민 |
 | adr/ | 설계 결정 기록 | 결정한 사람 |
 | setup/ | 개발 환경 구성. `drive.md` = 팀 Google Drive 구조·규칙(원본·데이터셋·모델·결과 위치) | 김학민·남현지 / drive.md: PL |
 | requirements/ | BRD·SRD (Claude Docs에서 Markdown으로 내보낸 사본), 개발일정 xlsx, 시스템 아키텍처 그림 | BRD·개발일정: PL / SRD·`architecture/` 그림: 박병후 |
