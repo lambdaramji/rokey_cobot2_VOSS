@@ -5,5 +5,6 @@ launch 파일과 파라미터 (T22 #31). 실행은 사람이 한다 — ros2 lau
 - `voss_dry_run.launch.py`: 로봇 없이 소프트웨어 전체 루프 — 녹화 재생(`playback_restamp`) → OCR → sort_manager → TrackAndGrasp → gateway dry_run(가짜 PLACE). g0_mock `--log` 로 LOG 준비. TrackAndGrasp 는 기본 `servo:=mock`(g0_mock `--servo`) — 고정 카메라 녹화로는 진짜 belt_servo 가 박스를 화면에 붙잡지 못해 LOST(10/11), `servo:=sim` 은 진짜 belt_servo(sim 파라미터)로 PREPARE·TRACK 확인. **도메인 30 이면 기동 거부.**
 - 기동 순서(런북 g0-runbook 2절): 두산 브링업(T1) → robot_gateway(T2, `pose_source:=joint_states`) → 카메라(T3) → sort_logger(T4, sort_manager 보다 먼저) → 비전(T5·T6) → belt_servo(T7) → sort_manager(T8) → 음성 3노드 → hmi_bridge. 운전 시작은 sort_manager 준비 판단(ROBOT·SERVO·VISION·OCR·LOG)이 막는다.
 - 끄는 순서: belt_servo 를 gateway 보다 먼저(끊기면 watchdog 이 정지) — 런북 7장.
+- 한 번에 기동·종료: `scripts/voss_up.sh`·`voss_down.sh`(본체 `scripts/voss_up.py`, 시험 `test/test_voss_up.py`). 단계 인자는 `voss_host.launch.py` `host_plan()` 에서 가져오고, 단계마다 준비 줄(gateway `started: real`·미리 계산, 카메라 `RealSense Node Is Up`, logger `DB 연결 성공`, 비전 `OCR 엔진 준비`, belt_servo `READY`/`READY 거부`, manager `voss_config … sha256`)을 기다린다. 운전 start 는 보내지 않는다. voss_launcher(S2-T10)도 같은 스크립트를 쓴다(`--yes` = 음성으로 확인했을 때만).
 - 카메라 노출·화이트밸런스 고정값은 `voss_host.launch.py` `CAMERA_PARAMS`(런북 T3 10/08 확인 명령). 툴/TCP 등록 스크립트도 여기(학민).
 - 순수 함수(`host_plan`·`dry_run_host_args`·`refuse_operating_domain`)와 "넘기는 인자가 대상 launch 에 선언돼 있는지"는 `test/test_launch.py`.

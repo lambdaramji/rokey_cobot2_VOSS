@@ -81,6 +81,8 @@ EOF
 ```
 
 ## 2. 기동 순서 (터미널마다 `source ~/voss_g0_env.sh` 먼저)
+> 한 번에 띄우려면 `scripts/voss_up.sh --real`(먼저 `--print` 로 계획 확인, 끌 때 `scripts/voss_down.sh`) — 아래 표와 같은 순서·같은 준비 표시를 기다린다(T22 #31). 표는 그대로 수동 기동 절차다.
+
 | T | 무엇 | 명령 | 누가 | 정상 표시 |
 |---|---|---|---|---|
 | 1 | 두산 브링업 | `ros2 launch m0609_rg2_bringup bringup.launch.py mode:=real host:=<로봇 컨트롤러 IP> port:=12345 model:=m0609` (IP 는 `scripts/measure_1006/servo_stream_check.md`·현장 메모 — 공개 레포라 여기 적지 않는다) | 학민 · **비상정지** | `dsr_controller2` active, 펜던트 AUTONOMOUS·STANDBY |
