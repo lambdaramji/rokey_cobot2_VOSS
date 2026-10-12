@@ -200,7 +200,7 @@ class RobotGatewayNode(Node):
         self.place_open = float(
             self.declare_parameter("gripper.place_open_mm", self.pre_open).value
         )
-        # 구역 트레이(3×2)에서 집기 전 여는 폭(보고값). 옆 줄 박스까지 44.5 mm — 90 이면 핑거가 닿는다. 없으면 pre_open
+        # 트레이에서 집기(PICK) 전 여는 폭(보고값). 옆 줄 박스까지 44.5 mm — 90 이면 핑거가 닿는다. 없으면 pre_open
         self.pick_open = float(self.declare_parameter("gripper.pick_open_mm", self.pre_open).value)
         self.grip_force = float(self.declare_parameter("gripper.force_n", 14.0).value)
         self.grasp_width = float(self.declare_parameter("gripper.grasp_width_mm", 39.0).value)
@@ -666,9 +666,8 @@ class RobotGatewayNode(Node):
                         return fail(f"GRIP_FAIL: RG2 상태 읽기 {e}")
                     if grip:  # 무언가를 쥔 채면 사전 개방에서 떨어뜨린다(자동 개방 금지, MC-014)
                         return fail(f"GRIP_FAIL: 이미 쥐고 있다(폭 {w:.1f} mm) — 열지 않고 거부")
-                    # 재확인 칸은 옆 박스가 없어 넓게(90), 구역 트레이 3×2 는 옆 줄 박스에 핑거가 닿지 않게 pick_open
-                    opening = self.pre_open if zone == "RECHECK" else self.pick_open
-                    g = self.rg2.command_held(opening, self.grip_force)
+                    # 트레이 안 집기 개방 = pick_open (3×2 에서 90 이면 옆 줄 박스에 핑거가 닿는다, 10/12 실기 50)
+                    g = self.rg2.command_held(self.pick_open, self.grip_force)
                     if not g.ok:
                         return fail(f"GRIP_FAIL: 사전 개방 {g.message}")
                 self._run_path(target, stage, in_tray_z)

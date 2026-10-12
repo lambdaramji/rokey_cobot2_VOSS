@@ -40,7 +40,7 @@ belt:
 gripper:                 # 폭은 RG2 보고값. 실측 안쪽 간격: 보고 90 → 80 mm, 빈손 보고 39 → 28 mm(10/08), 박스 파지 보고 40.3 → 30 mm(10/06) — 차이 10~11 mm 의 관측 특성이라 보정식으로 쓰지 않는다 (measurements #8)
   pre_open_mm: 90
   place_open_mm: null     # 선택. 트레이 안에서 놓을 때 여는 폭(보고값). 벽·옆 박스에 핑거가 닿지 않게 박스가 떨어지는 최소 폭. null·없음 = pre_open_mm
-  pick_open_mm: null      # 선택. 구역 트레이(A·B·C·보류)에서 MoveToZone PICK 전 여는 폭(보고값). 재확인 칸은 pre_open_mm 그대로. null = pre_open_mm
+  pick_open_mm: null      # 선택. 트레이(A·B·C·재확인·보류)에서 MoveToZone PICK 전 여는 폭(보고값). null = pre_open_mm. 벨트 사전 개방은 pre_open_mm 그대로
   grasp_width_mm: 39     # 파지 목표 폭 (예시 = 10/06 실측값). 박스보다 작아야 grip_detected 가 켜진다
   force_n: null          # 10/06 실측 (종이 박스 안 찌그러지는 값)
 ocr:
