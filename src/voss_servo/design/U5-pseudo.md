@@ -118,7 +118,7 @@ _cross_checks 에 추가 (have() 로 둘 다 있을 때만):
     hold_min ≤ grasp_width          → ("grasp.hold_width_min_mm", "gripper.grasp_width_mm 보다 커야 함 (빈손 보고 폭은 명령 폭 아래)")
 ```
 
-`config/belt_servo.yaml`: `hold_width_min_mm: 39.5`, `hold_width_max_mm: 43.5`, `close_time_max_s: 2.1`, `room_margin_mm: 10.0`(제안), `gripper_timeout_s: 3.0`(제안, gateway `rg2_timeout_s` 6.0 주석) + 근거 주석(DD 5절).
+`config/belt_servo.yaml`: `hold_width_min_mm: 39.5`, `hold_width_max_mm: 43.5`, `close_time_max_s: 2.1`, `room_margin_mm: 10.0`(제안), `gripper_timeout_s: 3.0`(제안, gateway `rg2_timeout_s` 6.0 주석) + 근거 주석(DD 5절). (10/10 현장값 44.0 으로 변경, U-F)
 
 ## 5. belt_servo.py — GoalCtx·노드 필드
 

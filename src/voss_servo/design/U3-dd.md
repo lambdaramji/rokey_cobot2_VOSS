@@ -68,7 +68,7 @@
 | 키 | belt_servo.yaml (main) | example | sim | sim 값 출처 |
 |---|---|---|---|---|
 | grasp.tcp_z_below_top_mm | 19.0 | 19.0 | 19.0 | 결정값 |
-| grasp.hold_width_min_mm / max | null | 39.5 / 43.5 (U5 #131 값 — 11절 예외) | 39.5 / 43.5 | U5 지시서·CONTRACT T34 (0° 40.7~41.2, 30° 43.0). main 주석의 41.5 갱신은 U5 몫 |
+| grasp.hold_width_min_mm / max | null | 39.5 / 43.5 (U5 #131 값 — 11절 예외) | 39.5 / 43.5 | U5 지시서·CONTRACT T34 (0° 40.7~41.2, 30° 43.0). main 주석의 41.5 갱신은 U5 몫 (10/10 현장값 44.0 으로 변경, U-F) |
 | reach.x_min_mm / x_max_mm | −107 / 620 | −107 / 620 | −107 / 620 | measurements #6, #122 |
 | control.kp_per_s | null | null (U4) | **1.0** | 사전 실험(sim 전용) |
 | control.kp_z_per_s | null | null (≤ 2) | 1.5 | U2 DD 7.1 (kp_z × 0.05 ≤ 0.1) |
@@ -307,7 +307,7 @@ grasp profile 은 U5 머지 뒤 실제 값으로 다시 확인한다(지금은 U
 - sim_check: SIGKILL 을 쓴 case 는 판정 표에 `J-` UNKNOWN 한 줄.
 - fake_box: 기본 시작 위치·둘째 박스 offset 을 상수(`DEFAULT_START_M`·`DEFAULT_SECOND_OFFSET_M`)로 두고 sim_check J12 가 같은 상수를 쓴다.
 - 테스트 실제 수: launch_params 13(실행 14), fake_box 7(실행 9), sim_check 10.
-- **U5 #131 키 미리 반영(사용자 승인 A안, 10/10)**: example·sim yaml 에 `grasp.close_time_max_s` 2.1·`grasp.room_margin_mm` 10·`gripper_timeout_s` 3.0 추가, example 의 hold_width 를 #131 값 39.5/43.5 로. T-L12 = "example = sim = belt_servo.yaml ∪ `U5_PENDING_KEYS`" → U3·U5 어느 쪽이 먼저 머지돼도 깨지지 않는다(#131 뒤에는 상수를 지워도 됨). main 노드는 선언 안 된 키를 무시해 READY·params_sha256 그대로(실측). 이 경우 3절 "키 집합 같음" 규칙은 이 한 가지 예외를 둔다.
+- **U5 #131 키 미리 반영(사용자 승인 A안, 10/10)**: example·sim yaml 에 `grasp.close_time_max_s` 2.1·`grasp.room_margin_mm` 10·`gripper_timeout_s` 3.0 추가, example 의 hold_width 를 #131 값 39.5/43.5 로. T-L12 = "example = sim = belt_servo.yaml ∪ `U5_PENDING_KEYS`" → U3·U5 어느 쪽이 먼저 머지돼도 깨지지 않는다(#131 뒤에는 상수를 지워도 됨). main 노드는 선언 안 된 키를 무시해 READY·params_sha256 그대로(실측). 이 경우 3절 "키 집합 같음" 규칙은 이 한 가지 예외를 둔다. (10/10 현장값 44.0 으로 변경, U-F)
 - 실행 도메인: RULES §2 배정(10/10)에 따라 이후 세션 실행은 75~79.
 - **PR 전 독립 재검(10/10) 반영**: 규칙 5 검사를 파일마다 null 제거 전에(값이 null 인 `belt.*` 도 오류 — T-L4 에 한 경우 추가), 중단 요약 행 폴더 칸 "-", 문서 수치·이름 정정, 수동 절차의 "goal 5 s 안" 조건(dry_run 에서 gateway x 자르기로 606 mm 에 서면 PREPARE 가 끝나지 않음 — belt_servo 가 '잘려서 선 상태' 를 감지하지 못하는 것은 U9 확인거리).
 
