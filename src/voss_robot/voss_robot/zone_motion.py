@@ -45,6 +45,12 @@ def slot_pose(zone_pose: Sequence[float], grid: Sequence[float], slot: int) -> l
     return [p[0] + dx, p[1] + dy, p[2] + dz, *p[3:]]
 
 
+def row_stage_slot(grid: Sequence[float], slot: int) -> int:
+    """트레이 안 이동의 출입구 칸 = slot 과 같은 Y 줄의 −X 끝 칸(1층). C 칸 2 → 0, 칸 5 → 3 (10/12 실기 요청)."""
+    cols, rows = int(grid[0]), int(grid[1])
+    return (slot % (cols * rows)) // cols * cols
+
+
 def pick_pose(slot_flange: Sequence[float], dz_mm: float) -> list[float]:
     """PICK 파지 자세 = 놓기 칸 자세 + dz. 놓기 자세는 쥔 박스 밑면 +5 mm(10/06 교시)라 핑거 끝은 바닥 약 +13 mm
     *(추정)* → 10/11 실기로 dz 기본 −8(핑거 끝 ≈ 박스 밑면 +5, voss_msgs.md MoveToZone PICK)."""

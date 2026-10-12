@@ -5,6 +5,7 @@ from voss_robot.zone_motion import (
     SAFE_Z_MM,
     pick_grip_ok,
     pick_pose,
+    row_stage_slot,
     plan_move,
     slot_offset,
     slot_pose,
@@ -29,6 +30,12 @@ def test_slot_out_of_range():
 
 def test_slot_pose_shifts_x_only():
     assert slot_pose(A, [3, 1, 60], 0) == pytest.approx([153.49, *A[1:]])
+
+
+def test_row_stage_slot_is_minus_x_end_of_same_row():
+    grid = [3, 2, 50, -30, 2, 27, 60]
+    assert [row_stage_slot(grid, k) for k in range(12)] == [0, 0, 0, 3, 3, 3, 0, 0, 0, 3, 3, 3]
+    assert row_stage_slot([2, 1, 60], 1) == 0  # 재확인·보류 1줄은 칸 0 그대로
 
 
 def test_layers_reuse_first_layer_slots_and_raise_z():
