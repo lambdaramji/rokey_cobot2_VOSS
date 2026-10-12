@@ -910,13 +910,17 @@ class RobotGatewayNode(Node):
             seq0 = self.dsr.alarm_seq
             # 블렌딩(zone_blend_mm): 위쪽 모서리(이동 높이에서 끝나는 구간 → 다음 직선 구간)만 — 남은 거리가
             # 이만큼일 때 다음 move_line 을 보내 멈추지 않고 꺾는다(두산 DUPLICATE). 트레이 안 낮은 모서리는 그대로
+            # 두산은 스플라인(move_spline_task) 앞뒤로 다른 이동이 겹치면 거부한다(10/12 실기 450 mm/s: 1203
+            # rejected eMoveL·1903 rejected eMoveSX) → 스플라인 구간은 블렌딩하지 않고, 보내기 전·직후 정지 확인
             nxt = steps[i + 1][0] if i + 1 < len(steps) else ""
             blend = (
                 self.blend_mm
-                if self.blend_mm > 0 and nxt and nxt != "arc" and pts[-1][2] >= hz - 0.5
+                if self.blend_mm > 0 and name != "arc" and nxt and nxt != "arc" and pts[-1][2] >= hz - 0.5
                 else 0.0
             )
             try:
+                if name == "arc" or (i > 0 and steps[i - 1][0] == "arc"):
+                    self._wait_idle(name)
                 self._send_move(name, cmds)
                 self._wait_arrive(name, tcps[-1], seq0, tcps[:-1], early=blend, carry=carry)
                 carry = blend
@@ -924,6 +928,22 @@ class RobotGatewayNode(Node):
                 if not str(e).startswith("STOPPED"):  # stop 은 이미 move_stop 을 보냈다
                     self._zone_halt(f"{name}: {e}")
                 raise
+
+    def _wait_idle(self, name: str, timeout_s: float = 3.0) -> None:
+        """컨트롤러가 MOVING(2) 이 아닐 때까지(스플라인 앞뒤). 도착 판정(3 mm·0.3 s) 뒤에도 빠른 속도에서는 잠깐
+        MOVING 으로 남는다(10/12 실기 450 mm/s)."""
+        deadline = time.monotonic() + timeout_s
+        while time.monotonic() < deadline:
+            if self._abort.is_set():
+                raise _ZoneError(f"STOPPED: {name} 전 stop")
+            try:
+                st = self.queue.submit(self.dsr.get_robot_state).result(timeout=1.0)
+            except Exception as e:  # 큐 응답 없음
+                raise _ZoneError(f"TIMEOUT: {name} 전 컨트롤러 상태 {e}") from e
+            if st != 2:
+                return
+            time.sleep(0.03)
+        raise _ZoneError(f"TIMEOUT: {name} 전 컨트롤러가 {timeout_s:.0f} s 동안 이동 중 상태")
 
     def _send_move(self, name: str, cmds) -> None:
         """move_line(ASYNC) 한 구간을 큐로 보낸다. stop 이 먼저 왔으면 보내지 않고 STOPPED.

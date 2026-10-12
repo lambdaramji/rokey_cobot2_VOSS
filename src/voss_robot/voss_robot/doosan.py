@@ -160,9 +160,10 @@ class DryRunDoosan:
     alarm_seq = 0
 
     def get_robot_state(self) -> int:
-        """두산 ROBOT_STATE: 움직이면 MOVING(2), 아니면 STANDBY(1)."""
+        """두산 ROBOT_STATE: 움직이면(speedl·move_line·move_spline) MOVING(2), 아니면 STANDBY(1)."""
         with self._lock:
-            return 2 if any(abs(v) > 0 for v in self._vel) else 1
+            self._advance()
+            return 2 if self._target is not None or any(abs(v) > 0 for v in self._vel) else 1
 
 
 class GuardedCaller:
