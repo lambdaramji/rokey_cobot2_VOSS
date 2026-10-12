@@ -592,11 +592,13 @@ class RobotGatewayNode(Node):
             self.get_logger().warn(f"move_to_zone {zone} 칸 {req.slot} {kind} → {msg}")
             return res
 
-        if mode not in ("", "PLACE", "VIEW", "PICK"):
+        if mode not in ("", "PLACE", "VIEW", "PICK", "STAY"):
             return fail(f"INVALID: mode {req.mode}")
         if zone == "OBSERVE" and mode:
             return fail('INVALID: OBSERVE 는 mode "" 만 (이동만, #96)')
-        place = mode in ("", "PLACE") and zone != "OBSERVE"
+        place = mode in ("", "PLACE", "STAY") and zone != "OBSERVE"
+        # STAY = 놓고 OBSERVE 로 돌아가지 않고 칸 위로 올라가 멈춘다 — 트럭 적재 뒤 바로 다음 박스 집기(로컬 10/12)
+        stay = mode == "STAY"
         pick = mode == "PICK"
         if (
             pick and zone not in ("A", "B", "C", "RECHECK", "HOLD")
@@ -604,7 +606,7 @@ class RobotGatewayNode(Node):
             return fail("INVALID: PICK 은 A·B·C·RECHECK·HOLD 만 (트럭·OBSERVE 에서는 집지 않음)")
         stage, via = None, None
         in_tray_z = None  # 이 구역의 트레이 안 최저 높이(없으면 공통 zone_min_in_tray_tcp_z_mm)
-        label = "PLACE" if place else (mode or "MOVE")
+        label = ("STAY" if stay else "PLACE") if place else (mode or "MOVE")
         if zone == "OBSERVE":
             if len(self.observe) != 6:
                 return fail("NOT_CONFIGURED: observe_pose 없음")
@@ -657,6 +659,7 @@ class RobotGatewayNode(Node):
             self.get_logger().info(f"move_to_zone {zone} 칸 {req.slot} {label} 시작{gate}")
             placed = None
             try:
+                rise = self._pick_lift(target, stage) if stay else None  # 놓은 뒤 올라갈 곳(움직이기 전에)
                 if pick:
                     # 상승 높이를 쥐기 전에 구한다 — 안 풀리면 쥔 채 멈추는 대신 움직이기 전에 거부(#148 리뷰 박병후)
                     lift = self._pick_lift(target, stage)
@@ -699,7 +702,7 @@ class RobotGatewayNode(Node):
                     placed = self.get_clock().now()
                     res.placed_stamp = placed.to_msg()
                     try:
-                        self._run_path(list(self.observe), stage, in_tray_z)
+                        self._run_path(rise if stay else list(self.observe), stage, in_tray_z)
                     except _ZoneError as e:
                         return fail(f"RETURN_FAILED: {e}")
             except _ZoneError as e:
