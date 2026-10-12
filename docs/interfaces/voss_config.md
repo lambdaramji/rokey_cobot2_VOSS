@@ -24,6 +24,10 @@ zones:               # 두산 posx: x y z rx ry rz, mm/deg. 플랜지 기준(TCP
   C:       {pose: null, grid: {cols: 3, rows: 1, pitch_mm: 60}}
   recheck: {pose: null, grid: {cols: 2, rows: 1, pitch_mm: 60}, view_pose: null}   # view_pose: MoveToZone(RECHECK, VIEW) 때 카메라가 재확인 구역 송장을 보는 자세. 플랜지 posx, 교시 전 null(김학민 T35, #51 MC-017)
   hold:    {pose: null, grid: {cols: 2, rows: 1, pitch_mm: 60}}
+  pallet:  {pose: null, size_mm: [220, 150], max_cols: 3, rows: 3, row_pitch_mm: null, drop_margin_mm: null}
+                     # Sprint 2 팔레트(트레이 중심, 직접교시 S2-T02 — 그림 계산값 금지, BRD v1.4 10.3). grid 대신 열을 경로마다 정한다:
+                     # 열 = 가로 size_mm[0](X) 을 경로 동 수 n(1~max_cols)으로 등분(3열 ≈ 73 mm, 2열 110 mm), 열 0 = −X 끝.
+                     # 열 안 칸 = rows 개, Y 피치 row_pitch_mm(≈ 50, pending #23). drop_margin_mm = DROP 때 쥔 보고 폭 위로 더 여는 값(pending #23)
 observe_pose: null   # 벨트 위 관측·대기 자세 (= 홈). 플랜지 기준
 robot:
   tcp_offset_mm: [1.382, 2.684, 246.642]   # 플랜지 → TCP(핑거 끝) 오프셋, 툴 좌표 mm. 펜던트 툴·TCP 등록(GripperDA_v1) 또는 등록 없음이어야 하고(gateway 가 MoveToZone 마다 재서 맞춤),
@@ -55,6 +59,7 @@ timing:
 - 비전 컨테이너 노드(box_tracker·label_reader)는 호스트 bringup 이 아니라 컨테이너 launch 로 뜨므로, 읽기 전용 마운트된 같은 파일을 직접 읽고 version·sha256 을 계산해 로그에 남긴다. 런타임에 쓰는 노드는 sort_manager 뿐.
 - **launch 로 넘기는 정적 값은 정지 상태에서만 바꾼다.** 바꾼 뒤에는 같은 version 을 모든 노드에 다시 적용하고 ready 를 확인한 다음 재개한다(#53 MC-009). 운전 중 일부 노드만 새 값을 쓰는 상태를 만들지 않는다.
 - **런타임 zone_map** 은 sort_manager 가 IDLE·PAUSED 에서만 UpdateZoneMap 을 받아 한 번에 바꾸고 version 을 올려 `/voss/sort/zone_map` 으로 발행한다. RUNNING·PICKING 중 요청은 `ok=false`(남현지 #84 리뷰).
+- **`zones.pallet`(Sprint 2)** 은 MoveToZone(`zone=PALLET`, `mode=DROP`, `cols`)만 쓴다. sort_manager 의 구역 칸 수(capacity, `grid`)에는 들지 않고, 팔레트 칸 카운터는 sort_manager 가 따로 센다(`reset_zone PALLET` 으로 0). 교시 전 `pose: null` 이면 gateway 는 `NOT_CONFIGURED`, sort_manager 는 palletize 를 거부한다. 지금 gateway(`config_params.ZONES`)·sort_manager(`sort_fsm.ZONES`)는 정해진 구역 키만 읽어 `pallet` 키가 있어도 기동에 영향이 없다.
 - 서보 전용 값(Kp, 높이, 오프셋, age·입력 상실 watchdog)은 voss_config 가 아니라 belt_servo 파라미터 YAML 에 둔다(#53 MC-009). robot_gateway 의 `servo_cmd` 만료 watchdog 은 gateway 파라미터다.
 
 ## 변경 이력
@@ -70,3 +75,4 @@ timing:
 - 2026-10-08: grid `offset_mm` 추가, **C 칸 −60/0/+60 → −80/−30/+20**(pitch 50, offset −30) (김학민 #41). 수직 놓기 자세로는 C 트레이(x ≈ 675)의 +X 쪽에 팔이 닿지 않는다 — fkin 으로 검증한 ikin(J3 ≥ 15°): +60 은 해 없음, 0 위 최고 TCP 100, +20 위 61. 트레이는 고정, 우선 트레이 안에 넣는 것이 목표라 칸을 −X 로 모았다(벽 4.5 mm·박스 사이 4 mm, 통합 뒤 조정). 칸 수 3 그대로라 sort_manager 영향 없음. 먼 칸은 robot_gateway 가 칸 0 위로 들어가 트레이 안에서 낮게(TCP ≥ 60) 옆으로 간다.
 - 2026-10-08: `zones.recheck.view_pose` 실측값 입력 [520.58, −37.92, 367.14, 169.44, −180.0, 79.38] (플랜지, 김학민 T35 #44). 펜던트 TCP [517.9, −39.3, 120.5, …] 교시를 tcp_offset_mm 로 변환. 카메라 광축이 재확인 트레이 중심 위, 송장 면까지 약 300 mm. 스키마·키 변경 없음. 출처 measurements-1008 #13.
 - 2026-10-08 저녁: `robot.tcp_offset_mm` 주석 — gateway 는 TCP 를 등록하지 않고, 컨트롤러 등록이 이 값이거나 없을 때만 MoveToZone 을 한다로 고침 (#41, 10/08 18:26 사고). 값 변경 없음.
+- 2026-10-12: **Sprint 2**(BRD v1.4 10.7, S2-T01 — 제안, 김학민 확인 필요). `zones.pallet`(pose·size_mm·max_cols·rows·row_pitch_mm·drop_margin_mm) 스키마 추가. 값은 S2-T02 교시·pending #23 실측 뒤 `config/voss_config.yaml` 에 넣는다(이 PR 은 스키마만).

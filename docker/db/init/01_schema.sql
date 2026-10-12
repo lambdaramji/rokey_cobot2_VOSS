@@ -21,10 +21,32 @@ CREATE TABLE sort_log (
   retries       smallint     GENERATED ALWAYS AS (GREATEST(attempts - 1, 0)) STORED,
   started_at    timestamptz,                         -- ROS Time 0 이면 NULL (추정하지 않음)
   finished_at   timestamptz  NOT NULL,               -- ← SortResult.stamp
-  inserted_at   timestamptz  NOT NULL DEFAULT now()  -- 트랜잭션 시작 시각. commit 시각이 아니다(#54)
+  inserted_at   timestamptz  NOT NULL DEFAULT now(), -- 트랜잭션 시작 시각. commit 시각이 아니다(#54)
+  slot          smallint     CHECK (slot >= 0)       -- ← SortResult.slot, -1 → NULL (Sprint 2). 마이그레이션과 열 순서를 같게 끝에 둔다
 );
 CREATE INDEX sort_log_session_result_idx ON sort_log (session_id, result);
 CREATE INDEX sort_log_finished_at_idx ON sort_log (finished_at);
+
+-- PalletResult 1건 = 1행 (Sprint 2, voss_msgs.md PalletResult). 같은 (run_id, box_id) 가 다시 오면 ON CONFLICT DO NOTHING.
+-- box_id 에 sort_log FK 를 걸지 않는다 — sort_log 행이 스풀에서 늦게 들어갈 수 있다(ListPlacements 는 스풀이 비었을 때만 답한다).
+CREATE TABLE pallet_log (
+  run_id        varchar(24)  NOT NULL,               -- palletize 실행 ID (session_id 와 같은 형식)
+  box_id        varchar(32)  NOT NULL,               -- sort_log.box_id
+  session_id    varchar(24)  NOT NULL,
+  dong          varchar(16)  NOT NULL DEFAULT '',
+  route_index   smallint     NOT NULL CHECK (route_index BETWEEN 0 AND 2),   -- 0 = 첫 배송지
+  zone          varchar(8)   NOT NULL CHECK (zone IN ('A', 'B', 'C')),       -- 집은 곳
+  slot          smallint     NOT NULL CHECK (slot >= 0),
+  pallet_col    smallint     NOT NULL CHECK (pallet_col BETWEEN 0 AND 2),    -- 놓은 곳 (0 = 가장 왼쪽 −X)
+  pallet_row    smallint     NOT NULL CHECK (pallet_row BETWEEN 0 AND 2),
+  result        varchar(8)   NOT NULL CHECK (result IN ('DONE', 'FAILED')),  -- ← outcome
+  reason        varchar(24)  NOT NULL DEFAULT '',
+  attempts      smallint     NOT NULL DEFAULT 0,
+  finished_at   timestamptz  NOT NULL,               -- ← PalletResult.stamp
+  inserted_at   timestamptz  NOT NULL DEFAULT now(),
+  PRIMARY KEY (run_id, box_id)
+);
+CREATE INDEX pallet_log_session_idx ON pallet_log (session_id, box_id);
 
 -- 투입 예정 수량 (web_api.md PUT /api/sessions/current/plan). Spring Boot 자체 테이블.
 -- 세션이 아직 없으면 session_id = 'next' 로 두었다가 start 때 새 session_id 에 붙인다.

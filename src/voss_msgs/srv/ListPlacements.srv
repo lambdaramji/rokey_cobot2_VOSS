@@ -1,0 +1,6 @@
+# Sprint 2 — sort_logger 제공 /voss/log/list_placements. sort_manager 는 DB 에 직접 붙지 않는다 (BRD v1.4 10.7)
+string session_id
+---
+bool ok                        # false 면 sort_manager 는 팔레타이징을 시작하지 않는다 (TR-PAL-03)
+string message                 # 실패: DB_ERROR | SPOOL_PENDING (스풀에 DB 미반영 결과 있음) | INVALID
+voss_msgs/Placement[] placements
