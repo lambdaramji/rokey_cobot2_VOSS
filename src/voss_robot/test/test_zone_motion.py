@@ -32,6 +32,16 @@ def test_slot_pose_shifts_x_only():
     assert slot_pose(A, [3, 1, 60], 0) == pytest.approx([153.49, *A[1:]])
 
 
+def test_truck_4x2_two_layers_slots():
+    grid = [4, 2, 50, 0, 2, 27, 60]
+    assert [slot_offset(grid, k) for k in range(8)] == [
+        (-75.0, -30.0), (-25.0, -30.0), (25.0, -30.0), (75.0, -30.0),
+        (-75.0, 30.0), (-25.0, 30.0), (25.0, 30.0), (75.0, 30.0),
+    ]
+    z0, z8 = slot_pose([0] * 6, grid, 0)[2], slot_pose([0] * 6, grid, 8)[2]
+    assert slot_offset(grid, 15) == (75.0, 30.0) and z8 - z0 == 27.0
+
+
 def test_row_stage_slot_is_minus_x_end_of_same_row():
     grid = [3, 2, 50, -30, 2, 27, 60]
     assert [row_stage_slot(grid, k) for k in range(12)] == [0, 0, 0, 3, 3, 3, 0, 0, 0, 3, 3, 3]

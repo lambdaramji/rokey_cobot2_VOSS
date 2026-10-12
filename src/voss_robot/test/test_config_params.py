@@ -52,6 +52,12 @@ def test_in_tray_height_per_zone_and_order_ignored():
     assert p["zones.C.grid"] == [3.0, 2.0, 50.0, 0.0]  # order 는 sort_manager 가 쓴다
 
 
+def test_truck_zone_4x2_two_layers():
+    z = {"pose": [-250, 160, 258, 35.36, -180, -54.64], "grid": {"cols": 4, "rows": 2, "pitch_mm": 50, "pitch_y_mm": 60, "layers": 2}}
+    p = gateway_params({"zones": {"truck": z}}, "x")
+    assert p["zones.TRUCK.grid"] == [4.0, 2.0, 50.0, 0.0, 2.0, 27.0, 60.0]
+
+
 def test_place_open_passes_when_set():
     p = gateway_params({"gripper": {"pre_open_mm": 90, "place_open_mm": 50}}, "x")
     assert (p["gripper.pre_open_mm"], p["gripper.place_open_mm"]) == (90.0, 50.0)

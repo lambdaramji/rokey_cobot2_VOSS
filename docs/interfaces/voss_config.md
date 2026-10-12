@@ -29,6 +29,7 @@ zones:               # 두산 posx: x y z rx ry rz, mm/deg. 플랜지 기준(TCP
   C:       {pose: null, grid: {cols: 3, rows: 1, pitch_mm: 60}}
   recheck: {pose: null, grid: {cols: 2, rows: 1, pitch_mm: 60}, view_pose: null}   # view_pose: MoveToZone(RECHECK, VIEW) 때 카메라가 재확인 구역 송장을 보는 자세. 플랜지 posx, 교시 전 null(김학민 T35, #51 MC-017)
   hold:    {pose: null, grid: {cols: 2, rows: 1, pitch_mm: 60}}
+  truck:   {pose: null, grid: {cols: 4, rows: 2, pitch_mm: 50, pitch_y_mm: 60, layers: 2}}   # 선택. 팔레타이징(트럭) 트레이 — robot_gateway MoveToZone(TRUCK) 만 읽는다(로컬 10/12)
 observe_pose: null   # 벨트 위 관측·대기 자세 (= 홈). 플랜지 기준
 robot:
   tcp_offset_mm: [1.382, 2.684, 246.642]   # 플랜지 → TCP(핑거 끝) 오프셋, 툴 좌표 mm. 펜던트 툴·TCP 등록(GripperDA_v1) 또는 등록 없음이어야 하고(gateway 가 MoveToZone 마다 재서 맞춤),
@@ -80,3 +81,4 @@ timing:
 - 2026-10-12 (로컬 시험 브랜치): `gripper.place_open_mm` 추가(선택). robot_gateway 가 PLACE 개방과 PICK 확인 실패 후퇴 때 이 폭으로 연다. 3×2 칸에서 90 으로 열면 핑거가 트레이 벽·옆 박스에 닿을 수 있어서다. 10/12 실측: 보고 50 mm 에서 박스가 떨어짐(최소). 없으면 pre_open_mm 그대로. belt_servo 의 사전 개방(pre_open_mm)·PICK 하강 전 개방은 바꾸지 않는다.
 - 2026-10-12 (로컬 시험 브랜치): grid `pitch_y_mm` 추가(선택, 기본 pitch_mm). A·B·C 3×2 칸에서 Y 줄 간격을 X 칸 간격과 따로 정하려고(기존 pose 에서 ±y 실측). 없으면 기존과 같다.
 - 2026-10-12 (로컬 시험 브랜치): grid `order`·zones.<z>.`in_tray_tcp_z_mm` 추가(선택). C 3×2 칸 5(+X·+Y 끝)는 그 위로 TCP 60 이 안 닿는다(ikin: TCP 40 까지 J3 16°, 50 은 12°). 트레이가 빌 때 먼저 놓도록 C `order: [5, 2, 4, 1, 3, 0]`, 트레이 안 이동을 C 만 TCP 40 으로. TCP 40 이면 든 박스 밑면(≈ 32)이 놓인 박스 윗면(≈ 28~33)과 같아서 칸 5 는 반드시 빈 트레이에 먼저 놓아야 한다. 2층(칸 6)은 칸 0 위 그대로. 같은 날 실기 요청으로 경로 수정: 칸 0 위에서는 공통 높이(TCP 60)까지만 내려가 칸 5 위 TCP 40 으로 비스듬히 간다(칸 0 에서 트레이 깊이 들어가지 않게, 사선 11 점 ikin 확인 — 실측 J3 59°→16°). 돌아올 때도 같은 사선. 이어서 출입구를 같은 Y 줄의 −X 끝 칸으로(C 칸 2 → 칸 0, 칸 5 → 칸 3): 칸 3 위 TCP 60 → 칸 5 위 TCP 40 을 줄 따라(ikin J3 55°→16°, 칸 3 위 TCP 120 은 46°).
+- 2026-10-12 (로컬 시험 브랜치): zones `truck` 추가(선택). 분류 20개를 마친 뒤 16개를 트럭 트레이에 4×2 × 2층으로 옮기는 시연용. 칸 규칙은 다른 트레이와 같다(pose = 트레이 중심, Y 줄 ±30). X 4칸은 46 mm 박스가 안쪽 215 mm 에 들어가도록 pitch 50(칸 −75/−25/+25/+75, 벽까지 9.5 mm). 지금은 robot_gateway 만 읽는다(sort_manager 는 모름).

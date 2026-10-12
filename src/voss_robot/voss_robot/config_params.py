@@ -13,7 +13,7 @@ from typing import Any
 
 import yaml
 
-ZONES = ("A", "B", "C", "RECHECK", "HOLD")  # MoveToZone zone 값(대문자). config 키는 대소문자 무시
+ZONES = ("A", "B", "C", "RECHECK", "HOLD", "TRUCK")  # MoveToZone zone 값(대문자). config 키는 대소문자 무시. TRUCK = 팔레타이징(로컬 10/12)
 LAYER_MM = 27.0  # grid.layer_mm 기본 = 박스 높이 (voss_config.md grid layers)
 
 
