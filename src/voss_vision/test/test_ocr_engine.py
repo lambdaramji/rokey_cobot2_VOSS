@@ -43,3 +43,10 @@ def test_unreadable_stays_none() -> None:
     eng = Fake(never=True)
     m, _, flipped = read_label(eng, half(True), CANDS)
     assert (m.dong, m.reason, flipped, eng.calls) == ("", "NONE", False, 2)
+
+
+def test_no_flip_retry_returns_after_one_read() -> None:
+    """1단계: 못 읽어도 180° 다시 읽지 않는다 (판독 실패를 빨리 내서 재확인으로)."""
+    eng = Fake()
+    m, _, flipped = read_label(eng, half(False), CANDS, flip_retry=False)
+    assert (m.dong, flipped, eng.calls) == ("", False, 1)
