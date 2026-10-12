@@ -18,7 +18,7 @@
 - **질문(ASKING):** 후보 최대 2동(+ 보류), 문장은 `SortState.pending_question` 과 `/voss/voice/say`. 답은 `answer <box_id>|<동 또는 HOLD>` — 다른 box_id 는 거부, 후보가 아닌 답은 1회만 재안내(타이머 유지). 답 = `OPERATOR`, HOLD 답 = HELD·OPERATOR. **30 s 무응답 = HOLD·HELD·`NONE`·`NO_ANSWER`**(`ask_timeout_s`). 질문 중 stop → 타이머 멈춤, resume → 다시 묻고 30 s 새로.
 - **재확인 실패:** PICK 실패 = 박스는 재확인 칸에 둔 채 HELD(zone RECHECK, reason DEVICE_ERROR·STOPPED) + PAUSED — 칸은 `reset_zone RECHECK` 로 비운다(처리 중 박스가 칸에 있으면 거부). 목적 구역이 가득이면 박스를 재확인 칸에 둔 채 PAUSED → reset_zone → resume 하면 PICK 부터.
 - **재확인 흐름 중 stop:** 응답을 PAUSED 에서 받고, resume 하면 멈춘 단계부터 — VIEW·판독 중이었으면 VIEW 다시, PICK 뒤였으면 목적 구역 PLACE.
-- **start·resume 은 먼저 `MoveToZone(OBSERVE)`**(`home_first`), 도착 시각부터의 판독만 쓴다. PLACE 응답 뒤에도 그 시각부터 다시 관측.
+- **start 를 접수하면 "작업을 시작합니다."**(`/voss/voice/say`, BRD 8.1 1단계 — 거부·운전 중 전체 전환은 말하지 않는다). **start·resume 은 먼저 `MoveToZone(OBSERVE)`**(`home_first`), 도착 시각부터의 판독만 쓴다. PLACE 응답 뒤에도 그 시각부터 다시 관측.
 - **파지 실패(GRASP_FAILED·LOST·OUT_OF_REACH·STALE_INPUT·DEVICE_ERROR)·goal 거부·적재 실패 → FAILED + PAUSED.** 자동 복귀·자동 개방 없음, 사람이 확인하고 resume(OBSERVE 로 이동). goal 거부는 reason DEVICE_ERROR·attempts 0.
 - **적재:** `placed_stamp ≠ 0` 이면 PLACED(HOLD 구역이면 HELD) + 칸 증가(ok=false 면 reason DEVICE_ERROR, 우리가 stop 했거나 응답 코드가 `STOPPED` 면 STOPPED — #100. RETURN_FAILED 의 outcome 은 F-06 제안). `placed_stamp = 0` 이면 FAILED, 같은 칸 재사용.
 - **stop:** `/voss/robot/stop` 먼저 → goal 취소 → PAUSED. 취소된 박스는 FAILED·STOPPED. stop 이 false·시간 초과면 not_ready 에 ROBOT, **stop 을 다시 보내 성공해야 resume**. **IDLE 에서 stop 은 IDLE 유지**(세션이 없어 resume 할 곳이 없음 — SRD 표 "모든 상태 → PAUSED" 와 다름, F-04 에 제안).

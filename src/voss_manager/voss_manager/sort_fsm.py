@@ -37,6 +37,7 @@ PH_VIEW, PH_READ, PH_PICK = (
 )  # 재확인: 구역 보기 → 다시 읽기 → 재확인 칸에서 집기
 HOLD_WORDS = ("HOLD", "보류")
 ASK_TIMEOUT_NS = 30_000_000_000  # 질문 발화부터 30 s (SRD §5.7)
+START_SAY = "작업을 시작합니다."  # start 접수 응답 (BRD 8.1 1단계)
 
 
 # ---------------------------------------------------------------- 설정
@@ -463,7 +464,7 @@ def _on_command(ctx: Ctx, ev: Command) -> Out:
             stop_requested=False,
         )
         log = Log("info", f"세션 {ev.new_session_id} 시작, 우선 {ctx.priority or '전체'}")
-        return Out(nxt, (*acts, log), (True, "start 접수"))
+        return Out(nxt, (Say(START_SAY), *acts, log), (True, "start 접수"))
 
     if cmd == "priority":
         dong = ctx.cfg.dong_of(arg)

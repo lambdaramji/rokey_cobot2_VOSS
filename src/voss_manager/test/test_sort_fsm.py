@@ -183,6 +183,19 @@ def test_g0_happy_path(cfg: f.Config) -> None:
     assert of(acts, f.Result)[0].box_id == SID + "-002" and ctx.slots["B"] == 2
 
 
+def test_start_says_once_only_when_accepted(cfg: f.Config) -> None:
+    _, acts, rep = run(f.new_ctx(cfg), start(0))
+    assert rep[0][0] and [a.text for a in of(acts, f.Say)] == [
+        "작업을 시작합니다."
+    ]  # BRD 8.1 1단계
+    _, acts, rep = run(f.new_ctx(cfg), start(0, not_ready=("SERVO",)))
+    assert not rep[0][0] and not of(acts, f.Say)  # 거부는 말하지 않는다 (응답·로그로)
+    _, acts, rep = run(running(cfg), f.Command("start", "ALL", 3000 * MS))
+    assert rep[0] == (True, "전체 분류로 전환") and not of(
+        acts, f.Say
+    )  # 운전 중 전환은 새 시작이 아니다
+
+
 def test_start_without_home(cfg: f.Config) -> None:
     ctx, acts, _ = run(f.new_ctx(cfg, home_first=False), start(500 * MS))
     assert ctx.state == f.RUNNING and ctx.phase == f.PH_NONE and not of(acts, f.CallMove)
