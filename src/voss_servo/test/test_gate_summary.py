@@ -210,25 +210,39 @@ def test_auto_hint_codes() -> None:
     assert gs.auto_hint("DEVICE_ERROR", "NODE_SHUTDOWN")[0] == "X"
     assert gs.auto_hint("CANCELED", "STOP_OK")[0] == "?"
     assert gs.auto_hint("OK", "") == ("", "")
+    # U9-c LOST 세분: 비전 전체 끊김 추정 → L, 로봇 정지 → X
+    assert gs.auto_hint("LOST", "VISION_DOWN")[0] == "L"
+    assert gs.auto_hint("LOST", "ROBOT_STALLED")[0] == "X"
+    assert "X·D" in gs.auto_hint("LOST", "ROBOT_STALLED")[1]
 
 
 def test_tick_summary() -> None:
-    def tick(t, phase, err=None, cause=""):
+    def tick(t, phase, along=None, cross=None, cause=""):
         return {"kind": "tick", "goal_id": "ii01", "t_calc_s": t, "phase": phase,
-                "error_m": err, "cause": cause}  # fmt: skip
+                "err_along_m": along, "err_cross_m": cross, "cause": cause}  # fmt: skip
 
-    rows = [tick(T0, "PREPARE"), tick(T0 + 0.1, "TRACK"), tick(T0 + 1.1, "TRACK")]
+    rows = [tick(T0, "PREPARE"), tick(T0 + 0.1, "TRACK", 0.009, 0.009), tick(T0 + 1.1, "TRACK")]
     rows += [
-        tick(T0 + 1.6, "DESCEND", [0.003, 0.004, 0.0]),
-        tick(T0 + 1.7, "DESCEND", [0, 0.002, 0]),
+        tick(T0 + 1.6, "DESCEND", -0.003, 0.004),  # 벨트 방향은 부호 무시
+        tick(T0 + 1.7, "DESCEND", 0.002, 0.001),
+        tick(T0 + 1.8, "DESCEND"),  # 값 없는 틱(null)은 건너뛴다
     ]
     rows += [tick(T0 + 2.0, "GRASP"), tick(T0 + 3.0, "TRACK", cause="ZERO_HOLD")]  # 0 유지는 뺀다
     rows.append({"kind": "tick", "goal_id": "other", "t_calc_s": T0, "phase": "TRACK"})
     summary = gs.summarize_ticks(rows, {"ii01"})
     assert set(summary) == {"ii01"}
     s = summary["ii01"]
-    assert s.n_ticks == 6 and s.track_s == pytest.approx(1.5)  # 0.1→1.1→1.6
-    assert s.descend_max_err_mm == pytest.approx(5.0)
+    assert s.n_ticks == 7 and s.track_s == pytest.approx(1.5)  # 0.1→1.1→1.6
+    # U9-c: 하강 높이차가 아닌 xy 오차 (TRACK 의 9 mm 는 세지 않는다)
+    assert s.descend_max_along_mm == pytest.approx(3.0)
+    assert s.descend_max_cross_mm == pytest.approx(4.0)
+
+
+def test_tick_summary_without_descend_is_dash() -> None:
+    """옛 로그처럼 err_along_m·err_cross_m 키가 없는 하강 틱이면 None (예외 없이)."""
+    rows = [{"kind": "tick", "goal_id": "kk01", "t_calc_s": T0, "phase": "DESCEND", "cause": ""}]
+    s = gs.summarize_ticks(rows, {"kk01"})["kk01"]
+    assert s.descend_max_along_mm is None and s.descend_max_cross_mm is None
 
 
 def test_main_md_append_and_ticks(tmp_path, capsys) -> None:

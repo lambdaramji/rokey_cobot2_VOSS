@@ -399,3 +399,66 @@ def test_grasp_floor_blocked_reach_z_min() -> None:
 def test_reach_x_before_z_min() -> None:
     g = control.geometry(tcp_est(x=0.7), np.array([0.7, 0.0, 0.09]), NOW, True, NOW, CFG)
     assert g.reach == "X_MAX"  # 둘 다 걸리면 x 가 먼저
+
+
+# --- U9-c 벨트 속도 추정 (로그 전용, design/U9c-dd.md 4.3) ---
+
+T_EPOCH = 1_791_000_000.0  # 실제 stamp 크기 (큰 수 빼기 확인용)
+DIR_TILT = (math.cos(-0.0129), math.sin(-0.0129), 0.0)  # 10/10 벨트 방향 근처
+
+
+def belt_samples(n: int, v: float, rate: float = 30.0, noise: float = 0.0, seed: int = 0):
+    """벨트 방향으로 v m/s 로 가는 박스 관측 n 개 (가로·높이 흔들림 포함)."""
+    rng = np.random.default_rng(seed)
+    d = np.array(DIR_TILT)
+    perp = np.array([-d[1], d[0], 0.0])  # 가로 방향
+    out = []
+    for i in range(n):
+        t = T_EPOCH + i / rate
+        p = np.array([-0.1, -0.27, 0.10]) + d * v * (i / rate)
+        p = (
+            p + d * rng.normal(0.0, noise) + perp * 0.003 * math.sin(i)
+        )  # 벨트 방향 잡음 + 가로 흔들림
+        p[2] += 0.002 * math.cos(i)  # 높이 흔들림 (무시돼야 함)
+        out.append((t, p))
+    return out
+
+
+def test_belt_speed_fit_exact_line() -> None:
+    v, span = control.belt_speed_fit(belt_samples(60, 0.048), DIR_TILT, 90, 15, 0.5)
+    assert v == pytest.approx(0.048, abs=1e-9)  # 가로·높이 흔들림은 영향 없음
+    assert span == pytest.approx(59 / 30.0)
+
+
+def test_belt_speed_fit_noise_within_half_percent() -> None:
+    """σ 1 mm 잡음, 90점(3 s) → 0.5 % 안 (DD 4.5 기울기 σ 0.25 %)."""
+    v, _ = control.belt_speed_fit(
+        belt_samples(90, 0.048, noise=0.001, seed=3), DIR_TILT, 90, 15, 0.5
+    )
+    assert v == pytest.approx(0.048, rel=0.005)
+
+
+def test_belt_speed_fit_too_few_points() -> None:
+    assert control.belt_speed_fit(belt_samples(14, 0.048), DIR_TILT, 90, 15, 0.5) == (None, None)
+
+
+def test_belt_speed_fit_short_span_returns_span() -> None:
+    v, span = control.belt_speed_fit(belt_samples(20, 0.048, rate=60.0), DIR_TILT, 90, 15, 0.5)
+    assert v is None and span == pytest.approx(19 / 60.0)  # 0.32 s < 0.5
+
+
+def test_belt_speed_fit_same_stamps_is_none() -> None:
+    same = [(T_EPOCH, (0.001 * i, 0.0, 0.1)) for i in range(20)]
+    assert control.belt_speed_fit(same, DIR_TILT, 90, 15, 0.0) == (None, 0.0)
+
+
+def test_belt_speed_fit_uses_recent_points_only() -> None:
+    """앞 60점은 0.030, 뒤 90점은 0.048 로 가면 최근 90점만 본다."""
+    slow = belt_samples(60, 0.030)
+    t_last, p_last = slow[-1]
+    fast = [
+        (t_last + (i + 1) / 30.0, p_last + np.array(DIR_TILT) * 0.048 * (i + 1) / 30.0)
+        for i in range(90)
+    ]
+    v, _ = control.belt_speed_fit(slow + fast, DIR_TILT, 90, 15, 0.5)
+    assert v == pytest.approx(0.048, abs=1e-9)

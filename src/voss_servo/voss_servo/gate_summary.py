@@ -22,7 +22,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from voss_servo import fsm
+from voss_servo import diagnose, fsm
 from voss_servo import log_schema as ls
 
 # ---------------------------------------------------------------- 상수
@@ -54,7 +54,8 @@ HINT_COLUMNS: tuple[str, ...] = (
     "마지막 phase",
     "재시도 원인",
     "추종 s",
-    "하강 최대 오차 mm",
+    "하강 최대 벨트방향 오차 mm",  # DESCEND 틱 |err_along_m| 최댓값 (U9-c)
+    "하강 최대 가로 오차 mm",  # DESCEND 틱 err_cross_m 최댓값 (U9-c)
 )
 
 GATE_RATIO = 0.7  # 게이트 기준 70 % (ADR-0002)
@@ -98,7 +99,10 @@ class TickSummary:
 
     n_ticks: int  # 0 유지 틱을 뺀 틱 수
     track_s: float  # TRACK phase 에 머문 시간 합 (s)
-    descend_max_err_mm: float | None  # DESCEND 중 ‖error_m‖ 최댓값 (mm)
+    # DESCEND 중 xy 오차 최댓값 (mm). 전에는 ‖error_m‖ 였는데 하강 높이차 59 mm 가 지배해 접근 오차를
+    # 못 봤다(measurements-1010 422행) → 틱의 err_along_m·err_cross_m(접근 높이 기준 xy 오차)로 (U9-c)
+    descend_max_along_mm: float | None  # |err_along_m| 최댓값 (벨트 방향)
+    descend_max_cross_mm: float | None  # err_cross_m 최댓값 (가로, 이미 크기)
 
 
 @dataclass(frozen=True)
@@ -299,6 +303,10 @@ def auto_hint(reason: str | None, cause: str) -> tuple[str, str]:
     """reason·cause → (g1-gate 원인 코드 힌트, 짧은 설명). 성공이면 ("", "")."""
     if reason == fsm.OK:
         return "", ""  # 성공은 힌트 없음 (grasped 는 따로 본다)
+    if reason == fsm.LOST and cause == diagnose.VISION_DOWN:
+        return "L", "비전 전체 끊김 추정 — box_tracker 5초 로그·other_box_rx_age_s 확인"
+    if reason == fsm.LOST and cause == diagnose.ROBOT_STALLED:
+        return "X", "명령은 나갔는데 로봇 정지 — gateway 로그로 X·D 구분"
     if reason in (fsm.LOST, fsm.STALE_INPUT):
         return "L", "입력 상실(검출·pose 끊김)"
     if reason == fsm.OUT_OF_REACH:
@@ -344,16 +352,6 @@ def count_stats(rows: list[Row], practice: int) -> Stats:
 # ---------------------------------------------------------------- 순수 함수: 틱 요약
 
 
-def _norm_mm(vec: Any) -> float | None:
-    """[x, y, z] m → 길이 mm. 값이 비면 None."""
-    if not isinstance(vec, list) or not vec:
-        return None
-    parts = [_as_float(v) for v in vec]  # null 섞임 확인
-    if any(p is None for p in parts):
-        return None
-    return math.sqrt(sum(p * p for p in parts)) * 1000.0  # m → mm
-
-
 def summarize_ticks(rows: Iterable[dict], goal_ids: set[str]) -> dict[str, TickSummary]:
     """틱 행 → goal_id 별 요약 (0 유지 틱 제외)."""
     per_goal: dict[str, list[dict]] = {}
@@ -375,12 +373,16 @@ def _one_goal_ticks(ticks: list[dict]) -> TickSummary:
     for prev, nxt in zip(ticks, ticks[1:], strict=False):  # 이웃한 두 틱
         if prev.get("phase") == fsm.TRACK:
             track_s += nxt["t_calc_s"] - prev["t_calc_s"]  # 앞 틱 phase 로 구간을 센다
-    errors = [_norm_mm(t.get("error_m")) for t in ticks if t.get("phase") == fsm.DESCEND]
-    errors = [e for e in errors if e is not None]  # 계산된 값만
+    descend = [t for t in ticks if t.get("phase") == fsm.DESCEND]  # 하강 틱만
+    along = [_as_float(t.get("err_along_m")) for t in descend]
+    along = [abs(a) * 1000.0 for a in along if a is not None]  # 부호 무시, m → mm
+    cross = [_as_float(t.get("err_cross_m")) for t in descend]
+    cross = [c * 1000.0 for c in cross if c is not None]  # 이미 크기, m → mm
     return TickSummary(
         n_ticks=len(ticks),
         track_s=track_s,
-        descend_max_err_mm=max(errors) if errors else None,
+        descend_max_along_mm=max(along) if along else None,
+        descend_max_cross_mm=max(cross) if cross else None,
     )
 
 
@@ -481,7 +483,8 @@ def hint_cells(row: Row, ticks: dict[str, TickSummary] | None) -> list[str]:
         case.phase or "",
         ",".join(c or "?" for c in case.retry_causes),
         _fmt(tick.track_s, 2) if tick else "-",
-        _fmt(tick.descend_max_err_mm, 1) if tick else "-",
+        _fmt(tick.descend_max_along_mm, 1) if tick else "-",
+        _fmt(tick.descend_max_cross_mm, 1) if tick else "-",
     ]
 
 

@@ -27,6 +27,8 @@ TICK_FIELDS: tuple[str, ...] = (
     "terminal",
     "box_stamp_s",  # BoxTrack.stamp (촬영 시각)
     "box_rx_s",  # 그 BoxTrack 을 받은 시각
+    "box_u_px",  # 그 BoxTrack 의 픽셀 u (U9-c — 시야 어느 쪽으로 빠졌나)
+    "box_v_px",  # 그 BoxTrack 의 픽셀 v
     "pose_stamp_s",
     "pose_rx_s",
     "t_calc_s",  # 이 틱 계산 시각
@@ -42,7 +44,10 @@ TICK_FIELDS: tuple[str, ...] = (
     "predicted_m",  # 예측 박스 위치 (U2)
     "predict_horizon_s",  # 예측 지평
     "predict_dt_clipped",  # 박스 stamp 가 미래였나
-    "obs_age_s",  # 마지막 유효 관측 나이 (촬영 시각 기준)
+    "obs_age_s",  # now − 마지막 유효 관측의 촬영 stamp(BoxTrack.stamp). 이름은 10/10 로그 호환으로 유지
+    "obs_rx_age_s",  # now − 마지막 유효 관측을 받은 시각 (수신 기준, U9-c)
+    "other_box_rx_age_s",  # now − 이 goal 중 다른 트랙을 마지막으로 받은 시각 (U9-c, LOST 원인 판정 근거)
+    "box_pub_count",  # /voss/vision/box 발행자 수 — LOST 틱에서만 조회, 그 밖 null (U9-c)
     "visible",  # 사각 아님 + 최신 메시지 valid
     "tcp_target_m",  # TCP 목표 (U2)
     "error_m",  # 목표 − TCP (U2)
@@ -51,6 +56,10 @@ TICK_FIELDS: tuple[str, ...] = (
     "belt_vel_mps",  # 벨트 속도 벡터
     "belt_speed_mps",
     "cmd_vel_mps",  # 발행한 속도
+    "tcp_vel_meas_mps",  # pose 값 차분으로 잰 TCP 속도 [x, y, z] (U9-c, z = 측정 z 속도)
+    "stall_ticks",  # 명령 ≠ 0 인데 측정 ≈ 0 인 연속 틱 수 (U9-c)
+    "belt_speed_est_mps",  # 관측열 직선 맞춤 벨트 속도 — 로그 전용, 제어에 안 씀 (U9-c)
+    "belt_speed_est_span_s",  # 그 맞춤에 쓴 관측의 시간 폭
     "clamped",  # 한계로 잘랐나 (U2)
     "cmd_rule",  # FF_P | FF | ZERO | ZERO_NO_POSE | ZERO_NO_OBS | ZERO_STOP
     "dt_s",  # 가속 제한에 쓴 틱 간격
@@ -66,7 +75,14 @@ TICK_FIELDS: tuple[str, ...] = (
     "stop_result",  # null | "OK" | "FAILED:<message>" | "TIMEOUT" | "UNAVAILABLE"
     "reason",
     "cause",
+    "cause_fsm",  # fsm.step 이 낸 원래 cause (진단으로 덮어쓰기 전, U9-c). 스냅샷 행은 null
     "grasped",
+    "phase_t_prepare_s",  # 이 시도에서 PREPARE 에 처음 들어간 시각 (U9-c, 아직이면 null)
+    "phase_t_track_s",
+    "phase_t_descend_s",
+    "phase_t_grasp_s",
+    "phase_t_lift_s",
+    "phase_t_verify_s",
     "gripper",  # null | 그리퍼 호출 기록 dict (키 목록은 grip.call_record, design/U5-dd.md 4절)
     "config_version",
     "config_sha256",
@@ -85,8 +101,20 @@ ATTEMPT_FIELDS: tuple[str, ...] = (
     "t_calc_s",
     "reason",
     "cause",
+    "cause_fsm",
     "grasped",
+    "phase_t_prepare_s",
+    "phase_t_track_s",
+    "phase_t_descend_s",
+    "phase_t_grasp_s",
+    "phase_t_lift_s",
+    "phase_t_verify_s",
     "belt_speed_mps",
+    "belt_speed_est_mps",
+    "belt_speed_est_span_s",
+    "other_box_rx_age_s",
+    "box_pub_count",
+    "stall_ticks",
     "gripper",
     "position_source",
     "calib_version",
@@ -97,6 +125,17 @@ ATTEMPT_FIELDS: tuple[str, ...] = (
 
 # 모듈을 불러올 때 부분집합 규칙을 확인한다 (표를 잘못 고치면 바로 실패)
 assert set(ATTEMPT_FIELDS) <= set(TICK_FIELDS), "ATTEMPT_FIELDS 는 TICK_FIELDS 의 부분집합"
+
+# 단계 진입 시각 키 (phase 이름 → 키, U9-c)
+PHASE_T_KEYS: dict[str, str] = {
+    "PREPARE": "phase_t_prepare_s",
+    "TRACK": "phase_t_track_s",
+    "DESCEND": "phase_t_descend_s",
+    "GRASP": "phase_t_grasp_s",
+    "LIFT": "phase_t_lift_s",
+    "VERIFY": "phase_t_verify_s",
+}
+assert set(PHASE_T_KEYS.values()) <= set(ATTEMPT_FIELDS), "단계 시각은 시도 행에도 남긴다"
 
 ATTEMPT_END = "ATTEMPT_END"
 GOAL_END = "GOAL_END"
