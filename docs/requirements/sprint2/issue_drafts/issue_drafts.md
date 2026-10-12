@@ -4,29 +4,31 @@ BRD v1.4 10장 기준. 레포 `.github/ISSUE_TEMPLATE/task.md` 형식. `create_i
 
 | 키 | 제목 | 담당 | 기한 | 의존 |
 |---|---|---|---|---|
-| S2-T01 | [통합] Sprint 2 인터페이스 변경안 (팔레타이징·음성 기동) — docs/interfaces + voss_msgs 한 PR | 남현지 | 10/11 | S2-T02 |
-| S2-T02 | [로봇] 팔레트 구역 좌표 교시·9칸 도달성(ikin) 확인, 베이스 위치 재측정 | 김학민, 남현지 | 10/11 | — |
-| S2-T03 | [로봇] MoveToZone PICK 구현(10/13→10/12, 재확인·팔레타이징 공용)·DROP 모드·PALLET 칸 계산·관절 경유점 | 김학민 | 10/12 | S2-T01, S2-T02 |
-| S2-T04 | [팔레타이징] 배치 계획 순수 함수 pallet_plan + 단위 시험 | 남현지 | 10/12 | — |
-| S2-T05 | [팔레타이징] sort_manager PALLETIZING 상태·palletize 명령·멈춤/재개 | 남현지 | 10/13 | S2-T03, S2-T04, S2-T07 |
+| S2-T01 | [통합] Sprint 2 인터페이스 변경안 (팔레타이징 v1.5·음성 기동) — docs/interfaces + voss_msgs 한 PR | 남현지 | 10/13 | S2-T21, S2-T02 |
+| S2-T02 | [로봇] 팔레트 구역 좌표 교시·16칸 2층 도달성(ikin) 확인, 베이스 위치 재측정 | 김학민, 남현지 | 10/13 | — |
+| S2-T03 | [로봇] MoveToZone PICK(재확인·팔레타이징 공용)·DROP 2층·PALLET slot 0~15·관절 경유점 | 김학민 | 10/13 | S2-T01, S2-T02, S2-T21 |
+| S2-T04 | [팔레타이징] 배치 계획 순수 함수 pallet_plan (v1.5: 16칸 2층·초과 처리) + 단위 시험 | 남현지 | 10/13 | — |
+| S2-T05 | [팔레타이징] sort_manager PALLETIZING 상태·palletize 명령·멈춤/재개·완료 안내 | 남현지 | 10/13 | S2-T03, S2-T04, S2-T07 |
 | S2-T06 | [팔레타이징] 음성 palletize intent (route) — intent_parser·FastAPI 프롬프트 | 남현지 | 10/13 | S2-T01 |
-| S2-T07 | [팔레타이징] 기록: SortResult.slot·sort_log.slot, PalletResult → pallet_log, ListPlacements 서비스 | 남현지 | 10/12 | S2-T01 |
-| S2-T08 | [팔레타이징] HMI: 경로 입력·진행률·팔레트 칸별 배치도 (hmi_bridge·Spring Boot·React) | 남현지 | 10/14 | S2-T01, S2-T05 |
+| S2-T07 | [팔레타이징] 기록: SortResult.slot·sort_log.slot, PalletResult(DONE·FAILED·OVERFLOW·EXCLUDED) → pallet_log, ListPlacements | 남현지 | 10/13 | S2-T01 |
+| S2-T08 | [팔레타이징] HMI: 경로 입력·3D 팔레트(4×2×2)·실을 수/초과/경로 제외·경고·진행률 | 남현지 | 10/14 | S2-T01, S2-T05 |
 | S2-T09 | [음성] voss_launcher — 음성 시스템 기동·종료 (호출어·확인 대화·마이크 인계) | 정의석 | 10/13 | S2-T10 |
 | S2-T10 | [음성·로봇] 기동 프로필: 수동 절차(g0-runbook)를 단계·준비 확인 스크립트로 묶기 | 정의석, 김학민 | 10/12 | — |
 | S2-T11 | [인계] 리허설 중 검출·OCR 튜닝, 비전 코드 이슈 1차 대응 (남현지 T24 인계) | 박병후 | 10/14 | — |
 | S2-T12 | [인계] 재확인·질문·보류 흐름 실기(흐린 송장 완주 3회), 시연 대본 운영·리허설 진행 (남현지 T23·T24 인계) | 김학민 | 10/14 | S2-T03 |
-| S2-T13 | [PL] 시연 대본 v2(단계 0·9, 박스 구성)·10/13 18:00 Sprint 2 게이트·문서 갱신 | 남현지 | 10/13 | — |
+| S2-T13 | [PL] 시연 대본 v2(20개 박스, 단계 0·9), 결정 D3·D4·D6·D7, 게이트 판정·문서 갱신 | 남현지 | 10/13 | — |
 | S2-T14 | [추종·파지] 하강·들기 사다리꼴 속도 프로파일 (3순위, 우선) | 박병후 | 10/13 | — |
 | S2-T15 | [추종·파지] 온라인 벨트 속도 추정 (직선 맞춤, 단계 적용) (3순위, 우선) | 박병후 | 10/14 | — |
 | S2-T16 | [비전] BoxTrack yaw 관측 (box_tracker 좌표 변환에 송장 각도 포함) (3순위, J6 선행) | 남현지 | 10/14 | — |
 | S2-T17 | [로봇] gateway 회전 가속 10 → 90 deg/s² 이상·각속도 전달, 에뮬레이터 회전 기준점, 그리퍼-벨트 프레임 간섭 측정 (3순위, J6 선행) | 김학민 | 10/14 | — |
 | S2-T18 | [추종·파지] J6 회전 파지 (TRACK 초반 회전, LIFT 원위치) (3순위, 후순위) | 박병후 | 10/14 | S2-T16, S2-T17 |
 | S2-T19 | [인계] 로그·성공률 집계와 10/14 NFR-01~03 실측값 보고 (남현지 T23 인계, 10/12 PL 승인으로 박병후 → 정의석) | 정의석 | 10/14 | S2-T12, S2-T11 |
+| S2-T21 | [로봇·1순위] A·B·C 트레이 칸 수 3 → 동별 7개 이상 (결정 D1, 20개 시연 선행) | 김학민 | 10/13 | — |
+| S2-T22 | [음성·HMI] 투입 예정 수량 기본 20, "몇 개 남았어?"에 팔레타이징 결과 반영 (TR-PAL-12) | 정의석 | 10/14 | S2-T07 |
 
 ---
 
-### S2-T01 · [통합] Sprint 2 인터페이스 변경안 (팔레타이징·음성 기동) — docs/interfaces + voss_msgs 한 PR
+### S2-T01 · [통합] Sprint 2 인터페이스 변경안 (팔레타이징 v1.5·음성 기동) — docs/interfaces + voss_msgs 한 PR
 
 labels: task, interface · assignees: @lambdaramji
 
@@ -34,28 +36,31 @@ labels: task, interface · assignees: @lambdaramji
 비전·OCR·통합 / 남현지 @lambdaramji
 
 ## 작업 내용
-- [ ] BRD v1.4 10.7 표대로 docs/interfaces 를 먼저 고친다: voss_config.md(zones.pallet), voss_msgs.md(MoveToZone DROP·cols, Command palletize, Intent route, SortState PALLETIZING, PalletState·PalletResult·ListPlacements 신규, SortResult slot), intent_json.md(palletize), mqtt.md(voss/pallet/state), topics.md
+- [ ] BRD v1.5 10.7 표대로 docs/interfaces 를 먼저 고친다: voss_config.md(zones.pallet cols 4·lanes 2·layers 2·피치·층 높이 27, A·B·C 칸 수), voss_msgs.md(MoveToZone DROP·PALLET slot 0~15, Command palletize, Intent route, SortState PALLETIZING, PalletState·PalletResult·ListPlacements 신규, SortResult slot), intent_json.md(palletize), mqtt.md(voss/pallet/state), topics.md
+- [ ] PALLET slot = (열−1)×4 + (층−1)×2 + (줄−1), z 오프셋 (층−1)×27 mm (결정 D2). v1.4안 cols 는 넣지 않음 — 이미 머지됐으면 지우지 말고 미사용 표시
+- [ ] PalletResult 결과 DONE·FAILED·OVERFLOW·EXCLUDED, PalletState 에 구역별 실을 수·초과 수·경로 제외 수·경고
 - [ ] voss_msgs 변경은 기존 메시지 끝에만 필드 추가. 한 PR 로 묶어 머지(전체 재빌드 1회)
-- [ ] DB: sort_log 에 slot 컬럼, pallet_log 테이블 스키마 초안(docker/db/init) — 정의석 리뷰
+- [ ] DB: sort_log.slot, pallet_log(미적재 행 포함) 스키마 — 정의석 리뷰
 
 ## 완료 기준 (측정 가능하게)
 - interface 라벨 PR 머지, `colcon build` 전체 통과
 - 각 파트 오너(김학민·정의석) 승인
 
 ## 관련 요구사항
-TR-PAL-01~10, TR-VOICE-11~16 (BRD v1.4 10.7), CLAUDE.md 규칙 2
+TR-PAL-01~12, TR-VOICE-11~16 (BRD v1.5 10.7), CLAUDE.md 규칙 2
 
 ## 의존하는 것 (다른 파트에서 먼저 되어야 하는 것)
-- S2-T02 의 팔레트 크기·칸 피치 초안값(교시 전이면 그림값으로 두고 TBD 표시)
+- S2-T21 트레이 칸 수(D1)
+- S2-T02 팔레트 피치 초안값
 
 ## 기한
-10/11
+10/13
 
 _Sprint 2 (10/12~10/14) · 출처: BRD v1.4 10장_
 
 ---
 
-### S2-T02 · [로봇] 팔레트 구역 좌표 교시·9칸 도달성(ikin) 확인, 베이스 위치 재측정
+### S2-T02 · [로봇] 팔레트 구역 좌표 교시·16칸 2층 도달성(ikin) 확인, 베이스 위치 재측정
 
 labels: task · assignees: @rokeyhak, @lambdaramji
 
@@ -64,29 +69,29 @@ labels: task · assignees: @rokeyhak, @lambdaramji
 
 ## 작업 내용
 - [ ] 팔레트 트레이 중심을 record_pose 로 교시해 voss_config.yaml zones.pallet.pose 에 등록 (그림 계산값 사용 금지 — BRD 10.3 좌표 불일치)
-- [ ] 3열 × 3칸 = 9칸 + 2열 배치 6칸에 대해 ikin 해·자기 충돌 확인, 오른쪽 열(베이스 최근접)은 저속 실기 접근
+- [ ] 4열 × 2줄 × 2층 = 16칸 ikin 해·자기 충돌 확인. 4열(문 쪽, 베이스 최근접)·2층부터 저속 실기 접근
 - [ ] A·B·C → 팔레트 이동이 베이스 근처를 지나는지 확인하고 관절 이동 경유점 후보 기록
 - [ ] 로봇 베이스 중심 위치를 다시 재서 measurements 에 기록(실측 16 cm/24 cm 와 설정 좌표 12·9 cm 차이 원인)
-- [ ] RG2 손가락 두께 실측 → 열 안 칸 피치·놓을 때 개방 폭 제안
+- [ ] RG2 손가락 두께 실측 → X·Y 피치(4 × 2)·놓을 때 개방 폭 제안(결정 5), 2층 놓기 때 손가락 끝 높이 확인(R-20)
 
 ## 완료 기준 (측정 가능하게)
-- 9칸 모두 ikin 해 있음 또는 대안 배치 결정
+- 16칸 모두 ikin 해 있음 또는 대안 배치 결정
 - measurements 문서 PR
 
 ## 관련 요구사항
 TR-PAL-06·07, R-18~21
 
 ## 의존하는 것 (다른 파트에서 먼저 되어야 하는 것)
-- 로봇 시간 30분 (10/11 스탠드업에서 확정)
+- 로봇 시간 (스탠드업에서 확정)
 
 ## 기한
-10/11
+10/13
 
 _Sprint 2 (10/12~10/14) · 출처: BRD v1.4 10장_
 
 ---
 
-### S2-T03 · [로봇] MoveToZone PICK 구현(10/13→10/12, 재확인·팔레타이징 공용)·DROP 모드·PALLET 칸 계산·관절 경유점
+### S2-T03 · [로봇] MoveToZone PICK(재확인·팔레타이징 공용)·DROP 2층·PALLET slot 0~15·관절 경유점
 
 labels: task · assignees: @rokeyhak
 
@@ -94,14 +99,14 @@ labels: task · assignees: @rokeyhak
 로봇 제어·환경 설정 / 김학민 @rokeyhak
 
 ## 작업 내용
-- [ ] PICK: 기록된 zone·slot 위에서 pre_open → 하강 → 파지 → grip_detected 확인 → 안전 높이 (실패 GRIP_FAIL). 재확인 흐름(S2-T12)과 팔레타이징 공용이라 10/13 → 10/12 로 당김
-- [ ] DROP: 칸 위 하강 → 최소 개방(박스 폭 + 여유) → 안전 높이 상승, OBSERVE 복귀 없음
-- [ ] zone_motion: PALLET 칸 오프셋 = cols(n) 등분 열 중심 + 열 안 Y 피치. 순수 함수 단위 시험
+- [ ] PICK: 기록된 zone·slot 위에서 pre_open → 하강 → 파지 → grip_detected 확인 → 안전 높이 (실패 GRIP_FAIL). 재확인 흐름(S2-T12)과 공용
+- [ ] DROP: 칸 위 하강 → 최소 개방(박스 폭 + 여유) → 안전 높이 상승, OBSERVE 복귀 없음. 2층은 z +27 mm
+- [ ] zone_motion: PALLET slot → (열, 층, 줄) → X·Y 피치·z 오프셋. 1열 = −X 끝. 순수 함수 단위 시험
 - [ ] 베이스 근처 통과 구간은 관절 이동 경유점 사용
 
 ## 완료 기준 (측정 가능하게)
 - A·B·C 각 칸 PICK 10회 성공
-- 팔레트 9칸 DROP 각 1회 실기, 옆 박스 밀림 0
+- 팔레트 16칸 DROP 각 1회 실기(2층 포함), 옆 박스 밀림·쓰러짐 0
 - zone_motion 단위 시험 통과
 
 ## 관련 요구사항
@@ -110,15 +115,16 @@ TR-PAL-05~07
 ## 의존하는 것 (다른 파트에서 먼저 되어야 하는 것)
 - S2-T01 인터페이스 머지
 - S2-T02 좌표
+- S2-T21 트레이 칸
 
 ## 기한
-10/12
+10/13
 
 _Sprint 2 (10/12~10/14) · 출처: BRD v1.4 10장_
 
 ---
 
-### S2-T04 · [팔레타이징] 배치 계획 순수 함수 pallet_plan + 단위 시험
+### S2-T04 · [팔레타이징] 배치 계획 순수 함수 pallet_plan (v1.5: 16칸 2층·초과 처리) + 단위 시험
 
 labels: task · assignees: @lambdaramji
 
@@ -126,12 +132,14 @@ labels: task · assignees: @lambdaramji
 비전·OCR·통합 / 남현지 @lambdaramji
 
 ## 작업 내용
-- [ ] 입력: route(첫 배송지부터), 적재 목록(box_id, dong, zone, slot, 이미 이동 여부). 출력: 옮길 순서(마지막 배송지부터)와 각 박스의 팔레트 열·칸
-- [ ] 규칙: 열 수 = 경로 동 수(1~3), 첫 배송지 = 오른쪽(+X) 열, 열 안 최대 3칸, 대상 = PLACED·A/B/C·경로 동·미이동, 동별 3개 초과 시 오류
-- [ ] 같은 입력이면 같은 결과(결정적). ROS·로봇 import 없음
+- [ ] 입력: route(첫 배송지부터), ListPlacements 목록. 출력: 구역별 실을 수·초과 수·경로 제외 수, 칸(slot 0~15)별 박스, 옮길 순서(= 칸 순서)
+- [ ] 수량: 16개 이하면 전부, 넘으면 물량 많은 순(동률이면 먼저 방문하는 동이 후순위)으로 min(물량, 남은 칸)
+- [ ] 위치: 수량과 따로, 마지막 방문 동부터 1열, 열 안 1층 2칸 → 2층 2칸
+- [ ] 시험: 검증 프롬프트 v2 의 정답 생성기·S1~S8·불변식 6개(무작위 500회 이상)·입력 검증
 
 ## 완료 기준 (측정 가능하게)
-- 시험: 경로 3/2/1개, 경로 밖 동, 보류·실패 제외, 3개 초과 거부, 재개 시 남은 목록
+- S1~S8 정답 일치(줄 대칭 허용)
+- 불변식 500회 이상 통과
 - colcon test 통과
 
 ## 관련 요구사항
@@ -141,13 +149,13 @@ TR-PAL-03·04
 - 없음
 
 ## 기한
-10/12
+10/13
 
 _Sprint 2 (10/12~10/14) · 출처: BRD v1.4 10장_
 
 ---
 
-### S2-T05 · [팔레타이징] sort_manager PALLETIZING 상태·palletize 명령·멈춤/재개
+### S2-T05 · [팔레타이징] sort_manager PALLETIZING 상태·palletize 명령·멈춤/재개·완료 안내
 
 labels: task · assignees: @lambdaramji
 
@@ -156,17 +164,18 @@ labels: task · assignees: @lambdaramji
 
 ## 작업 내용
 - [ ] Command palletize 수신 → 시작 조건 검사(처리 중 박스 없음, 팔레트 비어 있음) → ListPlacements 로 대상 조회 → pallet_plan
-- [ ] 박스마다 PICK(최대 2회 재시도) → DROP → PalletResult 발행, PalletState 갱신, 원래 구역 칸 비움
-- [ ] stop → PAUSED(진행 정보 유지), resume → 남은 박스부터. 든 채 멈춘 박스는 grip 확인 후 놓기/FAILED
-- [ ] 시작·종료 TTS 문장(순서 되읽기, 결과·실패 안내)
+- [ ] 계획 직후(첫 PICK 전) PalletState 발행: 칸 배정, 구역별 실을 수·초과·경로 제외, 초과 경고. 시작 TTS(순서·첫 배송지 위치)
+- [ ] 칸 순서대로 PICK(최대 2회 재시도) → DROP → PalletResult 발행, 원래 구역 칸 비움. 미적재 박스는 OVERFLOW·EXCLUDED 로 기록하고 그대로 둠
+- [ ] stop → PAUSED(진행 정보 유지), resume → 다음 칸부터. 든 채 멈춘 박스는 grip 확인 후 놓기/FAILED
+- [ ] 완료 TTS: 구역별 실은 수, 초과로 못 실은 수, 경로 제외 수, 실패 박스
 
 ## 완료 기준 (측정 가능하게)
 - 단독 시험(가짜 gateway)으로 전이 통과
-- 실기: 1개 동 → 3개 동 경로 완주, 멈춤·재개 1회
+- 실기: 게이트 기준(D3) 완주, 멈춤·재개 1회
 - 10/13 18:00 게이트 판정
 
 ## 관련 요구사항
-TR-PAL-02·05·06·08·10
+TR-PAL-02·05·06·08·10·11
 
 ## 의존하는 것 (다른 파트에서 먼저 되어야 하는 것)
 - S2-T03 PICK·DROP
@@ -209,7 +218,7 @@ _Sprint 2 (10/12~10/14) · 출처: BRD v1.4 10장_
 
 ---
 
-### S2-T07 · [팔레타이징] 기록: SortResult.slot·sort_log.slot, PalletResult → pallet_log, ListPlacements 서비스
+### S2-T07 · [팔레타이징] 기록: SortResult.slot·sort_log.slot, PalletResult(DONE·FAILED·OVERFLOW·EXCLUDED) → pallet_log, ListPlacements
 
 labels: task · assignees: @lambdaramji
 
@@ -218,12 +227,12 @@ labels: task · assignees: @lambdaramji
 
 ## 작업 내용
 - [ ] sort_manager 가 SortResult 에 slot 채움, sort_logger 가 sort_log.slot 기록
-- [ ] sort_logger: /voss/pallet/result → pallet_log INSERT, ListPlacements(session_id) 서비스 제공
+- [ ] sort_logger: /voss/pallet/result → pallet_log INSERT (미적재 박스도 사유와 함께 한 행), ListPlacements(session_id) 서비스
 - [ ] DB 장애 시 ListPlacements 실패 → 팔레타이징 시작 거부(TR-PAL-03)
 
 ## 완료 기준 (측정 가능하게)
-- 결과 1건 → sort_log.slot 기록 확인
-- PalletResult 1건 → pallet_log 1행
+- 결과 1건 → sort_log.slot 기록
+- S1 기준 pallet_log 19행(DONE 16 + OVERFLOW 3)
 - ListPlacements 가 이동 여부 반영
 
 ## 관련 요구사항
@@ -233,13 +242,13 @@ TR-PAL-03·09
 - S2-T01
 
 ## 기한
-10/12
+10/13
 
 _Sprint 2 (10/12~10/14) · 출처: BRD v1.4 10장_
 
 ---
 
-### S2-T08 · [팔레타이징] HMI: 경로 입력·진행률·팔레트 칸별 배치도 (hmi_bridge·Spring Boot·React)
+### S2-T08 · [팔레타이징] HMI: 경로 입력·3D 팔레트(4×2×2)·실을 수/초과/경로 제외·경고·진행률
 
 labels: task · assignees: @lambdaramji
 
@@ -248,12 +257,13 @@ labels: task · assignees: @lambdaramji
 
 ## 작업 내용
 - [ ] hmi_bridge: /voss/pallet/state → MQTT voss/pallet/state, voss/command palletize → Command
-- [ ] React: 등록 동을 순서대로 고르는 경로 입력, 시작 버튼, 진행률(n개 중 m개), 배치도(열 = 동·배송 순번, 칸 = 빈 칸·적재·실패)
-- [ ] 우선순위: 경로 입력·진행률 → 배치도(시간 부족 시 진행률만, R-26)
+- [ ] React: 경로 입력, 시작 버튼, 3D 팔레트(트럭 머리 왼쪽·문 오른쪽, 계획 칸 배정 → 놓을 때마다 채움, 동별 색), 진행률(n개 중 m개)
+- [ ] 계획 직후 구역별 실을 수·초과 수·경로 제외 수, 초과면 "배송 물량 남음" 경고
+- [ ] 폴백(결정 D5): 3D가 늦으면 2D 배치도 + 진행률
 
 ## 완료 기준 (측정 가능하게)
-- HMI 버튼으로 팔레타이징 1회 완주
-- 배치도가 실제 팔레트와 일치, 반영 ≤ 1초
+- S1 계획·적재 이벤트 재생으로 3D 화면 확인
+- HMI 버튼으로 1회 완주, 반영 ≤ 1초
 
 ## 관련 요구사항
 TR-PAL-10
@@ -261,6 +271,7 @@ TR-PAL-10
 ## 의존하는 것 (다른 파트에서 먼저 되어야 하는 것)
 - S2-T01
 - S2-T05
+- D5 담당 결정
 
 ## 기한
 10/14
@@ -391,7 +402,7 @@ _Sprint 2 (10/12~10/14) · 출처: BRD v1.4 10장_
 
 ---
 
-### S2-T13 · [PL] 시연 대본 v2(단계 0·9, 박스 구성)·10/13 18:00 Sprint 2 게이트·문서 갱신
+### S2-T13 · [PL] 시연 대본 v2(20개 박스, 단계 0·9), 결정 D3·D4·D6·D7, 게이트 판정·문서 갱신
 
 labels: task · assignees: @lambdaramji
 
@@ -399,16 +410,18 @@ labels: task · assignees: @lambdaramji
 비전·OCR·통합 / 남현지 @lambdaramji
 
 ## 작업 내용
-- [ ] 남은 결정 #1: 흐린 송장 박스가 들어가는 동이 4개가 되는 문제 → 동별 3개·총 9개 구성안을 김학민님(대본 운영, S2-T12)과 확정
-- [ ] 단계 0(음성 기동)·9(팔레타이징, 경로 대치 → 역삼 → 청담) 문안을 대본에 추가
-- [ ] 10/13 18:00 게이트 판정·ADR 기록, plan.md·개발일정.xlsx 에 Sprint 1/2 반영, BRD v1.4 레포 반영(md 재변환)
+- [ ] 박스 20개 구성(역삼·대치·청담 각 6 + 흐린 1 + 판별 불가 1)으로 8.1 대본의 박스 번호·투입 수를 다시 짬 (김학민 S2-T12 대본 운영과 함께)
+- [ ] 단계 0(음성 기동)·9(팔레타이징) 문안. 9의 경로는 D4 (대치 → 역삼 → 청담이면 대치 3개 초과)
+- [ ] D3 게이트 기준, D6 줄 순서, D7 NFR-07 "20개 중 16개" 전원 승인
+- [ ] 10/13 18:00 게이트 판정·ADR 기록, plan.md·개발일정·BRD 반영
 
 ## 완료 기준 (측정 가능하게)
 - 대본 v2 PR
+- D3·D4·D6·D7 결정 기록
 - 게이트 결정 기록
 
 ## 관련 요구사항
-BRD v1.4 10.2·10.8
+BRD v1.5 10.8·10.10·10.12
 
 ## 의존하는 것 (다른 파트에서 먼저 되어야 하는 것)
 - 없음
@@ -592,6 +605,64 @@ NFR-01~03, T23
 ## 의존하는 것 (다른 파트에서 먼저 되어야 하는 것)
 - S2-T12 리허설 판정 기록
 - S2-T11 OCR 원인 분석
+
+## 기한
+10/14
+
+_Sprint 2 (10/12~10/14) · 출처: BRD v1.4 10장_
+
+---
+
+### S2-T21 · [로봇·1순위] A·B·C 트레이 칸 수 3 → 동별 7개 이상 (결정 D1, 20개 시연 선행)
+
+labels: task, interface · assignees: @rokeyhak
+
+## 파트 / 담당
+로봇 제어·환경 설정 / 김학민 @rokeyhak
+
+## 작업 내용
+- [ ] 22 × 15 cm 트레이에 46 × 31 mm 박스 4 × 2 = 8칸 격자(X 4 · Y 2), zone_motion 칸 오프셋·voss_config grid 수정 (docs/interfaces 먼저)
+- [ ] C 트레이는 수직 자세로 +X 도달 한계(10/08 ikin, 칸 +20 mm) — 4열이 안 되면 3 × 2 = 6칸(청담 6개와 같음)으로 두고 역삼(7)을 C 로 보내는 규칙 변경 금지 (R-31)
+- [ ] sort_manager capacity 와 맞춤(남현지 리뷰)
+
+## 완료 기준 (측정 가능하게)
+- A·B 8칸·C 6칸 이상 PLACE·PICK 각 1회 실기
+- 설정·문서 PR
+
+## 관련 요구사항
+TR-PICK-08, BRD v1.5 10.12, R-31
+
+## 의존하는 것 (다른 파트에서 먼저 되어야 하는 것)
+- 없음
+
+## 기한
+10/13
+
+_Sprint 2 (10/12~10/14) · 출처: BRD v1.4 10장_
+
+---
+
+### S2-T22 · [음성·HMI] 투입 예정 수량 기본 20, "몇 개 남았어?"에 팔레타이징 결과 반영 (TR-PAL-12)
+
+labels: task · assignees: @EuiseokJeongNZ
+
+## 파트 / 담당
+음성·웹·HMI / 정의석 @EuiseokJeongNZ
+
+## 작업 내용
+- [ ] HMI 투입 예정 수량 기본값 10 → 20
+- [ ] /api/stats remaining_count 와 intent_parser 답변에 pallet_log 반영: 실은 박스는 남은 수에서 빼고, 구역에 남은 미적재 박스(OVERFLOW·EXCLUDED)는 넣음. 보류 포함 여부는 명세 미정 — 동작을 기록
+- [ ] 정답 세트에 이력 질의 문장 추가
+
+## 완료 기준 (측정 가능하게)
+- S1 적재 후 "지금 박스 몇 개 남았어?" 답이 실제와 일치
+- HMI 숫자와 음성 답 일치
+
+## 관련 요구사항
+TR-PAL-12, TR-VOICE-08
+
+## 의존하는 것 (다른 파트에서 먼저 되어야 하는 것)
+- S2-T07 pallet_log
 
 ## 기한
 10/14
