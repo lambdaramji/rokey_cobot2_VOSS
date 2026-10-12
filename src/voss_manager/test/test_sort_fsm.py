@@ -189,23 +189,31 @@ def test_start_without_home(cfg: f.Config) -> None:
     assert ctx.stage_start_ns == 500 * MS
 
 
-def test_unknown_waits_but_low_conf_goes_to_recheck(cfg: f.Config) -> None:
-    """후보가 없으면(UNKNOWN) 기다리고, 후보는 있는데 불확실하면 집어서 재확인 구역으로."""
-    ctx = running(cfg)
-    ctx, acts, _ = run(ctx, label(3, code="", dong="", conf=0.0))
-    assert ctx.state == f.RUNNING and not of(acts, f.SendGoal) and 3 not in ctx.decided
-    ctx, acts, _ = run(ctx, label(3, conf=0.4))
+def test_unknown_and_low_conf_go_to_recheck(cfg: f.Config) -> None:
+    """후보가 없거나(UNKNOWN) 후보는 있는데 불확실하면 첫 판독에서 집어서 재확인 구역으로."""
+    ctx, acts, _ = run(running(cfg), label(3, code="", dong="", conf=0.0))
+    assert ctx.state == f.PICKING and of(acts, f.SendGoal) == [f.SendGoal(3)]
+    assert (ctx.box.zone, ctx.box.slot, ctx.box.dong, ctx.box.candidates) == ("RECHECK", 0, "", ())
+    assert "UNKNOWN → 재확인" in of(acts, f.Log)[0].text
+    ctx, acts, _ = run(running(cfg), label(3, conf=0.4))
     assert ctx.state == f.PICKING and of(acts, f.SendGoal) == [f.SendGoal(3)]
     assert (ctx.box.zone, ctx.box.slot, ctx.box.candidates) == ("RECHECK", 0, ("대치동",))
     ctx2, _, _ = run(running(cfg), label(4, code="S07-01", dong="대치동"))  # 코드·동 불일치
     assert ctx2.box.zone == "RECHECK" and ctx2.box.candidates == ("역삼동", "대치동")
 
 
-def test_waiting_log_once_per_track_and_reason(cfg: f.Config) -> None:
+def test_unknown_asks_all_dongs(cfg: f.Config) -> None:
+    """UNKNOWN 박스가 재확인에서도 안 읽히면 질문 후보 = 전체 동."""
+    ctx, _, _ = run(running(cfg), label(3, code="", dong="", conf=0.0))
+    out = f._ask(ctx, 5000 * MS, "UNKNOWN")
+    assert out.ctx.box.candidates == tuple(cfg.zone_map)
+
+
+def test_ignore_log_once_per_track_and_reason(cfg: f.Config) -> None:
     ctx = running(cfg)
-    unk = dict(code="", dong="", conf=0.0)
-    ctx, acts, _ = run(ctx, label(3, **unk), label(3, **unk), label(3, **unk), label(4, **unk))
-    assert len(of(acts, f.Log)) == 2  # track 3 UNKNOWN 한 번, track 4 한 번
+    gone = dict(track_fresh=False)
+    ctx, acts, _ = run(ctx, label(3, **gone), label(3, **gone), label(3, **gone), label(4, **gone))
+    assert len(of(acts, f.Log)) == 2  # track 3 GONE 한 번, track 4 한 번
 
 
 def test_label_ignored_when_box_gone_or_not_stage1(cfg: f.Config) -> None:

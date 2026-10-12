@@ -13,7 +13,7 @@
 
 ## 운용 규칙 (T20, SRD F-04/06/07·T23 확정 전 값은 제안)
 - **분류 결정:** RUNNING 에서 OBSERVE 도착 뒤 촬영된 stage 1 판독으로 정한다. 확실(분류코드 우선, 동 이름과 같고 `confidence ≥ ocr.confidence_min`)하면 목적 구역으로 바로 집는다. 한 번에 한 박스.
-- **불확실:** 후보가 있는데 LOW_CONF·코드와 동 이름 불일치면 **집어서 재확인 구역**(빈 칸, 최대 2)으로. 후보가 하나도 없으면(UNKNOWN) 집지 않고 다음 판독을 기다린다(box_id 없음). 추종 중 stage 2 판독이 확실하면 재확인 대신 목적 구역으로 바꾼다.
+- **불확실:** 후보가 하나도 없거나(UNKNOWN, 글자를 못 읽음) LOW_CONF·코드와 동 이름 불일치면 **집어서 재확인 구역**(빈 칸, 최대 2)으로. UNKNOWN 도 첫 판독에서 바로 집는다 — OCR 한 번 ≈ 2 s 라 다음 판독을 기다리면 박스가 지나간다(10/12 실기, 로컬 시험 브랜치 변경 — 담당 확인 전). 재확인에서도 모르면 전체 동을 후보로 묻는다. 추종 중 stage 2 판독이 확실하면 재확인 대신 목적 구역으로 바꾼다.
 - **재확인(RECHECK):** 재확인 칸에 놓기 → `MoveToZone(RECHECK, VIEW)` → `/voss/vision/read_label`(stage 3) → 확실하면 `decided_by=RECHECK` → `MoveToZone(RECHECK, 칸, PICK)` → 목적 구역 PLACE. VIEW·ReadLabel 실패(서비스 없음·시간 초과 포함)나 불확실하면 질문.
 - **질문(ASKING):** 후보 최대 2동(+ 보류), 문장은 `SortState.pending_question` 과 `/voss/voice/say`. 답은 `answer <box_id>|<동 또는 HOLD>` — 다른 box_id 는 거부, 후보가 아닌 답은 1회만 재안내(타이머 유지). 답 = `OPERATOR`, HOLD 답 = HELD·OPERATOR. **30 s 무응답 = HOLD·HELD·`NONE`·`NO_ANSWER`**(`ask_timeout_s`). 질문 중 stop → 타이머 멈춤, resume → 다시 묻고 30 s 새로.
 - **재확인 실패:** PICK 실패 = 박스는 재확인 칸에 둔 채 HELD(zone RECHECK, reason DEVICE_ERROR·STOPPED) + PAUSED — 칸은 `reset_zone RECHECK` 로 비운다(처리 중 박스가 칸에 있으면 거부). 목적 구역이 가득이면 박스를 재확인 칸에 둔 채 PAUSED → reset_zone → resume 하면 PICK 부터.
