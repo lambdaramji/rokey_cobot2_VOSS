@@ -43,6 +43,12 @@ def test_layers_append_to_grid():
     assert p["zones.B.grid"][4:] == [2.0, 30.0]
 
 
+def test_place_open_passes_when_set():
+    p = gateway_params({"gripper": {"pre_open_mm": 90, "place_open_mm": 50}}, "x")
+    assert (p["gripper.pre_open_mm"], p["gripper.place_open_mm"]) == (90.0, 50.0)
+    assert "gripper.place_open_mm" not in gateway_params({"gripper": {"pre_open_mm": 90}}, "x")
+
+
 def test_wrong_length_is_left_out():
     p = gateway_params({"robot": {"tcp_offset_mm": [1, 2]}, "observe_pose": [0, 0, 0]}, "x")
     assert "tcp_offset_mm" not in p and "observe_pose" not in p

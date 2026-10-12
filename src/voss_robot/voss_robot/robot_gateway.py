@@ -186,6 +186,10 @@ class RobotGatewayNode(Node):
                 "view": view if len(view) == 6 else None,
             }
         self.pre_open = float(self.declare_parameter("gripper.pre_open_mm", 90.0).value)
+        # 트레이 안에서 여는 폭(PLACE 개방·PICK 확인 실패 후퇴). 없으면 pre_open (voss_config.md gripper)
+        self.place_open = float(
+            self.declare_parameter("gripper.place_open_mm", self.pre_open).value
+        )
         self.grip_force = float(self.declare_parameter("gripper.force_n", 14.0).value)
         self.grasp_width = float(self.declare_parameter("gripper.grasp_width_mm", 39.0).value)
         # PICK(재확인 칸에서 집기): 놓기 칸 자세 + dz. 놓기 자세는 쥔 박스 밑면 +5 라 핑거 끝은 바닥 약 +13.
@@ -669,7 +673,7 @@ class RobotGatewayNode(Node):
                     except _ZoneError as e:
                         return fail(f"{e} (박스를 쥔 채 멈춤)")
                 if place:
-                    g = self.rg2.command_held(self.pre_open, self.grip_force)
+                    g = self.rg2.command_held(self.place_open, self.grip_force)
                     if not g.ok:
                         return fail(f"GRIP_FAIL: 개방 {g.message}")
                     placed = self.get_clock().now()
@@ -714,7 +718,7 @@ class RobotGatewayNode(Node):
     def _pick_retreat(self, lift) -> str:
         """PICK 확인 실패: 파지 높이(박스 밑면 = 바닥)에서 열어 박스를 칸에 그대로 두고 lift 까지 올라간다.
         문제가 생기면 그 자리에 멈추고 설명을 돌려준다(GRIP_FAIL 메시지 뒤에 붙임)."""
-        g = self.rg2.command_held(self.pre_open, self.grip_force)
+        g = self.rg2.command_held(self.place_open, self.grip_force)
         if not g.ok:
             return f" / 개방 실패 {g.message} — 칸 위 파지 높이에 멈춤"
         try:

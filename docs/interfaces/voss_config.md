@@ -35,6 +35,7 @@ belt:
   direction_base: [1.0, 0.0, 0.0]   # 벨트 진행 방향 단위벡터, 두산 베이스 기준(부호 포함). z = 0 = 수평 성분만 쓴다(벨트 기울기 0.18° 무시)
 gripper:                 # 폭은 RG2 보고값. 실측 안쪽 간격: 보고 90 → 80 mm, 빈손 보고 39 → 28 mm(10/08), 박스 파지 보고 40.3 → 30 mm(10/06) — 차이 10~11 mm 의 관측 특성이라 보정식으로 쓰지 않는다 (measurements #8)
   pre_open_mm: 90
+  place_open_mm: null     # 선택. 트레이 안에서 놓을 때 여는 폭(보고값). 벽·옆 박스에 핑거가 닿지 않게 박스가 떨어지는 최소 폭. null·없음 = pre_open_mm
   grasp_width_mm: 39     # 파지 목표 폭 (예시 = 10/06 실측값). 박스보다 작아야 grip_detected 가 켜진다
   force_n: null          # 10/06 실측 (종이 박스 안 찌그러지는 값)
 ocr:
@@ -73,3 +74,4 @@ timing:
 - 2026-10-08: `zones.recheck.view_pose` 실측값 입력 [520.58, −37.92, 367.14, 169.44, −180.0, 79.38] (플랜지, 김학민 T35 #44). 펜던트 TCP [517.9, −39.3, 120.5, …] 교시를 tcp_offset_mm 로 변환. 카메라 광축이 재확인 트레이 중심 위, 송장 면까지 약 300 mm. 스키마·키 변경 없음. 출처 measurements-1008 #13.
 - 2026-10-08 저녁: `robot.tcp_offset_mm` 주석 — gateway 는 TCP 를 등록하지 않고, 컨트롤러 등록이 이 값이거나 없을 때만 MoveToZone 을 한다로 고침 (#41, 10/08 18:26 사고). 값 변경 없음.
 - 2026-10-12 (로컬 시험 브랜치 `local/1012-recheck-flow`, 원격 막힘 — 담당 확인 전): grid `layers`·`layer_mm` 추가(선택, 기본 1층·27 mm). 시연 시나리오(A·B·C 6칸을 채운 뒤 사람이 판정한 흐린 송장 1개를 칸 0 위 2층에)용. 칸 수 = cols × rows × layers 라 sort_manager 의 구역 용량과 robot_gateway 의 칸 범위가 함께 바뀐다. layers 를 안 쓰면 기존과 같다.
+- 2026-10-12 (로컬 시험 브랜치): `gripper.place_open_mm` 추가(선택). robot_gateway 가 PLACE 개방과 PICK 확인 실패 후퇴 때 이 폭으로 연다. 3×2 칸에서 90 으로 열면 핑거가 트레이 벽·옆 박스에 닿을 수 있어서다. 10/12 실측: 보고 50 mm 에서 박스가 떨어짐(최소). 없으면 pre_open_mm 그대로. belt_servo 의 사전 개방(pre_open_mm)·PICK 하강 전 개방은 바꾸지 않는다.

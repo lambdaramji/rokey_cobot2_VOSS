@@ -68,7 +68,7 @@ def gateway_params(cfg: dict[str, Any], sha: str) -> dict[str, Any]:
         if view is not None:
             out[f"zones.{z}.view_pose"] = view
     g = cfg.get("gripper") or {}
-    for k in ("pre_open_mm", "grasp_width_mm", "force_n"):
+    for k in ("pre_open_mm", "place_open_mm", "grasp_width_mm", "force_n"):
         if isinstance(g.get(k), int | float) and not isinstance(g.get(k), bool):
             out[f"gripper.{k}"] = float(g[k])
     return out
