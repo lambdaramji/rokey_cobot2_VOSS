@@ -63,6 +63,8 @@ class Plan:
     moves: tuple[Move, ...]  # 옮길 순서 (마지막 배송지부터)
     empty: tuple[str, ...] = ()  # 경로에 있지만 옮길 박스가 없는 동
     skipped: tuple[str, ...] = ()  # 대상에서 뺀 기록과 이유 (로그용)
+    # 지금 A·B·C 트레이에 있는 박스 (구역, 칸, box_id) — 경로 밖 포함. 다 옮긴 구역의 칸 카운터를 되돌리는 데 쓴다
+    occupied: tuple[tuple[str, int, str], ...] = ()
 
     @property
     def cols(self) -> int:
@@ -129,10 +131,13 @@ def plan_pallet(route: Sequence[str], placements: Iterable[Placement]) -> Plan:
 
     # 2) 이미 옮긴 것·경로 밖 동은 트레이에 그대로 둔다
     by_dong: dict[str, list[tuple[str, int, str]]] = {d: [] for d in route}
+    occupied = []
     for (zone, slot), p in latest.items():
         if p.palletized:
             skipped.append(f"{p.box_id} {p.dong} 이미 팔레트")
-        elif p.dong not in in_route:
+            continue
+        occupied.append((zone, slot, p.box_id))
+        if p.dong not in in_route:
             skipped.append(f"{p.box_id} {p.dong} 경로 밖")
         else:
             by_dong[p.dong].append((zone, slot, p.box_id))
@@ -151,7 +156,15 @@ def plan_pallet(route: Sequence[str], placements: Iterable[Placement]) -> Plan:
         for row, (zone, slot, box_id) in enumerate(sorted(by_dong[dong])):
             moves.append(Move(box_id, dong, i, zone, slot, col_of(i, n), row))
     empty = tuple(d for d in route if not by_dong[d])
-    return Plan(route, tuple(moves), empty, tuple(sorted(skipped)))
+    return Plan(route, tuple(moves), empty, tuple(sorted(skipped)), tuple(sorted(occupied)))
+
+
+def emptied_zones(plan: Plan, done: Iterable[str]) -> tuple[str, ...]:
+    """옮긴(DONE) 박스로 트레이가 다 빈 구역 — 그 구역 칸 카운터를 0 으로 (TR-PAL-09). 하나라도 남으면 그대로 둔다
+    (칸 카운터는 '다음 칸 = 놓은 횟수' 라 중간 칸만 비울 수 없다)."""
+    moved = set(done)
+    zones = sorted({z for z, _, _ in plan.occupied})
+    return tuple(z for z in zones if all(b in moved for zz, _, b in plan.occupied if zz == z))
 
 
 def remaining(plan: Plan, finished: Iterable[str]) -> tuple[Move, ...]:

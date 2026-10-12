@@ -170,3 +170,17 @@ def test_parse_route_with_aliases_and_errors() -> None:
 
 def test_sort_zones_match_fsm() -> None:
     assert pp.SORT_ZONES == f.SORT_ZONES
+
+
+def test_occupied_and_emptied_zones() -> None:
+    recs = nine() + [
+        box(20, "역삼동", 0, palletized=True, stamp_ns=0)
+    ]  # 칸 0 옛 기록(이미 옮김)은 나중 박스에 덮인다
+    plan = pp.plan_pallet(("청담동", "역삼동"), recs)
+    assert (
+        len(plan.occupied) == 9 and ("B", 0, f"{SID}-004") in plan.occupied
+    )  # 경로 밖 대치도 트레이에 있다
+    moved = [m.box_id for m in plan.moves]
+    assert pp.emptied_zones(plan, moved) == ("A", "C")  # 대치(B)는 남아 칸 카운터를 그대로 둔다
+    assert moved[0].endswith("-001")  # 마지막 배송지 역삼부터 옮긴다
+    assert pp.emptied_zones(plan, moved[1:]) == ("C",)  # 역삼 하나를 못 옮기면 A 는 그대로
