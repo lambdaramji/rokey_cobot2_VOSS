@@ -41,6 +41,11 @@ def test_layers_reuse_first_layer_slots_and_raise_z():
         slot_offset(g, 12)
 
 
+def test_pitch_y_separate_from_x():
+    g = [3, 2, 50, -30, 1, 27, 44]  # C: X 50·offset −30, Y 줄 간격 44
+    assert [slot_offset(g, s) for s in (0, 2, 3)] == [(-80.0, -22.0), (20.0, -22.0), (-80.0, 22.0)]
+
+
 def test_observe_to_zone_rises_then_over_then_descends():
     steps = plan_move(OBS, slot_pose(A, [3, 1, 60], 2))
     assert [n for n, _ in steps] == ["over", "descend"]  # 관측 자세는 이미 safe z(450.2) 이상

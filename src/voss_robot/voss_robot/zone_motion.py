@@ -22,17 +22,18 @@ def _layers(grid: Sequence[float]) -> tuple[int, float]:
 
 
 def slot_offset(grid: Sequence[float], slot: int) -> tuple[float, float]:
-    """grid = [cols, rows, pitch_mm(, offset_mm(, layers, layer_mm))] → (dx, dy) mm. offset_mm = 칸 줄 중심의
-    X 위치(트레이 중심 기준, 먼 트레이에서 팔이 닿는 −X 쪽으로 당김 — 10/08). 2층부터는 1층 칸 위치를 다시 쓴다.
-    범위 밖이면 ValueError."""
+    """grid = [cols, rows, pitch_mm(, offset_mm(, layers, layer_mm(, pitch_y_mm)))] → (dx, dy) mm. offset_mm = 칸
+    줄 중심의 X 위치(트레이 중심 기준, 먼 트레이에서 팔이 닿는 −X 쪽으로 당김 — 10/08). pitch_y_mm = Y 줄 간격
+    (없으면 pitch_mm). 2층부터는 1층 칸 위치를 다시 쓴다. 범위 밖이면 ValueError."""
     cols, rows, pitch = int(grid[0]), int(grid[1]), float(grid[2])
+    pitch_y = float(grid[6]) if len(grid) > 6 else pitch
     off = float(grid[3]) if len(grid) > 3 else 0.0
     per = cols * rows
     layers, _ = _layers(grid)
     if not 0 <= slot < per * layers:
         raise ValueError(f"slot {slot} 는 0~{per * layers - 1}")
     col, row = (slot % per) % cols, (slot % per) // cols
-    return off + (col - (cols - 1) / 2.0) * pitch, (row - (rows - 1) / 2.0) * pitch
+    return off + (col - (cols - 1) / 2.0) * pitch, (row - (rows - 1) / 2.0) * pitch_y
 
 
 def slot_pose(zone_pose: Sequence[float], grid: Sequence[float], slot: int) -> list[float]:

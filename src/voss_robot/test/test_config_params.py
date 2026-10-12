@@ -41,6 +41,8 @@ def test_layers_append_to_grid():
     p = gateway_params({"zones": {"A": z, "B": {**z, "grid": {**z["grid"], "layer_mm": 30}}}}, "x")
     assert p["zones.A.grid"] == [3.0, 2.0, 60.0, 0.0, 2.0, 27.0]  # layer_mm 기본 27 = 박스 높이
     assert p["zones.B.grid"][4:] == [2.0, 30.0]
+    q = gateway_params({"zones": {"C": {"grid": {"cols": 3, "rows": 2, "pitch_mm": 50, "pitch_y_mm": 44}}}}, "x")
+    assert q["zones.C.grid"] == [3.0, 2.0, 50.0, 0.0, 1.0, 27.0, 44.0]
 
 
 def test_place_open_passes_when_set():
