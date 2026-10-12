@@ -36,11 +36,11 @@ def test_slot_pose_shifts_x_only():
 def test_truck_4x2_two_layers_slots():
     grid = [4, 2, 50, 0, 2, 27, 60]
     assert [slot_offset(grid, k) for k in range(8)] == [
-        (-75.0, -30.0), (-25.0, -30.0), (25.0, -30.0), (75.0, -30.0),
         (-75.0, 30.0), (-25.0, 30.0), (25.0, 30.0), (75.0, 30.0),
+        (-75.0, -30.0), (-25.0, -30.0), (25.0, -30.0), (75.0, -30.0),
     ]
     z0, z8 = slot_pose([0] * 6, grid, 0)[2], slot_pose([0] * 6, grid, 8)[2]
-    assert slot_offset(grid, 15) == (75.0, 30.0) and z8 - z0 == 27.0
+    assert slot_offset(grid, 15) == (75.0, -30.0) and z8 - z0 == 27.0
 
 
 def test_row_stage_slot_is_minus_x_end_of_same_row():
@@ -51,9 +51,10 @@ def test_row_stage_slot_is_minus_x_end_of_same_row():
 
 def test_layers_reuse_first_layer_slots_and_raise_z():
     g = [3, 2, 60, 0, 2, 27]  # 3칸 × 2줄 × 2층 = 12칸, 층 간격 27 mm (박스 높이)
-    assert [slot_offset(g, s) for s in (0, 5)] == [(-60.0, -30.0), (60.0, 30.0)]
+    # row 0 = +Y(위 줄): 왼쪽 위 0·1·2, 왼쪽 아래 3·4·5 (10/12 실기 요청)
+    assert [slot_offset(g, s) for s in (0, 5)] == [(-60.0, 30.0), (60.0, -30.0)]
     assert slot_offset(g, 6) == slot_offset(g, 0)  # 7번째 = 칸 0 위 2층
-    assert slot_pose(A, g, 6) == pytest.approx([153.49, 135.23, A[2] + 27.0, *A[3:]])
+    assert slot_pose(A, g, 6) == pytest.approx([153.49, 195.23, A[2] + 27.0, *A[3:]])
     assert slot_pose(A, g, 5)[2] == pytest.approx(A[2])
     with pytest.raises(ValueError):
         slot_offset(g, 12)
@@ -61,7 +62,7 @@ def test_layers_reuse_first_layer_slots_and_raise_z():
 
 def test_pitch_y_separate_from_x():
     g = [3, 2, 50, -30, 1, 27, 44]  # C: X 50·offset −30, Y 줄 간격 44
-    assert [slot_offset(g, s) for s in (0, 2, 3)] == [(-80.0, -22.0), (20.0, -22.0), (-80.0, 22.0)]
+    assert [slot_offset(g, s) for s in (0, 2, 3)] == [(-80.0, 22.0), (20.0, 22.0), (-80.0, -22.0)]
 
 
 def test_observe_to_zone_rises_then_over_then_descends():
@@ -147,5 +148,5 @@ def test_tray_paths_do_not_get_arcs():
 
 def test_col_dy_shifts_one_column_in_both_rows_and_layers():
     grid = [4, 2, 50, 0, 2, 27, 60, 0, 0, 0, 10]
-    assert slot_offset(grid, 3) == (75.0, -20.0) and slot_offset(grid, 7) == (75.0, 40.0)
-    assert slot_offset(grid, 11) == (75.0, -20.0) and slot_offset(grid, 2) == (25.0, -30.0)
+    assert slot_offset(grid, 3) == (75.0, 40.0) and slot_offset(grid, 7) == (75.0, -20.0)
+    assert slot_offset(grid, 11) == (75.0, 40.0) and slot_offset(grid, 2) == (25.0, 30.0)

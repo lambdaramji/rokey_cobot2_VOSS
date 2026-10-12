@@ -114,6 +114,8 @@ PARAM_SPECS: tuple[ParamSpec, ...] = (
     ParamSpec("z.descend_speed_mps", "float", "m/s", True, _positive),
     ParamSpec("z.lift_speed_mps", "float", "m/s", True, _positive),
     ParamSpec("z.height_tol_mm", "float", "mm", True, _positive),
+    # 선택: LIFT 를 들기 높이보다 이만큼 아래에서 끝낸다(P 제어 꼬리 2 s 를 자름 — 10/12 실기, 로컬 시험). 없으면 0
+    ParamSpec("z.lift_done_below_mm", "float", "mm", False, _non_negative),
     ParamSpec("input.stale_timeout_s", "float", "s", True, _positive),
     ParamSpec("input.lost_timeout_s", "float", "s", True, _positive),
     ParamSpec("input.pose_lag_ms", "float", "ms", True, _non_negative),  # 측정값 60 (0 = 보정 없음)

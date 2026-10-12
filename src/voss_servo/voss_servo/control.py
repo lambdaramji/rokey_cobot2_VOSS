@@ -60,6 +60,7 @@ class ControlConfig:
     x_max: float  # 추종 가능 구간 TCP x 상한
     dt_nominal: float  # 1 / rate_hz
     z_min: float  # gateway TCP z 하한 (사본, m)
+    lift_done_below_m: float = 0.0  # LIFT 끝 = 들기 높이 − 허용치 − 이 값 (빨리 넘기기)
 
 
 def vec3(v: Vec) -> np.ndarray:
@@ -92,6 +93,7 @@ def config_from_values(values: dict[str, Any]) -> ControlConfig:
         descend_speed=float(values["z.descend_speed_mps"]),
         lift_speed=float(values["z.lift_speed_mps"]),
         height_tol_m=values["z.height_tol_mm"] / 1000.0,
+        lift_done_below_m=(values.get("z.lift_done_below_mm") or 0.0) / 1000.0,
         x_min=values["reach.x_min_mm"] / 1000.0,
         x_max=values["reach.x_max_mm"] / 1000.0,
         dt_nominal=1.0 / values["rate_hz"],
@@ -327,7 +329,7 @@ def geometry(
     at_grasp = float(tcp[2]) <= top_z + cfg.grasp_dz + cfg.height_tol_m
     if reach is None and grasp_floor_blocked(top_z, cfg):
         reach = "Z_MIN"  # 파지 높이에 닿을 수 없다 → OUT_OF_REACH (cause REACH_Z_MIN)
-    at_lift = float(tcp[2]) >= top_z + cfg.lift_dz - cfg.height_tol_m
+    at_lift = float(tcp[2]) >= top_z + cfg.lift_dz - cfg.height_tol_m - cfg.lift_done_below_m
     return Geometry(
         tcp=tcp,
         tcp_horizon_s=tcp_h,

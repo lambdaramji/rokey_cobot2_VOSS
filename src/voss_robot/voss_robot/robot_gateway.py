@@ -242,6 +242,8 @@ class RobotGatewayNode(Node):
         self.tcp_check_tol = float(self.declare_parameter("zone_tcp_check_tol_mm", 3.0).value)
         # move_line 은 TCP 직선 이동 — 출발–목표 선분에서 이만큼 벗어나면 move_stop 하고 LIMIT
         self.path_tol = float(self.declare_parameter("zone_path_tol_mm", 15.0).value)
+        # 위쪽 모서리 블렌딩 거리(mm). 0 = 모서리마다 멈춤(예전). 상승→수평→하강을 멈추지 않고 잇는다(로컬 10/12)
+        self.blend_mm = float(self.declare_parameter("zone_blend_mm", 0.0).value)
         self._cmd_off = list(self.tcp)  # _run_path 가 매번 잰 컨트롤러 TCP 오프셋으로 바꾼다
         self._tcp_note = ""  # RobotState.detail: 컨트롤러 TCP 가 voss_config 와 다를 때
         self._mlock = threading.Lock()  # 모션 자원(MoveToZone)
@@ -255,7 +257,7 @@ class RobotGatewayNode(Node):
         )
         ready = [z for z, c in self.zones.items() if c["pose"] and c["grid"]]
         self.get_logger().info(
-            f"MoveToZone 구역 {ready}, safe z {self.safe_z} mm(플랜지), vel {self.zone_vel}, acc {self.zone_acc}"
+            f"MoveToZone 구역 {ready}, safe z {self.safe_z} mm(플랜지), vel {self.zone_vel}, acc {self.zone_acc}, blend {self.blend_mm} mm"
         )
 
         # ---- /voss/robot/state: reliable·transient_local·depth 1, 바뀔 때 + 2 Hz (#55 MC-019) ----
@@ -899,15 +901,25 @@ class RobotGatewayNode(Node):
                     merged.append(steps[i])
                     i += 1
             steps = merged
-        for name, step in steps:
+        carry = 0.0  # 앞 구간에서 블렌딩으로 남긴 거리 — 이번 구간 경로 이탈 허용에 더한다
+        for i, (name, step) in enumerate(steps):
             pts = step if name == "arc" else [step]  # arc = 경유점들 + 끝점 (스플라인)
             cmds = [flange_to_tcp(q, self._cmd_off) for q in pts]  # 컨트롤러 등록 TCP 기준 목표
             # 핑거 끝(/voss/robot/pose 와 같은 기준) — 도착 판정
             tcps = [flange_to_tcp(q, self.tcp)[:3] for q in pts]
             seq0 = self.dsr.alarm_seq
+            # 블렌딩(zone_blend_mm): 위쪽 모서리(이동 높이에서 끝나는 구간 → 다음 직선 구간)만 — 남은 거리가
+            # 이만큼일 때 다음 move_line 을 보내 멈추지 않고 꺾는다(두산 DUPLICATE). 트레이 안 낮은 모서리는 그대로
+            nxt = steps[i + 1][0] if i + 1 < len(steps) else ""
+            blend = (
+                self.blend_mm
+                if self.blend_mm > 0 and nxt and nxt != "arc" and pts[-1][2] >= hz - 0.5
+                else 0.0
+            )
             try:
                 self._send_move(name, cmds)
-                self._wait_arrive(name, tcps[-1], seq0, tcps[:-1])
+                self._wait_arrive(name, tcps[-1], seq0, tcps[:-1], early=blend, carry=carry)
+                carry = blend
             except _ZoneError as e:
                 if not str(e).startswith("STOPPED"):  # stop 은 이미 move_stop 을 보냈다
                     self._zone_halt(f"{name}: {e}")
@@ -945,15 +957,18 @@ class RobotGatewayNode(Node):
 
         self.dsr.move_stop_async(done)
 
-    def _wait_arrive(self, name: str, tcp_xyz, seq0: int, via=()) -> None:
+    def _wait_arrive(
+        self, name: str, tcp_xyz, seq0: int, via=(), early: float = 0.0, carry: float = 0.0
+    ) -> None:
         """도착 확인. via = 스플라인 경유점(핑거 끝 xyz) — 경로 이탈은 경유점을 잇는 꺾은선 기준, 스플라인이 현을
-        벗어나는 만큼(40° 원호 r 300 이면 약 18 mm) 허용을 넓힌다."""
+        벗어나는 만큼(40° 원호 r 300 이면 약 18 mm) 허용을 넓힌다. early > 0 = 남은 거리가 이만큼이면 바로 돌려준다
+        (다음 구간과 블렌딩). carry = 앞 구간이 블렌딩으로 남긴 거리 — 그만큼 경로 이탈 허용을 넓힌다."""
         with self._glock:
             p = self.guard._pose
         start = p[1:] if p else tcp_xyz
         line = [list(start), *[list(v) for v in via], list(tcp_xyz)]
         dist = sum(math.dist(a, b) for a, b in zip(line, line[1:]))
-        tol = self.path_tol + (25.0 if via else 0.0)
+        tol = self.path_tol + (25.0 if via else 0.0) + carry
         # pose 는 config 오프셋으로 바꾼 TCP 라 등록 TCP 가 달라도(검사를 지나친 경우) 여기서 잡힌다
         seg_a = p[1:] if p else None
         deadline = time.monotonic() + dist / max(self.zone_vel[0], 1.0) + 8.0
@@ -977,6 +992,8 @@ class RobotGatewayNode(Node):
                 raise _ZoneError(
                     f"LIMIT: {name} 중 경로 이탈 {off:.0f} mm (직선 이동이어야 함 — TCP 등록·충돌 확인)"
                 )
+            if early > 0.0 and fresh and math.dist(p[1:], tcp_xyz) <= early:
+                return  # 블렌딩: 다음 구간을 바로 보낸다
             # 3 mm: 팔을 거의 다 뻗은 자세(J3 ≈ 18°)에서 move_line 이 1.1 mm 덜 가고 멈췄다(10/08 HOLD 칸 1)
             if fresh and sum((a - b) ** 2 for a, b in zip(p[1:], tcp_xyz, strict=True)) < 9.0:
                 still = still or time.monotonic()
