@@ -7,6 +7,10 @@
 인자: config(필수, 레포 voss_config.yaml) · scenario(normal|invalid_after_s|lost_after_s|two_boxes)
       · object_mm(gateway dry_run_object_mm, 0 = 빈손) · kp(control.kp_per_s 덮어쓰기)
       · log_dir · invalid_after_s · lost_after_s
+      · (U9b) gripper(gateway|fake) · grip_plan · grip_close_s · max_attempts(retry.max_attempts 덮어쓰기)
+        · box_start_x_mm (fake_box 시작 x) — 기본값이면 지금과 똑같이 동작
+- gripper:=fake 면 fake_gripper 를 띄우고 belt_servo 의 /voss/robot/gripper 를 /voss/sim/gripper 로 remap
+  (gateway 의 그리퍼 서비스는 떠 있지만 belt_servo 가 부르지 않는다, design/U9b-dd.md 6.2).
 - gateway 는 **항상 dry_run:=true** (인자로 받지 않는다 — 시뮬에서 실기로 새지 않게).
 - fake_box 의 벨트 속도·방향은 voss_config 에서 읽어 넘긴다 (숫자를 복사하지 않는다).
 """
@@ -17,18 +21,34 @@ import tempfile
 import yaml
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, LogInfo, OpaqueFunction
+from launch.actions import (
+    DeclareLaunchArgument,
+    GroupAction,
+    IncludeLaunchDescription,
+    LogInfo,
+    OpaqueFunction,
+)
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import Node
+from launch_ros.actions import Node, SetRemap
+from voss_servo.fake_box import DEFAULT_START_M
+from voss_servo.fake_gripper import SERVICE as FAKE_GRIPPER_SRV
+from voss_servo.fake_gripper import parse_plan
 from voss_servo.launch_params import config_values, expand, file_sha, load_yaml
 
+GRIPPER_SRV = "/voss/robot/gripper"  # belt_servo 가 부르는 이름 (topics.md)
 
-def _write_overrides(folder: str, kp: str) -> str:
-    """kp 를 덮어쓰는 작은 YAML 을 만들고 경로를 돌려준다."""
+
+def _write_overrides(folder: str, kp: str, max_attempts: str = "") -> str:
+    """kp·max_attempts 중 값이 있는 것만 덮어쓰는 작은 YAML 을 만들고 경로를 돌려준다."""
     os.makedirs(folder, exist_ok=True)
     path = os.path.join(folder, "sim_overrides.yaml")
-    body = {"belt_servo": {"ros__parameters": {"control": {"kp_per_s": float(kp)}}}}
+    params: dict = {}
+    if kp:
+        params["control"] = {"kp_per_s": float(kp)}  # P 게인
+    if max_attempts:
+        params["retry"] = {"max_attempts": int(max_attempts)}  # 재시도 상한 (U9b)
+    body = {"belt_servo": {"ros__parameters": params}}
     with open(path, "w", encoding="utf-8") as f:
         yaml.safe_dump(body, f)
     return path
@@ -49,9 +69,13 @@ def _setup(context):
     robot_share = get_package_share_directory("voss_robot")
     log_dir = arg("log_dir")
     overrides = ""
-    if arg("kp"):  # kp 만 바꾸는 덮어쓰기 파일
+    if arg("kp") or arg("max_attempts"):  # kp·max_attempts 만 바꾸는 덮어쓰기 파일
         folder = expand(log_dir) if log_dir else tempfile.mkdtemp(prefix="voss_sim_")
-        overrides = _write_overrides(folder, arg("kp"))
+        overrides = _write_overrides(folder, arg("kp"), arg("max_attempts"))
+    gripper = arg("gripper")
+    if gripper not in ("gateway", "fake"):
+        raise RuntimeError(f"sim.launch gripper:={gripper} — gateway 또는 fake")
+    start = [float(arg("box_start_x_mm")) / 1000.0, *DEFAULT_START_M[1:]]  # 시작 x 만 바꾼다
     fake = Node(
         package="voss_servo",
         executable="fake_box",
@@ -64,6 +88,7 @@ def _setup(context):
                 "direction_base": [float(x) for x in cfg["belt.direction_base"]],
                 "invalid_after_s": float(arg("invalid_after_s")),
                 "lost_after_s": float(arg("lost_after_s")),
+                "start_xyz_m": start,
             }
         ],
     )
@@ -87,11 +112,28 @@ def _setup(context):
             "log_dir": log_dir,
         }.items(),
     )
+    actions = [fake, gateway]
+    if gripper == "fake":
+        # 모르는 계획이면 여기서 ValueError — belt_servo 를 띄우기 전에 launch 가 멈춘다
+        parse_plan(arg("grip_plan"))
+        actions.append(
+            Node(
+                package="voss_servo",
+                executable="fake_gripper",
+                name="fake_gripper",
+                output="screen",
+                parameters=[{"plan": arg("grip_plan"), "close_s": float(arg("grip_close_s"))}],
+            )
+        )
+        # 이 그룹 안에서 뜨는 노드(belt_servo)만 그리퍼 서비스를 가짜로 잇는다
+        servo = GroupAction([SetRemap(src=GRIPPER_SRV, dst=FAKE_GRIPPER_SRV), servo])
     note = (
         f"sim.launch: scenario={arg('scenario')} object_mm={arg('object_mm')} "
-        f"kp={arg('kp') or '(sim yaml)'} log_dir={log_dir or '(sim yaml)'} — gateway dry_run 고정"
+        f"kp={arg('kp') or '(sim yaml)'} max_attempts={arg('max_attempts') or '(sim yaml)'} "
+        f"gripper={gripper} plan={arg('grip_plan')} close={arg('grip_close_s')} "
+        f"start_x={arg('box_start_x_mm')} log_dir={log_dir or '(sim yaml)'} — gateway dry_run 고정"
     )
-    return [LogInfo(msg=note), fake, gateway, servo]
+    return [LogInfo(msg=note), *actions, servo]
 
 
 def generate_launch_description() -> LaunchDescription:
@@ -103,6 +145,11 @@ def generate_launch_description() -> LaunchDescription:
         ("log_dir", "", "belt_servo 로그 폴더 (비우면 sim yaml 의 /tmp/voss_sim/servo)"),
         ("invalid_after_s", "8.0", "fake_box: 이 시각부터 position_valid=false"),
         ("lost_after_s", "8.0", "fake_box: 이 시각부터 발행 안 함"),
+        ("gripper", "gateway", "gateway(dry_run 가짜 RG2) | fake(fake_gripper 계획표, U9b)"),
+        ("grip_plan", "held", "fake 계획: 닫기마다 empty|held|wide (쉼표 구분)"),
+        ("grip_close_s", "1.7", "fake 닫힘 지연 s"),
+        ("max_attempts", "", "retry.max_attempts 덮어쓰기 (비우면 sim yaml)"),
+        ("box_start_x_mm", str(DEFAULT_START_M[0] * 1000.0), "fake_box 시작 x mm"),
     ]
     decls = [DeclareLaunchArgument(n, default_value=d, description=t) for n, d, t in args]
     return LaunchDescription([*decls, OpaqueFunction(function=_setup)])

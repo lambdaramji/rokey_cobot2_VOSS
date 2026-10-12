@@ -77,6 +77,10 @@ TICK_FIELDS: tuple[str, ...] = (
     "cause",
     "cause_fsm",  # fsm.step 이 낸 원래 cause (진단으로 덮어쓰기 전, U9-c). 스냅샷 행은 null
     "grasped",
+    "retreat",  # null | "OPENING"(개방 기다림) | "RISING" — 실패 뒤 안전 후퇴 중 (U9b, phase 는 LIFT)
+    "retreat_reason",  # null | 후퇴 끝에 보낼 reason (GRASP_FAILED | DEVICE_ERROR)
+    "retreat_done",  # null(후퇴 없음) | true(들기 높이 도달로 끝) | false(후퇴 중 다른 이유로 끝)
+    "retry_room_ok",  # null | 마지막 GRASP 실패 때 재시도 x 여유 (true 재시도 / false 후퇴)
     "phase_t_prepare_s",  # 이 시도에서 PREPARE 에 처음 들어간 시각 (U9-c, 아직이면 null)
     "phase_t_track_s",
     "phase_t_descend_s",
@@ -103,6 +107,10 @@ ATTEMPT_FIELDS: tuple[str, ...] = (
     "cause",
     "cause_fsm",
     "grasped",
+    "retreat",
+    "retreat_reason",
+    "retreat_done",
+    "retry_room_ok",
     "phase_t_prepare_s",
     "phase_t_track_s",
     "phase_t_descend_s",
