@@ -304,6 +304,8 @@ class SortManagerNode(Node):
                 log.info(a.text)
         elif isinstance(a, fsm.Result):
             self._publish_result(a)
+        elif isinstance(a, pallet_fsm.PublishPalletState):
+            self._publish_pallet_state()  # 계획 직후·첫 PICK 전 (TR-PAL-10 ①) — 끝의 발행은 같은 값이라 건너뛴다
         elif isinstance(a, pallet_fsm.PalletOut):
             self._publish_pallet_result(a)
         elif isinstance(a, pallet_fsm.CallList):
@@ -398,9 +400,7 @@ class SortManagerNode(Node):
             self._post(fsm.MoveDone(False, "NO_SERVICE", 0, self._now_ns()))
             return
         op = self.dev = self._new_op("move", self.move_timeout_s)
-        fut = self.move_cli.call_async(
-            MoveToZone.Request(zone=a.zone, slot=a.slot, mode=a.mode, cols=a.cols)
-        )
+        fut = self.move_cli.call_async(MoveToZone.Request(zone=a.zone, slot=a.slot, mode=a.mode))
         fut.add_done_callback(lambda f, t=op["token"], z=a.zone: self._on_move_response(f, t, z))
         self.get_logger().info(
             f"MoveToZone {a.zone} 칸 {a.slot} "
@@ -596,8 +596,10 @@ class SortManagerNode(Node):
                 route_index=r.route_index,
                 zone=r.zone,
                 slot=r.slot,
+                pallet_slot=r.pallet_slot,
                 pallet_col=r.pallet_col,
-                pallet_row=r.pallet_row,
+                pallet_lane=r.pallet_lane,
+                pallet_layer=r.pallet_layer,
                 outcome=r.outcome,
                 reason=r.reason,
                 attempts=r.attempts,
@@ -605,7 +607,7 @@ class SortManagerNode(Node):
             )
         )
         self.get_logger().info(
-            f"PalletResult {r.box_id} {r.outcome} {r.zone} 칸 {r.slot} → 열 {r.pallet_col} 칸 {r.pallet_row} reason={r.reason or '-'}"
+            f"PalletResult {r.box_id} {r.outcome} {r.zone} 칸 {r.slot} → 팔레트 칸 {r.pallet_slot} (열 {r.pallet_col}·층 {r.pallet_layer}·줄 {r.pallet_lane}) reason={r.reason or '-'}"
         )
 
     def _publish_zone_map(self) -> None:

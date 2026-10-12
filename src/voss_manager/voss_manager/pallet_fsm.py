@@ -1,15 +1,16 @@
-"""팔레타이징 상태 PALLETIZING (S2-T05, BRD v1.4 10.4·TR-PAL-02·05·06·08·09·10). ROS 없음, pytest 대상.
+"""팔레타이징 상태 PALLETIZING (S2-T05, BRD v1.5 10.4·TR-PAL-02·05·06·08·09·10·11). ROS 없음, pytest 대상.
 
 노드는 이 모듈의 step 을 부른다. 팔레타이징 이벤트(palletize·reset_zone PALLET·멈춘 실행의 resume·대상 조회 응답·
 팔레타이징 이동 응답)만 여기서 처리하고, 나머지는 sort_fsm.step 으로 넘긴다(stop 도 sort_fsm 이 → PAUSED).
 
   palletize(경로) → 대상 조회(ListPlacements) → pallet_plan → 박스마다 MoveToZone(구역, 칸, PICK)
-  → MoveToZone(PALLET, 열 × 3 + 칸, DROP, cols) → PalletResult → … → 끝나면 MoveToZone(OBSERVE) → 원래 상태
+  → MoveToZone(PALLET, slot 0~15, DROP) → PalletResult → … → 끝나면 MoveToZone(OBSERVE) → 원래 상태
+- 계획 직후(첫 PICK 전): 시작 안내, 싣지 않는 박스의 PalletResult(OVERFLOW·EXCLUDED), PalletState 발행(TR-PAL-10 ①).
 - 시작 조건: 처리 중 박스가 없는 RUNNING·PAUSED 또는 세션이 있는 IDLE, ROBOT·LOG 준비, 팔레트 교시됨, 팔레트 비어 있음.
 - PICK 이 GRIP_FAIL 이면 2회 더(최대 3회) → 그래도 실패면 FAILED·GRIP_FAIL 로 두고 다음 박스(박스는 원래 칸에 남는다).
 - 그 밖의 실패·stop 은 PAUSED. resume 은 남은 박스부터 — 박스를 든 채 멈췄으면 RobotState 보고 폭으로 파지를 확인해
   쥐고 있으면 놓고, 놓쳤으면 FAILED·DROPPED 로 두고 작업자에게 알린다. 계획은 다시 세우지 않는다(칸이 당겨지지 않게).
-- 다 옮기면 관측 자세로 → 트레이가 다 빈 구역은 칸 카운터 0 → 시작 전 상태(IDLE·RUNNING·PAUSED)로 돌아간다.
+- 다 옮기면 관측 자세로 → 트레이가 다 빈 구역은 칸 카운터 0 → 구역별 실은 수·초과·경로 제외·실패 안내 → 시작 전 상태로.
 여기서 정한 규칙은 src/voss_manager/CLAUDE.md 에 적는다.
 """
 
@@ -61,6 +62,11 @@ class CallList:
 
 
 @dataclass(frozen=True)
+class PublishPalletState:
+    """지금 PalletState 를 바로 발행 — 계획 직후·첫 PICK 전 (TR-PAL-10 ①)."""
+
+
+@dataclass(frozen=True)
 class PalletOut:
     """PalletResult 한 건 (필드 이름·값은 PalletResult.msg 그대로)."""
 
@@ -71,8 +77,10 @@ class PalletOut:
     route_index: int
     zone: str
     slot: int
-    pallet_col: int
-    pallet_row: int
+    pallet_slot: int  # 0~15, 싣지 않으면 -1
+    pallet_col: int  # 1~4, 싣지 않으면 0
+    pallet_lane: int
+    pallet_layer: int
     outcome: str
     reason: str
     attempts: int
@@ -115,48 +123,68 @@ def current_box_id(ctx: f.Ctx) -> str:
 
 
 def pallet_state(ctx: f.Ctx) -> dict:
-    """PalletState 필드 (voss_msgs.md). 실행이 없으면 state ""."""
+    """PalletState 필드 (voss_msgs.md, BRD v1.5). 실행이 없으면 state "", 칸 배열은 늘 16."""
     run = run_of(ctx)
+    st = dict(run_id="", state="", route=[], dongs=[], load=[], overflow=[], excluded=[],
+              overflow_warning=False, total=0, done=0, failed=0, box_id="",
+              slot_state=["EMPTY"] * pp.CAPACITY, slot_box_id=[""] * pp.CAPACITY,
+              slot_dong=[""] * pp.CAPACITY)  # fmt: skip
     if run is None:
-        return dict(run_id="", state="", route=[], total=0, done=0, failed=0, box_id="",
-                    slot_state=[], slot_box_id=[])  # fmt: skip
-    if run.finished:
-        state = "DONE"
-    elif ctx.state == PALLETIZING:
-        state = "RUNNING"
-    else:
-        state = "PAUSED"
-    n = len(run.route)
-    slot_state, slot_box = ["EMPTY"] * (n * pp.PALLET_ROWS), [""] * (n * pp.PALLET_ROWS)
+        return st
+    st.update(run_id=run.run_id, route=list(run.route), box_id=current_box_id(ctx))
+    st["state"] = "DONE" if run.finished else ("RUNNING" if ctx.state == PALLETIZING else "PAUSED")
+    st["done"] = sum(1 for _, o in run.results if o == "DONE")
+    st["failed"] = sum(1 for _, o in run.results if o == "FAILED")
+    if run.plan is None:
+        return st
+    rows = run.plan.counts()
+    st.update(dongs=[r[0] for r in rows], load=[r[1] for r in rows], overflow=[r[2] for r in rows],
+              excluded=[r[3] for r in rows], overflow_warning=run.plan.overflow > 0,
+              total=len(run.plan.moves))  # fmt: skip
     outcome = dict(run.results)
-    now = current_box_id(ctx)
-    for m in run.plan.moves if run.plan else ():
-        slot_box[m.pallet_slot] = m.box_id
-        slot_state[m.pallet_slot] = outcome.get(m.box_id) or (
-            "MOVING" if m.box_id == now else "PLANNED"
+    for m in run.plan.moves:
+        st["slot_box_id"][m.pallet_slot] = m.box_id
+        st["slot_dong"][m.pallet_slot] = m.dong
+        st["slot_state"][m.pallet_slot] = outcome.get(m.box_id) or (
+            "MOVING" if m.box_id == st["box_id"] else "PLANNED"
         )
-    return dict(
-        run_id=run.run_id,
-        state=state,
-        route=list(run.route),
-        total=len(run.plan.moves) if run.plan else 0,
-        done=sum(1 for _, o in run.results if o == "DONE"),
-        failed=sum(1 for _, o in run.results if o == "FAILED"),
-        box_id=now,
-        slot_state=slot_state,
-        slot_box_id=slot_box,
-    )
+    return st
 
 
 def start_sentence(plan: pp.Plan) -> str:
-    """시작 안내 (BRD v1.4 10.4): 순서 되읽기 + 첫 배송지 위치."""
+    """시작 안내 (BRD v1.5 10.4): 순서 되읽기 + 첫 배송지 위치. 초과가 있으면 남는 수도 말한다."""
     names = ", ".join(plan.route)
-    if plan.cols == 1:
+    if len(plan.route) == 1:
         text = f"{names} 박스를 팔레트에 싣겠습니다."
     else:
-        text = f"{names} 순서로 싣겠습니다. 첫 배송지 {plan.route[0]}은 오른쪽 열입니다."
+        text = f"{names} 순서로 싣겠습니다. 첫 배송지 {plan.route[0]}은 오른쪽입니다."
     if plan.empty:
         text += f" {', '.join(plan.empty)} 박스는 없습니다."
+    if plan.overflow:
+        text += f" 팔레트가 {pp.CAPACITY}칸이라 {plan.overflow}개는 싣지 못하고 원래 구역에 둡니다."
+    return text
+
+
+def finish_sentence(plan: pp.Plan, results: tuple[tuple[str, str], ...]) -> str:
+    """끝 안내 (TR-PAL-10 ③): 구역별 실은 수, 초과로 못 실은 수, 경로 제외 수, 실패 박스."""
+    outcome = dict(results)
+    done = {d: 0 for d in plan.route}
+    for m in plan.moves:
+        if outcome.get(m.box_id) == "DONE":
+            done[m.dong] += 1
+    loaded = [f"{d} {n}개" for d, n in done.items() if n]
+    text = "팔레트 적재를 마쳤습니다. "
+    text += (", ".join(loaded) + "를 실었습니다.") if loaded else "실은 박스가 없습니다."
+    rows = plan.counts()
+    over = [f"{d} {o}개" for d, _, o, _ in rows if o]
+    excl = [f"{d} {e}개" for d, _, _, e in rows if e]
+    if over:
+        text += f" 초과로 못 실은 박스는 {', '.join(over)}입니다."
+    if excl:
+        text += f" 경로에 없는 {', '.join(excl)}는 그대로 두었습니다."
+    failed = [b for b, o in results if o == "FAILED"]
+    if failed:
+        text += f" 옮기지 못한 박스는 {', '.join(b[-3:] + '번' for b in failed)}입니다. 원래 칸을 확인해 주세요."
     return text
 
 
@@ -265,10 +293,15 @@ def _on_list(ctx: f.Ctx, ev: ListDone) -> f.Out:
         f.Say(start_sentence(plan)),
         f.Log(
             "info",
-            f"팔레타이징 계획 {len(plan.moves)}개, 열 {plan.cols}, 빈 동 {plan.empty or '-'}",
+            f"팔레타이징 계획: 실음 {len(plan.moves)}, 초과 {plan.overflow}, 경로 제외 {plan.excluded}, "
+            f"빈 동 {plan.empty or '-'} — {plan.counts()}",
         ),
     ]
     acts += [f.Log("info", f"팔레타이징 제외: {s}") for s in plan.skipped]
+    # 싣지 않는 박스도 한 건씩 남긴다(TR-PAL-09 v1.5) — 원래 구역에 그대로 둔다(TR-PAL-11)
+    acts += [PalletOut(run.run_id, ctx.session_id, u.box_id, u.dong, u.route_index, u.zone, u.slot,
+                       -1, 0, 0, 0, u.reason, "", 0, ev.now_ns) for u in plan.unloaded]  # fmt: skip
+    acts.append(PublishPalletState())  # 배치도·집계·경고를 첫 PICK 보다 먼저 (TR-PAL-10 ①)
     return _next(replace(ctx, pallet=replace(run, plan=plan)), acts)
 
 
@@ -291,7 +324,7 @@ def _pick(ctx: f.Ctx, m: pp.Move, acts: list) -> f.Out:
         (
             *acts,
             f.CallMove(m.zone, m.slot, "PICK"),
-            f.Log("info", f"{m.box_id} {m.dong} {m.zone} 칸 {m.slot} 집기 ({run.attempts}/{MAX_PICK}) → 팔레트 열 {m.col} 칸 {m.row}"),
+            f.Log("info", f"{m.box_id} {m.dong} {m.zone} 칸 {m.slot} 집기 ({run.attempts}/{MAX_PICK}) → 팔레트 칸 {m.pallet_slot} (열·층·줄 {m.cell})"),
         ),
     )  # fmt: skip
 
@@ -314,8 +347,8 @@ def _drop(ctx: f.Ctx, m: pp.Move, acts: list) -> f.Out:
         replace(ctx, phase=PH_DROP, pallet=run),
         (
             *acts,
-            f.CallMove("PALLET", m.pallet_slot, "DROP", run.plan.cols),
-            f.Log("info", f"{m.box_id} 팔레트 칸 {m.pallet_slot}(열 {m.col}·칸 {m.row}) 에 놓기"),
+            f.CallMove("PALLET", m.pallet_slot, "DROP"),
+            f.Log("info", f"{m.box_id} 팔레트 칸 {m.pallet_slot}(열·층·줄 {m.cell}) 에 놓기"),
         ),
     )
 
@@ -325,8 +358,9 @@ def _finish_box(
 ) -> tuple[f.Ctx, list]:
     """박스 하나 끝 — PalletResult 를 내고 실행 기록에 넣는다."""
     run = run_of(ctx)
+    col, layer, lane = m.cell
     res = PalletOut(run.run_id, ctx.session_id, m.box_id, m.dong, m.route_index, m.zone, m.slot,
-                    m.col, m.row, outcome, reason, run.attempts, stamp_ns)  # fmt: skip
+                    m.pallet_slot, col, lane, layer, outcome, reason, run.attempts, stamp_ns)  # fmt: skip
     run = replace(run, results=(*run.results, (m.box_id, outcome)), holding=NO, stage="NEXT")
     count = ctx.pallet_count + (1 if outcome == "DONE" else 0)
     level = "info" if outcome == "DONE" else "warn"
@@ -421,9 +455,7 @@ def _complete(ctx: f.Ctx, run: Run, now_ns: int) -> f.Out:
     freed = pp.emptied_zones(run.plan, done)
     slots = {**ctx.slots, **{z: 0 for z in freed}}
     full = "" if ctx.full_zone in freed else ctx.full_zone
-    text = f"팔레트 적재를 마쳤습니다. {len(run.plan.moves)}개 중 {len(done)}개를 실었습니다."
-    if failed:
-        text += f" 옮기지 못한 박스는 {', '.join(b[-3:] + '번' for b in failed)}입니다. 원래 칸을 확인해 주세요."
+    text = finish_sentence(run.plan, run.results)
     back = f.PAUSED if ctx.state == f.PAUSED else run.back_to  # 도착 뒤 stop 이 왔으면 멈춘 채로
     nctx = replace(ctx, state=back, phase=f.PH_NONE, slots=slots, full_zone=full,
                    pallet=replace(run, finished=True, stage=""))  # fmt: skip

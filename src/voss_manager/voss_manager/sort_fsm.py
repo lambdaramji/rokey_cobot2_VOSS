@@ -366,7 +366,6 @@ class CallMove:
     zone: str
     slot: int
     mode: str = ""  # "" = PLACE
-    cols: int = 0  # PALLET 만: 팔레트 열 수 (Sprint 2)
 
 
 @dataclass(frozen=True)

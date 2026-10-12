@@ -207,8 +207,7 @@ class G0Mock(Node):
     # robot_gateway 대역
     def _move(self, req: MoveToZone.Request, res: MoveToZone.Response) -> MoveToZone.Response:
         mode = "이동" if req.zone == "OBSERVE" else (req.mode or "PLACE")
-        cols = f" cols {req.cols}" if req.zone == "PALLET" else ""
-        self.get_logger().info(f"[robot] MoveToZone {req.zone} 칸 {req.slot} {mode}{cols}")
+        self.get_logger().info(f"[robot] MoveToZone {req.zone} 칸 {req.slot} {mode}")
         self._set_action(f"MOVE_TO_ZONE:{req.zone}")
         try:
             return self._run_move(req, res, mode)
