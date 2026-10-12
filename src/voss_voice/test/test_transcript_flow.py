@@ -318,3 +318,14 @@ def test_unreadable_answer_without_question_is_rejected() -> None:
 
     assert flow.handle("송장 확인 불가")[0] == "say"
     assert published == [] and spoken == ["지금은 답할 질문이 없습니다."]
+
+
+@pytest.mark.parametrize("text", ["재확인 시작", "재확인 시작해 줘.", "재확인 진행", "재확인 해줘", "재확인"])
+def test_recheck_start_without_llm(text: str) -> None:
+    def unexpected_llm(text: str, allowed: dict) -> dict:
+        raise AssertionError("LLM을 호출하면 안 됩니다")
+
+    flow, published, _ = _flow(unexpected_llm)
+    flow.state = "RUNNING"
+    assert flow.handle(text)[0] == "publish"
+    assert [(p["type"], p["box_id"]) for p in published] == [("recheck", "")]

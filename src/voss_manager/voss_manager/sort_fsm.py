@@ -129,6 +129,8 @@ def intent_to_command(kind: str, dong: str, zone: str, box_id: str) -> tuple[str
         return "priority", dong
     if k == "answer":
         return "answer", f"{box_id}|{dong or zone}"
+    if k == "recheck":
+        return "recheck", ""
     return None
 
 
@@ -221,14 +223,21 @@ class Ctx:
     resume_to: str = (
         ""  # PAUSED 에서 resume 할 때 이어 갈 재확인 단계: RECHECK | ASKING | PICK | PLACE
     )
+    # 재확인 미루기(10/12 시연): 재확인 칸에 놓기만 하고 분류를 이어 간다. `recheck` 명령에 칸 순서대로 처리
+    defer_recheck: bool = False
+    recheck_queue: tuple[Box, ...] = ()  # 재확인 칸에 보관 중인(아직 다시 읽지 않은) 박스, 놓은 순서
+    draining: bool = False  # recheck 명령으로 보관 박스를 처리하는 중 — 한 개 끝나면 다음 것
 
 
-def new_ctx(cfg: Config, home_first: bool = True, ask_timeout_s: float = 30.0) -> Ctx:
+def new_ctx(
+    cfg: Config, home_first: bool = True, ask_timeout_s: float = 30.0, defer_recheck: bool = False
+) -> Ctx:
     return Ctx(
         cfg=cfg,
         slots={z: 0 for z in ZONES},
         home_first=home_first,
         ask_timeout_ns=int(ask_timeout_s * 1e9),
+        defer_recheck=defer_recheck,
     )
 
 
@@ -494,7 +503,8 @@ def _on_command(ctx: Ctx, ev: Command) -> Out:
             return _reject(ctx, "준비 안 됨: " + ", ".join(nr))
         if ctx.box is not None and ctx.resume_to:
             return _resume_recheck(ctx, ev.now_ns)
-        nxt, acts = _enter_running(ctx, ev.now_ns, stop_requested=False)
+        # 보관 박스 처리 중 멈췄으면 분류로 돌아간다 — 남은 보관 박스는 recheck 를 다시 보내 이어 간다
+        nxt, acts = _enter_running(ctx, ev.now_ns, stop_requested=False, draining=False)
         return Out(nxt, (*acts, Log("info", "resume")), (True, "resume 접수"))
 
     if cmd == "reset_zone":
@@ -507,6 +517,9 @@ def _on_command(ctx: Ctx, ev: Command) -> Out:
             return _reject(
                 ctx, f"{ctx.box.box_id} 가 재확인 구역에서 처리 중 — resume 으로 끝낸 뒤 비운다"
             )
+        if zone == "RECHECK" and ctx.recheck_queue:
+            ids = ", ".join(b.box_id for b in ctx.recheck_queue)
+            return _reject(ctx, f"재확인 칸에 보관 중인 박스가 있다({ids}) — recheck 로 처리한 뒤 비운다")
         slots = {**ctx.slots, zone: 0}
         full = "" if ctx.full_zone == zone else ctx.full_zone
         busy = frozenset() if zone == "RECHECK" else ctx.recheck_busy
@@ -518,6 +531,14 @@ def _on_command(ctx: Ctx, ev: Command) -> Out:
 
     if cmd == "answer":
         return _on_answer(ctx, arg, ev.now_ns)
+
+    if cmd == "recheck":
+        if not ctx.recheck_queue:
+            return _reject(ctx, "재확인 칸에 보관 중인 박스가 없음")
+        if ctx.state != RUNNING or ctx.phase != PH_NONE or ctx.box is not None:
+            return _reject(ctx, f"{ctx.state} 에서는 recheck 불가 (분류 중 박스가 끝난 뒤)")
+        out = _next_recheck(replace(ctx, draining=True), ev.now_ns)
+        return Out(out.ctx, out.actions, (True, f"재확인 시작 ({len(ctx.recheck_queue)}개)"))
 
     return _reject(ctx, f"모르는 명령: {ev.command}")
 
@@ -798,13 +819,15 @@ def _on_place(ctx: Ctx, ev: MoveDone) -> Out:
         res = _result(ctx, box, "FAILED", "", reason, ev.now_ns, box.attempts)
 
     if ev.ok and ctx.state in (PICKING, RECHECK):
-        return Out(
-            _done(ctx, state=RUNNING, slots=slots, stage_start_ns=ev.now_ns),
-            (
-                res,
-                Log("info", f"{box.box_id} {box.zone} 칸 {box.slot} 적재 완료 ({box.decided_by})"),
-            ),
-        )
+        done = Log("info", f"{box.box_id} {box.zone} 칸 {box.slot} 적재 완료 ({box.decided_by})")
+        nxt = _done(ctx, state=RUNNING, slots=slots, stage_start_ns=ev.now_ns)
+        if ctx.state == RECHECK and ctx.draining:
+            if nxt.recheck_queue:
+                out = _next_recheck(nxt, ev.now_ns)
+                return Out(out.ctx, (res, done, *out.actions))
+            nxt = replace(nxt, draining=False)
+            return Out(nxt, (res, done, Log("info", "보관 박스 재확인 끝, 분류 계속")))
+        return Out(nxt, (res, done))
     acts: list = [
         res,
         Log(
@@ -827,6 +850,18 @@ def _on_place_recheck(ctx: Ctx, ev: MoveDone) -> Out:
     slots = {**ctx.slots, "RECHECK": ctx.slots["RECHECK"] + 1}
     nbox = replace(box, recheck_slot=box.slot)
     nxt = replace(ctx, box=nbox, slots=slots, recheck_busy=ctx.recheck_busy | {box.slot})
+    if ev.ok and ctx.state == PICKING and ctx.defer_recheck:
+        # 보관만 하고 분류를 이어 간다. PLACE 응답 = OBSERVE 복귀 뒤라 이 시각부터 다시 관측
+        queue = (*ctx.recheck_queue, nbox)
+        return Out(
+            _done(nxt, state=RUNNING, stage_start_ns=ev.now_ns, recheck_queue=queue),
+            (
+                Log(
+                    "info",
+                    f"{box.box_id} 재확인 칸 {box.slot} 에 보관 (보관 {len(queue)}개, recheck 명령 대기)",
+                ),
+            ),
+        )
     if ev.ok and ctx.state == PICKING:
         return Out(
             replace(nxt, state=RECHECK, phase=PH_VIEW),
@@ -997,6 +1032,21 @@ def _on_pick(ctx: Ctx, ev: MoveDone) -> Out:
     if ctx.state != PAUSED:
         acts.append(Say("재확인 구역의 박스를 집지 못해 일시정지했습니다."))
     return Out(_done(ctx, state=PAUSED, question=""), tuple(acts))
+
+
+def _next_recheck(ctx: Ctx, now_ns: int) -> Out:
+    """보관 박스 하나를 꺼내 재확인(VIEW → 다시 읽기 → 확정 또는 질문)을 시작한다."""
+    box, rest = ctx.recheck_queue[0], ctx.recheck_queue[1:]
+    return Out(
+        replace(ctx, box=box, recheck_queue=rest, state=RECHECK, phase=PH_VIEW),
+        (
+            CallMove("RECHECK", 0, "VIEW"),
+            Log(
+                "info",
+                f"{box.box_id} 보관 박스 재확인 시작 — 재확인 칸 {box.recheck_slot} 다시 읽기 (남은 보관 {len(rest)}개)",
+            ),
+        ),
+    )
 
 
 def _resume_recheck(ctx: Ctx, now_ns: int) -> Out:

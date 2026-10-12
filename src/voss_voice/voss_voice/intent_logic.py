@@ -18,6 +18,7 @@ ROS_TYPES = (
     "resume",
     "priority",
     "answer",
+    "recheck",
     "update_zone_map",
 )  # Intent 로 보내는 것
 QUERY_KINDS = ("count_by_dong", "held_count", "remaining_count")
@@ -27,6 +28,10 @@ DESTINATION_ANSWER_RE = re.compile(r"(.+?)(?:으로|로)보내(?:줘|주세요|�
 HOLD_ANSWER_RE = re.compile(
     r"(?:송장)?(?:확인|판독|인식)(?:이)?(?:불가|안돼|안됨|안됩니다|못해|못함)(?:입니다|이에요|예요|요)?"
     r"|보류(?:해|해줘|해주세요|로보내|로보내줘|로보내주세요|입니다|요)?"
+)
+# "재확인 시작" → 보관 중인 재확인 칸 박스 처리(type recheck, 10/12 시연, LLM 없이). 전체 일치
+RECHECK_START_RE = re.compile(
+    r"재확인(?:을)?(?:시작|진행|처리)?(?:해|해줘|해주세요|하자|합니다|할게|해요)?"
 )
 
 # 정지 키워드: 공백·문장부호를 지운 뒤 포함 여부로 본다. 오인식으로 멈추는 쪽은 허용한다.
@@ -171,6 +176,13 @@ def decide_hold_answer(
     return Decision(
         "publish", intent=_intent("answer", zone=HOLD, raw_text=raw_text, box_id=sort_box_id)
     )
+
+
+def decide_recheck_start(raw_text: str) -> Decision | None:
+    """'재확인 시작'·'재확인 진행해 줘' → recheck. 받을 수 있는 상태인지는 sort_manager 가 판단한다."""
+    if RECHECK_START_RE.fullmatch(_squash(raw_text)) is None:
+        return None
+    return Decision("publish", intent=_intent("recheck", raw_text=raw_text))
 
 
 def decide_destination_answer(

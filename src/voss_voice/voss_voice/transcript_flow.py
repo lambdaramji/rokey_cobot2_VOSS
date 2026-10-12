@@ -21,6 +21,7 @@ from voss_voice.intent_logic import (
     decide_bare_dong,
     decide_destination_answer,
     decide_hold_answer,
+    decide_recheck_start,
     is_stop,
     stats_sentence,
     stop_decision,
@@ -88,6 +89,10 @@ class TranscriptFlow:
             # 4-1. "송장 확인 불가"·"보류" 답은 보류로 (LLM 없이)
             if d is None:
                 d = decide_hold_answer(text, state, box_id)
+
+            # 4-2. "재확인 시작" → 보관 중인 재확인 칸 박스 처리 (LLM 없이)
+            if d is None:
+                d = decide_recheck_start(text)
 
             # 5. 단독 동 이름이 아니라면 기존 GPT-4o 경로를 사용한다.
             if d is None:

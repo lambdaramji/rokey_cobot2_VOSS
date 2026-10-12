@@ -89,14 +89,19 @@ class SortManagerNode(Node):
             log_max_age_s=p("log_max_age_s", 3.0).value,
         )
         home_first = p("home_first", True).value
+        # 재확인 칸에 놓기만 하고 분류를 이어 간 뒤 recheck 명령에 몰아서 처리(10/12 시연)
+        defer_recheck = p("defer_recheck", False).value
 
         with open(self.config_path, "rb") as f:
             raw = f.read()
         cfg = fsm.load_config(yaml.safe_load(raw))  # 어긋나면 ValueError → 기동 거부
-        self.ctx = fsm.new_ctx(cfg, home_first=home_first, ask_timeout_s=ask_timeout_s)
+        self.ctx = fsm.new_ctx(
+            cfg, home_first=home_first, ask_timeout_s=ask_timeout_s, defer_recheck=defer_recheck
+        )
         self.get_logger().info(
             f"voss_config {self.config_path} version {cfg.version} sha256 {hashlib.sha256(raw).hexdigest()[:12]}, "
-            f"구역 칸 {cfg.capacity}, confidence_min {cfg.confidence_min}, home_first {home_first}"
+            f"구역 칸 {cfg.capacity}, confidence_min {cfg.confidence_min}, home_first {home_first}, "
+            f"defer_recheck {defer_recheck}"
         )
 
         # 발행
