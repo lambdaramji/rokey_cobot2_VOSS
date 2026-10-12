@@ -36,6 +36,13 @@ def test_null_values_are_left_out():
     assert p["zones.A.grid"] == [3.0, 1.0, 60.0, 0.0]
 
 
+def test_layers_append_to_grid():
+    z = {"grid": {"cols": 3, "rows": 2, "pitch_mm": 60, "layers": 2}}
+    p = gateway_params({"zones": {"A": z, "B": {**z, "grid": {**z["grid"], "layer_mm": 30}}}}, "x")
+    assert p["zones.A.grid"] == [3.0, 2.0, 60.0, 0.0, 2.0, 27.0]  # layer_mm 기본 27 = 박스 높이
+    assert p["zones.B.grid"][4:] == [2.0, 30.0]
+
+
 def test_wrong_length_is_left_out():
     p = gateway_params({"robot": {"tcp_offset_mm": [1, 2]}, "observe_pose": [0, 0, 0]}, "x")
     assert "tcp_offset_mm" not in p and "observe_pose" not in p

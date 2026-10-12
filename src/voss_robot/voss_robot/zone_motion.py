@@ -16,22 +16,32 @@ from collections.abc import Sequence
 SAFE_Z_MM = 446.6  # 플랜지 z, TCP z 200 (measurements #6 홈 복귀)
 
 
+def _layers(grid: Sequence[float]) -> tuple[int, float]:
+    """grid 5·6번째 = (layers, layer_mm). 없으면 1층(voss_config.md grid layers)."""
+    return (int(grid[4]), float(grid[5])) if len(grid) > 5 else (1, 0.0)
+
+
 def slot_offset(grid: Sequence[float], slot: int) -> tuple[float, float]:
-    """grid = [cols, rows, pitch_mm(, offset_mm)] → (dx, dy) mm. offset_mm = 칸 줄 중심의 X 위치(트레이 중심
-    기준, 먼 트레이에서 팔이 닿는 −X 쪽으로 당김 — 10/08). 범위 밖이면 ValueError."""
+    """grid = [cols, rows, pitch_mm(, offset_mm(, layers, layer_mm))] → (dx, dy) mm. offset_mm = 칸 줄 중심의
+    X 위치(트레이 중심 기준, 먼 트레이에서 팔이 닿는 −X 쪽으로 당김 — 10/08). 2층부터는 1층 칸 위치를 다시 쓴다.
+    범위 밖이면 ValueError."""
     cols, rows, pitch = int(grid[0]), int(grid[1]), float(grid[2])
     off = float(grid[3]) if len(grid) > 3 else 0.0
-    if not 0 <= slot < cols * rows:
-        raise ValueError(f"slot {slot} 는 0~{cols * rows - 1}")
-    col, row = slot % cols, slot // cols
+    per = cols * rows
+    layers, _ = _layers(grid)
+    if not 0 <= slot < per * layers:
+        raise ValueError(f"slot {slot} 는 0~{per * layers - 1}")
+    col, row = (slot % per) % cols, (slot % per) // cols
     return off + (col - (cols - 1) / 2.0) * pitch, (row - (rows - 1) / 2.0) * pitch
 
 
 def slot_pose(zone_pose: Sequence[float], grid: Sequence[float], slot: int) -> list[float]:
-    """구역 중심 플랜지 posx + 칸 오프셋 (자세 그대로)."""
+    """구역 중심 플랜지 posx + 칸 오프셋 + 층 높이 (자세 그대로)."""
     dx, dy = slot_offset(grid, slot)
+    _, layer_mm = _layers(grid)
+    dz = (slot // (int(grid[0]) * int(grid[1]))) * layer_mm
     p = [float(v) for v in zone_pose]
-    return [p[0] + dx, p[1] + dy, *p[2:]]
+    return [p[0] + dx, p[1] + dy, p[2] + dz, *p[3:]]
 
 
 def pick_pose(slot_flange: Sequence[float], dz_mm: float) -> list[float]:

@@ -31,6 +31,16 @@ def test_slot_pose_shifts_x_only():
     assert slot_pose(A, [3, 1, 60], 0) == pytest.approx([153.49, *A[1:]])
 
 
+def test_layers_reuse_first_layer_slots_and_raise_z():
+    g = [3, 2, 60, 0, 2, 27]  # 3칸 × 2줄 × 2층 = 12칸, 층 간격 27 mm (박스 높이)
+    assert [slot_offset(g, s) for s in (0, 5)] == [(-60.0, -30.0), (60.0, 30.0)]
+    assert slot_offset(g, 6) == slot_offset(g, 0)  # 7번째 = 칸 0 위 2층
+    assert slot_pose(A, g, 6) == pytest.approx([153.49, 135.23, A[2] + 27.0, *A[3:]])
+    assert slot_pose(A, g, 5)[2] == pytest.approx(A[2])
+    with pytest.raises(ValueError):
+        slot_offset(g, 12)
+
+
 def test_observe_to_zone_rises_then_over_then_descends():
     steps = plan_move(OBS, slot_pose(A, [3, 1, 60], 2))
     assert [n for n, _ in steps] == ["over", "descend"]  # 관측 자세는 이미 safe z(450.2) 이상

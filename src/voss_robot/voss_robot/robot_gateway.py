@@ -182,7 +182,7 @@ class RobotGatewayNode(Node):
             view = list(self.declare_parameter(f"zones.{z}.view_pose", [0.0]).value)
             self.zones[z] = {
                 "pose": pose if len(pose) == 6 else None,
-                "grid": grid if len(grid) in (3, 4) else None,
+                "grid": grid if len(grid) in (3, 4, 6) else None,
                 "view": view if len(view) == 6 else None,
             }
         self.pre_open = float(self.declare_parameter("gripper.pre_open_mm", 90.0).value)

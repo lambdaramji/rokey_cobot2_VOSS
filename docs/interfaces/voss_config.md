@@ -18,6 +18,8 @@ aliases:             # 동 → 자연어 별칭 (BRD 2.4). zone_map 토픽의 al
   청담동: [청담, 청담동]
 zones:               # 두산 posx: x y z rx ry rz, mm/deg. 플랜지 기준(TCP 미적용), 구역 중심, 박스 밑면 +5 mm.
                      # grid: 같은 구역에 여러 개를 놓을 칸. cols = X(벨트 방향) 칸 수, rows = Y 칸 수, pitch_mm = 칸 간격, offset_mm(선택, 기본 0) = 칸 줄 중심의 X 위치(pose 기준). pose 는 트레이 중심
+                     # layers(선택, 기본 1) = 쌓는 층 수, layer_mm(선택, 기본 27 = 박스 높이) = 층 간격. 칸 수 = cols × rows × layers.
+                     # 칸 번호는 1층부터 채운다: slot = layer × (cols × rows) + row × cols + col, 놓기 z = pose z + layer × layer_mm
                      # 자세는 ry = ±180° 라 rx·rz 가 한 값으로 정해지지 않는다(rx − rz 만 의미). robot_gateway 가 정규화한다
   A:       {pose: null, grid: {cols: 3, rows: 1, pitch_mm: 60}}
   B:       {pose: null, grid: {cols: 3, rows: 1, pitch_mm: 60}}
@@ -70,3 +72,4 @@ timing:
 - 2026-10-08: grid `offset_mm` 추가, **C 칸 −60/0/+60 → −80/−30/+20**(pitch 50, offset −30) (김학민 #41). 수직 놓기 자세로는 C 트레이(x ≈ 675)의 +X 쪽에 팔이 닿지 않는다 — fkin 으로 검증한 ikin(J3 ≥ 15°): +60 은 해 없음, 0 위 최고 TCP 100, +20 위 61. 트레이는 고정, 우선 트레이 안에 넣는 것이 목표라 칸을 −X 로 모았다(벽 4.5 mm·박스 사이 4 mm, 통합 뒤 조정). 칸 수 3 그대로라 sort_manager 영향 없음. 먼 칸은 robot_gateway 가 칸 0 위로 들어가 트레이 안에서 낮게(TCP ≥ 60) 옆으로 간다.
 - 2026-10-08: `zones.recheck.view_pose` 실측값 입력 [520.58, −37.92, 367.14, 169.44, −180.0, 79.38] (플랜지, 김학민 T35 #44). 펜던트 TCP [517.9, −39.3, 120.5, …] 교시를 tcp_offset_mm 로 변환. 카메라 광축이 재확인 트레이 중심 위, 송장 면까지 약 300 mm. 스키마·키 변경 없음. 출처 measurements-1008 #13.
 - 2026-10-08 저녁: `robot.tcp_offset_mm` 주석 — gateway 는 TCP 를 등록하지 않고, 컨트롤러 등록이 이 값이거나 없을 때만 MoveToZone 을 한다로 고침 (#41, 10/08 18:26 사고). 값 변경 없음.
+- 2026-10-12 (로컬 시험 브랜치 `local/1012-recheck-flow`, 원격 막힘 — 담당 확인 전): grid `layers`·`layer_mm` 추가(선택, 기본 1층·27 mm). 시연 시나리오(A·B·C 6칸을 채운 뒤 사람이 판정한 흐린 송장 1개를 칸 0 위 2층에)용. 칸 수 = cols × rows × layers 라 sort_manager 의 구역 용량과 robot_gateway 의 칸 범위가 함께 바뀐다. layers 를 안 쓰면 기존과 같다.

@@ -14,6 +14,7 @@ from typing import Any
 import yaml
 
 ZONES = ("A", "B", "C", "RECHECK", "HOLD")  # MoveToZone zone 값(대문자). config 키는 대소문자 무시
+LAYER_MM = 27.0  # grid.layer_mm 기본 = 박스 높이 (voss_config.md grid layers)
 
 
 def load_config(path: str | Path) -> tuple[dict[str, Any], str]:
@@ -58,6 +59,11 @@ def gateway_params(cfg: dict[str, Any], sha: str) -> dict[str, Any]:
                 float(grid["pitch_mm"]),
                 float(off) if isinstance(off, int | float) and not isinstance(off, bool) else 0.0,
             ]
+            layers = grid.get("layers", 1)  # 쌓는 층(선택). 1층이면 예전 4개 그대로
+            if isinstance(layers, int) and not isinstance(layers, bool) and layers > 1:
+                lmm = grid.get("layer_mm", LAYER_MM)
+                ok = isinstance(lmm, int | float) and not isinstance(lmm, bool)
+                out[f"zones.{z}.grid"] += [float(layers), float(lmm) if ok else LAYER_MM]
         view = _floats(zc.get("view_pose"), 6)
         if view is not None:
             out[f"zones.{z}.view_pose"] = view
