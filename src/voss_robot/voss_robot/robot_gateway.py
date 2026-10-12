@@ -9,6 +9,7 @@
 /voss/robot/move_to_zone (PLACE·OBSERVE·VIEW·PICK — PICK 은 재확인 칸에서 집어 이동 높이로, #45).
 """
 
+import math
 import threading
 import time
 
@@ -881,22 +882,35 @@ class RobotGatewayNode(Node):
                 raise _ZoneError(f"TIMEOUT: 경유점 계산 {e}") from e
             if not reach:
                 raise _ZoneError("LIMIT: 베이스 앞쪽으로 도는 경유점에 팔이 닿지 않음")
-            self.get_logger().info(f"수평 이동이 베이스 뒤를 지나 앞쪽으로 돈다 (경유점 {len(arcs)}개)")
+            self.get_logger().info(f"수평 이동이 베이스 뒤를 지나 앞쪽으로 돈다 (경유점 {len(arcs)}개, 스플라인 한 번)")
+            # 원호 경유점 + 다음 목표(over)를 move_spline 한 번으로 — 경유점마다 멈추지 않게(10/12 실기 요청)
+            merged, i = [], 0
+            while i < len(steps):
+                if steps[i][0].startswith("arc"):
+                    j = i
+                    while steps[j][0].startswith("arc"):
+                        j += 1
+                    merged.append(("arc", [p for _, p in steps[i : j + 1]]))
+                    i = j + 1
+                else:
+                    merged.append(steps[i])
+                    i += 1
+            steps = merged
         for name, step in steps:
-            cmd = flange_to_tcp(step, self._cmd_off)  # 컨트롤러 등록 TCP 기준 목표
-            tcp = flange_to_tcp(
-                step, self.tcp
-            )  # 핑거 끝(/voss/robot/pose 와 같은 기준) — 도착 판정
+            pts = step if name == "arc" else [step]  # arc = 경유점들 + 끝점 (스플라인)
+            cmds = [flange_to_tcp(q, self._cmd_off) for q in pts]  # 컨트롤러 등록 TCP 기준 목표
+            # 핑거 끝(/voss/robot/pose 와 같은 기준) — 도착 판정
+            tcps = [flange_to_tcp(q, self.tcp)[:3] for q in pts]
             seq0 = self.dsr.alarm_seq
             try:
-                self._send_move(name, cmd)
-                self._wait_arrive(name, tcp[:3], seq0)
+                self._send_move(name, cmds)
+                self._wait_arrive(name, tcps[-1], seq0, tcps[:-1])
             except _ZoneError as e:
                 if not str(e).startswith("STOPPED"):  # stop 은 이미 move_stop 을 보냈다
                     self._zone_halt(f"{name}: {e}")
                 raise
 
-    def _send_move(self, name: str, cmd) -> None:
+    def _send_move(self, name: str, cmds) -> None:
         """move_line(ASYNC) 한 구간을 큐로 보낸다. stop 이 먼저 왔으면 보내지 않고 STOPPED.
 
         stop 의 move_stop 은 그 순간 움직이는 것만 멈춘다. 그리퍼 동작(닫기 약 1.7 s) 중에 온 stop 뒤에 다음 구간을
@@ -906,7 +920,10 @@ class RobotGatewayNode(Node):
         def send():
             if self._abort.is_set():
                 raise _ZoneError(f"STOPPED: {name} 전 stop")
-            self.dsr.move_line_async(cmd, self.zone_vel, self.zone_acc)
+            if len(cmds) == 1:
+                self.dsr.move_line_async(cmds[0], self.zone_vel, self.zone_acc)
+            else:
+                self.dsr.move_spline_async(cmds, self.zone_vel, self.zone_acc)
 
         try:
             self.queue.submit(send).result(timeout=2.0)
@@ -925,11 +942,15 @@ class RobotGatewayNode(Node):
 
         self.dsr.move_stop_async(done)
 
-    def _wait_arrive(self, name: str, tcp_xyz, seq0: int) -> None:
+    def _wait_arrive(self, name: str, tcp_xyz, seq0: int, via=()) -> None:
+        """도착 확인. via = 스플라인 경유점(핑거 끝 xyz) — 경로 이탈은 경유점을 잇는 꺾은선 기준, 스플라인이 현을
+        벗어나는 만큼(40° 원호 r 300 이면 약 18 mm) 허용을 넓힌다."""
         with self._glock:
             p = self.guard._pose
         start = p[1:] if p else tcp_xyz
-        dist = sum((a - b) ** 2 for a, b in zip(start, tcp_xyz, strict=True)) ** 0.5
+        line = [list(start), *[list(v) for v in via], list(tcp_xyz)]
+        dist = sum(math.dist(a, b) for a, b in zip(line, line[1:]))
+        tol = self.path_tol + (25.0 if via else 0.0)
         # pose 는 config 오프셋으로 바꾼 TCP 라 등록 TCP 가 달라도(검사를 지나친 경우) 여기서 잡힌다
         seg_a = p[1:] if p else None
         deadline = time.monotonic() + dist / max(self.zone_vel[0], 1.0) + 8.0
@@ -944,9 +965,12 @@ class RobotGatewayNode(Node):
             fresh = p is not None and self._now() - p[0] < 0.3
             if fresh and seg_a is None:
                 seg_a = p[1:]  # 시작 때 pose 가 없었으면 처음 받은 pose 부터
+                line[0] = list(seg_a)
             # 전제: 구역 자세는 모두 툴 수직·yaw 거의 같음(rx−rz ≈ 90° ±1.3°) → 단계 중 회전이 없어 컨트롤러가
             # 직선으로 보내는 점(TCP 든 플랜지 모드의 플랜지든)과 핑거 끝이 함께 직선으로 간다(#121 리뷰 남현지)
-            if fresh and (off := segment_distance_mm(seg_a, tcp_xyz, p[1:])) > self.path_tol:
+            if fresh and (
+                off := min(segment_distance_mm(a, b, p[1:]) for a, b in zip(line, line[1:]))
+            ) > tol:
                 raise _ZoneError(
                     f"LIMIT: {name} 중 경로 이탈 {off:.0f} mm (직선 이동이어야 함 — TCP 등록·충돌 확인)"
                 )
