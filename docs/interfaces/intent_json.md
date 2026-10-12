@@ -64,6 +64,7 @@ LLM(FastAPI `/intent`, OpenAI structured output — ADR-0006)의 출력은 반�
 ## 시험 (VC-EUS-INTENT-01, #54 MC-031)
 - 정답 세트 20문장(필수 지시 4유형 × 5)은 시험 전에 `src/voss_voice/test/fixtures/` 에 커밋한다.
 - 판정: **전체 20건 중 정답 ≥ 19**. API 오류·timeout 도 분모에 넣고 따로 보고하며, API 성공 건만의 조건부 정확도는 참고로 적는다. 허용 외 입력은 100% 거부.
+- **palletize(Sprint 2, S2-T06)** 는 이 20건에 넣지 않고 `src/voss_voice/test/fixtures/palletize_cases.json` 에 따로 둔다(받기 5 + 거부 3 — 중복·미등록·4개). 판정: 8건 전부(받기 5/5, 거부 100%). NFR-03 판정 세트를 바꾸지 않기 위해서다.
 
 ## 변경 이력
 - 2026-10-08: #124 로컬 단독 동·목적지 답변의 문장부호·띄어쓰기·`보내요` 처리와 ASKING 외 발행 차단을 명시. 토픽·Intent JSON 필드·메시지 스키마 변경 없음.

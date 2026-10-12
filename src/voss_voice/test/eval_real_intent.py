@@ -1,9 +1,10 @@
 """T09 실제 Intent 평가 스크립트.
-입력: intent_cases.json의 20개 발화
+입력: intent_cases.json의 20개 발화 (--cases palletize 면 palletize_cases.json 8개, S2-T06)
 출력: Intent 정답 여부와 처리 시간
 계약: docs/interfaces/intent_json.md
 """
 
+import argparse
 import json
 from pathlib import Path
 
@@ -12,11 +13,12 @@ from voss_voice.intent_logic import ZoneMapView
 from voss_voice.transcript_flow import TranscriptFlow
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "intent_cases.json"
+PALLETIZE_PATH = Path(__file__).parent / "fixtures" / "palletize_cases.json"
 
 
-def load_cases() -> list[dict]:
+def load_cases(path: Path = FIXTURE_PATH) -> list[dict]:
     """정답 JSON에서 테스트 케이스 목록을 읽어 반환한다."""
-    fixture_text = FIXTURE_PATH.read_text()
+    fixture_text = path.read_text()
     return json.loads(fixture_text)["cases"]
 
 
@@ -72,12 +74,18 @@ def evaluate_case(test_case: dict) -> tuple[bool, str, float]:
     if result_kind != expected["kind"]:
         return False, f"kind 불일치: {result_kind}", elapsed_ms
 
+    # 거부 정답(palletize 중복·미등록·4개 이상): 되묻기만 하고 아무것도 발행하지 않아야 한다
+    if result_kind == "say":
+        if published_intents:
+            return False, "거부해야 하는데 Intent 를 발행함", elapsed_ms
+        return True, f"거부: {spoken_texts[-1] if spoken_texts else ''}", elapsed_ms
+
     if result_kind == "publish":
         if len(published_intents) != 1:
             return False, "Intent 발행 건수 불일치", elapsed_ms
 
         actual = published_intents[0]
-        fields_to_check = ("type", "dong", "zone", "box_id")
+        fields_to_check = ("type", "dong", "zone", "box_id", "route")
 
     elif result_kind == "query":
         if len(stats_queries) != 1:
@@ -112,13 +120,17 @@ MIN_CORRECT_CASES = 19
 
 
 def main() -> None:
-    """전체 20문장을 평가하고 정확도와 최종 판정을 출력한다."""
-    test_cases = load_cases()
+    """전체 20문장을 평가하고 정확도와 최종 판정을 출력한다. --cases palletize 는 8문장 전부 맞아야 PASS."""
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--cases", choices=("intent", "palletize"), default="intent")
+    palletize = ap.parse_args().cases == "palletize"
+    test_cases = load_cases(PALLETIZE_PATH if palletize else FIXTURE_PATH)
 
     total_count = len(test_cases)
     passed_count = 0
 
-    if total_count != 20:
+    expected_count = 8 if palletize else EXPECTED_CASE_COUNT
+    if total_count != expected_count:
         raise ValueError(f"테스트 문장 수 오류: {total_count}개")
 
     for test_case in test_cases:
@@ -143,7 +155,9 @@ def main() -> None:
     print(f"실패: {failed_count}건")
     print(f"정확도: {accuracy:.1f}%")
 
-    if passed_count >= 19:
+    if passed_count >= (
+        total_count if palletize else MIN_CORRECT_CASES
+    ):  # palletize: 받기 5/5·거부 100%
         print("판정: PASS")
     else:
         print("판정: FAIL")

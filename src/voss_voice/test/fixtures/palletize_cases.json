@@ -1,0 +1,13 @@
+{
+  "_doc": "S2-T06 palletize 정답 세트 (BRD v1.4 TR-PAL-01). 받기 5 + 거부 3. VC-EUS-INTENT-01(intent_cases.json 20건, NFR-03 판정 세트)과 따로 둔다. 완료 기준: 받기 5/5 정확, 거부 100%. llm_route = 정답대로 답한 LLM 이 낼 route(들은 그대로, 별칭 포함).",
+  "cases": [
+    {"id": "pal-1", "text": "헬로 로키, 역삼, 대치, 청담 순서로 실어줘", "state": "RUNNING", "llm_route": ["역삼", "대치", "청담"], "expect": {"kind": "publish", "type": "palletize", "route": ["역삼동", "대치동", "청담동"]}},
+    {"id": "pal-2", "text": "대치, 역삼, 청담 순서로 팔레트에 실어 줘", "state": "PAUSED", "llm_route": ["대치동", "역삼동", "청담동"], "expect": {"kind": "publish", "type": "palletize", "route": ["대치동", "역삼동", "청담동"]}},
+    {"id": "pal-3", "text": "청담 먼저 싣고 그다음 역삼으로 실어", "state": "IDLE", "llm_route": ["청담", "역삼"], "expect": {"kind": "publish", "type": "palletize", "route": ["청담동", "역삼동"]}},
+    {"id": "pal-4", "text": "대치동만 팔레트에 실어줘", "state": "RUNNING", "llm_route": ["대치동"], "expect": {"kind": "publish", "type": "palletize", "route": ["대치동"]}},
+    {"id": "pal-5", "text": "첫 배송지는 역삼, 두 번째는 청담, 마지막은 대치로 팔레트 적재해", "state": "RUNNING", "llm_route": ["역삼", "청담", "대치"], "expect": {"kind": "publish", "type": "palletize", "route": ["역삼동", "청담동", "대치동"]}},
+    {"id": "pal-x1", "text": "역삼, 역삼 순서로 실어줘", "state": "RUNNING", "llm_route": ["역삼", "역삼"], "expect": {"kind": "say", "reason": "중복"}},
+    {"id": "pal-x2", "text": "신사, 역삼 순서로 실어줘", "state": "RUNNING", "llm_route": ["신사", "역삼"], "expect": {"kind": "say", "reason": "미등록"}},
+    {"id": "pal-x3", "text": "역삼, 대치, 청담, 논현 순서로 실어줘", "state": "RUNNING", "llm_route": ["역삼", "대치", "청담", "논현"], "expect": {"kind": "say", "reason": "4개"}}
+  ]
+}
