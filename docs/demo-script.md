@@ -56,7 +56,7 @@ ros2 bag record -s mcap -o ~/voss_data/1015/demo --include-hidden-topics \
 | 단계 | 작업자 발화 (폴백) | 로봇·HMI 기대 | 통과 조건 | 관련 |
 |---|---|---|---|---|
 | **0. 음성 시스템 기동** | "헬로, 로키. 시스템 켜줘" → 확인 질문에 "응" (폴백: 수동 기동) | "로봇 시스템을 켭니다. 비상정지 담당자가 준비됐으면 '응'이라고 답해 주세요" → 단계별 안내 → "준비를 마쳤습니다", HMI 준비 표시. **로봇은 움직이지 않는다**(IDLE) | 사람 손 없이 준비 완료, `SortState.ready=true`. 시간 기록(NFR-16 3분, 실측 후 조정) | TR-VOICE-11~13, S2-T09·T10 (정의석) |
-| **1. 운전 시작** | "헬로, 로키. 작업 시작" (HMI 시작) | 관측 자세로 이동, HMI 운전 중(RUNNING). ⚠️ BRD 의 "작업을 시작합니다" 음성은 sort_manager 가 아직 내지 않는다 | RUNNING·관측 자세 도착 | TR-VOICE-01·05, TR-SYS-03 |
+| **1. 운전 시작** | "헬로, 로키. 작업 시작" (HMI 시작) | "작업을 시작합니다." → 관측 자세로 이동, HMI 운전 중(RUNNING). ⚠️ 음성은 `feat/29-voss_manager-start-voice` 에서 추가 — 머지 전 빌드에는 없다 | RUNNING·관측 자세 도착 | TR-VOICE-01·05, TR-SYS-03 |
 | **2. 우선 분류** | "대치동부터 분류해" → 박스 1·2·3 투입 | 1 → B, 2·3 은 집지 않고 벨트 끝으로(PASSED·NON_TARGET) → 회수 | 1 이 B, 2·3 통과 | TR-VOICE-06, TR-PICK-09 |
 | **3. 전체 분류** | "전부 구역별로 나눠줘" → 4·5·6, 회수한 2·3 투입 | 벨트를 멈추지 않고 각 구역 | 5개 모두 기대 구역 | TR-PICK-01~08, TR-OCR-01~05 |
 | **4. 규칙 변경** | "오늘 역삼동 물류는 B구역으로, 대치동 물류는 A구역으로" → 7·8 | ⚠️ **미구현**(sort_manager UpdateZoneMap 없음, intent_parser `allow_update_zone_map=false`) — 빼면 7·8 은 3단계에 이어 투입(A·B) | 바뀐 매핑대로 7 → B, 8 → A | TR-VOICE-09, TR-SYS-06 |
