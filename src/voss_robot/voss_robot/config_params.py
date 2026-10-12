@@ -66,10 +66,22 @@ def gateway_params(cfg: dict[str, Any], sha: str) -> dict[str, Any]:
             lmm = float(lmm) if isinstance(lmm, int | float) and not isinstance(lmm, bool) else LAYER_MM
             py = grid.get("pitch_y_mm")
             py = float(py) if isinstance(py, int | float) and not isinstance(py, bool) else None
+            cdy = grid.get("col_dy_mm")  # 열마다 Y 보정, cols 개(선택)
+            cdy = (
+                [float(v) for v in cdy]
+                if isinstance(cdy, list)
+                and len(cdy) == int(grid["cols"])
+                and all(isinstance(v, int | float) and not isinstance(v, bool) for v in cdy)
+                else None
+            )
+            if cdy is not None and py is None:
+                py = float(grid["pitch_mm"])
             if layers > 1 or py is not None:
                 out[f"zones.{z}.grid"] += [float(layers), lmm]
             if py is not None:
                 out[f"zones.{z}.grid"].append(py)
+            if cdy is not None:
+                out[f"zones.{z}.grid"] += cdy
         # 선택: 트레이 안 이동 최저 TCP z — 먼 칸 위로 공통 값(60)이 안 닿는 구역만 (voss_config.md zones)
         itz = zc.get("in_tray_tcp_z_mm")
         if isinstance(itz, int | float) and not isinstance(itz, bool) and itz > 0:

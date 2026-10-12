@@ -192,7 +192,7 @@ class RobotGatewayNode(Node):
             in_tray = float(self.declare_parameter(f"zones.{z}.in_tray_tcp_z_mm", 0.0).value)
             self.zones[z] = {
                 "pose": pose if len(pose) == 6 else None,
-                "grid": grid if len(grid) in (3, 4, 6, 7) else None,
+                "grid": grid if len(grid) in (3, 4, 6, 7) or len(grid) == 7 + int(grid[0]) else None,
                 "view": view if len(view) == 6 else None,
                 "in_tray": in_tray if in_tray > 0 else None,
             }

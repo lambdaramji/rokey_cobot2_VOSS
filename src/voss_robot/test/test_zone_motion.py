@@ -143,3 +143,9 @@ def test_observe_to_truck_goes_round_the_front_not_behind_the_base():
 def test_tray_paths_do_not_get_arcs():
     for z in (A, slot_pose(A, [3, 2, 60, 0, 2, 27, 60], 0)):
         assert not any(n.startswith("arc") for n, _ in plan_move(OBS, z) + plan_move(z, OBS))
+
+
+def test_col_dy_shifts_one_column_in_both_rows_and_layers():
+    grid = [4, 2, 50, 0, 2, 27, 60, 0, 0, 0, 10]
+    assert slot_offset(grid, 3) == (75.0, -20.0) and slot_offset(grid, 7) == (75.0, 40.0)
+    assert slot_offset(grid, 11) == (75.0, -20.0) and slot_offset(grid, 2) == (25.0, -30.0)

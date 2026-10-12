@@ -58,6 +58,15 @@ def test_truck_zone_4x2_two_layers():
     assert p["zones.TRUCK.grid"] == [4.0, 2.0, 50.0, 0.0, 2.0, 27.0, 60.0]
 
 
+def test_col_dy_appends_after_pitch_y():
+    g = {"cols": 4, "rows": 2, "pitch_mm": 50, "pitch_y_mm": 60, "layers": 2, "col_dy_mm": [0, 0, 0, 10]}
+    assert gateway_params({"zones": {"truck": {"grid": g}}}, "x")["zones.TRUCK.grid"][7:] == [0.0, 0.0, 0.0, 10.0]
+    g2 = {"cols": 4, "rows": 2, "pitch_mm": 50, "col_dy_mm": [0, 0, 0, 10]}  # pitch_y 없으면 pitch 로 채움
+    assert gateway_params({"zones": {"truck": {"grid": g2}}}, "x")["zones.TRUCK.grid"][4:] == [1.0, 27.0, 50.0, 0.0, 0.0, 0.0, 10.0]
+    g3 = {**g, "col_dy_mm": [0, 10]}  # 열 수가 다르면 뺀다
+    assert len(gateway_params({"zones": {"truck": {"grid": g3}}}, "x")["zones.TRUCK.grid"]) == 7
+
+
 def test_place_open_passes_when_set():
     p = gateway_params({"gripper": {"pre_open_mm": 90, "place_open_mm": 50}}, "x")
     assert (p["gripper.pre_open_mm"], p["gripper.place_open_mm"]) == (90.0, 50.0)
