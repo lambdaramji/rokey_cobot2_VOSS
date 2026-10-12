@@ -21,7 +21,7 @@
 | `voss/command` | 웹 → ROS | 1 | false | `{"command_id", "type", "args", "raw_text", "sent_at"}` — Spring Boot 가 `command_id`(UUID)·`sent_at` 을 붙인다(web_api.md `POST /api/commands`) |
 | `voss/command/ack` | ROS → 웹 | 1 | false | `{"command_id", "ok", "message", "acked_at"}` — `/voss/sort/command` 응답(= manager **접수**, 완료 아님) |
 | `voss/log_status` | ROS → 웹 | 1 | **true** | `{"status":"STARTING|OK|DB_ERROR|SPOOL_FULL","stamp":"…"}` — `/voss/log/status` 값을 hmi_bridge 가 전달. Spring Boot 재기동 직후에도 마지막 logger 상태를 받기 위해 retained |
-| `voss/pallet/state` | ROS → 웹 | 1 | **true** | **Sprint 2.** PalletState 필드 이름 그대로: `run_id`, `state`, `route`, `total`, `done`, `failed`, `box_id`, `slot_state`, `slot_box_id`(voss_msgs.md). 팔레트 배치도·진행률(TR-PAL-10). Spring Boot 재기동 직후에도 마지막 배치도를 받기 위해 retained |
+| `voss/pallet/state` | ROS → 웹 | 1 | **true** | **Sprint 2.** PalletState 필드 이름 그대로: `run_id`, `state`, `route`, `dongs`, `load`, `overflow`, `excluded`, `overflow_warning`, `total`, `done`, `failed`, `box_id`, `slot_state`, `slot_box_id`, `slot_dong`(voss_msgs.md, 칸 배열 16 = slot 0~15). 3D 팔레트·진행률·구역별 실을 수/초과/경로 제외·"배송 물량 남음" 경고(TR-PAL-10, BRD v1.5). Spring Boot 재기동 직후에도 마지막 배치도를 받기 위해 retained |
 
 - 시각은 모두 ISO-8601 `+09:00` 문자열(공용 PC 시스템 시계). ROS Time 은 hmi_bridge 가 바꾼다.
 - `type` 은 Command canonical 명령(voss_msgs.md): `start`·`stop`·`resume`·`priority`·`answer`·`reset_zone`·`palletize`(Sprint 2). 다른 문자열은 실행하지 않는다.
@@ -60,3 +60,4 @@
 - 2026-10-05: 초안.
 - 2026-10-07: SRD v1.0 정합 (#6). #52 MC-026 합의(정의석 결정)를 옮김 — 6개 토픽·QoS·retained, command/ack JSON, 10분 중복 억제·30초 EXPIRED, ISO 시각, Spring Boot 가 클라이언트. `voss/robot` 필드(#55). 브로커 위치·args 변환표·로그 상태 토픽은 #20. #84 리뷰 반영: stop 은 EXPIRED 예외, result 0 시각 = null 확정, `voss/log_status` 제안.
 - 2026-10-12: **Sprint 2**(BRD v1.4 10.7, S2-T01 — 제안, 정의석 확인 필요). `voss/pallet/state`(QoS 1, retained) 추가·bridge ACL write 에 추가, command `palletize`(args `route` 배열 → 쉼표 문자열), `reset_zone` 에 `PALLET`, `voss/result` 에 `slot`.
+- 2026-10-12 저녁: BRD v1.5 — `voss/pallet/state` 필드에 집계(`dongs`·`load`·`overflow`·`excluded`·`overflow_warning`)·`slot_dong` 추가, 칸 16 고정.
