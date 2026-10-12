@@ -10,6 +10,7 @@
 - `sort_fsm.py` 순수 전이 `step(ctx, event) → Out(ctx, actions, reply)`. `readiness.py` 준비 판단. `sort_manager.py` 는 입출력·장비 호출 시간 초과만(단일 스레드 executor, 잠금 없음).
 - 파라미터 `config/sort_manager.yaml`, voss_config 는 `config_path`(launch `config_dir`, 기본 `VOSS_CONFIG_DIR` → 레포 `config/`). 어긋난 설정은 기동 거부.
 - 로봇 없이 시험: `tools/mock/g0_mock.py` (belt_servo·gateway·logger·비전 대역, 아무것도 움직이지 않음).
+- `pallet_plan.py` 팔레타이징 배치 계획(S2-T04, BRD v1.4 10.4): 경로 + 적재 기록 → 옮길 순서·팔레트 열·칸. 열 0 = 가장 왼쪽(−X), 첫 배송지 = 오른쪽 열, 마지막 배송지부터 옮기고 열 안은 칸 0 → 2. 같은 구역·칸에 PLACED 가 둘이면(세션 중 reset_zone) 나중 것만. 재개는 다시 계획하지 않고 `remaining()`(칸 번호가 당겨지지 않게). `Placement` 필드는 ListPlacements(S2-T01) 제안 — `stamp` 가 필요하다.
 
 ## 운용 규칙 (T20, SRD F-04/06/07·T23 확정 전 값은 제안)
 - **분류 결정:** RUNNING 에서 OBSERVE 도착 뒤 촬영된 stage 1 판독으로 정한다. 확실(분류코드 우선, 동 이름과 같고 `confidence ≥ ocr.confidence_min`)하면 목적 구역으로 바로 집는다. 한 번에 한 박스.
