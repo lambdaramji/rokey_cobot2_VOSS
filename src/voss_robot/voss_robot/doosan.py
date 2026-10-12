@@ -165,6 +165,12 @@ class DryRunDoosan:
             self._advance()
             return 2 if self._target is not None or any(abs(v) > 0 for v in self._vel) else 1
 
+    def check_motion(self) -> int:
+        """두산 check_motion 대신: move_line·move_spline 진행 중이면 BUSY(2), 아니면 IDLE(0)."""
+        with self._lock:
+            self._advance()
+            return 2 if self._target is not None else 0
+
 
 class GuardedCaller:
     """서비스 호출 하나씩: 타임아웃 난 요청의 응답이 올 때까지 다음 요청을 보내지 않는다(ROS import 없음).
@@ -266,7 +272,7 @@ class RosDoosan:
         self.last_alarm = ""
         self.alarm_seq = 0  # WARN·ERROR 알람 수 (MoveToZone 이 이동 중 새 알람을 본다)
         self.disconnected = False
-        from dsr_msgs2.srv import Fkin, GetCurrentPosx, Ikin, MoveLine, MoveSplineTask
+        from dsr_msgs2.srv import CheckMotion, Fkin, GetCurrentPosx, Ikin, MoveLine, MoveSplineTask
 
         self._ik_srv, self._fk_srv, self._posx_srv = Ikin, Fkin, GetCurrentPosx
         self._ik = node.create_client(Ikin, prefix + "motion/ikin", callback_group=self._group)
@@ -277,6 +283,10 @@ class RosDoosan:
         self._line_srv = MoveLine
         self._line = node.create_client(
             MoveLine, prefix + "motion/move_line", callback_group=self._group
+        )
+        self._check_srv = CheckMotion
+        self._check = node.create_client(
+            CheckMotion, prefix + "motion/check_motion", callback_group=self._group
         )
         self._spline_srv = MoveSplineTask
         self._spline = node.create_client(
@@ -406,6 +416,11 @@ class RosDoosan:
             (a - float(b)) ** 2 for a, b in zip(tcp_posx[:3], back.conv_posx[:3], strict=True)
         )
         return j if back.success and err <= 1.0 else None
+
+    def check_motion(self) -> int:
+        """두산 check_motion: IDLE(0) 이동 없음 / INIT(1) 계산 중 / BUSY(2) 동작 중. 큐 작업 스레드에서만.
+        robot_state 가 STANDBY 여도 이동 명령이 끝나지 않았을 수 있다(10/12 실기 1903 rejected eMoveSX)."""
+        return int(self.caller.call(self._check, self._check_srv.Request()).status)
 
     def get_robot_state(self) -> int:
         """두산 ROBOT_STATE (DRFC.h). 큐 작업 스레드에서만."""

@@ -930,17 +930,17 @@ class RobotGatewayNode(Node):
                 raise
 
     def _wait_idle(self, name: str, timeout_s: float = 3.0) -> None:
-        """컨트롤러가 MOVING(2) 이 아닐 때까지(스플라인 앞뒤). 도착 판정(3 mm·0.3 s) 뒤에도 빠른 속도에서는 잠깐
-        MOVING 으로 남는다(10/12 실기 450 mm/s)."""
+        """컨트롤러 이동 명령이 끝날 때까지(check_motion = IDLE 0, 스플라인 앞뒤). 도착 판정(3 mm·0.3 s) 뒤에도,
+        robot_state 가 STANDBY 여도 이동 명령이 남아 스플라인이 거부됐다(10/12 실기 450 mm/s, 1903)."""
         deadline = time.monotonic() + timeout_s
         while time.monotonic() < deadline:
             if self._abort.is_set():
                 raise _ZoneError(f"STOPPED: {name} 전 stop")
             try:
-                st = self.queue.submit(self.dsr.get_robot_state).result(timeout=1.0)
+                st = self.queue.submit(self.dsr.check_motion).result(timeout=1.0)
             except Exception as e:  # 큐 응답 없음
                 raise _ZoneError(f"TIMEOUT: {name} 전 컨트롤러 상태 {e}") from e
-            if st != 2:
+            if st == 0:
                 return
             time.sleep(0.03)
         raise _ZoneError(f"TIMEOUT: {name} 전 컨트롤러가 {timeout_s:.0f} s 동안 이동 중 상태")
