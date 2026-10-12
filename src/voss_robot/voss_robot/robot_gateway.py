@@ -180,10 +180,13 @@ class RobotGatewayNode(Node):
             pose = list(self.declare_parameter(f"zones.{z}.pose", [0.0]).value)
             grid = list(self.declare_parameter(f"zones.{z}.grid", [0.0]).value)
             view = list(self.declare_parameter(f"zones.{z}.view_pose", [0.0]).value)
+            # 구역별 트레이 안 이동 최저 TCP z(voss_config zones.<z>.in_tray_tcp_z_mm). 0 = 공통 값
+            in_tray = float(self.declare_parameter(f"zones.{z}.in_tray_tcp_z_mm", 0.0).value)
             self.zones[z] = {
                 "pose": pose if len(pose) == 6 else None,
                 "grid": grid if len(grid) in (3, 4, 6, 7) else None,
                 "view": view if len(view) == 6 else None,
+                "in_tray": in_tray if in_tray > 0 else None,
             }
         self.pre_open = float(self.declare_parameter("gripper.pre_open_mm", 90.0).value)
         # 트레이 안에서 여는 폭(PLACE 개방·PICK 확인 실패 후퇴). 없으면 pre_open (voss_config.md gripper)
@@ -590,6 +593,7 @@ class RobotGatewayNode(Node):
         ):  # C·HOLD 처럼 safe_z 에서 안 닿는 칸이면 쥔 채 트레이 안에 멈춘다
             return fail("INVALID: PICK 은 RECHECK 만 (재확인 칸에서 집기, MC-017)")
         stage = None
+        in_tray_z = None  # 이 구역의 트레이 안 최저 높이(없으면 공통 zone_min_in_tray_tcp_z_mm)
         label = "PLACE" if place else (mode or "MOVE")
         if zone == "OBSERVE":
             if len(self.observe) != 6:
@@ -608,6 +612,7 @@ class RobotGatewayNode(Node):
             try:
                 target = slot_pose(zc["pose"], zc["grid"], int(req.slot))
                 stage = slot_pose(zc["pose"], zc["grid"], 0)  # 트레이 안 이동의 출입구(−X 끝 칸)
+                in_tray_z = zc["in_tray"]
                 if pick:
                     target = pick_pose(target, self.pick_dz)
             except ValueError as e:
@@ -652,7 +657,7 @@ class RobotGatewayNode(Node):
                     g = self.rg2.command_held(self.pre_open, self.grip_force)
                     if not g.ok:
                         return fail(f"GRIP_FAIL: 사전 개방 {g.message}")
-                self._run_path(target, stage)
+                self._run_path(target, stage, in_tray_z)
                 if pick:
                     g = self.rg2.command_held(self.grasp_width, self.grip_force)
                     why = pick_grip_ok(
@@ -679,7 +684,7 @@ class RobotGatewayNode(Node):
                     placed = self.get_clock().now()
                     res.placed_stamp = placed.to_msg()
                     try:
-                        self._run_path(list(self.observe), stage)
+                        self._run_path(list(self.observe), stage, in_tray_z)
                     except _ZoneError as e:
                         return fail(f"RETURN_FAILED: {e}")
             except _ZoneError as e:
@@ -749,13 +754,14 @@ class RobotGatewayNode(Node):
         j = self.queue.submit(lambda: self.dsr.ikin(cmd, sol)).result(timeout=3.0)
         return j is not None and abs(j[2]) >= self.min_j3_deg
 
-    def _in_tray(self, slot_flange, stage, sol: int):
-        """slot 위로 TCP ≥ 최저 이동 높이가 안 나올 때: (트레이 안 높이 플랜지 z, 칸 0 위 이동 높이) 또는 None."""
+    def _in_tray(self, slot_flange, stage, sol: int, floor: float | None = None):
+        """slot 위로 TCP ≥ 최저 이동 높이가 안 나올 때: (트레이 안 높이 플랜지 z, 칸 0 위 이동 높이) 또는 None.
+        floor = 트레이 안 최저 TCP z(없으면 zone_min_in_tray_tcp_z_mm)."""
         if stage is None or all(
             abs(a - b) < 0.5 for a, b in zip(slot_flange[:2], stage[:2], strict=True)
         ):
             return None
-        zi = self._travel_z(slot_flange, sol, self.min_in_tray_tcp_z)
+        zi = self._travel_z(slot_flange, sol, self.min_in_tray_tcp_z if floor is None else floor)
         zs = self._travel_z(stage, sol)
         return None if zi is None or zs is None else (zi, zs)
 
@@ -768,7 +774,7 @@ class RobotGatewayNode(Node):
                     return slot_pose(p, zc["grid"], 0)
         return None
 
-    def _run_path(self, target_flange, stage=None) -> None:
+    def _run_path(self, target_flange, stage=None, in_tray_z: float | None = None) -> None:
         """현재 플랜지 → 목표: 수직 상승 → 수평 → 수직 하강, 단계마다 도착을 pose 로 확인.
         수평 이동 높이 = safe_z 와, 출발·도착 x·y 에서 닿는 최고 높이 중 낮은 것. 목표 자세 자체도 풀리는지
         움직이기 전에 확인한다. 먼 칸(출발·도착) 위로 최저 이동 높이가 안 나오면 stage(같은 구역 칸 0) 를
@@ -796,13 +802,13 @@ class RobotGatewayNode(Node):
             start, end = cur, target_flange
             if z0 is None and stage is None:
                 stage = self._tray_stage(cur)  # 트레이 안에 멈춘 뒤 OBSERVE 복귀 등
-            if z0 is None and (t := self._in_tray(cur, stage, sol)) is not None:
+            if z0 is None and (t := self._in_tray(cur, stage, sol, in_tray_z)) is not None:
                 zi, z0 = t  # 놓은 칸에서 트레이 안 높이로 올라가 칸 0 위로 옮긴 뒤 거기서 출발
                 low = [cur[0], cur[1], zi, *cur[3:]]
                 start = [stage[0], stage[1], zi, *cur[3:]]
                 pre = [("rise_in_tray", low)] if cur[2] < zi - 0.5 else []
                 pre.append(("to_stage", start))
-            if z1 is None and (t := self._in_tray(target_flange, stage, sol)) is not None:
+            if z1 is None and (t := self._in_tray(target_flange, stage, sol, in_tray_z)) is not None:
                 zi, z1 = t  # 칸 0 위로 내려와 트레이 안 높이로 목표 칸 위까지 옮긴 뒤 하강
                 end = [stage[0], stage[1], zi, *target_flange[3:]]
                 post = [("in_tray", [target_flange[0], target_flange[1], zi, *target_flange[3:]])]
@@ -815,7 +821,7 @@ class RobotGatewayNode(Node):
             where = "출발" if z0 is None else "도착"
             raise _ZoneError(
                 f"LIMIT: {where} 위에서 TCP z ≥ {self.min_travel_tcp_z:.0f} mm 로 수평 이동할 수 없다"
-                f" (트레이 안 TCP ≥ {self.min_in_tray_tcp_z:.0f} 도 안 됨 — 팔이 닿지 않음)"
+                f" (트레이 안 TCP ≥ {in_tray_z or self.min_in_tray_tcp_z:.0f} 도 안 됨 — 팔이 닿지 않음)"
             )
         hz = min(z0, z1)
         if hz < self.safe_z - 0.5:

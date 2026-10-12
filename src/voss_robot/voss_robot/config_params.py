@@ -70,6 +70,10 @@ def gateway_params(cfg: dict[str, Any], sha: str) -> dict[str, Any]:
                 out[f"zones.{z}.grid"] += [float(layers), lmm]
             if py is not None:
                 out[f"zones.{z}.grid"].append(py)
+        # 선택: 트레이 안 이동 최저 TCP z — 먼 칸 위로 공통 값(60)이 안 닿는 구역만 (voss_config.md zones)
+        itz = zc.get("in_tray_tcp_z_mm")
+        if isinstance(itz, int | float) and not isinstance(itz, bool) and itz > 0:
+            out[f"zones.{z}.in_tray_tcp_z_mm"] = float(itz)
         view = _floats(zc.get("view_pose"), 6)
         if view is not None:
             out[f"zones.{z}.view_pose"] = view

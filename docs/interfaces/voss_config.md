@@ -21,6 +21,8 @@ zones:               # 두산 posx: x y z rx ry rz, mm/deg. 플랜지 기준(TCP
                      # layers(선택, 기본 1) = 쌓는 층 수, layer_mm(선택, 기본 27 = 박스 높이) = 층 간격. 칸 수 = cols × rows × layers.
                      # 칸 번호는 1층부터 채운다: slot = layer × (cols × rows) + row × cols + col, 놓기 z = pose z + layer × layer_mm
                      # pitch_y_mm(선택, 기본 pitch_mm) = Y 줄 간격. 줄 위치 = (row − (rows−1)/2) × pitch_y_mm (pose 기준, row 0 이 −Y)
+                     # order(선택) = 앞쪽 칸을 채우는 순서(0..n−1 을 한 번씩, sort_manager 만 씀). n 번째 박스 → order[n], 넘어가면 n 그대로(2층 등)
+                     # in_tray_tcp_z_mm(선택, zones.<z> 키) = 이 구역의 트레이 안 이동 최저 TCP z(robot_gateway). 없으면 zone_min_in_tray_tcp_z_mm(60)
                      # 자세는 ry = ±180° 라 rx·rz 가 한 값으로 정해지지 않는다(rx − rz 만 의미). robot_gateway 가 정규화한다
   A:       {pose: null, grid: {cols: 3, rows: 1, pitch_mm: 60}}
   B:       {pose: null, grid: {cols: 3, rows: 1, pitch_mm: 60}}
@@ -77,3 +79,4 @@ timing:
 - 2026-10-12 (로컬 시험 브랜치 `local/1012-recheck-flow`, 원격 막힘 — 담당 확인 전): grid `layers`·`layer_mm` 추가(선택, 기본 1층·27 mm). 시연 시나리오(A·B·C 6칸을 채운 뒤 사람이 판정한 흐린 송장 1개를 칸 0 위 2층에)용. 칸 수 = cols × rows × layers 라 sort_manager 의 구역 용량과 robot_gateway 의 칸 범위가 함께 바뀐다. layers 를 안 쓰면 기존과 같다.
 - 2026-10-12 (로컬 시험 브랜치): `gripper.place_open_mm` 추가(선택). robot_gateway 가 PLACE 개방과 PICK 확인 실패 후퇴 때 이 폭으로 연다. 3×2 칸에서 90 으로 열면 핑거가 트레이 벽·옆 박스에 닿을 수 있어서다. 10/12 실측: 보고 50 mm 에서 박스가 떨어짐(최소). 없으면 pre_open_mm 그대로. belt_servo 의 사전 개방(pre_open_mm)·PICK 하강 전 개방은 바꾸지 않는다.
 - 2026-10-12 (로컬 시험 브랜치): grid `pitch_y_mm` 추가(선택, 기본 pitch_mm). A·B·C 3×2 칸에서 Y 줄 간격을 X 칸 간격과 따로 정하려고(기존 pose 에서 ±y 실측). 없으면 기존과 같다.
+- 2026-10-12 (로컬 시험 브랜치): grid `order`·zones.<z>.`in_tray_tcp_z_mm` 추가(선택). C 3×2 칸 5(+X·+Y 끝)는 그 위로 TCP 60 이 안 닿는다(ikin: TCP 40 까지 J3 16°, 50 은 12°). 트레이가 빌 때 먼저 놓도록 C `order: [5, 2, 4, 1, 3, 0]`, 트레이 안 이동을 C 만 TCP 40 으로. TCP 40 이면 든 박스 밑면(≈ 32)이 놓인 박스 윗면(≈ 28~33)과 같아서 칸 5 는 반드시 빈 트레이에 먼저 놓아야 한다. 2층(칸 6)은 칸 0 위 그대로.

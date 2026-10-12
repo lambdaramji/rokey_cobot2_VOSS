@@ -45,6 +45,13 @@ def test_layers_append_to_grid():
     assert q["zones.C.grid"] == [3.0, 2.0, 50.0, 0.0, 1.0, 27.0, 44.0]
 
 
+def test_in_tray_height_per_zone_and_order_ignored():
+    z = {"grid": {"cols": 3, "rows": 2, "pitch_mm": 50, "order": [5, 2, 4, 1, 3, 0]}, "in_tray_tcp_z_mm": 40}
+    p = gateway_params({"zones": {"C": z, "A": {"in_tray_tcp_z_mm": None}}}, "x")
+    assert p["zones.C.in_tray_tcp_z_mm"] == 40.0 and "zones.A.in_tray_tcp_z_mm" not in p
+    assert p["zones.C.grid"] == [3.0, 2.0, 50.0, 0.0]  # order 는 sort_manager 가 쓴다
+
+
 def test_place_open_passes_when_set():
     p = gateway_params({"gripper": {"pre_open_mm": 90, "place_open_mm": 50}}, "x")
     assert (p["gripper.pre_open_mm"], p["gripper.place_open_mm"]) == (90.0, 50.0)
