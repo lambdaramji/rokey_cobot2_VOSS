@@ -21,6 +21,7 @@ from voss_voice.intent_logic import (
     decide_bare_dong,
     decide_destination_answer,
     decide_hold_answer,
+    decide_load_truck,
     decide_recheck_start,
     is_stop,
     stats_sentence,
@@ -93,6 +94,10 @@ class TranscriptFlow:
             # 4-2. "재확인 시작" → 보관 중인 재확인 칸 박스 처리 (LLM 없이)
             if d is None:
                 d = decide_recheck_start(text)
+
+            # 4-3. "청담동, 대치동, 역삼동 순으로 트럭에 실어" → 트럭 적재 (LLM 없이)
+            if d is None:
+                d = decide_load_truck(text, view)
 
             # 5. 단독 동 이름이 아니라면 기존 GPT-4o 경로를 사용한다.
             if d is None:

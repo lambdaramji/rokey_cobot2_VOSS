@@ -19,6 +19,7 @@ ROS_TYPES = (
     "priority",
     "answer",
     "recheck",
+    "load_truck",
     "update_zone_map",
 )  # Intent 로 보내는 것
 QUERY_KINDS = ("count_by_dong", "held_count", "remaining_count")
@@ -33,6 +34,9 @@ HOLD_ANSWER_RE = re.compile(
 RECHECK_START_RE = re.compile(
     r"재확인(?:을)?(?:시작|진행|처리)?(?:해|해줘|해주세요|하자|합니다|할게|해요)?"
 )
+
+# "청담동, 대치동, 역삼동 순으로 트럭에 실어" → load_truck(10/12 시연, LLM 없이). 트럭 + 싣는 말이 있으면
+LOAD_TRUCK_RE = re.compile(r"트럭.*(?:실어|싣|적재|태워|올려|옮겨)|(?:실어|싣|적재|태워|올려|옮겨).*트럭")
 
 # 정지 키워드: 공백·문장부호를 지운 뒤 포함 여부로 본다. 오인식으로 멈추는 쪽은 허용한다.
 STOP_KEYWORDS = ("멈춰", "멈추", "정지", "스톱", "스탑", "그만", "stop")
@@ -183,6 +187,23 @@ def decide_recheck_start(raw_text: str) -> Decision | None:
     if RECHECK_START_RE.fullmatch(_squash(raw_text)) is None:
         return None
     return Decision("publish", intent=_intent("recheck", raw_text=raw_text))
+
+
+def decide_load_truck(raw_text: str, view: ZoneMapView | None) -> Decision | None:
+    """'청담동 대치동 역삼동 순으로 트럭에 실어' → load_truck, dong = 말한 순서 "청담동,대치동,역삼동".
+    동을 말하지 않으면 빈값(sort_manager 가 zone_map 순서로). 받을 수 있는 상태인지는 sort_manager 가 판단한다."""
+    s = _squash(raw_text)
+    if LOAD_TRUCK_RE.search(s) is None:
+        return None
+    if view is None:
+        return Decision("say", say=SAY_NOT_READY)
+    found: dict[str, int] = {}  # 정식 동 → 처음 나온 위치
+    for alias, dong in view.alias_to_dong.items():
+        i = s.find(alias)
+        if alias and i >= 0 and (dong not in found or i < found[dong]):
+            found[dong] = i
+    order = sorted(found, key=found.get)
+    return Decision("publish", intent=_intent("load_truck", dong=",".join(order), raw_text=raw_text))
 
 
 def decide_destination_answer(

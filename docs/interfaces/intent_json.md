@@ -4,7 +4,7 @@ LLM(FastAPI `/intent`, OpenAI structured output — ADR-0006)의 출력은 반�
 
 ```json
 {
-  "type": "start | stop | resume | priority | answer | recheck | query_history | update_zone_map",
+  "type": "start | stop | resume | priority | answer | recheck | load_truck | query_history | update_zone_map",
   "dong": "<zone_map 의 정식 동 이름> | null",
   "zone": "A | B | C | HOLD | null",
   "count": 0,
@@ -33,6 +33,7 @@ LLM(FastAPI `/intent`, OpenAI structured output — ADR-0006)의 출력은 반�
 | priority | `dong` | `/voss/voice/intent` | dong 없으면 되묻기 |
 | answer | `dong` 또는 `zone=HOLD`, `box_id` | `/voss/voice/intent` | `box_id` = 발화 시작 시점의 최신 `/voss/sort/state` 가 ASKING 일 때의 `box_id`. ASKING 이 아니면 발행하지 않고 "지금은 답할 질문이 없습니다". 다른 type 은 `box_id = ""` |
 | recheck | — | `/voss/voice/intent` | 보관 중인 재확인 칸 박스 처리 시작(Command `recheck`). "재확인 시작/진행/해 줘" 는 LLM 전에 로컬 매칭(10/12 로컬 시험 브랜치). 보관 박스가 없거나 RUNNING 이 아니면 manager 가 거부 |
+| load_truck | `dong` = 싣는 순서 `"청담동,대치동,역삼동"`(말한 순서, 비우면 manager 기본 순서) | `/voss/voice/intent` | 트럭 적재(Command `load_truck`). "청담동, 대치동, 역삼동 순으로 트럭에 실어" 처럼 트럭 + 싣다/적재 가 있으면 LLM 전에 로컬 매칭, 말한 동을 나온 순서대로(10/12 로컬 시험 브랜치) |
 | query_history | `query_kind` (+ `dong` 은 count_by_dong 에서 필수) | **REST `GET /api/stats`** (Spring Boot, `web_api.md`) | **sort_manager 로 보내지 않는다.** 결과를 intent_parser 가 `/voss/voice/say` 로 읽는다. DB 장애면 "기록을 조회할 수 없습니다" |
 | update_zone_map | `dong`, `zone`(A/B/C) | `/voss/voice/intent` | **C 선택 범위** — G0 이후 채택 여부 결정(MC-033). 채택 전에는 "지금은 지원하지 않습니다" |
 

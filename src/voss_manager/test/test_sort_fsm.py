@@ -889,3 +889,107 @@ def test_grid_order_fills_far_slot_first_then_second_layer_on_slot_0() -> None:
         ctx, acts = placed(ctx, 10 + k, t=(2 + 20 * k) * 1000 * MS, code="", dong="청담동")
         got += [a.slot for a in of(acts, f.CallMove) if a.zone == "C"]
     assert got == [5, 2, 4, 1, 3, 0, 6] and ctx.slots["C"] == 7
+
+
+# ---------------------------------------------------------------- 트럭 적재 (로컬 10/12)
+
+
+def truck_cfg() -> f.Config:
+    raw = raw_config()
+    for z in ("A", "B", "C"):
+        raw["zones"][z]["grid"] = {"cols": 3, "rows": 2, "pitch_mm": 60, "layers": 2, "order": [2, 5, 1, 4, 0, 3]}
+    raw["zones"]["truck"] = {"grid": {"cols": 4, "rows": 2, "pitch_mm": 50, "layers": 2}}
+    return f.load_config(raw)
+
+
+def loaded(a: int = 7, b: int = 6, c: int = 6) -> f.Ctx:
+    """시연 상태: A 1층 6 + 2층 1, B·C 6, 보류 1."""
+    ctx = running(truck_cfg())
+    return replace(ctx, slots={**ctx.slots, "A": a, "B": b, "C": c, "HOLD": 1})
+
+
+def drive_load(ctx: f.Ctx, acts: list, t0: int = 10_000 * MS) -> tuple[f.Ctx, list]:
+    """CallMove 마다 성공 응답을 넣어 끝까지 간다. (ctx, [(zone, slot, mode)])."""
+    seen, t = [], t0
+    while True:
+        moves = of(acts, f.CallMove)
+        if not moves:
+            return ctx, seen
+        m = moves[-1]
+        seen.append((m.zone, m.slot, m.mode))
+        if m.zone == "OBSERVE":
+            ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", 0, t))
+            return ctx, seen
+        t += 1000 * MS
+        stamp = t if m.mode == "STAY" else 0
+        ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", stamp, t))
+
+
+def test_load_order_parses_dongs_aliases_and_zones() -> None:
+    cfg = truck_cfg()
+    assert f.load_order(cfg, "청담동,대치동,역삼동") == ("C", "B", "A")
+    assert f.load_order(cfg, "청담 → 역삼") == ("C", "A")
+    assert f.load_order(cfg, "b a") == ("B", "A")
+    assert f.load_order(cfg, "") == ("A", "B", "C")
+    assert "모르는" in f.load_order(cfg, "청담동,강남동")
+    assert cfg.truck_capacity == 16 and f.load_config(raw_config()).truck_capacity == 0
+
+
+def test_load_truck_follows_spoken_order_reverse_fill_and_stops_at_16() -> None:
+    ctx, acts, rep = run(loaded(), cmd("load_truck", "청담동,대치동,역삼동", t=5000 * MS))
+    assert rep[0][0] and ctx.state == f.LOADING
+    ctx, seen = drive_load(ctx, acts)
+    picks = [(z, s) for z, s, m in seen if m == "PICK"]
+    rev = [3, 0, 4, 1, 5, 2]  # 채운 순서 2,5,1,4,0,3 의 역순
+    assert picks == [("C", s) for s in rev] + [("B", s) for s in rev] + [("A", s) for s in (6, 3, 0, 4)]
+    assert [s for z, s, m in seen if z == "TRUCK"] == list(range(16))
+    assert all(m == "STAY" for z, _, m in seen if z == "TRUCK")
+    assert seen[-1] == ("OBSERVE", 0, "")  # 16개 뒤 홈으로, 분류 상태로 돌아감
+    assert ctx.state == f.RUNNING and ctx.truck_count == 16
+    assert (ctx.slots["A"], ctx.slots["B"], ctx.slots["C"]) == (3, 0, 0)  # A 에 3개 남음(다음 트럭)
+
+
+def test_load_truck_skips_empty_slot_and_continues() -> None:
+    ctx, acts, _ = run(loaded(a=2, b=0, c=0), cmd("load_truck", "역삼동"))
+    assert of(acts, f.CallMove) == [f.CallMove("A", 5, "PICK")]  # A 두 번째로 놓은 칸 = 5
+    msg = "GRIP_FAIL: 집기 확인 실패 — grip 없음(폭 38.0 mm) / 열고 상승함(박스는 칸에 그대로)"
+    ctx, acts, _ = run(ctx, f.MoveDone(False, msg, 0, 1))
+    assert ctx.state == f.LOADING and of(acts, f.CallMove) == [f.CallMove("A", 2, "PICK")]
+
+
+def test_load_truck_stop_while_holding_then_resume_places_on_truck() -> None:
+    ctx, acts, _ = run(loaded(a=1, b=0, c=0), cmd("load_truck", "A"))
+    ctx, _, _ = run(ctx, cmd("stop"))
+    assert ctx.state == f.PAUSED and ctx.phase == f.PH_TPICK
+    ctx, _, _ = run(ctx, f.MoveDone(True, "OK", 0, 1))  # 집기는 끝났다 — 든 채 멈춤
+    assert ctx.resume_to == "TPLACE" and ctx.slots["A"] == 0
+    ctx, acts, rep = run(ctx, cmd("resume"))
+    assert rep[0][0] and of(acts, f.CallMove) == [f.CallMove("TRUCK", 0, "STAY")]
+    ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", 5, 6))
+    assert ctx.truck_count == 1 and of(acts, f.CallMove) == [f.CallMove("OBSERVE", 0, "")]
+
+
+def test_load_truck_pick_error_pauses_and_retries_same_box() -> None:
+    ctx, _, _ = run(loaded(a=1, b=0, c=0), cmd("load_truck", "A"))
+    ctx, acts, _ = run(ctx, f.MoveDone(False, "LIMIT: 목표 자세에 팔이 닿지 않음", 0, 1))
+    assert ctx.state == f.PAUSED and ctx.resume_to == "LOAD" and of(acts, f.Say)
+    _, acts, _ = run(ctx, cmd("resume"))
+    assert of(acts, f.CallMove) == [f.CallMove("A", 2, "PICK")]
+
+
+def test_load_truck_rejections_and_reset() -> None:
+    ctx = loaded()
+    assert run(f.new_ctx(f.load_config(raw_config())), cmd("load_truck"))[2][0][0] is False  # truck 없음
+    assert run(loaded(a=0, b=0, c=0), cmd("load_truck", "A"))[2][0][1].endswith("실을 박스가 없음")
+    full = replace(ctx, truck_count=16)
+    assert "트럭 가득" in run(full, cmd("load_truck"))[2][0][1]
+    paused, _, _ = run(full, cmd("stop"))
+    p2, _, rep = run(paused, cmd("reset_zone", "truck"))
+    assert rep[0][0] and p2.truck_count == 0
+    busy, _, _ = run(ctx, cmd("load_truck", "A"))
+    assert run(busy, cmd("load_truck", "B"))[2][0][0] is False
+    assert run(busy, start(1))[2][0][0] is False  # 적재 중 start 는 새 세션을 열지 않는다
+
+
+def test_intent_load_truck_maps_to_command() -> None:
+    assert f.intent_to_command("load_truck", "청담동,대치동,역삼동", "", "") == ("load_truck", "청담동,대치동,역삼동")

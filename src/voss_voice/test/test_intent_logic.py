@@ -243,3 +243,15 @@ def test_bare_dong_requires_active_question(state: str, box_id: str) -> None:
     decision = decide_bare_dong("대치동.", VIEW, state, box_id)
     assert decision is not None and decision.kind == "say"
     assert decision.say == SAY_NO_QUESTION
+
+
+def test_load_truck_keeps_spoken_order() -> None:
+    from voss_voice.intent_logic import decide_load_truck
+
+    d = decide_load_truck("청담동, 대치동, 역삼동 순으로 트럭에 실어 줘", VIEW)
+    assert d.kind == "publish" and d.intent["type"] == "load_truck"
+    assert d.intent["dong"] == "청담동,대치동,역삼동"
+    assert decide_load_truck("역삼 청담 순서로 트럭에 적재해", VIEW).intent["dong"] == "역삼동,청담동"
+    assert decide_load_truck("트럭에 실어", VIEW).intent["dong"] == ""  # 순서 없음 = sort_manager 기본
+    assert decide_load_truck("트럭에 실어", None).say == SAY_NOT_READY
+    assert decide_load_truck("역삼동으로 보내", VIEW) is None

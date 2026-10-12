@@ -13,6 +13,7 @@ step(ctx, event) → Out(ctx', actions, reply). ctx 는 바꾸지 않고 새 값
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 
@@ -24,6 +25,7 @@ IDLE, RUNNING, PICKING, RECHECK, ASKING, PAUSED = (
     "ASKING",
     "PAUSED",
 )
+LOADING = "LOADING"  # 트럭 적재(load_truck, 로컬 10/12 시연): 구역 트레이에서 집어 트럭에 놓는다
 ACTIVE = (RUNNING, PICKING, RECHECK, ASKING)  # start(ALL)·priority 를 받는 운전 상태
 ZONES = ("A", "B", "C", "RECHECK", "HOLD")
 SORT_ZONES = ("A", "B", "C")
@@ -35,6 +37,7 @@ PH_VIEW, PH_READ, PH_PICK = (
     "READ",
     "PICK",
 )  # 재확인: 구역 보기 → 다시 읽기 → 재확인 칸에서 집기
+PH_TPICK, PH_TPLACE = "TPICK", "TPLACE"  # 트럭 적재: 구역 칸에서 집기 → 트럭 칸에 놓기(STAY)
 HOLD_WORDS = ("HOLD", "보류")
 ASK_TIMEOUT_NS = 30_000_000_000  # 질문 발화부터 30 s (SRD §5.7)
 
@@ -53,6 +56,7 @@ class Config:
     confidence_min: float
     version: str  # ZoneMap.version = SortResult.rule_version (≤ 16자)
     order: dict[str, tuple[int, ...]] = field(default_factory=dict)  # 구역 → 채우는 칸 순서(grid.order)
+    truck_capacity: int = 0  # zones.truck 칸 수(cols × rows × layers), 없으면 0 = 트럭 적재 안 함
 
     def slot_at(self, zone: str, n: int) -> int:
         """구역에 n 번째로 놓는 박스의 칸. grid.order 가 있으면 그 순서, 넘어가면 n 그대로(2층 등)."""
@@ -119,10 +123,18 @@ def load_config(raw: dict) -> Config:
                 raise ValueError(f"zones.{z.lower()}.grid.order 는 0..n−1 을 한 번씩: {o!r}")
             order[z] = tuple(o)
 
+    truck = 0  # 선택: zones.truck (팔레타이징, 로컬 10/12)
+    tg = (zones.get("TRUCK") or {}).get("grid") or {}
+    if tg:
+        tl = tg.get("layers", 1)
+        if not tg.get("cols") or not tg.get("rows") or isinstance(tl, bool) or not isinstance(tl, int) or tl < 1:
+            raise ValueError(f"zones.truck.grid 의 cols·rows·layers 가 어긋남: {tg!r}")
+        truck = int(tg["cols"]) * int(tg["rows"]) * tl
+
     version = str(raw.get("version", ""))
     if not version or len(version) > 16:
         raise ValueError(f"version 이 비었거나 16자 초과: {version!r}")
-    return Config(zone_map, codes, aliases, capacity, float(conf), version, order)
+    return Config(zone_map, codes, aliases, capacity, float(conf), version, order, truck)
 
 
 def zone_map_entries(cfg: Config) -> list[tuple[str, str, str, list[str]]]:
@@ -149,6 +161,8 @@ def intent_to_command(kind: str, dong: str, zone: str, box_id: str) -> tuple[str
         return "answer", f"{box_id}|{dong or zone}"
     if k == "recheck":
         return "recheck", ""
+    if k == "load_truck":
+        return "load_truck", dong  # dong = 싣는 순서 "청담동,대치동,역삼동" (비우면 zone_map 순서)
     return None
 
 
@@ -245,6 +259,11 @@ class Ctx:
     defer_recheck: bool = False
     recheck_queue: tuple[Box, ...] = ()  # 재확인 칸에 보관 중인(아직 다시 읽지 않은) 박스, 놓은 순서
     draining: bool = False  # recheck 명령으로 보관 박스를 처리하는 중 — 한 개 끝나면 다음 것
+    # 트럭 적재(load_truck): 남은 (구역, n번째) — n 은 그 구역에 놓은 순번, 칸 = cfg.slot_at(구역, n)
+    truck_count: int = 0  # 트럭에 놓은 수 = 다음 트럭 칸 (start·reset_zone TRUCK 에 0)
+    load_plan: tuple[tuple[str, int], ...] = ()
+    load_item: tuple[str, int] | None = None  # 지금 집거나 놓는 것
+    load_done: int = 0  # 이번 load_truck 으로 실은 수
 
 
 def new_ctx(
@@ -465,6 +484,8 @@ def _on_command(ctx: Ctx, ev: Command) -> Out:
         return Out(replace(nxt, state=PAUSED), tuple(acts), (True, "stop 접수"))
 
     if cmd == "start":
+        if ctx.state == LOADING:
+            return _reject(ctx, "트럭 적재 중 — 끝난 뒤 또는 stop")
         if arg.upper() not in ("", "ALL"):
             return _reject(ctx, f"start 인자는 빈값 또는 ALL: {arg}")
         if ctx.state in ACTIVE:
@@ -491,6 +512,10 @@ def _on_command(ctx: Ctx, ev: Command) -> Out:
             noted=frozenset(),
             box=None,
             stop_requested=False,
+            truck_count=0,
+            load_plan=(),
+            load_item=None,
+            resume_to="",
         )
         log = Log("info", f"세션 {ev.new_session_id} 시작, 우선 {ctx.priority or '전체'}")
         return Out(nxt, (*acts, log), (True, "start 접수"))
@@ -519,6 +544,8 @@ def _on_command(ctx: Ctx, ev: Command) -> Out:
         nr = not_ready_items(ctx, ev.not_ready)
         if nr:
             return _reject(ctx, "준비 안 됨: " + ", ".join(nr))
+        if ctx.resume_to in ("LOAD", "TPLACE"):
+            return _resume_load(ctx, ev.now_ns)
         if ctx.box is not None and ctx.resume_to:
             return _resume_recheck(ctx, ev.now_ns)
         # 보관 박스 처리 중 멈췄으면 분류로 돌아간다 — 남은 보관 박스는 recheck 를 다시 보내 이어 간다
@@ -527,6 +554,16 @@ def _on_command(ctx: Ctx, ev: Command) -> Out:
 
     if cmd == "reset_zone":
         zone = arg.upper()
+        if zone == "TRUCK" and ctx.cfg.truck_capacity:
+            if ctx.state != PAUSED:
+                return _reject(ctx, "reset_zone 은 PAUSED 에서만")
+            if ctx.resume_to in ("LOAD", "TPLACE"):
+                return _reject(ctx, "트럭 적재가 멈춘 상태 — resume 으로 끝낸 뒤 비운다")
+            return Out(
+                replace(ctx, truck_count=0),
+                (Log("info", "트럭 비움 확인, 칸 0"),),
+                (True, "TRUCK 비움"),
+            )
         if zone not in ZONES:
             return _reject(ctx, f"모르는 구역: {arg}")
         if ctx.state != PAUSED:
@@ -557,6 +594,9 @@ def _on_command(ctx: Ctx, ev: Command) -> Out:
             return _reject(ctx, f"{ctx.state} 에서는 recheck 불가 (분류 중 박스가 끝난 뒤)")
         out = _next_recheck(replace(ctx, draining=True), ev.now_ns)
         return Out(out.ctx, out.actions, (True, f"재확인 시작 ({len(ctx.recheck_queue)}개)"))
+
+    if cmd == "load_truck":
+        return _on_load_truck(ctx, arg, ev)
 
     return _reject(ctx, f"모르는 명령: {ev.command}")
 
@@ -783,6 +823,8 @@ def _on_goal(ctx: Ctx, ev: GoalDone) -> Out:
 
 
 def _on_move(ctx: Ctx, ev: MoveDone) -> Out:
+    if ctx.phase in (PH_TPICK, PH_TPLACE):
+        return _on_load_move(ctx, ev)
     if ctx.phase == PH_HOME:
         if not ev.ok:
             return Out(
@@ -1109,3 +1151,148 @@ def _on_stop_done(ctx: Ctx, ev: StopDone) -> Out:
         replace(ctx, stop_failed=True),
         (Log("error", f"로봇 정지 요청 응답 없음/오류 {ev.message} — 사람이 로봇을 확인한다"),),
     )
+
+
+# ---------------------------------------------------------------- 트럭 적재 (로컬 10/12 시연)
+
+
+def load_order(cfg: Config, arg: str) -> tuple[str, ...] | str:
+    """'청담동,대치동,역삼동'·'C B A' → 구역 순서. 비우면 zone_map 순서. 모르는 이름이면 오류 문장."""
+    out: list[str] = []
+    for tok in [t for t in re.split(r"[,\s>/→·]+", arg.strip()) if t]:
+        dong = cfg.dong_of(tok)
+        zone = cfg.zone_map[dong] if dong else tok.upper()
+        if zone not in SORT_ZONES:
+            return f"모르는 동·구역: {tok}"
+        if zone not in out:
+            out.append(zone)
+    if not out:
+        out = list(dict.fromkeys(cfg.zone_map.values()))
+    return tuple(out)
+
+
+def _on_load_truck(ctx: Ctx, arg: str, ev: Command) -> Out:
+    """작업자가 말한 동 순서대로, 구역마다 놓은 역순(2층 먼저 — 트레이 안 경로가 빈 칸 위로 지나게)으로
+    집어 트럭 칸 0 부터 놓는다. 트럭이 차거나 실을 것이 없으면 끝(남은 박스는 다음 트럭)."""
+    cap = ctx.cfg.truck_capacity
+    if cap <= 0:
+        return _reject(ctx, "voss_config 에 zones.truck 이 없음")
+    if ctx.state not in (RUNNING, PAUSED) or ctx.phase != PH_NONE or ctx.box is not None:
+        return _reject(ctx, f"{ctx.state} 에서는 트럭 적재 불가 (분류 중 박스가 끝난 뒤)")
+    if ctx.resume_to:
+        return _reject(ctx, f"멈춘 작업({ctx.resume_to})이 있음 — resume 으로 끝낸 뒤")
+    nr = [k for k in ("ROBOT",) if k in not_ready_items(ctx, ev.not_ready)]
+    if nr:
+        return _reject(ctx, "준비 안 됨: ROBOT")
+    zones = load_order(ctx.cfg, arg)
+    if isinstance(zones, str):
+        return _reject(ctx, zones)
+    free = cap - ctx.truck_count
+    if free <= 0:
+        return _reject(ctx, f"트럭 가득 ({cap}칸) — 비운 뒤 reset_zone TRUCK")
+    plan = tuple((z, n) for z in zones for n in reversed(range(ctx.slots[z])))[:free]
+    if not plan:
+        return _reject(ctx, f"{', '.join(zones)} 구역에 실을 박스가 없음")
+    out = _load_next(
+        replace(ctx, state=LOADING, load_plan=plan, load_done=0, stop_requested=False), ev.now_ns
+    )
+    word = " → ".join(zones)
+    msg = f"트럭 적재 시작 {word}: {len(plan)}개 (트럭 {ctx.truck_count}/{cap})"
+    return Out(out.ctx, (Log("info", msg), *out.actions), (True, msg))
+
+
+def _load_next(ctx: Ctx, now_ns: int) -> Out:
+    cap = ctx.cfg.truck_capacity
+    if not ctx.load_plan or ctx.truck_count >= cap:
+        return _load_finish(ctx, now_ns)
+    (zone, n), rest = ctx.load_plan[0], ctx.load_plan[1:]
+    slot = ctx.cfg.slot_at(zone, n)
+    return Out(
+        replace(ctx, load_plan=rest, load_item=(zone, n), phase=PH_TPICK),
+        (
+            CallMove(zone, slot, "PICK"),
+            Log("info", f"트럭 적재: {zone} 칸 {slot} 집기 → 트럭 칸 {ctx.truck_count}"),
+        ),
+    )
+
+
+def _load_finish(ctx: Ctx, now_ns: int) -> Out:
+    cap = ctx.cfg.truck_capacity
+    left = {z: ctx.slots[z] for z in SORT_ZONES if ctx.slots[z]}
+    rest = ", ".join(f"{z} {k}" for z, k in left.items()) or "없음"
+    full = " — 트럭 가득" if ctx.truck_count >= cap else ""
+    nxt, acts = _enter_running(
+        replace(ctx, load_plan=(), load_item=None, resume_to=""), now_ns, stop_requested=False
+    )
+    text = f"트럭 적재 끝: 이번 {ctx.load_done}개, 트럭 {ctx.truck_count}/{cap}{full}. 남은 박스 {rest}"
+    return Out(nxt, (*acts, Log("info", text), Say(f"트럭에 {ctx.load_done}개를 실었습니다.")))
+
+
+def _on_load_move(ctx: Ctx, ev: MoveDone) -> Out:
+    zone, n = ctx.load_item or ("", -1)
+    slot = ctx.cfg.slot_at(zone, n) if zone else -1
+    t = ctx.truck_count
+    paused = ctx.state == PAUSED
+    if ctx.phase == PH_TPICK:
+        if ev.ok:
+            # 놓은 역순으로 집으니 그 구역의 다음 칸 = n (빈 칸)
+            nxt = replace(ctx, slots={**ctx.slots, zone: min(ctx.slots[zone], n)})
+            if paused:
+                return Out(
+                    replace(nxt, phase=PH_NONE, resume_to="TPLACE"),
+                    (Log("warn", f"{zone} 칸 {slot} 박스를 든 채 멈춤 — resume 하면 트럭 칸 {t} 에 놓는다"),),
+                )
+            return Out(
+                replace(nxt, phase=PH_TPLACE),
+                (CallMove("TRUCK", t, "STAY"), Log("info", f"{zone} 칸 {slot} 집음 → 트럭 칸 {t}")),
+            )
+        if ev.message.startswith("GRIP_FAIL") and "열고 상승함" in ev.message:
+            # 집지 못하고 열어 올라왔다(박스는 칸에 그대로거나 칸이 비었다) → 건너뛴다
+            skip = Log("warn", f"{zone} 칸 {slot} 집기 실패 — 건너뜀: {ev.message}")
+            base = replace(ctx, phase=PH_NONE, load_item=None)
+            if paused:
+                return Out(replace(base, resume_to="LOAD"), (skip,))
+            out = _load_next(base, ev.now_ns)
+            return Out(out.ctx, (skip, *out.actions))
+        acts: list = [Log("error", f"{zone} 칸 {slot} 집기 실패 {ev.message} → PAUSED")]
+        if not paused:
+            acts.append(Say("트럭 적재 중 문제가 생겨 일시정지했습니다."))
+        back = replace(
+            ctx, state=PAUSED, phase=PH_NONE, load_item=None, load_plan=((zone, n), *ctx.load_plan)
+        )
+        return Out(replace(back, resume_to="LOAD"), tuple(acts))
+    # PH_TPLACE
+    placed = ev.placed_stamp_ns != 0
+    nxt = replace(
+        ctx,
+        phase=PH_NONE,
+        truck_count=t + (1 if placed else 0),
+        load_done=ctx.load_done + (1 if placed else 0),
+    )
+    if ev.ok and not paused:
+        out = _load_next(replace(nxt, load_item=None), ev.now_ns)
+        return Out(out.ctx, (Log("info", f"트럭 칸 {t} 적재 완료"), *out.actions))
+    if placed:
+        # 트럭에 놓았다(복귀 실패·stop 포함) → resume 하면 다음 박스
+        acts = [Log("warn" if paused else "error", f"트럭 칸 {t} 놓음, ok={ev.ok} {ev.message} → PAUSED")]
+        if not paused and not ev.ok:
+            acts.append(Say("트럭 적재 중 문제가 생겨 일시정지했습니다."))
+        return Out(replace(nxt, state=PAUSED, load_item=None, resume_to="LOAD"), tuple(acts))
+    # 놓기 전 실패 — 박스를 든 채일 수 있다(자동 개방 없음). resume 하면 같은 트럭 칸에 다시 놓기
+    acts = [Log("error", f"트럭 칸 {t} 에 놓기 전 실패 {ev.message} — 박스를 든 채일 수 있음 → PAUSED")]
+    if not paused:
+        acts.append(Say("트럭 적재 중 문제가 생겨 일시정지했습니다."))
+    return Out(replace(nxt, state=PAUSED, resume_to="TPLACE"), tuple(acts))
+
+
+def _resume_load(ctx: Ctx, now_ns: int) -> Out:
+    base = replace(ctx, state=LOADING, stop_requested=False, resume_to="")
+    if ctx.resume_to == "TPLACE":
+        t = ctx.truck_count
+        return Out(
+            replace(base, phase=PH_TPLACE),
+            (CallMove("TRUCK", t, "STAY"), Log("info", f"resume — 트럭 칸 {t} 에 놓기")),
+            (True, "resume 접수 (트럭에 놓기)"),
+        )
+    out = _load_next(base, now_ns)
+    return Out(out.ctx, (Log("info", "resume — 트럭 적재 계속"), *out.actions), (True, "resume 접수 (트럭 적재)"))

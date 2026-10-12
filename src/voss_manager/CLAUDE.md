@@ -27,3 +27,4 @@
 - **ROBOT 준비:** RobotState READY·STOPPED + connected + 오류 없음. BUSY 는 우리 goal·MoveToZone 중이거나 끝난 뒤 `robot_busy_grace_s`(1.5 s) 안일 때만 준비(운전 중 `SortState.ready` 유지). 남이 움직이는 BUSY 는 미준비.
 - **준비 판단 한계:** VISION·OCR 은 발행자 존재만 본다(BoxTrack·LabelRead 는 박스가 있을 때만 나와서 나이로 장애를 못 가른다). SERVO 는 액션 서버 존재. 상태 신호(heartbeat)는 인터페이스 변경이라 G0 뒤 논의.
 - **아직 없음:** label_reader 의 `/voss/vision/read_label`(3단계, T23 비전) — 없으면 바로 질문으로 간다. `zones.recheck.view_pose` 교시(김학민 T35) 전에는 VIEW 가 거부돼 질문으로 간다. UpdateZoneMap(C 범위), voss_config 쓰기.
+- **트럭 적재(load_truck, 10/12 로컬 시험 브랜치 — 담당 확인 전):** 작업자가 말한 동 순서대로, 구역마다 놓은 역순(2층 먼저, C 의 +X·+Y 끝 칸은 마지막 — 트레이 안 경로가 빈 칸 위로 지나게)으로 `MoveToZone(구역, 칸, PICK)` → `MoveToZone(TRUCK, n, STAY)`(홈 복귀 없이 다음 집기). 트럭(`zones.truck` 칸 수, 16)이 차거나 실을 것이 없으면 OBSERVE → RUNNING, 남은 박스는 다음 트럭. 상태 `LOADING`. 집기 GRIP_FAIL(열고 상승함)은 건너뛰고, 그 밖의 실패·stop 은 PAUSED → resume 이 이어 간다(든 채 멈췄으면 트럭에 놓기부터). 보류 박스는 싣지 않는다.

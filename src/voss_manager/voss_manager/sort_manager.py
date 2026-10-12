@@ -101,7 +101,7 @@ class SortManagerNode(Node):
         self.get_logger().info(
             f"voss_config {self.config_path} version {cfg.version} sha256 {hashlib.sha256(raw).hexdigest()[:12]}, "
             f"구역 칸 {cfg.capacity}, confidence_min {cfg.confidence_min}, home_first {home_first}, "
-            f"defer_recheck {defer_recheck}"
+            f"defer_recheck {defer_recheck}, 트럭 {cfg.truck_capacity}칸"
         )
 
         # 발행
