@@ -134,7 +134,12 @@ def host_plan(a: dict[str, str]) -> list[Step]:
     if on(a["with_camera"], dry):  # T3
         steps.append(
             Step(
-                "node", "realsense2_camera", "realsense2_camera_node", dict(CAMERA_PARAMS), "camera", "/"
+                "node",
+                "realsense2_camera",
+                "realsense2_camera_node",
+                dict(CAMERA_PARAMS),
+                "camera",
+                "/",
             )
         )
     if on(a["with_logger"], dry):  # T4 — sort_manager 보다 먼저
