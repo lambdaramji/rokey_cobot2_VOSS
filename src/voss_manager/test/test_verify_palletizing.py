@@ -366,8 +366,8 @@ def test_resume_continues_at_next_slot(cfg) -> None:
     assert [(a.zone, a.slot) for a in o.actions if isinstance(a, f.CallMove)] == [("C", 1)]
 
 
-def test_failed_box_slot_is_left_empty(cfg) -> None:
-    """명세 미정 기록(pending #37): GRIP_FAIL 3회로 FAILED 가 된 박스의 칸은 비우고 다음 박스는 계획한 칸에 놓는다."""
+def test_failed_box_slot_without_box_above(cfg) -> None:
+    """1층 칸 2개뿐(위층 없음)이면 FAILED 칸은 비워 두고 다음 박스는 계획한 칸에 (위층이 있으면 아래 시험 — #37)."""
     ctx = started(cfg, "청담", {C: 2}).ctx
     for _ in range(3):
         o = pf.step(ctx, f.MoveDone(False, "GRIP_FAIL", 0, 4 * MS))
@@ -377,3 +377,18 @@ def test_failed_box_slot_is_left_empty(cfg) -> None:
     ]
     o = pf.step(ctx, f.MoveDone(True, "OK", 0, 5 * MS))
     assert [(a.zone, a.slot) for a in o.actions if isinstance(a, f.CallMove)] == [("PALLET", 1)]
+
+
+def test_layer2_box_pulled_down_onto_failed_slot(cfg) -> None:
+    """pending #37 결정(10/13): 1층 FAILED 칸 위 2층 박스는 빈 1층 칸에 — 실기 불변식 3(빈칸 위에 올리지 않음)."""
+    ctx = started(cfg, "청담", {C: 4}).ctx
+    acts: list = []
+    for _ in range(3):  # 칸 0 박스 FAILED
+        o = pf.step(ctx, f.MoveDone(False, "GRIP_FAIL", 0, 4 * MS))
+        ctx = o.ctx
+    ctx, acts = drive(ctx, list(o.actions))
+    drops = [a.slot for a in acts if isinstance(a, f.CallMove) and a.mode == "DROP"]
+    assert drops == [1, 0, 3]  # 칸 2 박스 → 칸 0, 칸 2 는 빈칸
+    st = pf.pallet_state(ctx)
+    cells = {pp.slot_cell(i) for i, s in enumerate(st["slot_state"]) if s == "DONE"}
+    assert all((c, 1, ln) in cells for (c, la, ln) in cells if la == 2)  # 2층 아래는 늘 1층
