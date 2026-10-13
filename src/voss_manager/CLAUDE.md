@@ -10,6 +10,7 @@
 - `sort_fsm.py` 순수 전이 `step(ctx, event) → Out(ctx, actions, reply)`. `readiness.py` 준비 판단. `sort_manager.py` 는 입출력·장비 호출 시간 초과만(단일 스레드 executor, 잠금 없음).
 - 파라미터 `config/sort_manager.yaml`, voss_config 는 `config_path`(launch `config_dir`, 기본 `VOSS_CONFIG_DIR` → 레포 `config/`). 어긋난 설정은 기동 거부.
 - 로봇 없이 시험: `tools/mock/g0_mock.py` (belt_servo·gateway·logger·비전 대역, 아무것도 움직이지 않음).
+- `pallet_plan.py` 팔레타이징 배치 계획(S2-T04, **BRD v1.5** 10.4): 팔레트 4열 × 2줄 × 2층 = 16칸 고정, slot = (열−1)×4 + (층−1)×2 + (줄−1)(결정 D2). 대상 16개 이하면 전부, 넘으면 물량 많은 순(동률이면 먼저 방문하는 동이 후순위)으로 `allocate()` — 못 실은 박스는 OVERFLOW, 경로 밖 동은 EXCLUDED(`Plan.unloaded`, 원래 칸에 그대로). 위치는 수량과 따로 마지막 방문 동부터 slot 0 → 15(열 단위, 열 안 1층 2칸 → 2층 2칸, 같은 층 1줄 → 2줄 — D6 제안). 한 동의 일부만 실을 때는 (구역, 칸) 앞의 박스부터(명세 미정). 같은 구역·칸에 PLACED 가 둘이면(세션 중 reset_zone) 나중 것만. 재개는 다시 계획하지 않고 `remaining()`. 시험 = 정답 생성기·S1~S8·불변식 500회(`test/test_pallet_plan.py`).
 
 ## 운용 규칙 (T20, SRD F-04/06/07·T23 확정 전 값은 제안)
 - **분류 결정:** RUNNING 에서 OBSERVE 도착 뒤 촬영된 stage 1 판독으로 정한다. 확실(분류코드 우선, 동 이름과 같고 `confidence ≥ ocr.confidence_min`)하면 목적 구역으로 바로 집는다. 한 번에 한 박스.
@@ -26,4 +27,6 @@
 - **priority:** 비대상은 PASSED·NON_TARGET·attempts 0. IDLE 에서 저장한 우선은 start 뒤에도 유지, 운전 중 start(ALL) 는 전체로 전환. PAUSED 에서는 거부. 불확실한 박스는 동을 몰라 재확인으로 보낸다(판정 뒤 그 구역에 놓는다).
 - **ROBOT 준비:** RobotState READY·STOPPED + connected + 오류 없음. BUSY 는 우리 goal·MoveToZone 중이거나 끝난 뒤 `robot_busy_grace_s`(1.5 s) 안일 때만 준비(운전 중 `SortState.ready` 유지). 남이 움직이는 BUSY 는 미준비.
 - **준비 판단 한계:** VISION·OCR 은 발행자 존재만 본다(BoxTrack·LabelRead 는 박스가 있을 때만 나와서 나이로 장애를 못 가른다). SERVO 는 액션 서버 존재. 상태 신호(heartbeat)는 인터페이스 변경이라 G0 뒤 논의.
+- **팔레타이징(PALLETIZING, S2-T05 — `pallet_fsm.py`, 노드는 `pallet_fsm.step`):** `palletize <동,동,…>` 는 처리 중 박스가 없는 RUNNING·PAUSED 또는 세션이 있는 IDLE 에서, ROBOT·LOG 준비·`zones.pallet.pose` 교시·팔레트 칸 0 일 때만 받는다(응답 = 접수). ListPlacements → `pallet_plan` → **계획 직후(첫 PICK 전)** 시작 안내·싣지 않는 박스의 PalletResult(OVERFLOW·EXCLUDED)·PalletState(집계·경고·16칸 배정) → 박스마다 `MoveToZone(구역, 칸, PICK)` → `MoveToZone(PALLET, slot 0~15, DROP)` → PalletResult(DONE·FAILED). 대상 조회 실패·계획 거부는 음성으로 알리고 시작 전 상태로. GRIP_FAIL 은 최대 3회 뒤 FAILED·GRIP_FAIL·다음 박스. 그 밖의 실패·stop → PAUSED, resume 은 남은 박스부터 — 박스를 든 채(또는 집다가) 멈췄으면 RobotState 보고 폭(`pallet_hold_width_mm`)으로 확인해 쥐고 있으면 놓고, 집은 박스를 놓쳤으면 FAILED·DROPPED + 안내, 집다가 멈췄는데 빈손이면 다시 집는다. 폭을 모르면 resume 거부. 놓은 뒤 끊긴 DROP 은 DONE(+STOPPED·DEVICE_ERROR). 끝나면 OBSERVE → 트레이가 다 빈 구역 칸 0(`emptied_zones` — 초과·경로 제외가 남은 구역은 그대로) → 구역별 실은 수·초과·경로 제외·실패 안내(`finish_sentence`) → 시작 전 상태(RUNNING 이면 도착 시각부터 판독). 팔레타이징 중 start·priority·answer·reset_zone 거부, 멈춘 실행이 있으면 reset_zone(모든 구역)·palletize 거부. `reset_zone PALLET` 은 IDLE·PAUSED 에서만(사람이 손을 넣기 전에 멈춘다). 멈춘 실행을 버리는 명령은 아직 없다(노드 재시작).
+- **SortResult.slot (S2-T07 sort_manager 몫):** PLACED·HELD 는 놓은 칸, 재확인 칸 PICK 실패 HELD 는 재확인 칸, 그 밖은 -1.
 - **아직 없음:** label_reader 의 `/voss/vision/read_label`(3단계, T23 비전) — 없으면 바로 질문으로 간다. `zones.recheck.view_pose` 교시(김학민 T35) 전에는 VIEW 가 거부돼 질문으로 간다. UpdateZoneMap(C 범위), voss_config 쓰기.

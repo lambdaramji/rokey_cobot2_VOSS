@@ -22,8 +22,8 @@ from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 from std_msgs.msg import String
 
-from voss_hmi.mqtt_logic import CommandError, parse_command_json
-from voss_msgs.msg import RobotState, SortResult, SortState, ZoneMap
+from voss_hmi.mqtt_logic import CommandError, pallet_state_payload, parse_command_json
+from voss_msgs.msg import PalletState, RobotState, SortResult, SortState, ZoneMap
 from voss_msgs.srv import Command
 
 MQTT_HOST = "127.0.0.1"
@@ -97,6 +97,12 @@ class HmiBridgeNode(Node):
             "/voss/log/status",
             self._on_log_status,
             QOS_RELIABLE_10,
+        )
+        self.create_subscription(
+            PalletState,
+            "/voss/pallet/state",
+            self._on_pallet_state,
+            QOS_TRANSIENT_1,  # topics.md: reliable·transient_local·1
         )
 
         self._mqtt = self._create_mqtt_client()
@@ -199,8 +205,15 @@ class HmiBridgeNode(Node):
             "rule_version": message.rule_version,
             "reason": message.reason,
             "attempts": int(message.attempts),
+            "slot": int(message.slot),  # Sprint 2: 놓은 칸, 없으면 -1
         }
         self._publish_json("voss/result", payload, qos=1, retain=False)
+
+    def _on_pallet_state(self, message: PalletState) -> None:
+        """PalletState 를 retained voss/pallet/state 로 (Sprint 2, mqtt.md — 3D 팔레트·집계·경고)."""
+
+        fields = {name: getattr(message, name) for name in PalletState.get_fields_and_field_types()}
+        self._publish_json("voss/pallet/state", pallet_state_payload(fields), qos=1, retain=True)
 
     def _on_zone_map(self, message: ZoneMap) -> None:
         """ZoneMap을 retained voss/zone_map으로 발행한다."""

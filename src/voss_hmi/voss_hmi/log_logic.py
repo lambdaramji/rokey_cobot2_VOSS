@@ -2,6 +2,7 @@
 
 하는 일
 - SortResult 필드 → DB `sort_log` 한 행으로 바꾼다 (voss_msgs.md "DB sort_log 대응").
+- PalletResult 필드 → DB `pallet_log` 한 행, ListPlacements 응답 만들기 (Sprint 2 S2-T07, BRD v1.5 TR-PAL-03·09).
 - DB 에 못 쓴 행을 jsonl 파일(스풀)에 쌓고, 나중에 순서대로 다시 보낸다 (SRD v1.0 §5, #52 MC-027).
 - `/voss/log/status` 에 낼 상태를 정한다: STARTING / OK / DB_ERROR / SPOOL_FULL (topics.md).
 
@@ -44,6 +45,26 @@ SORT_LOG_COLUMNS = [
     "attempts",
     "started_at",
     "finished_at",
+    "slot",  # Sprint 2 (SortResult.slot, -1 → NULL). 스키마도 맨 끝
+]
+
+# pallet_log 컬럼 (docker/db/init/01_schema.sql, Sprint 2·BRD v1.5). 유일키 (run_id, box_id)
+PALLET_LOG_COLUMNS = [
+    "run_id",
+    "box_id",
+    "session_id",
+    "dong",
+    "route_index",
+    "zone",
+    "slot",
+    "pallet_slot",
+    "pallet_col",
+    "pallet_lane",
+    "pallet_layer",
+    "result",
+    "reason",
+    "attempts",
+    "finished_at",
 ]
 
 
@@ -81,7 +102,69 @@ def result_to_row(result: dict) -> dict:
         "attempts": result["attempts"],
         "started_at": ros_time_to_iso(started_sec, started_nanosec),
         "finished_at": ros_time_to_iso(stamp_sec, stamp_nanosec),
+        "slot": _or_none(result.get("slot", -1), -1),  # 놓지 않았거나 모름(-1) → NULL
     }
+
+
+def _or_none(value: int, missing: int) -> int | None:
+    return None if value is None or value == missing else int(value)
+
+
+def pallet_result_to_row(result: dict) -> dict:
+    """PalletResult 필드(dict) → pallet_log 한 행. outcome → result, stamp → finished_at.
+    싣지 않은 박스(OVERFLOW·EXCLUDED)의 pallet_slot -1·열·줄·층 0 은 NULL (voss_msgs.md PalletResult)."""
+    sec, nanosec = result["stamp"]
+    return {
+        "run_id": result["run_id"],
+        "box_id": result["box_id"],
+        "session_id": result["session_id"],
+        "dong": result["dong"],
+        "route_index": result["route_index"],
+        "zone": result["zone"],
+        "slot": result["slot"],
+        "pallet_slot": _or_none(result["pallet_slot"], -1),
+        "pallet_col": _or_none(result["pallet_col"], 0),
+        "pallet_lane": _or_none(result["pallet_lane"], 0),
+        "pallet_layer": _or_none(result["pallet_layer"], 0),
+        "result": result["outcome"],
+        "reason": result["reason"],
+        "attempts": result["attempts"],
+        "finished_at": ros_time_to_iso(sec, nanosec),
+    }
+
+
+def placements_from_rows(rows: list[tuple]) -> list[dict]:
+    """DB 조회 결과 (box_id, dong, zone, slot, finished_at(datetime), palletized) → ListPlacements 항목.
+    slot NULL → -1(그 박스가 경로 동이면 sort_manager 가 시작하지 않는다), 시각은 (sec, nanosec)."""
+    out = []
+    for box_id, dong, zone, slot, finished_at, palletized in rows:
+        ns = round(finished_at.timestamp() * 1e9) if finished_at else 0
+        out.append({"box_id": box_id, "dong": dong, "zone": zone, "slot": -1 if slot is None else int(slot),
+                    "stamp": divmod(ns, 1_000_000_000), "palletized": bool(palletized)})  # fmt: skip
+    return out
+
+
+def list_placements_reply(session_id: str, spool_rows: int, query) -> tuple[bool, str, list[dict]]:
+    """ListPlacements 응답 (ok, message, placements). query(session_id) → DB 행, 실패하면 예외(DbError 등).
+    INVALID = session_id 비었음, SPOOL_PENDING = 스풀에 DB 미반영 결과가 있음(칸 기록이 빠진 채 계획하지 않게),
+    DB_ERROR = DB 를 읽을 수 없음 (voss_msgs.md ListPlacements, TR-PAL-03 — 그러면 sort_manager 는 시작하지 않는다)."""
+    if not session_id.strip():
+        return False, "INVALID: session_id 비었음", []
+    if spool_rows > 0:
+        return False, f"SPOOL_PENDING: 스풀에 DB 미반영 {spool_rows}행", []
+    try:
+        rows = query(session_id)
+    except Exception as error:  # noqa: BLE001 — 어떤 실패든 시작하지 않게 DB_ERROR 로 답한다
+        return False, f"DB_ERROR: {error}", []
+    return True, "", placements_from_rows(rows)
+
+
+STATUS_RANK = {STATUS_OK: 0, STATUS_DB_ERROR: 1, STATUS_SPOOL_FULL: 2, STATUS_STARTING: 3}
+
+
+def worst_status(*statuses: str) -> str:
+    """sort_log·pallet_log 두 저장 흐름의 상태 중 나쁜 쪽 (/voss/log/status 는 하나만 낸다)."""
+    return max(statuses, key=lambda s: STATUS_RANK.get(s, 0))
 
 
 def retry_delay_s(failures_in_a_row: int) -> int:

@@ -13,8 +13,9 @@ from dataclasses import dataclass
 from datetime import datetime
 
 COMMAND_MAX_AGE_S = 30.0
-ALLOWED_TYPES = {"start", "stop", "resume", "priority", "answer", "reset_zone"}
-RESETTABLE_ZONES = {"A", "B", "C", "RECHECK", "HOLD"}
+ALLOWED_TYPES = {"start", "stop", "resume", "priority", "answer", "reset_zone", "palletize"}
+RESETTABLE_ZONES = {"A", "B", "C", "RECHECK", "HOLD", "PALLET"}  # PALLET: Sprint 2 팔레트 비움
+MAX_ROUTE = 3  # palletize 경로 동 1~3개 (mqtt.md, TR-PAL-01)
 
 
 @dataclass(frozen=True)
@@ -139,7 +140,44 @@ def _command_arg(command_type: str, args: dict[str, object]) -> str:
     if command_type == "answer":
         return _answer_arg(args)
 
+    if command_type == "palletize":
+        _require_exact_keys(args, {"route"})
+        return _route_arg(args["route"])
+
     raise CommandError("INVALID_COMMAND")
+
+
+def _route_arg(route: object) -> str:
+    """palletize route 배열 → "역삼동,대치동,청담동" (1~3개·중복 없음). 등록 동 여부와 시작 조건은 manager 가 본다."""
+
+    if not isinstance(route, list) or not 1 <= len(route) <= MAX_ROUTE:
+        raise CommandError("INVALID_ARGS")
+    names = [_required_text(name) for name in route]
+    if len(set(names)) != len(names) or any("," in name for name in names):
+        raise CommandError("INVALID_ARGS")
+    return ",".join(names)
+
+
+def pallet_state_payload(fields: dict) -> dict:
+    """PalletState 필드(dict) → voss/pallet/state JSON (mqtt.md, 필드 이름 그대로 — ROS 배열은 list 로)."""
+
+    lists = (
+        "route",
+        "dongs",
+        "load",
+        "overflow",
+        "excluded",
+        "slot_state",
+        "slot_box_id",
+        "slot_dong",
+    )
+    out = {key: (list(value) if key in lists else value) for key, value in fields.items()}
+    for key in ("load", "overflow", "excluded"):
+        out[key] = [int(v) for v in out[key]]
+    for key in ("total", "done", "failed"):
+        out[key] = int(out[key])
+    out["overflow_warning"] = bool(out["overflow_warning"])
+    return out
 
 
 def _answer_arg(args: dict[str, object]) -> str:

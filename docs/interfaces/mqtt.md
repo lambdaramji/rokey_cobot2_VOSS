@@ -7,7 +7,7 @@
 - Mosquitto listener 자체는 `0.0.0.0:1883` 을 사용하되 방화벽으로 노출을 제한한다. `enp4s0`(로봇망)은 항상 차단한다. `wlo1` 은 개발 중 개인 PC의 읽기 전용 디버깅이 필요할 때만 임시로 열고, **시연 때는 1883/wlo1 을 닫는다**. HMI는 공용 PC의 Spring Boot가 로컬로 붙으므로 시연 기능에는 영향이 없다.
 - `allow_anonymous false`. 비밀번호 파일과 실제 비밀번호는 Git에 넣지 않고 공용 PC에서 생성한다(`.env`/로컬 파일만). ACL은 아래처럼 고정한다.
   - `web`: `voss/command` write, `voss/#` read
-  - `bridge`: `voss/command` read. write는 `voss/state`·`voss/result`·`voss/zone_map`·`voss/robot`·`voss/command/ack`·`voss/log_status`만 허용한다 (`voss/command` write 금지)
+  - `bridge`: `voss/command` read. write는 `voss/state`·`voss/result`·`voss/zone_map`·`voss/robot`·`voss/command/ack`·`voss/log_status`·`voss/pallet/state`(Sprint 2)만 허용한다 (`voss/command` write 금지)
   - `debug`: `voss/#` read only
 - 런타임 계정의 비밀번호는 환경 변수로 주입한다. hmi_bridge 는 `VOSS_MQTT_BRIDGE_PASSWORD`, Spring Boot 는 웹 컨테이너의 MQTT 비밀번호 변수를 사용한다.
 
@@ -21,9 +21,11 @@
 | `voss/command` | 웹 → ROS | 1 | false | `{"command_id", "type", "args", "raw_text", "sent_at"}` — Spring Boot 가 `command_id`(UUID)·`sent_at` 을 붙인다(web_api.md `POST /api/commands`) |
 | `voss/command/ack` | ROS → 웹 | 1 | false | `{"command_id", "ok", "message", "acked_at"}` — `/voss/sort/command` 응답(= manager **접수**, 완료 아님) |
 | `voss/log_status` | ROS → 웹 | 1 | **true** | `{"status":"STARTING|OK|DB_ERROR|SPOOL_FULL","stamp":"…"}` — `/voss/log/status` 값을 hmi_bridge 가 전달. Spring Boot 재기동 직후에도 마지막 logger 상태를 받기 위해 retained |
+| `voss/pallet/state` | ROS → 웹 | 1 | **true** | **Sprint 2.** PalletState 필드 이름 그대로: `run_id`, `state`, `route`, `dongs`, `load`, `overflow`, `excluded`, `overflow_warning`, `total`, `done`, `failed`, `box_id`, `slot_state`, `slot_box_id`, `slot_dong`(voss_msgs.md, 칸 배열 16 = slot 0~15). 3D 팔레트·진행률·구역별 실을 수/초과/경로 제외·"배송 물량 남음" 경고(TR-PAL-10, BRD v1.5). Spring Boot 재기동 직후에도 마지막 배치도를 받기 위해 retained |
 
 - 시각은 모두 ISO-8601 `+09:00` 문자열(공용 PC 시스템 시계). ROS Time 은 hmi_bridge 가 바꾼다.
-- `type` 은 Command canonical 명령(voss_msgs.md): `start`·`stop`·`resume`·`priority`·`answer`·`reset_zone`. 다른 문자열은 실행하지 않는다.
+- `type` 은 Command canonical 명령(voss_msgs.md): `start`·`stop`·`resume`·`priority`·`answer`·`reset_zone`·`palletize`(Sprint 2). 다른 문자열은 실행하지 않는다.
+- `voss/result` 의 SortResult 필드에는 Sprint 2 의 `slot`(놓은 칸, 없으면 -1)이 끝에 붙는다.
 
 ### `voss/command.args` → `Command.arg` 변환표
 
@@ -34,10 +36,12 @@
 | `resume` | `{}` | `""` |
 | `priority` | `{"dong":"역삼동"}` | 정식 동 이름, 예 `"역삼동"` |
 | `answer` | `{"box_id":"<현재 질문 box_id>","dong":"역삼동"}` **또는** `{"box_id":"…","zone":"HOLD"}` | `"<box_id>|<동 또는 HOLD>"` |
-| `reset_zone` | `{"zone":"A"}` | `"A"` (A/B/C/RECHECK/HOLD) |
+| `reset_zone` | `{"zone":"A"}` | `"A"` (A/B/C/RECHECK/HOLD, Sprint 2 `PALLET`) |
+| `palletize` | `{"route":["역삼동","대치동","청담동"]}` | `"역삼동,대치동,청담동"` — 배송 순서(첫 배송지부터) 정식 동 이름을 쉼표로 (Sprint 2) |
 
 - `priority.dong` 은 zone_map 의 정식 동 이름이어야 한다. 별칭 변환은 음성 intent_parser 역할이며 HMI는 정식 이름을 보낸다.
 - `answer` 는 `dong` 과 `zone` 중 정확히 하나만 허용하고, `zone` 은 `HOLD` 만 허용한다.
+- `palletize.route` 는 zone_map 정식 동 이름 문자열 배열, 1~3개·중복 없음. 아니면 `INVALID_ARGS`(등록 여부·시작 조건은 manager 가 다시 본다).
 - 정의되지 않은 `args` 키나 필수값 누락은 실행하지 않고 `INVALID_ARGS` ack 로 거부한다.
 
 ## 명령 처리 규칙 (hmi_bridge)
@@ -55,3 +59,5 @@
 - 2026-10-08: #20 확정 — Mosquitto=공용 PC 호스트 1883, 시연 때 wlo1/1883 차단, 7개 토픽의 QoS/retained 확정, command args→Command.arg 표와 bridge 거부 코드 확정, `voss/log_status` 채택.
 - 2026-10-05: 초안.
 - 2026-10-07: SRD v1.0 정합 (#6). #52 MC-026 합의(정의석 결정)를 옮김 — 6개 토픽·QoS·retained, command/ack JSON, 10분 중복 억제·30초 EXPIRED, ISO 시각, Spring Boot 가 클라이언트. `voss/robot` 필드(#55). 브로커 위치·args 변환표·로그 상태 토픽은 #20. #84 리뷰 반영: stop 은 EXPIRED 예외, result 0 시각 = null 확정, `voss/log_status` 제안.
+- 2026-10-12: **Sprint 2**(BRD v1.4 10.7, S2-T01 — 제안, 정의석 확인 필요). `voss/pallet/state`(QoS 1, retained) 추가·bridge ACL write 에 추가, command `palletize`(args `route` 배열 → 쉼표 문자열), `reset_zone` 에 `PALLET`, `voss/result` 에 `slot`.
+- 2026-10-12 저녁: BRD v1.5 — `voss/pallet/state` 필드에 집계(`dongs`·`load`·`overflow`·`excluded`·`overflow_warning`)·`slot_dong` 추가, 칸 16 고정.

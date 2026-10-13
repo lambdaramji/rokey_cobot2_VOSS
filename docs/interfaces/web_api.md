@@ -15,7 +15,7 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
   | 8080 Spring Boot (`server.address=127.0.0.1`) · 8000 FastAPI · 5432 PostgreSQL (`listen_addresses=localhost`) | 127.0.0.1 | ❌ |
 
   로봇망 `enp4s0` 에는 어떤 웹·MQTT 포트도 열지 않는다.
-- **로봇을 움직이는 명령의 접근 제한 (안전, #68 남현지 🔴):** `POST /api/commands` 의 `start`·`resume`·`priority`·`answer`·`reset_zone` 은 **공용 PC 로컬 접속(공용 PC 화면의 HMI)** 에서만 받는다. 그 밖은 `403 {"ok": false, "message": "FORBIDDEN_REMOTE"}`. **`stop` 은 어디서든 받는다**(멈추는 쪽은 막지 않는다). 조회(`GET`)·SSE 는 `wlo1` 허용.
+- **로봇을 움직이는 명령의 접근 제한 (안전, #68 남현지 🔴):** `POST /api/commands` 의 `start`·`resume`·`priority`·`answer`·`reset_zone`·`palletize`(Sprint 2) 는 **공용 PC 로컬 접속(공용 PC 화면의 HMI)** 에서만 받는다. 그 밖은 `403 {"ok": false, "message": "FORBIDDEN_REMOTE"}`. **`stop` 은 어디서든 받는다**(멈추는 쪽은 막지 않는다). 조회(`GET`)·SSE 는 `wlo1` 허용.
   - 원격 판정은 Nginx 가 넣는 `X-Real-IP $remote_addr` 로만 한다. 클라이언트가 보낸 `X-Forwarded-For` 는 믿지 않는다(Nginx 뒤에서는 모든 요청이 127.0.0.1 로 보이므로).
   - 판정은 Spring Boot 한 곳에서만 한다. hmi_bridge(ROS) 는 원격 여부를 다시 판단하지 않는다.
 - **Mosquitto ACL:** `voss/command` 쓰기는 Spring Boot 계정(`web`)만. 개인 PC 디버그 계정(`debug`)은 `voss/#` 읽기만. hmi_bridge 계정(`bridge`)은 `voss/command` 읽기와 bridge 출력 토픽만 쓰기(`voss/command` write 금지). 비밀번호는 Git에 넣지 않는다. 브로커는 공용 PC 호스트 1883이며 시연 때 `wlo1`의 1883은 닫는다. 상세는 #20 `mqtt.md`.
@@ -73,7 +73,7 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 - 행을 사후에 고르지 않는다. 필터는 받는 쪽에서 SQL·스프레드시트로 한다.
 
 ### `POST /api/commands` — HMI 버튼 → MQTT `voss/command`
-- 요청 `{"type": "start|stop|resume|priority|answer|reset_zone", "args": {...}, "raw_text": "HMI 버튼"}` (type·args 는 `Command` canonical 표, voss_msgs.md)
+- 요청 `{"type": "start|stop|resume|priority|answer|reset_zone|palletize", "args": {...}, "raw_text": "HMI 버튼"}` (type·args 는 `Command` canonical 표, voss_msgs.md)
 - Spring Boot 가 `command_id`(UUID)·`sent_at` 을 붙여 MQTT 로 발행하고 **즉시** `202 {"ok": true, "command_id": "…"}` 를 준다. 이것은 "브로커 전달" 이지 manager 접수가 아니다.
 - manager 접수 결과는 SSE `command_ack` 이벤트로 온다(hmi_bridge 가 `/voss/sort/command` 응답을 `voss/command/ack` 로 회신). 완료는 `state`·`result` 이벤트로 본다.
 - 브로커 끊김: `503 {"ok": false, "message": "MQTT_DOWN"}`, HMI 버튼 비활성화.
@@ -124,6 +124,7 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 - 검증: SYS-FR-022 / VT-022, SYS-PF-005 / VT-049
 
 ## 변경 이력
+- 2026-10-12: **Sprint 2**(S2-T01 — 제안). `POST /api/commands` 에 `palletize`(로봇을 움직이므로 공용 PC 로컬만). 팔레트 배치도 SSE·이력 조회(`pallet_log`)는 S2-T08 에서 정한다.
 - 2026-10-08: #20 MQTT 계약 확정에 맞춰 1883/wlo1은 개발 디버그 때만 임시 개방하고 시연 때 차단하도록 정합.
 - 2026-10-07: `SortState.session_id`(#78) 머지에 맞춰 "현재 세션" 확정 — 임시 규칙(최근 `sort_log` 행) 삭제, `session_id == ""` 이면 `NO_SESSION`(#78 김학민 🟢, `/api/sessions/current` 는 예정 수량만), `next` 예정 수량은 첫 결과가 아니라 `start` 때 붙임. "의존" 절 삭제.
 - 2026-10-07: 리뷰 반영(#68 남현지·김학민) — 움직이는 명령은 공용 PC 로컬만·`stop` 은 어디서든, 원격 판정은 Nginx `X-Real-IP`, 포트 바인드 표, Mosquitto ACL, Nginx `/ai` 제거, SortState.session_id 수용.

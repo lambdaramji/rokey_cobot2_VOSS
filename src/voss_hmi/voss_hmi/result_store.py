@@ -30,6 +30,7 @@ class ResultStore:
         log_warn: Callable[[str], None],
         log_error: Callable[[str], None],
         clock: Callable[[], float] = time.monotonic,
+        log_prefix: str = "",
     ) -> None:
         """writer 는 insert(row) -> bool, check() 를 가진 객체(DbWriter 또는 시험용 가짜)."""
         self._writer = writer
@@ -39,6 +40,9 @@ class ResultStore:
         self._warn = log_warn
         self._error = log_error
         self._clock = clock
+        self._prefix = (
+            log_prefix  # pallet_log 흐름은 "pallet_log " — sort_log 의 G0 증거 로그 형식은 그대로
+        )
 
         self.ever_connected = False  # 한 번이라도 DB 연결에 성공했나 (아니면 STARTING)
         self.db_ok = False  # 마지막 DB 시도가 성공했나
@@ -83,11 +87,13 @@ class ResultStore:
             committed_at = datetime.now(UTC).astimezone().isoformat(timespec="milliseconds")
             # G0 증거: commit 이 돌아온 뒤에 남기는 로그 (inserted_at 은 commit 시각이 아니다)
             self._info(
-                f"db_committed box_id={row['box_id']} result={row['result']} zone={row['zone']} "
+                f"{self._prefix}db_committed box_id={row['box_id']} result={row['result']} zone={row['zone']} "
                 f"session={row['session_id']} at={committed_at}"
             )
         else:
-            self._warn(f"duplicate box_id={row['box_id']} — 이미 있는 행, 다시 쓰지 않음")
+            self._warn(
+                f"{self._prefix}duplicate box_id={row['box_id']} — 이미 있는 행, 다시 쓰지 않음"
+            )
 
     def _recover(self) -> None:
         """DB 연결을 확인하고, 스풀에 쌓인 행을 앞에서부터 다시 보낸다."""

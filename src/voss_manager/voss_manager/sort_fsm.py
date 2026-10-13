@@ -8,6 +8,8 @@ step(ctx, event) → Out(ctx', actions, reply). ctx 는 바꾸지 않고 새 값
   불확실(후보는 있는데 LOW_CONF·불일치)하면 PICKING 의 목적지가 재확인 구역 → RECHECK(VIEW → ReadLabel)
   → 확정이면 PICK → 목적 구역 PLACE, 아니면 ASKING(질문 30 s) → 답 → PICK → PLACE / 무응답 → HOLD.
   (SRD v1.0 §5.7 질문, voss_msgs.md MoveToZone 재확인 실패 분기·ReadLabel, #51 MC-017)
+Sprint 2 의 7번째 상태 PALLETIZING(팔레타이징)은 pallet_fsm 이 맡고, 노드는 pallet_fsm.step 을 부른다
+(팔레타이징이 아닌 이벤트는 그대로 이 모듈의 step 으로 간다).
 여기서 정한 규칙은 src/voss_manager/CLAUDE.md "운용 규칙" 에 적는다.
 """
 
@@ -24,6 +26,7 @@ IDLE, RUNNING, PICKING, RECHECK, ASKING, PAUSED = (
     "ASKING",
     "PAUSED",
 )
+PALLETIZING = "PALLETIZING"  # Sprint 2 (pallet_fsm)
 ACTIVE = (RUNNING, PICKING, RECHECK, ASKING)  # start(ALL)·priority 를 받는 운전 상태
 ZONES = ("A", "B", "C", "RECHECK", "HOLD")
 SORT_ZONES = ("A", "B", "C")
@@ -52,6 +55,9 @@ class Config:
     capacity: dict[str, int]  # 구역(대문자) → 칸 수 = grid cols × rows
     confidence_min: float
     version: str  # ZoneMap.version = SortResult.rule_version (≤ 16자)
+    pallet_ready: bool = (
+        False  # zones.pallet.pose 교시됨 (Sprint 2) — 아니면 palletize 를 받지 않는다
+    )
 
     def dong_of(self, name: str) -> str:
         """정식 동 이름 또는 별칭 → 정식 이름. 없으면 ""."""
@@ -101,7 +107,11 @@ def load_config(raw: dict) -> Config:
     version = str(raw.get("version", ""))
     if not version or len(version) > 16:
         raise ValueError(f"version 이 비었거나 16자 초과: {version!r}")
-    return Config(zone_map, codes, aliases, capacity, float(conf), version)
+    pose = (zones.get("PALLET") or {}).get("pose")
+    pallet_ready = (
+        isinstance(pose, list) and len(pose) == 6 and all(isinstance(v, (int, float)) for v in pose)
+    )
+    return Config(zone_map, codes, aliases, capacity, float(conf), version, pallet_ready)
 
 
 def zone_map_entries(cfg: Config) -> list[tuple[str, str, str, list[str]]]:
@@ -117,7 +127,9 @@ def make_session_id(now: datetime, rand4: str) -> str:
     return f"{now:%Y%m%dT%H%M%S}-{rand4}"
 
 
-def intent_to_command(kind: str, dong: str, zone: str, box_id: str) -> tuple[str, str] | None:
+def intent_to_command(
+    kind: str, dong: str, zone: str, box_id: str, route: tuple[str, ...] = ()
+) -> tuple[str, str] | None:
     """Intent → (command, arg) (intent_json.md). update_zone_map 은 C 범위라 None."""
     k = kind.strip().lower()
     if k in ("start", "stop", "resume"):
@@ -126,6 +138,8 @@ def intent_to_command(kind: str, dong: str, zone: str, box_id: str) -> tuple[str
         return "priority", dong
     if k == "answer":
         return "answer", f"{box_id}|{dong or zone}"
+    if k == "palletize":
+        return "palletize", ",".join(route)  # Command arg = 정식 동 이름 쉼표 (Sprint 2)
     return None
 
 
@@ -218,14 +232,28 @@ class Ctx:
     resume_to: str = (
         ""  # PAUSED 에서 resume 할 때 이어 갈 재확인 단계: RECHECK | ASKING | PICK | PLACE
     )
+    # ---- Sprint 2 팔레타이징 (pallet_fsm)
+    pallet: object | None = (
+        None  # pallet_fsm.Run — 실행 중·멈춤·끝난 팔레타이징, reset_zone PALLET 까지 유지
+    )
+    pallet_count: int = (
+        0  # 팔레트에 놓은 박스 수 (≠ 0 이면 palletize 거부, reset_zone PALLET 으로 0)
+    )
+    hold_width_mm: tuple[float, float] = (39.5, 44.0)  # 재개 때 파지 확인 — RG2 보고 폭 범위
 
 
-def new_ctx(cfg: Config, home_first: bool = True, ask_timeout_s: float = 30.0) -> Ctx:
+def new_ctx(
+    cfg: Config,
+    home_first: bool = True,
+    ask_timeout_s: float = 30.0,
+    hold_width_mm: tuple[float, float] = (39.5, 44.0),
+) -> Ctx:
     return Ctx(
         cfg=cfg,
         slots={z: 0 for z in ZONES},
         home_first=home_first,
         ask_timeout_ns=int(ask_timeout_s * 1e9),
+        hold_width_mm=(float(hold_width_mm[0]), float(hold_width_mm[1])),
     )
 
 
@@ -240,7 +268,12 @@ class Command:
     arg: str
     now_ns: int
     not_ready: tuple[str, ...] = ()  # 노드가 계산한 준비 안 된 항목
-    new_session_id: str = ""  # start 로 새 세션을 열 때 쓸 값(노드가 시계·난수로 만든다)
+    new_session_id: str = (
+        ""  # start 로 새 세션을 열 때 쓸 값(노드가 시계·난수로 만든다). palletize 는 실행 ID
+    )
+    grip_mm: float = (
+        -1.0
+    )  # 지금 RG2 보고 폭(RobotState, 오래됐거나 없으면 -1) — 팔레타이징 재개 때 파지 확인
 
 
 @dataclass(frozen=True)
@@ -363,6 +396,7 @@ class Result:
     rule_version: str
     reason: str
     attempts: int
+    slot: int = -1  # 놓은 칸 (PLACED·HELD), 없으면 -1 (Sprint 2)
 
 
 @dataclass(frozen=True)
@@ -667,7 +701,14 @@ def _box(ctx: Ctx, ev: LabelSeen, seq: int, dong: str, zone: str, slot: int) -> 
 
 
 def _result(
-    ctx: Ctx, box: Box, outcome: str, zone: str, reason: str, stamp_ns: int, attempts: int
+    ctx: Ctx,
+    box: Box,
+    outcome: str,
+    zone: str,
+    reason: str,
+    stamp_ns: int,
+    attempts: int,
+    slot: int = -1,
 ) -> Result:
     return Result(
         box_id=box.box_id,
@@ -686,6 +727,7 @@ def _result(
         rule_version=ctx.cfg.version,
         reason=reason,
         attempts=attempts,
+        slot=slot,
     )
 
 
@@ -790,7 +832,9 @@ def _on_place(ctx: Ctx, ev: MoveDone) -> Out:
         # 그 칸에서 개방했으면(RETURN_FAILED 포함) 칸을 쓴 것 (MC-018)
         slots[box.zone] += 1
         outcome = "HELD" if box.zone == "HOLD" else "PLACED"
-        res = _result(ctx, box, outcome, box.zone, reason, ev.placed_stamp_ns, box.attempts)
+        res = _result(
+            ctx, box, outcome, box.zone, reason, ev.placed_stamp_ns, box.attempts, box.slot
+        )
     else:
         res = _result(ctx, box, "FAILED", "", reason, ev.now_ns, box.attempts)
 
@@ -984,7 +1028,7 @@ def _on_pick(ctx: Ctx, ev: MoveDone) -> Out:
     # PICK 실패 → 박스는 재확인 칸에 둔 채 보류(HELD), 사람 확인 (#51 MC-017)
     reason = _fail_reason(ctx, ev)
     res = replace(
-        _result(ctx, box, "HELD", "RECHECK", reason, ev.now_ns, box.attempts),
+        _result(ctx, box, "HELD", "RECHECK", reason, ev.now_ns, box.attempts, box.recheck_slot),
         decided_by=box.decided_by,
     )
     acts: list = [

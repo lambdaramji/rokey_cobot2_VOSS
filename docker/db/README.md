@@ -7,8 +7,9 @@ ADR-0006 · 계약: `docs/interfaces/voss_msgs.md` "DB sort_log 대응", `web_ap
 |---|---|
 | 포트 | `127.0.0.1:5432` 만 (Wi-Fi 쪽으로 열지 않음, web_api.md 포트 표) |
 | 데이터 | 호스트 `/var/lib/voss/pgdata` — 10/16 발표까지 지우지 않는다(SRD) |
-| 스키마 | `init/01_schema.sql` — `sort_log`(PK box_id), `session_plan`(Spring Boot) |
-| 계정 | `init/02_roles.sh` — `voss_logger`(sort_log INSERT·SELECT), `voss_web`(sort_log SELECT, session_plan 읽기·쓰기). 비밀번호는 `.env` |
+| 스키마 | `init/01_schema.sql` — `sort_log`(PK box_id, Sprint 2 `slot`), `pallet_log`(PK run_id + box_id, Sprint 2), `session_plan`(Spring Boot) |
+| 계정 | `init/02_roles.sh` — `voss_logger`(sort_log·pallet_log INSERT·SELECT), `voss_web`(sort_log·pallet_log SELECT, session_plan 읽기·쓰기). 비밀번호는 `.env` |
+| 마이그레이션 | `migrations/` — 이미 있는 DB 에 스키마 변경을 적용(아래). `20261012_sprint2_pallet.sql` = Sprint 2 `sort_log.slot`·`pallet_log` |
 
 `init/` 은 **데이터 폴더가 비어 있을 때 처음 한 번만** 실행된다. 스키마를 바꾸면 마이그레이션 SQL 을 따로 만든다(데이터를 지우지 않는다).
 
@@ -19,6 +20,14 @@ cd ~/voss_ws/src/rokey_cobot2_VOSS/docker/db
 cp .env.example .env              # 비밀번호 3개 채우기 (.env 는 커밋 금지)
 docker compose up -d
 docker compose ps                 # STATUS 가 healthy 인지
+```
+
+## 마이그레이션 (공용 PC, 사람이 실행)
+데이터 폴더가 이미 있으면 `init/` 이 다시 돌지 않는다. sort_logger 를 끈 뒤 한 번 실행한다(여러 번 실행해도 결과가 같다).
+```bash
+cd ~/voss_ws/src/rokey_cobot2_VOSS/docker/db
+docker compose exec -T db psql -U voss_admin -d voss -v ON_ERROR_STOP=1 < migrations/20261012_sprint2_pallet.sql
+docker compose exec db psql -U voss_admin -d voss -c '\d pallet_log'   # 표가 보이면 끝
 ```
 
 ## sort_logger 연결 (호스트)

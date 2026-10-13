@@ -10,11 +10,15 @@
   --log     /voss/log/status 1 Hz (sort_logger 대역)
   --vision  /voss/vision/box 30 Hz + /voss/vision/label stage 1 (box_tracker·label_reader 대역, 박스 1개)
   --read    /voss/vision/read_label 서비스 (label_reader 3단계 재판독 대역) — 재확인·질문 흐름 시험용
+  --pallet  /voss/log/list_placements 서비스 (sort_logger 대역, Sprint 2) — 받은 SortResult(PLACED·A/B/C)와
+            PalletResult(DONE)로 답한다. --robot 의 MoveToZone 은 PALLET·DROP 에도 개방 시각을 준다
 
 예 (개인 PC, ROS_DOMAIN_ID=31, 터미널 두 개):
   python3 tools/mock/g0_mock.py --servo --robot --log --vision --code S07-02 --dong 대치동
   python3 -m voss_manager.sort_manager   # 또는 ros2 launch voss_manager sort_manager.launch.py
   ros2 service call /voss/sort/command voss_msgs/srv/Command "{command: start}"
+팔레타이징 (위에 --pallet 을 더하고, 박스 몇 개를 분류한 뒤):
+  ros2 service call /voss/sort/command voss_msgs/srv/Command "{command: palletize, arg: '대치동'}"
 """
 
 from __future__ import annotations
@@ -35,8 +39,8 @@ from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
 from voss_msgs.action import TrackAndGrasp
-from voss_msgs.msg import BoxTrack, LabelRead, RobotState
-from voss_msgs.srv import MoveToZone, ReadLabel
+from voss_msgs.msg import BoxTrack, LabelRead, PalletResult, Placement, RobotState, SortResult
+from voss_msgs.srv import ListPlacements, MoveToZone, ReadLabel
 
 BEST_EFFORT = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
 RELIABLE = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
@@ -76,6 +80,15 @@ class G0Mock(Node):
             log.info(
                 f"[read] ReadLabel 모의: {a.read_result} {a.read_code}/{a.read_dong} conf {a.read_conf}"
             )
+        self.placed: dict[str, Placement] = {}  # box_id → 적재 기록 (sort_logger 대역)
+        self.palletized: set[str] = set()
+        if a.pallet and self._free_service("/voss/log/list_placements"):
+            self.create_subscription(SortResult, "/voss/sort/result", self._on_result, RELIABLE)
+            self.create_subscription(PalletResult, "/voss/pallet/result", self._on_pallet, RELIABLE)
+            self.create_service(
+                ListPlacements, "/voss/log/list_placements", self._list, callback_group=self.cb
+            )
+            log.info("[pallet] ListPlacements 모의 (받은 SortResult·PalletResult 로 답함)")
         if a.robot and self._free_service("/voss/robot/stop"):
             self.create_service(Trigger, "/voss/robot/stop", self._stop, callback_group=self.cb)
             log.info("[robot] stop 모의")
@@ -205,7 +218,7 @@ class G0Mock(Node):
         self, req: MoveToZone.Request, res: MoveToZone.Response, mode: str
     ) -> MoveToZone.Response:
         a = self.a
-        time.sleep(a.place_s if mode in ("PLACE", "PICK") else 0.5)
+        time.sleep(a.place_s if mode in ("PLACE", "PICK", "DROP") else 0.5)
         if mode == "VIEW":  # 재확인 구역을 보는 자세로 이동만
             res.ok, res.message = (False, "INVALID view_pose null") if a.view_fail else (True, "OK")
             return res
@@ -216,7 +229,11 @@ class G0Mock(Node):
             res.ok, res.message = True, "OK"
         else:
             res.ok, res.message = False, a.place
-        if mode == "PLACE" and req.zone != "OBSERVE" and a.place in ("ok", "RETURN_FAILED"):
+        if (
+            mode in ("PLACE", "DROP")
+            and req.zone != "OBSERVE"
+            and a.place in ("ok", "RETURN_FAILED")
+        ):
             res.placed_stamp = self.get_clock().now().to_msg()
         return res
 
@@ -235,6 +252,29 @@ class G0Mock(Node):
         res.label.confidence = a.read_conf if a.read_result == "ok" else min(a.read_conf, 0.3)
         res.label.raw_text = f"{a.read_code}\n{a.read_dong}"
         res.label.stamp = self.get_clock().now().to_msg()
+        return res
+
+    # sort_logger 대역 (ListPlacements, Sprint 2)
+    def _on_result(self, r: SortResult) -> None:
+        if r.outcome == "PLACED" and r.zone in ("A", "B", "C"):
+            self.placed[r.box_id] = Placement(
+                box_id=r.box_id, dong=r.dong, zone=r.zone, slot=r.slot, stamp=r.stamp
+            )
+
+    def _on_pallet(self, r: PalletResult) -> None:
+        if r.outcome == "DONE":
+            self.palletized.add(r.box_id)
+
+    def _list(self, req: ListPlacements.Request, res: ListPlacements.Response):
+        res.ok, res.message = True, ""
+        for b, p in self.placed.items():
+            if not b.startswith(req.session_id + "-"):
+                continue  # 그 세션 것만 (box_id = <session_id>-NNN)
+            p.palletized = b in self.palletized
+            res.placements.append(p)
+        self.get_logger().info(
+            f"[pallet] ListPlacements {req.session_id}: {len(res.placements)}건 (이미 옮김 {len(self.palletized)})"
+        )
         return res
 
     def _stop(self, _req: Trigger.Request, res: Trigger.Response) -> Trigger.Response:
@@ -311,6 +351,7 @@ def main() -> None:
         "--pick-fail", action="store_true", help="MoveToZone PICK(재확인 칸에서 집기)이 실패"
     )
     ap.add_argument("--read", action="store_true")
+    ap.add_argument("--pallet", action="store_true")
     ap.add_argument(
         "--read-result", default="ok", help="ok(확실) | low(불확실 → 질문) | fail(판독 실패 → 질문)"
     )
@@ -326,8 +367,8 @@ def main() -> None:
     ap.add_argument("--label-after", type=float, default=1.0, help="트랙이 나타난 뒤 첫 판독까지 s")
     ap.add_argument("--box-s", type=float, default=20.0, help="박스 하나가 시야를 지나가는 주기 s")
     a = ap.parse_args()
-    if not (a.servo or a.robot or a.log or a.vision or a.read):
-        ap.error("--servo/--robot/--log/--vision/--read 중 하나 이상")
+    if not (a.servo or a.robot or a.log or a.vision or a.read or a.pallet):
+        ap.error("--servo/--robot/--log/--vision/--read/--pallet 중 하나 이상")
 
     if os.environ.get("ROS_DOMAIN_ID", "0") == "30":
         ap.error("ROS_DOMAIN_ID=30 은 공용 PC 로봇 도메인 — 다른 도메인(예 77)에서 실행")

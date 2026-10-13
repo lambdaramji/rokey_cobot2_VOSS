@@ -18,12 +18,16 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/LabelRead.msg"
   "msg/LabelCrop.msg"
   "msg/RobotState.msg"
+  "msg/Placement.msg"
+  "msg/PalletState.msg"
+  "msg/PalletResult.msg"
   "srv/Command.srv"
   "srv/UpdateZoneMap.srv"
   "srv/MoveToZone.srv"
   "srv/Gripper.srv"
   "srv/TeachZone.srv"
   "srv/ReadLabel.srv"
+  "srv/ListPlacements.srv"
   "action/TrackAndGrasp.action"
   DEPENDENCIES builtin_interfaces std_msgs sensor_msgs geometry_msgs
 )

@@ -14,3 +14,4 @@ string dong_alt           # 2위 후보 동, 없으면 ""
 string rule_version       # 적용한 ZoneMap.version
 string reason             # "" | LOW_CONF | NO_ANSWER | NON_TARGET | STOPPED | DEVICE_ERROR | (TrackAndGrasp reason)
 int32 attempts            # 파지 총 시도 수 (TrackAndGrasp 결과), PASSED 는 0
+int32 slot -1             # 놓은 칸 = 그 구역 MoveToZone slot (PLACED·HELD). 놓지 않았거나 모르면 -1(기본값 — 아직 채우지 않는 발행자도 "칸 0" 이 되지 않게). DB sort_log.slot (-1 → NULL) (Sprint 2)

@@ -11,13 +11,21 @@ import uuid
 
 import pytest
 
-psycopg2 = pytest.importorskip("psycopg2")
+# 모듈 수준 importorskip 은 psycopg2 가 없을 때 같이 수집되는 다른 시험 파일까지 모두 수집을 멈춘다(pytest 7.4,
+# colcon test 가 voss_hmi 시험 41개를 하나도 안 돌림) → import 실패만 잡고 이 파일의 시험만 건너뛴다
+try:
+    import psycopg2
+except ImportError:  # 개발 PC (python3-psycopg2 없음)
+    psycopg2 = None
 
 from voss_hmi.db_writer import DbError, DbWriter, RowRejected  # noqa: E402
-from voss_hmi.log_logic import result_to_row  # noqa: E402
+from voss_hmi.log_logic import pallet_result_to_row, result_to_row  # noqa: E402
 
 PORT = os.getenv("VOSS_TEST_DB_PORT")
-pytestmark = pytest.mark.skipif(not PORT, reason="VOSS_TEST_DB_PORT 없음 — 실제 DB 시험 건너뜀")
+pytestmark = pytest.mark.skipif(
+    psycopg2 is None or not PORT,
+    reason="psycopg2 또는 VOSS_TEST_DB_PORT 없음 — 실제 DB 시험 건너뜀",
+)
 
 
 def connect_as(user: str, password_env: str):
@@ -118,3 +126,43 @@ def test_wrong_port_raises_db_error_quickly():
     writer = DbWriter("127.0.0.1", 1, "voss", "voss_logger", "x", timeout_s=1.0)
     with pytest.raises(DbError):
         writer.check()
+
+
+# ---------- Sprint 2 (S2-T07, BRD v1.5): sort_log.slot · pallet_log · ListPlacements ----------
+def make_pallet_row(box_id: str, session_id: str, outcome: str = "DONE", **changes) -> dict:
+    result = {
+        "run_id": f"T{uuid.uuid4().hex[:15]}",
+        "session_id": session_id,
+        "box_id": box_id,
+        "dong": "역삼동",
+        "route_index": 0,
+        "zone": "A",
+        "slot": 0,
+        "pallet_slot": 9 if outcome in ("DONE", "FAILED") else -1,
+        "pallet_col": 3 if outcome in ("DONE", "FAILED") else 0,
+        "pallet_lane": 2 if outcome in ("DONE", "FAILED") else 0,
+        "pallet_layer": 1 if outcome in ("DONE", "FAILED") else 0,
+        "outcome": outcome,
+        "reason": "",
+        "attempts": 1 if outcome in ("DONE", "FAILED") else 0,
+        "stamp": (1_791_610_300, 0),
+    }
+    result.update(changes)
+    return pallet_result_to_row(result)
+
+
+def test_slot_and_pallet_log_and_list_placements():
+    writer = make_writer()
+    session = f"TEST{uuid.uuid4().hex[:16]}"
+    placed = make_row(session_id=session, slot=2)
+    overflow = make_row(session_id=session, slot=3)
+    held = make_row(session_id=session, zone="HOLD", outcome="HELD", slot=0)
+    for row in (placed, overflow, held):
+        assert writer.insert(row) is True
+    assert select_row(placed["box_id"])["slot"] == 2
+    assert writer.insert_pallet(make_pallet_row(placed["box_id"], session)) is True
+    assert writer.insert_pallet(make_pallet_row(overflow["box_id"], session, "OVERFLOW")) is True
+    rows = writer.list_placements(session)  # PLACED·A/B/C 만, palletized = DONE 행이 있나
+    got = {r[0]: (r[2], r[3], r[5]) for r in rows}
+    assert got == {placed["box_id"]: ("A", 2, True), overflow["box_id"]: ("A", 3, False)}
+    writer.close()
