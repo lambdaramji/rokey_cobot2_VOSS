@@ -1,6 +1,6 @@
 # 팔레타이징 검증 보고서 — BRD v1.5 (2026-10-13)
 
-- **검증 대상:** 로컬 통합 브랜치 `integ/1013-gate-v15`(fef3153, **리뷰 전**) 위의 `verify/palletizing`. GitHub 계정 정지로 팔레타이징 코드는 main 에 없고 로컬 브랜치에만 있다 — S2-T01(94126e3)·T04(4118dde)·T05(6c2881d)·T06(c25ae5c)·T07(2c85b7f)·T08 브리지(b3cc33a)·T13 문서(360fac0). 웹 HMI 는 원격 브랜치 `origin/feat/22-web-hmi-initial`(8c009dd)에만 있다.
+- **검증 대상:** 로컬 통합 브랜치 `integ/1013-gate-v15`(fef3153, **리뷰 전**) 위의 `verify/palletizing`. GitHub 계정 정지로 팔레타이징 코드는 main 에 없고 로컬 브랜치에만 있다 — S2-T01(94126e3)·T04(4118dde)·T05(6c2881d)·T06(c25ae5c)·T07(2c85b7f)·T08 브리지(b3cc33a)·T13 문서(360fac0). 웹 HMI 는 원격 브랜치 `origin/feat/22-web-hmi-initial`(8c009dd)에만 있고, S2-T08 웹 쪽(경로 입력·3D 팔레트)은 그 위의 로컬 `feat/s2-t08-web-pallet-3d`(089f5c2, 10/13 오후 — 이 보고서 판 뒤에 추가해 아래 TR-PAL-01·10 을 고쳤다).
 - **기준:** BRD v1.5 10장(TR-PAL-01~12, 10.10 결정 D1~D7)과 검증 프롬프트 v2(정답 생성기 2.3·시나리오 S1~S8·불변식 2.5). 명세가 정답이고, 명세가 정하지 않은 것은 "명세 미정"으로 둔다.
 - **방법:** 코드 읽기와 로봇·LLM 없는 시험. 로봇·컨베이어·그리퍼 명령, LLM 호출, `.env` 열람은 하지 않았다.
 - **이전 판(10/12, v1.4 구현 기준)** 은 git 기록에 없다(커밋 전) — 그때 결과: S1~S8 전부 시작 거부, 무작위 500회 중 468 불일치, 버그 B1~B4. 이번 판은 v1.5 구현 뒤의 결과다.
@@ -25,7 +25,8 @@
 | 판정 | 개수 | 항목 |
 |---|---|---|
 | 통과 | 6 | TR-PAL-02·03·04·08·09·11 (03·09 는 실제 DB, 08 은 실기 확인 필요) |
-| 미구현 | 6 | TR-PAL-01(웹 경로 입력 화면), 05·06·07(gateway), 10 ④(3D 웹), 12(남은 수) |
+| 구현·공용 PC 확인 전 | 2 | TR-PAL-01 웹 경로 입력, 10 ④ 3D 웹 (10/13 오후 S2-T08 웹) |
+| 미구현 | 4 | TR-PAL-05·06·07(gateway), 12(남은 수) |
 | v1.5 미반영 | 0 | — |
 | 실패 | 0 | — |
 | 명세 미정 | 5 | §7 (#37 은 10/13 결정) |
@@ -33,12 +34,12 @@
 **가장 심각한 문제 3개**
 1. **[상] 로봇 쪽과 트레이가 없어 실기를 할 수 없다.** A·B·C 칸 PICK·DROP(2층)·PALLET(S2-T03), 트레이 8·8·6칸(S2-T21, D1), 팔레트 교시(S2-T02). 관리자 FSM 이 PICK 을 보내면 gateway 가 `INVALID` 로 답해 첫 박스에서 PAUSED.
 2. **[중] (고침) 1층 칸 박스가 FAILED 면 그 위 2층에 박스가 놓일 수 있었다** — pending #37 결정(10/13 PL)대로 위층 박스를 빈 1층 칸에 당겨 놓도록 고쳤다(d8c1d78, `test_layer2_box_pulled_down_onto_failed_slot`).
-3. **[중] 웹 HMI 의 경로 입력·3D 팔레트·남은 수가 없다**(S2-T08 웹 쪽 D5 미정, S2-T22). ROS·MQTT 쪽(`voss/pallet/state` 에 집계·경고·16칸)은 준비됐다.
+3. **[중] 웹 HMI 의 남은 수가 없다**(S2-T22). 경로 입력·3D 팔레트는 10/13 오후 구현(S2-T08 웹, 089f5c2 — 정의석 리뷰·공용 PC 재생 확인 전). 그 과정에서 웹 백엔드가 SortState `PALLETIZING` 을 버려 팔레타이징 중 3초 뒤 UNKNOWN 이 되던 문제를 고쳤다(B5).
 
 ## 3. 요구사항별 결과
 | ID | 결과 | 근거 | 비고 |
 |---|---|---|---|
-| TR-PAL-01 | **미구현(웹 화면)** · 음성·브리지 통과 | 음성 `intent_logic.py` `check_route`·palletize 분기, `test_verify_palletize_intent.py` 6건, `palletize_cases.json` 8건. 브리지 `mqtt_logic.py:150` `_route_arg`(1~3·중복 없음 → "a,b,c"), `test_verify_hmi_palletize.py` | 실제 LLM 정확도 미측정(`eval_real_intent.py --cases palletize`, 비용 — 실행 전 확인). 웹 경로 입력 화면은 D5 |
+| TR-PAL-01 | **구현(웹 화면, 공용 PC 확인 전)** · 음성·브리지 통과 | 음성 `intent_logic.py` `check_route`·palletize 분기, `test_verify_palletize_intent.py` 6건, `palletize_cases.json` 8건. 브리지 `mqtt_logic.py:150` `_route_arg`(1~3·중복 없음 → "a,b,c"), `test_verify_hmi_palletize.py` | 실제 LLM 정확도 미측정(`eval_real_intent.py --cases palletize`, 비용 — 실행 전 확인). 웹 경로 입력(10/13 오후): `PalletPanel.tsx` 1~3번째 배송지 → `routeFromPicks`(앞에서부터·중복·미등록 거부, `npm test`), 서버 `CommandController.validateRoute`(1~3·중복·정식 동, `./gradlew test`) |
 | TR-PAL-02 | **통과** | `pallet_fsm.py:222` `_on_palletize`, `:28` `BUSY_MSG` 문장 일치, 칸 카운터 ≠ 0 거부·reset_zone PALLET 요청, PALLETIZING; `test_start_conditions` | "세션이 있는 IDLE"은 지금 FSM 에서 생기지 않는다(관찰) |
 | TR-PAL-03 | **통과** (실제 DB 확인 필요) | PLACED·A/B/C·경로·미이동, 보류 제외·작업자 판정 흐린 박스 포함, 동별 상한 없음(`test_no_v14_residue`), 경로 제외 수 `Plan.counts()`(`pallet_plan.py:96`). DB 실패·스풀 남음 → 시작 안 함(`sort_logger.py:155`, `db_writer.py:147`) | 실DB 시험 `test_slot_and_pallet_log_and_list_placements`(공용 PC) |
 | TR-PAL-04 | **통과** | `pallet_plan.py:142` `allocate`(16 이하 전부, 넘으면 물량 많은 순·동률은 먼저 방문 동이 후순위), `:155` 위치는 수량과 따로. S1~S8 명세 표 일치, 불변식 500회 실패 0, 결정적 | 계획 하나를 FSM·PalletState·TTS·PalletResult 가 공유(`pallet_fsm.py` `run.plan`) |
@@ -47,7 +48,7 @@
 | TR-PAL-07 | **미구현** | 관절 경유점·16칸 2층 ikin — S2-T02·T03 | |
 | TR-PAL-08 | **통과** (실기 확인 필요) | `pallet_fsm.py:468` `_on_resume`: 든 채 멈춤 → 보고 폭 확인 → 같은 칸에 놓기, 놓쳤으면 FAILED·DROPPED + 안내, 다음 칸부터(`test_resume_continues_at_next_slot`) | 보고 폭 범위 39.5~44.0 실기 확인 |
 | TR-PAL-09 | **통과** (실제 DB 확인 필요) | PalletResult 에 slot·열·줄·층(`_finish_box` `pallet_fsm.py:356`), 싣지 않은 박스 OVERFLOW·EXCLUDED 를 계획 직후 발행(S1 = 19건, `test_s1_records_and_finish_sentence`). sort_logger `_on_pallet`(`sort_logger.py:151`) → pallet_log, 다 옮긴 트레이만 칸 0(`emptied_zones`) | 미적재 박스 칸 비움은 하지 않는다(그대로 있으니) |
-| TR-PAL-10 | **미구현(④ 3D 웹)** · ①②③ 통과 | ① 계획 직후 첫 PICK 전 `PublishPalletState`(`pallet_fsm.py:304`, `sort_manager.py:307`) — 동별 실을 수·초과·경로 제외·`overflow_warning`·16칸, MQTT 전달 `hmi_bridge.py:212`. ② "…첫 배송지 대치동은 오른쪽입니다. 팔레트가 16칸이라 3개는…"(`pallet_fsm.py:154`). ③ "… 역삼동 7개, 대치동 3개, 청담동 6개를 실었습니다. 초과로 못 실은 박스는 대치동 3개입니다."(`:168`) | ④ 웹 3D 는 D5. 경고는 초과일 때만(`test_s3_excluded_has_no_overflow_warning`) |
+| TR-PAL-10 | **①②③ 통과 · ④ 구현(3D 웹, 공용 PC 확인 전)** | ① 계획 직후 첫 PICK 전 `PublishPalletState`(`pallet_fsm.py:304`, `sort_manager.py:307`) — 동별 실을 수·초과·경로 제외·`overflow_warning`·16칸, MQTT 전달 `hmi_bridge.py:212`. ② "…첫 배송지 대치동은 오른쪽입니다. 팔레트가 16칸이라 3개는…"(`pallet_fsm.py:154`). ③ "… 역삼동 7개, 대치동 3개, 청담동 6개를 실었습니다. 초과로 못 실은 박스는 대치동 3개입니다."(`:168`) | ④(10/13 오후): SSE `pallet_state` → `PalletPanel.tsx` 3D 4×2×2(트럭 머리 왼쪽·문 오른쪽, 동 색, 계획·옮기는 중·적재·실패) + 위에서 본 칸 표(10.4 표와 같은 행 순서) + 진행률 "n개 중 m개". 시험 데이터는 실제 pallet_fsm 의 S1 + slot 4 실패·#37(`pallet_s1.json`). 반영 ≤ 1초는 공용 PC 재생(`scripts/integration` S2-T08). 경고는 초과일 때만(`test_s3_excluded_has_no_overflow_warning`) |
 | TR-PAL-11 | **통과** | 초과·경로 제외 박스는 PICK 하지 않고 원래 구역·칸을 기록(`Plan.unloaded`), 칸 카운터도 그대로 | |
 | TR-PAL-12 | **미구현** | 남은 수 = 예정 − 처리(PLACED·HELD·FAILED) — 팔레타이징 결과 미반영(`SessionController.java:53`, web_api.md) | S2-T22 정의석 |
 
@@ -82,6 +83,7 @@
 | N1 | 중 | 1층 FAILED 칸 위에 2층 박스가 놓일 수 있음 | **고침**(d8c1d78) — pending #37 결정: 위층 박스를 빈 1층 칸에 당겨 놓고 위층 칸은 비움 |
 | N2 | 하 | 게이트 D3 예시("1층 8칸 + 2층 1칸")가 구현된 채우기 순서(열마다 1층 2칸 → 2층 2칸)와 다름 | 게이트 문서에 같은 의도의 "1·2열 8칸(2층 4칸)" 제안 — D3 전원 결정 |
 | N3 | 하 | 시연의 "판별 불가" 박스가 송장을 전혀 못 읽으면(UNKNOWN) 집지 않고 통과 → 보류 구역에 안 간다 | 대본 §2 에 "후보가 하나는 읽히게" 준비 조건 |
+| B5 | 중 | 웹 백엔드 SortState 허용 목록에 `PALLETIZING` 이 없어 팔레타이징 중 상태를 모두 버림 → 3초 뒤 HMI UNKNOWN | **고침**(fc3ff03, S2-T08 웹) — 시험 `testPalletizingStateIsAccepted` |
 | N4 | 하 | 마이그레이션 전 DB 에서 새 sort_logger 가 모든 INSERT 를 실패할 위험 | **막음**(2c85b7f) — 연결 때 스키마를 보고 slot 없이 쓰며 경고 |
 
 ## 7. 명세 미정 항목
