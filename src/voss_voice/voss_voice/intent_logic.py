@@ -11,7 +11,16 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-INTENT_TYPES = ("start", "stop", "resume", "priority", "answer", "query_history", "update_zone_map")
+INTENT_TYPES = (
+    "start",
+    "stop",
+    "resume",
+    "priority",
+    "answer",
+    "query_history",
+    "update_zone_map",
+    "palletize",  # Sprint 2 (TR-PAL-01)
+)
 ROS_TYPES = (
     "start",
     "stop",
@@ -19,6 +28,7 @@ ROS_TYPES = (
     "priority",
     "answer",
     "update_zone_map",
+    "palletize",
 )  # Intent 로 보내는 것
 QUERY_KINDS = ("count_by_dong", "held_count", "remaining_count")
 HOLD = "HOLD"
@@ -35,6 +45,12 @@ SAY_UNSUPPORTED = "지금은 지원하지 않는 명령입니다."
 SAY_RETRY = "잘 못 알아들었습니다. 다시 말씀해 주세요."
 SAY_WHICH_DONG = "어느 동인지 말씀해 주세요."
 SAY_UNKNOWN_DONG = "등록되지 않은 동입니다. 다시 말씀해 주세요."
+# palletize 경로 (TR-PAL-01: 미등록·중복·0개·4개 이상이면 실행하지 않고 되묻는다)
+MAX_ROUTE = 3
+SAY_ROUTE_RETRY = "배송 순서를 다시 말씀해 주세요."
+SAY_ROUTE_COUNT = "배송지는 한 곳에서 세 곳까지 말씀해 주세요."
+SAY_ROUTE_DUP = "같은 동이 두 번 들어 있습니다. 배송 순서를 다시 말씀해 주세요."
+SAY_ROUTE_UNKNOWN = "등록되지 않은 동이 있습니다. 배송 순서를 다시 말씀해 주세요."
 
 
 def _squash(text: str) -> str:
@@ -101,7 +117,7 @@ class Decision:
     """
 
     kind: str
-    intent: dict | None = None  # publish: Intent 필드 (type,dong,zone,count,raw_text,box_id)
+    intent: dict | None = None  # publish: Intent 필드 (type,dong,zone,count,raw_text,box_id,route)
     query: dict | None = None  # query: {query_kind, dong}
     say: str = ""
 
@@ -110,7 +126,14 @@ def stop_decision(raw_text: str) -> Decision:
     return Decision("publish", intent=_intent("stop", raw_text=raw_text))
 
 
-def _intent(t: str, dong: str = "", zone: str = "", raw_text: str = "", box_id: str = "") -> dict:
+def _intent(
+    t: str,
+    dong: str = "",
+    zone: str = "",
+    raw_text: str = "",
+    box_id: str = "",
+    route: list[str] | None = None,
+) -> dict:
     return {
         "type": t,
         "dong": dong,
@@ -118,7 +141,23 @@ def _intent(t: str, dong: str = "", zone: str = "", raw_text: str = "", box_id: 
         "count": 0,
         "raw_text": raw_text,
         "box_id": box_id,
+        "route": list(route or []),  # palletize 만, 그 밖은 []
     }
+
+
+def check_route(raw, view: ZoneMapView) -> tuple[list[str], str]:
+    """LLM 의 route → (정식 동 이름 경로, "") 또는 ([], 되묻기 문장). 말한 순서(첫 배송지부터)를 지킨다."""
+    if not isinstance(raw, list) or not all(isinstance(x, str) for x in raw):
+        return [], SAY_ROUTE_RETRY
+    names = [x for x in raw if x.strip()]
+    if not 1 <= len(names) <= MAX_ROUTE:
+        return [], SAY_ROUTE_COUNT if names else SAY_ROUTE_RETRY
+    route = [view.canonical_dong(x) for x in names]
+    if any(d is None for d in route):
+        return [], SAY_ROUTE_UNKNOWN
+    if len(set(route)) != len(route):
+        return [], SAY_ROUTE_DUP
+    return route, ""
 
 
 def decide_bare_dong(
@@ -249,6 +288,13 @@ def decide(
                 return Decision("say", say=SAY_UNKNOWN_DONG)
             dong = d
         return Decision("query", query={"query_kind": kind, "dong": dong})
+
+    if t == "palletize":
+        # 시작 조건(분류 중 박스 없음·팔레트 비어 있음)은 sort_manager 가 보고 거부 이유를 말한다(TR-PAL-02)
+        route, why = check_route(llm.get("route"), view)
+        if why:
+            return Decision("say", say=why)
+        return Decision("publish", intent=_intent(t, raw_text=raw_text, route=route))
 
     # update_zone_map: C 선택 범위 (MC-033). 채택 전에는 실행하지 않는다.
     if not allow_update_zone_map:

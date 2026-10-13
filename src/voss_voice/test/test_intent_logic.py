@@ -11,6 +11,10 @@ from voss_voice.intent_logic import (
     SAY_NO_QUESTION,
     SAY_NOT_READY,
     SAY_RETRY,
+    SAY_ROUTE_COUNT,
+    SAY_ROUTE_DUP,
+    SAY_ROUTE_RETRY,
+    SAY_ROUTE_UNKNOWN,
     SAY_UNKNOWN_DONG,
     SAY_UNSUPPORTED,
     SAY_WHICH_DONG,
@@ -243,3 +247,47 @@ def test_bare_dong_requires_active_question(state: str, box_id: str) -> None:
     decision = decide_bare_dong("대치동.", VIEW, state, box_id)
     assert decision is not None and decision.kind == "say"
     assert decision.say == SAY_NO_QUESTION
+
+
+# --- palletize (S2-T06, TR-PAL-01) — 정답 세트는 NFR-03 20건과 따로 ---
+PAL_FIXTURE = pathlib.Path(__file__).parent / "fixtures" / "palletize_cases.json"
+
+
+def _pal_cases():
+    return json.loads(PAL_FIXTURE.read_text(encoding="utf-8"))["cases"]
+
+
+def test_palletize_fixture_has_5_accept_3_reject():
+    kinds = [c["expect"]["kind"] for c in _pal_cases()]
+    assert kinds.count("publish") == 5 and kinds.count("say") == 3
+
+
+@pytest.mark.parametrize("case", _pal_cases(), ids=lambda c: c["id"])
+def test_palletize_case_with_correct_llm(case):
+    llm = {"type": "palletize", "dong": None, "zone": None, "route": case["llm_route"]}
+    d = decide(llm, case["text"], VIEW, case["state"])
+    e = case["expect"]
+    assert d.kind == e["kind"]
+    if d.kind == "publish":
+        assert (
+            d.intent["type"] == "palletize" and d.intent["route"] == e["route"]
+        )  # 말한 순서 그대로
+        assert d.intent["dong"] == "" and d.intent["box_id"] == ""
+    else:
+        assert d.say in (SAY_ROUTE_DUP, SAY_ROUTE_UNKNOWN, SAY_ROUTE_COUNT)
+
+
+def test_palletize_route_checks():
+    def say(route):
+        return decide({"type": "palletize", "route": route}, "x", VIEW).say
+
+    assert say(["역삼", "역삼동"]) == SAY_ROUTE_DUP  # 별칭이 같은 동이면 중복
+    assert say(["신사"]) == SAY_ROUTE_UNKNOWN
+    assert say(["역삼", "대치", "청담", "역삼"]) == SAY_ROUTE_COUNT
+    for bad in ([], None, "역삼", [1, 2], ["  "]):
+        assert say(bad) == SAY_ROUTE_RETRY
+
+
+def test_route_is_empty_for_other_intents():
+    assert decide({"type": "start"}, "작업 시작", VIEW).intent["route"] == []
+    assert decide(None, "멈춰", VIEW).intent["route"] == []  # 로컬 stop 도

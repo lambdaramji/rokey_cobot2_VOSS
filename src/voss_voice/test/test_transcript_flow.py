@@ -289,3 +289,13 @@ def test_punctuated_destination_is_rejected_outside_asking() -> None:
     assert result_kind == "say"
     assert published == []
     assert spoken == ["지금은 답할 질문이 없습니다."]
+
+
+def test_palletize_route_is_published_in_spoken_order():
+    """S2-T06: LLM 의 route(별칭 섞임) → 정식 동 이름 경로로 발행, 순서 유지."""
+    f, published, said = _flow(
+        lambda text, allowed: {"type": "palletize", "route": ["대치동", "역삼"]}
+    )
+    kind, _ = f.handle("대치, 역삼 순서로 실어줘")
+    assert kind == "publish" and not said
+    assert published[0]["type"] == "palletize" and published[0]["route"] == ["대치동", "역삼동"]
