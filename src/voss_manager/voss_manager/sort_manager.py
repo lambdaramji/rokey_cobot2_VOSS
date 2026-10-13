@@ -84,6 +84,8 @@ class SortManagerNode(Node):
         self.list_timeout_s = p("list_timeout_s", 3.0).value  # ListPlacements (sort_logger DB 조회)
         # 팔레타이징 재개 때 파지 확인 — RG2 보고 폭 범위 (gateway zone_pick_width_mm·belt_servo hold_width 와 같은 근거)
         hold_width_mm = list(p("pallet_hold_width_mm", [39.5, 44.0]).value)
+        # 2 = 16칸(기본), 1 = 1층 8칸만 — 게이트에서 2층 놓기를 시연에서 뺐을 때(ADR-0014 B)
+        pallet_layers = int(p("pallet_layers", 2).value)
         ask_timeout_s = p("ask_timeout_s", 30.0).value  # 질문 발화부터 무응답 보류까지 (SRD §5.7)
         self.state_period_s = p("state_period_s", 0.4).value
         # 우리 goal·MoveToZone 이 끝난 뒤에도 gateway 가 BUSY 인 시간 — belt_servo 0 유지 0.5 s + watchdog 0.2 s,
@@ -100,12 +102,17 @@ class SortManagerNode(Node):
             raw = f.read()
         cfg = fsm.load_config(yaml.safe_load(raw))  # 어긋나면 ValueError → 기동 거부
         self.ctx = fsm.new_ctx(
-            cfg, home_first=home_first, ask_timeout_s=ask_timeout_s, hold_width_mm=hold_width_mm
+            cfg,
+            home_first=home_first,
+            ask_timeout_s=ask_timeout_s,
+            hold_width_mm=hold_width_mm,
+            pallet_layers=pallet_layers,
         )
         self.get_logger().info(
             f"voss_config {self.config_path} version {cfg.version} sha256 {hashlib.sha256(raw).hexdigest()[:12]}, "
             f"구역 칸 {cfg.capacity}, confidence_min {cfg.confidence_min}, home_first {home_first}, "
-            f"팔레트 교시 {'됨' if cfg.pallet_ready else '안 됨(palletize 거부)'}"
+            f"팔레트 교시 {'됨' if cfg.pallet_ready else '안 됨(palletize 거부)'}, "
+            f"팔레트 {'16칸(2층)' if pallet_layers == 2 else '1층 8칸만'}"
         )
 
         # 발행

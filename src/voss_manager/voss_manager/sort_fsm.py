@@ -241,6 +241,7 @@ class Ctx:
         0  # 팔레트에 놓은 박스 수 (≠ 0 이면 palletize 거부, reset_zone PALLET 으로 0)
     )
     hold_width_mm: tuple[float, float] = (39.5, 44.0)  # 재개 때 파지 확인 — RG2 보고 폭 범위
+    pallet_layers: int = 2  # 2 = 16칸, 1 = 1층 8칸만 (ADR-0014 B — 게이트에서 2층 놓기를 뺄 때)
 
 
 def new_ctx(
@@ -248,13 +249,17 @@ def new_ctx(
     home_first: bool = True,
     ask_timeout_s: float = 30.0,
     hold_width_mm: tuple[float, float] = (39.5, 44.0),
+    pallet_layers: int = 2,
 ) -> Ctx:
+    if pallet_layers not in (1, 2):
+        raise ValueError(f"pallet_layers={pallet_layers} — 1 | 2")
     return Ctx(
         cfg=cfg,
         slots={z: 0 for z in ZONES},
         home_first=home_first,
         ask_timeout_ns=int(ask_timeout_s * 1e9),
         hold_width_mm=(float(hold_width_mm[0]), float(hold_width_mm[1])),
+        pallet_layers=int(pallet_layers),
     )
 
 

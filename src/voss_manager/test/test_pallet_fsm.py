@@ -480,3 +480,28 @@ def test_no_pull_down_when_lower_slot_is_done(cfg) -> None:
     assert [m[1] for m in moves(acts) if m[2] == "DROP"] == [0, 1, 2, 3] and not pf.run_of(
         ctx
     ).moved
+
+
+# ---------------------------------------------------------------- 1층만 (ADR-0014 B, sort_manager pallet_layers)
+
+
+def test_layer1_only_drops_on_first_layer_and_says_8_slots(cfg) -> None:
+    ctx = replace(running(cfg), pallet_layers=1)
+    out = pf.step(ctx, palletize(ALL3))
+    out2 = pf.step(out.ctx, pf.ListDone(True, "", placements(S1), 3000 * MS))
+    acts = list(out.actions) + list(out2.actions)
+    assert "팔레트가 8칸이라 11개는" in says(acts)[0]
+    ctx, acts = gateway(out2.ctx, acts, ok_all)
+    drops = [s for z, s, mode in moves(acts) if mode == "DROP"]
+    assert drops == [0, 1, 4, 5, 8, 9, 12, 13]
+    st = pf.pallet_state(ctx)
+    assert all(st["slot_state"][s] == "EMPTY" for s in range(16) if pp.slot_cell(s)[1] == 2)
+    assert st["state"] == "DONE" and st["done"] == 8 and st["total"] == 8
+    res = of(acts, pf.PalletOut)
+    assert {r.pallet_layer for r in res if r.outcome == "DONE"} == {1}
+    assert sum(r.outcome == "OVERFLOW" for r in res) == 11
+
+
+def test_new_ctx_rejects_unknown_layers(cfg) -> None:
+    with pytest.raises(ValueError):
+        f.new_ctx(cfg, pallet_layers=3)

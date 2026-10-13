@@ -169,7 +169,9 @@ def start_sentence(plan: pp.Plan) -> str:
     if plan.empty:
         text += f" {', '.join(plan.empty)} 박스는 없습니다."
     if plan.overflow:
-        text += f" 팔레트가 {pp.CAPACITY}칸이라 {plan.overflow}개는 싣지 못하고 원래 구역에 둡니다."
+        text += (
+            f" 팔레트가 {plan.capacity}칸이라 {plan.overflow}개는 싣지 못하고 원래 구역에 둡니다."
+        )
     return text
 
 
@@ -296,7 +298,7 @@ def _on_list(ctx: f.Ctx, ev: ListDone) -> f.Out:
     if not ev.ok:
         return _abort(ctx, run, f"작업 기록 조회 실패 {ev.message}", "작업 기록을 읽지 못해")
     try:
-        plan = pp.plan_pallet(run.route, ev.placements)
+        plan = pp.plan_pallet(run.route, ev.placements, layers=ctx.pallet_layers)
     except pp.PlanError as e:
         return _abort(ctx, run, str(e), str(e) + " —")
     acts: list = [
@@ -351,6 +353,11 @@ def _next(ctx: f.Ctx, acts: list) -> f.Out:
     return _pick(replace(ctx, pallet=run), m, acts)
 
 
+def planned_box(plan: pp.Plan, slot: int) -> str:
+    """그 칸에 계획된 box_id (없으면 ""). 1층만 쓰면 옮기는 차례 ≠ 칸 번호라 칸으로 찾는다."""
+    return next((m.box_id for m in plan.moves if m.pallet_slot == slot), "")
+
+
 def placed_slot(run: Run, m: pp.Move) -> int:
     """이 박스를 실제로 놓을 칸. 계획 칸이 2층이고 바로 아래 1층 칸 박스가 FAILED(빈칸)면 그 아래 칸 (pending #37)."""
     moved = dict(run.moved)
@@ -361,7 +368,7 @@ def placed_slot(run: Run, m: pp.Move) -> int:
     if (
         layer == 2
         and below not in moved.values()
-        and dict(run.results).get(run.plan.moves[below].box_id) == "FAILED"
+        and dict(run.results).get(planned_box(run.plan, below)) == "FAILED"
     ):
         return below
     return m.pallet_slot
