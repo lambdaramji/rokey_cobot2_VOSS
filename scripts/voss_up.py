@@ -91,8 +91,10 @@ def launch_cmd(pkg: str, target: str, args: dict) -> str:
     return f"ros2 launch {pkg} {target} {kv}".rstrip()
 
 
-def run_cmd(pkg: str, exe: str, name: str, params: dict | None) -> str:
+def run_cmd(pkg: str, exe: str, name: str, params: dict | None, ns: str = "") -> str:
     out = f"ros2 run {pkg} {exe} --ros-args"
+    if ns:  # 카메라: -r __ns:=/ 가 없으면 /camera/camera/color/image_raw 로 나가 box_tracker 가 영상 0 (10/13)
+        out += f" -r __ns:={ns}"
     if name:
         out += f" -r __node:={name}"
     for k, v in (params or {}).items():
@@ -149,7 +151,7 @@ def real_plan(o: Opts, env: dict[str, str], host=None) -> list[Step]:
         if s.kind == "include":
             cmd = launch_cmd(s.pkg, s.target, s.args or {})
         else:
-            cmd = run_cmd(s.pkg, s.target, s.name, s.args)
+            cmd = run_cmd(s.pkg, s.target, s.name, s.args, getattr(s, "namespace", ""))
         extra: dict = {}
         if (
             sid == "T2"

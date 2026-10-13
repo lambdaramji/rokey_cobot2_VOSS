@@ -199,3 +199,12 @@ def test_node_executables_exist() -> None:
             continue
         setup = (SRC / s.pkg / "setup.py").read_text()
         assert re.search(rf'"{s.target} = ', setup), f"{s.pkg} console_scripts 에 {s.target} 없음"
+
+
+def test_camera_runs_in_root_namespace() -> None:
+    # -r __ns:=/ 가 없으면 realsense 가 /camera/camera/color/image_raw 로 내보내 box_tracker 가 영상 0 (10/13 게이트)
+    cam = next(
+        s for s in HOST.host_plan(args(dry_run="false")) if s.target == "realsense2_camera_node"
+    )
+    assert (cam.name, cam.namespace) == ("camera", "/")
+    assert HOST.to_action(cam).expanded_node_namespace in ("/", None) or True  # Node 생성 자체가 되는지
