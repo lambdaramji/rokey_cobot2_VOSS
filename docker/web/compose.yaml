@@ -1,0 +1,15 @@
+# T13 #22: host 네트워크로 Spring localhost 8080, Nginx 80, Mosquitto 1883을 연계한다.
+# ADR-0006 / docs/interfaces/web_api.md.
+services:
+  backend:
+    build: ./backend
+    network_mode: host
+    env_file: .env
+    restart: unless-stopped
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    network_mode: host
+    depends_on: [backend]
+    restart: unless-stopped
