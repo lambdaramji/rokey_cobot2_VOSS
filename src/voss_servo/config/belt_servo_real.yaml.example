@@ -22,11 +22,11 @@ belt_servo:
       # 아래 4키는 U5 #131 기준 (measurements-1008 #14, T34). #131 머지 전 main 노드는 close_time·room_margin 을 무시한다
       hold_width_min_mm: 39.5       # 쥔 폭 범위 하한 (RG2 보고값). 빈손 최대 38.7 + 0.8 — 경계값은 제안
       hold_width_max_mm: 44.0       # 쥔 폭 범위 상한. 10/10 G1 현장값(measurements-1010 #10), 회전 박스 42.0~43.0 + 여유 1.0
-      close_time_max_s: 2.1         # 닫힘 90→39 최대 시간 (T34 1.6~2.1 s). x 여유 계산에 쓴다
+      close_time_max_s: 2.3         # 닫힘 90→39 최대 시간. 10/10 최대 2128 ms(measurements-1010 7·8절) 위로 2.1→2.3 (U9-c). x 여유 계산에 쓴다
       room_margin_mm: 10.0          # x 여유 덧셈 (제안, 판단값). 부족하면 DESCEND 전에 OUT_OF_REACH(REACH_GRASP_ROOM)
     reach:
       x_min_mm: -107.0              # 측정값 — 추종 가능 구간 TCP x (measurements #6)
-      x_max_mm: 620.0               # 유효값 — 측정 구간 638 에서 gateway 감속 여유를 뺌 (PR #122, U2 DD 7.3)
+      x_max_mm: 600.0               # 유효값 — 620 → 600 (U9-c): x 600~618 TRACK z 처짐(measurements-1010 #13)·특이점 안내 x≈600(#14)
     control:
       kp_per_s: null                # P 게인 (1/s). 0 = FF 만. U4 실기에서 정함
       kp_z_per_s: null              # z P 게인 (1/s). 제안 ≤ 2 (kp_z × descend_speed ≤ max_acc)
@@ -52,7 +52,7 @@ belt_servo:
     retry:
       max_attempts: 1               # U9 에서 3 으로 켠다
     stop_timeout_s: 1.0             # stop 응답 기다리는 한계
-    gripper_timeout_s: 3.0          # 그리퍼 응답 기다리는 한계 (요청마다). 제안 — T34 닫힘 최대 2.1 s + 여유 (U5 #131 기준)
+    gripper_timeout_s: 3.0          # 그리퍼 응답 기다리는 한계 (요청마다). 제안 — 10/10 닫힘 최대 2128 ms(close_time_max 2.3) + 여유
     rate_hz: 30.0                   # 서보 루프 (topics.md 계약)
     zero_hold_s: 0.5                # goal 종료 뒤 0 속도 유지 (watchdog 200 ms + 정지 시간보다 길게)
     log:

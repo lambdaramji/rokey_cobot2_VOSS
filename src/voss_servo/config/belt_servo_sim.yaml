@@ -12,11 +12,11 @@ belt_servo:
       tcp_z_below_top_mm: 19.0
       hold_width_min_mm: 39.5
       hold_width_max_mm: 44.0       # 10/10 G1 현장값(measurements-1010 #10), 회전 박스 42.0~43.0 + 여유 1.0
-      close_time_max_s: 2.1
+      close_time_max_s: 2.3         # 10/10 닫힘 최대 2128 ms (measurements-1010 7·8절, U9-c)
       room_margin_mm: 10.0
     reach:
       x_min_mm: -107.0
-      x_max_mm: 620.0
+      x_max_mm: 600.0               # U9-c: 620 → 600 (measurements-1010 #13·#14)
     control:
       kp_per_s: 1.0
       kp_z_per_s: 1.5

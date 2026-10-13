@@ -392,3 +392,36 @@ def finite_vec(v: Vec) -> np.ndarray | None:
     """길이 3 벡터, NaN·inf 가 있으면 None."""
     a = vec3(v)
     return a if all(math.isfinite(x) for x in a) else None
+
+
+# ---------------------------------------------------------------------- 벨트 속도 추정 (U9-c, 로그 전용)
+
+
+def belt_speed_fit(
+    samples: Sequence[tuple[float, Vec]],
+    dir_xy: Vec,
+    max_points: int,
+    min_points: int,
+    min_span_s: float,
+) -> tuple[float | None, float | None]:
+    """관측열 (촬영 stamp, 위치) → 벨트 방향 속도 m/s 와 시간 폭 s. 모르면 None.
+
+    박스 위치를 벨트 방향 거리 s 로 바꿔 시각 t 에 직선 s = a + v·t 를 맞춘 기울기 v (최소제곱).
+    제어(FF)에는 쓰지 않는다 — 실기 정확도 확인 뒤 결정 (10/12, design/U9c-dd.md 4.3·10절).
+    """
+    pts = list(samples)[-max_points:]  # 최근 점만
+    if len(pts) < min_points:
+        return None, None  # 점이 모자람
+    t0 = float(pts[0][0])
+    t = np.array([float(p[0]) - t0 for p in pts])  # 첫 점 기준 시각 (큰 수를 빼 계산 오차 줄임)
+    d = vec3(dir_xy)
+    s = np.array([float(vec3(p[1])[:2] @ d[:2]) for p in pts])  # 벨트 방향 거리 (가로·높이 무시)
+    span = float(t[-1] - t[0])  # 맞춤에 쓴 시간 폭
+    if span < min_span_s:
+        return None, span  # 시간 폭이 짧음
+    tc = t - t.mean()  # 평균을 뺀 시각
+    den = float(tc @ tc)
+    if den <= 0.0:
+        return None, span  # 모든 stamp 가 같음 (방어)
+    v = float(tc @ (s - s.mean())) / den  # 최소제곱 기울기
+    return (v if math.isfinite(v) else None), span

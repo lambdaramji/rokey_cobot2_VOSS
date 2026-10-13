@@ -3,6 +3,7 @@
 import array
 from pathlib import Path
 
+import pytest
 import yaml
 from voss_servo.params import check_params, params_digest, ready_log_line
 
@@ -314,10 +315,30 @@ def test_default_yaml_has_t34_and_gripper_values() -> None:
     path = Path(__file__).resolve().parents[1] / "config" / "belt_servo.yaml"
     p = yaml.safe_load(path.read_text())["belt_servo"]["ros__parameters"]
     g = p["grasp"]
-    # measurements-1008 #14 (T34) 근거 값과 제안값
+    # measurements-1008 #14 (T34) 근거 값과 제안값, close_time_max 는 10/10 최대 2128 ms 로 2.3 (U9-c)
     assert (g["hold_width_min_mm"], g["hold_width_max_mm"], g["close_time_max_s"]) == (
         39.5,
         44.0,
-        2.1,
+        2.3,
     )
     assert (g["room_margin_mm"], p["gripper_timeout_s"]) == (10.0, 3.0)
+
+
+CONFIG_DIR = Path(__file__).resolve().parents[1] / "config"
+U9C_FILES = ["belt_servo.yaml", "belt_servo_real.yaml.example", "belt_servo_sim.yaml"]
+
+
+@pytest.mark.parametrize("name", U9C_FILES)
+def test_u9c_values_in_all_yaml(name) -> None:
+    """U9-c: x_max 600 (measurements-1010 #13·#14), close_time_max 2.3 (7·8절 2128 ms) — 3개 파일 모두."""
+    p = yaml.safe_load((CONFIG_DIR / name).read_text())["belt_servo"]["ros__parameters"]
+    assert (p["reach"]["x_max_mm"], p["grasp"]["close_time_max_s"]) == (600.0, 2.3)
+
+
+def test_u9c_values_pass_cross_checks() -> None:
+    """x_max 600·close 2.3 + gripper_timeout 3.0 은 READY, timeout = close 2.3 이면 거부 (경계)."""
+    values = valid_values()
+    values["reach.x_max_mm"], values["grasp.close_time_max_s"] = 600.0, 2.3
+    assert check_params(values).ready
+    values["gripper_timeout_s"] = 2.3  # 닫힘 최대와 같다
+    assert "gripper_timeout_s" in invalid_keys(values)

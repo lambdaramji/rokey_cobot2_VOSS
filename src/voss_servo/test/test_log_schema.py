@@ -33,6 +33,26 @@ def test_missing_key_raises() -> None:
         ls.make_tick(**values)
 
 
+U9C_TICK_KEYS = {
+    "box_u_px", "box_v_px", "obs_rx_age_s", "other_box_rx_age_s", "box_pub_count",
+    "tcp_vel_meas_mps", "stall_ticks", "belt_speed_est_mps", "belt_speed_est_span_s", "cause_fsm",
+    *ls.PHASE_T_KEYS.values(),
+}  # fmt: skip
+U9C_ATTEMPT_KEYS = U9C_TICK_KEYS - {
+    "box_u_px", "box_v_px", "obs_rx_age_s", "tcp_vel_meas_mps"
+}  # fmt: skip
+
+
+def test_u9c_keys_present_and_counts() -> None:
+    """U9-c 새 키 16개(틱)·12개(시도), obs_age_s 이름 유지 (10/10 로그 호환)."""
+    assert U9C_TICK_KEYS <= set(ls.TICK_FIELDS) and len(U9C_TICK_KEYS) == 16
+    assert U9C_ATTEMPT_KEYS <= set(ls.ATTEMPT_FIELDS) and len(U9C_ATTEMPT_KEYS) == 12
+    assert "obs_age_s" in ls.TICK_FIELDS
+    assert (len(ls.TICK_FIELDS), len(ls.ATTEMPT_FIELDS)) == (70, 30)
+    assert len(set(ls.TICK_FIELDS)) == len(ls.TICK_FIELDS)  # 중복 키 없음
+    assert list(ls.PHASE_T_KEYS) == ["PREPARE", "TRACK", "DESCEND", "GRASP", "LIFT", "VERIFY"]
+
+
 def test_attempt_is_subset_of_tick() -> None:
     tick = ls.make_tick(**sample_values())
     record = ls.to_attempt(tick, ls.GOAL_END)
