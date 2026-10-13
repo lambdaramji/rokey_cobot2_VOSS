@@ -30,9 +30,9 @@ zones:               # 두산 posx: x y z rx ry rz, mm/deg. 플랜지 기준(TCP
   C:       {pose: null, grid: {cols: 3, rows: 1, pitch_mm: 60}}
   recheck: {pose: null, grid: {cols: 2, rows: 1, pitch_mm: 60}, view_pose: null}   # view_pose: MoveToZone(RECHECK, VIEW) 때 카메라가 재확인 구역 송장을 보는 자세. 플랜지 posx, 교시 전 null(김학민 T35, #51 MC-017)
   hold:    {pose: null, grid: {cols: 2, rows: 1, pitch_mm: 60}}
-  pallet:  {pose: null, grid: {cols: 4, rows: 2, pitch_mm: 50, pitch_y_mm: 60, layers: 2, order: [0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15]}}   # 선택. 팔레타이징 트레이(BRD 10.7) — robot_gateway MoveToZone(PALLET) 칸 좌표, sort_manager 칸 수·적재 순서(order)
+  pallet:  {pose: null, grid: {cols: 4, rows: 2, pitch_mm: 50, pitch_y_mm: 60, layers: 2}}   # 선택. 팔레타이징 트레이(BRD 10.7) — robot_gateway MoveToZone(PALLET) 격자 칸(cell) 좌표. 적재 순서는 sort_manager 내부 상수(`pallet_plan.slot_order`) — `zones.pallet.grid.order` 는 쓰지 않는다(10/13 PL 결정 Q12, 아무도 읽지 않음)
                      # 팔레트(BRD v1.5, 10/13 통합): 4열 × 2줄 × 2층 = 16칸. 칸 위치는 다른 구역과 같은 grid 규칙 — robot_gateway 는 MoveToZone(PALLET, slot = 격자 칸 번호)로 놓는다.
-                     # sort_manager(pallet_fsm)는 적재 순서 slot(D2: (열−1)×4 + (층−1)×2 + (줄−1))로 계획하고 격자 번호 = (층−1)×8 + (줄−1)×4 + (열−1) 로 바꿔 부른다 — order 는 그 대응과 같다.
+                     # sort_manager(pallet_fsm)는 적재 순서 slot(D2: (열−1)×4 + (층−1)×2 + (줄−1))로 계획하고 격자 번호 = (층−1)×8 + (줄−1)×4 + (열−1) 로 바꿔 부른다.
                      # 열 1 = col 0 = −X(트럭 머리), 줄 1 = row 0 = +Y(D6 전 임시). pose 교시 전(null)이면 sort_manager 가 palletize 를 거부한다.
 observe_pose: null   # 벨트 위 관측·대기 자세 (= 홈). 플랜지 기준
 robot:
@@ -95,3 +95,4 @@ timing:
 - 2026-10-12 (로컬 시험 브랜치): MoveToZone mode `STAY` 추가(voss_msgs) — 놓고 OBSERVE 로 돌아가지 않고 칸 위(못 닿으면 출입구 칸 위)로 올라가 멈춘다. 트럭 적재 뒤 바로 다음 구역 박스 집기. 실기 16개 집기·트럭 적재 성공(집은 폭 40.3~41.2 mm). robot_gateway launch `zone_acc_mm_s2` 인자 추가(속도 올리기).
 - 2026-10-13 (로컬 시험 브랜치, BRD v1.5 10.7 이름에 맞춤 — 10/13 결정): zones `truck` → `pallet`, MoveToZone zone `TRUCK` → `PALLET`, mode `STAY` → `DROP`. `zones.pallet.grid.order` = 적재 순서(말한 순서대로 트럭 안쪽 1열부터 열 단위: 1층 0·4 → 2층 8·12 → 2열 1·5·9·13 …). 칸 번호(층 × 8 + 줄 × 4 + 열, 줄 0 = +Y)는 그대로라 robot_gateway 좌표는 바뀌지 않는다. sort_manager 가 칸 수(16)와 order 를 읽는다. 트레이는 10/12 에 +Y 80 mm 옮겨 재교시(칸 3 1206 해결, col_dy 는 쓰지 않음).
 - 2026-10-13 낮: **김학민 로컬 시험 브랜치(10/12 실기) 통합**(PL 결정). `zones.pallet` 는 김학민의 grid 형식(cols 4·rows 2·layers 2·pitch_mm·pitch_y_mm·order)을 쓴다 — v1.5 초안의 `lanes`·`pitch_x_mm`·`drop_margin_mm` 는 쓰지 않는다(개방 폭은 `gripper.place_open_mm`). grid `layers`·`layer_mm`·`pitch_y_mm`·`col_dy_mm`·`order`, zones.<z>.`in_tray_tcp_z_mm`, `gripper.place_open_mm`·`pick_open_mm` 그대로. 말한 순서 = 배송 순서(10/13 PL) — 위 10/13 줄의 "말한 순서대로 트럭 안쪽부터"는 쓰지 않는다.
+- 2026-10-13 저녁: `zones.pallet.grid.order` 삭제(10/13 PL 결정 Q12) — 아무도 읽지 않고 적재 순서는 `pallet_plan.slot_order` 상수다. A·B·C 의 `zones.<z>.grid.order`(앞쪽 칸 채우는 순서, sort_manager)는 그대로. 설정 파일에서 지우는 것은 demo.yaml 레포 승격(Q23) 때 함께.
