@@ -257,7 +257,7 @@ def test_u9b_launch_extra() -> None:
     assert extra == [
         "gripper:=fake",
         "grip_plan:=empty,held",
-        "grip_close_s:=1.2",
+        "grip_close_s:=0.5",  # S2-T29: x_max 550 에서 재시도 문턱 166 안에 들게
         "max_attempts:=3",
         "box_start_x_mm:=-250",
     ]

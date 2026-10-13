@@ -475,8 +475,8 @@ def test_descend_blind_max_s_values() -> None:
 
 # --- U9b: 안전 후퇴·재시도 여유 (design/U9b-dd.md 7.1 C1~C5) ---
 
-SHOW = control.config_from_values(  # 시연 설정 (kp_z 1.5, x_max 600)
-    values(**{"control.kp_z_per_s": 1.5, "reach.x_max_mm": 600.0})
+SHOW = control.config_from_values(  # 시연 설정 (kp_z 1.5, x_max 550 — S2-T29)
+    values(**{"control.kp_z_per_s": 1.5, "reach.x_max_mm": 550.0})
 )
 
 
@@ -491,7 +491,7 @@ def test_u9b_c2_retreat_xy_rules() -> None:
     assert control.retreat_xy((0.30, 0.0, GRASP), TOP, SHOW) == control.FF  # 아직 윗면 아래
     assert control.retreat_xy((0.30, 0.0, clear - 1e-4), TOP, SHOW) == control.FF
     assert control.retreat_xy((0.30, 0.0, clear), TOP, SHOW) == control.ZERO  # 넘음 → 수직
-    assert control.retreat_xy((0.60, 0.0, GRASP), TOP, SHOW) == control.ZERO  # x 끝 가드
+    assert control.retreat_xy((0.55, 0.0, GRASP), TOP, SHOW) == control.ZERO  # x 끝 가드
 
 
 def test_u9b_c3_command_retreat_tick() -> None:
@@ -509,14 +509,16 @@ def test_u9b_c3_command_retreat_tick() -> None:
 
 
 def test_u9b_c4_retry_need_and_lift_max() -> None:
-    room_need = 2.639 + 2.3  # 하강 예상 + 닫힘 상한 (belt_servo._grasp_room_need 와 같은 식)
-    assert control.retry_need_s(SHOW, room_need) == pytest.approx(7.60, abs=0.02)
+    room_need = 2.639 + 2.5  # 하강 예상 + 닫힘 상한 2.5 (belt_servo._grasp_room_need 와 같은 식)
+    # 재상승 2.66 + 5.14 = 7.80 s
+    assert control.retry_need_s(SHOW, room_need) == pytest.approx(7.80, abs=0.02)
     assert control.lift_max_s(SHOW) == pytest.approx(3.785, abs=0.005)  # 2.785 + 1.0
 
 
 def test_u9b_c5_retry_room_ok() -> None:
-    need, margin = 7.60, 0.010  # 필요 x = 0.048 × 7.60 + 0.010 = 0.3748 → 문턱 x 0.2252
-    assert control.retry_room_ok(0.2250, need, BELT, SHOW, margin)
-    assert not control.retry_room_ok(0.2260, need, BELT, SHOW, margin)
+    # 필요 x = 0.048 × 7.80 + 0.010 = 0.3844 → 문턱 x 0.550 − 0.3844 = 0.1656
+    need, margin = 7.80, 0.010
+    assert control.retry_room_ok(0.1650, need, BELT, SHOW, margin)
+    assert not control.retry_room_ok(0.1660, need, BELT, SHOW, margin)
     assert not control.retry_room_ok(None, need, BELT, SHOW, margin)  # TCP 모름 → 후퇴
     assert not control.retry_room_ok(0.0, None, BELT, SHOW, margin)  # 필요 시간 모름 → 후퇴

@@ -315,11 +315,12 @@ def test_default_yaml_has_t34_and_gripper_values() -> None:
     path = Path(__file__).resolve().parents[1] / "config" / "belt_servo.yaml"
     p = yaml.safe_load(path.read_text())["belt_servo"]["ros__parameters"]
     g = p["grasp"]
-    # measurements-1008 #14 (T34) 근거 값과 제안값, close_time_max 는 10/10 최대 2128 ms 로 2.3 (U9-c)
+    # measurements-1008 #14 (T34) 근거 값과 제안값. close_time_max 는 10/10 최대 2128 ms 로 2.3 (U9-c)
+    # → 10/12 최대 2.467 s 로 2.5 (FIELD-1012 ①, S2-T29)
     assert (g["hold_width_min_mm"], g["hold_width_max_mm"], g["close_time_max_s"]) == (
         39.5,
         44.0,
-        2.3,
+        2.5,
     )
     assert (g["room_margin_mm"], p["gripper_timeout_s"]) == (10.0, 3.0)
 
@@ -330,17 +331,20 @@ U9C_FILES = ["belt_servo.yaml", "belt_servo_real.yaml.example", "belt_servo_sim.
 
 @pytest.mark.parametrize("name", U9C_FILES)
 def test_u9c_values_in_all_yaml(name) -> None:
-    """U9-c: x_max 600 (measurements-1010 #13·#14), close_time_max 2.3 (7·8절 2128 ms) — 3개 파일 모두."""
+    """S2-T29: x_max 550 (FIELD-1012 ③ 3205 x≈564.5), close_time_max 2.5 (① 최대 2.467 s) — 3개 파일 모두.
+
+    이력: U9-c 는 x_max 600 (measurements-1010 #13·#14)·close 2.3 (7·8절 2128 ms).
+    """
     p = yaml.safe_load((CONFIG_DIR / name).read_text())["belt_servo"]["ros__parameters"]
-    assert (p["reach"]["x_max_mm"], p["grasp"]["close_time_max_s"]) == (600.0, 2.3)
+    assert (p["reach"]["x_max_mm"], p["grasp"]["close_time_max_s"]) == (550.0, 2.5)
 
 
 def test_u9c_values_pass_cross_checks() -> None:
-    """x_max 600·close 2.3 + gripper_timeout 3.0 은 READY, timeout = close 2.3 이면 거부 (경계)."""
+    """x_max 550·close 2.5 + gripper_timeout 3.0 은 READY, timeout = close 2.5 이면 거부 (경계)."""
     values = valid_values()
-    values["reach.x_max_mm"], values["grasp.close_time_max_s"] = 600.0, 2.3
+    values["reach.x_max_mm"], values["grasp.close_time_max_s"] = 550.0, 2.5
     assert check_params(values).ready
-    values["gripper_timeout_s"] = 2.3  # 닫힘 최대와 같다
+    values["gripper_timeout_s"] = 2.5  # 닫힘 최대와 같다
     assert "gripper_timeout_s" in invalid_keys(values)
 
 

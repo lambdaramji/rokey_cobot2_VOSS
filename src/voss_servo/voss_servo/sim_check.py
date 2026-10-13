@@ -59,13 +59,15 @@ CASES: dict[str, Case] = {
     "descend_lost": Case("descend_lost", "descend_cut", 40.5),  # 하강 중 +37 에서 끊김 (U9a)
     "vanish": Case("vanish", "approach_cut", 40.5),  # 접근 중 +45 에서 정말 사라짐 (U9a)
     # U9b: 1차 빈손 → 재시도 → 2차 쥠. sim 정렬 x 는 P 추격이 정한다(kp 1 이면 시작점과 무관하게 ≈ 72)
-    # → kp 3 + 시작 −250 으로 정렬 x ≈ −2, 닫힘 1.2 s 로 1차 실패 x ≈ 182 ≤ 재시도 문턱 225 (U9b-dd 6.3)
+    # → kp 3 + 시작 −250 으로 정렬 x ≈ −2, 닫힘 1.2 s 로 1차 실패 x ≈ 182 ≤ 재시도 문턱 225 (U9b-dd 6.3).
+    # S2-T29(x_max 550·close_max 2.5): 문턱 225 → 166, 재정렬 문턱 353 → 293 이라 닫힘 1.2 → 0.5 s
+    # (10/13 sim: 1.2 s 면 1차 실패 x 186 > 166 → 후퇴. 0.5 s 면 1차 실패 x ≈ 150, 재정렬 ≈ 273)
     "retry": Case(
         "retry",
         "normal",
         40.5,
         grip_plan="empty,held",
-        grip_close_s=1.2,
+        grip_close_s=0.5,
         max_attempts=3,
         start_x_mm=-250.0,
         kp=3.0,
