@@ -66,8 +66,15 @@ def of(acts, kind) -> list:
     return [a for a in acts if isinstance(a, kind)]
 
 
+GRID_TO_SLOT = {pp.grid_cell(s): s for s in range(pp.CAPACITY)}
+
+
 def moves(acts) -> list[tuple]:
-    return [(a.zone, a.slot, a.mode) for a in of(acts, f.CallMove)]
+    """(구역, 칸, mode). PALLET 칸은 gateway 격자 번호로 보내므로 적재 순서 slot(D2)으로 되돌려 비교한다."""
+    return [
+        (a.zone, GRID_TO_SLOT[a.slot] if a.zone == "PALLET" else a.slot, a.mode)
+        for a in of(acts, f.CallMove)
+    ]
 
 
 def says(acts) -> list[str]:
@@ -505,3 +512,45 @@ def test_layer1_only_drops_on_first_layer_and_says_8_slots(cfg) -> None:
 def test_new_ctx_rejects_unknown_layers(cfg) -> None:
     with pytest.raises(ValueError):
         f.new_ctx(cfg, pallet_layers=3)
+
+
+# ---------------------------------------------------------------- gateway 격자 번호 (10/13 김학민 로봇 쪽 통합)
+
+
+def test_grid_cell_matches_field_order_and_is_one_to_one() -> None:
+    """적재 순서 slot(D2) → 격자 칸 = 10/12 실기 zones.pallet.grid.order 와 같다."""
+    assert [pp.grid_cell(s) for s in range(16)] == [
+        0,
+        4,
+        8,
+        12,
+        1,
+        5,
+        9,
+        13,
+        2,
+        6,
+        10,
+        14,
+        3,
+        7,
+        11,
+        15,
+    ]
+    assert [pp.grid_cell(s) for s in pp.slot_order(1)] == [
+        0,
+        4,
+        1,
+        5,
+        2,
+        6,
+        3,
+        7,
+    ]  # 1층만 = 격자 1층
+
+
+def test_drop_calls_use_grid_cells(cfg) -> None:
+    ctx, acts = started(cfg, ALL3)
+    ctx, acts = gateway(ctx, acts, ok_all)
+    raw = [a.slot for a in of(acts, f.CallMove) if a.zone == "PALLET"]
+    assert raw == [pp.grid_cell(s) for s in range(16)]

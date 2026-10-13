@@ -27,6 +27,14 @@ COLS, LANES, LAYERS = 4, 2, 2  # 열(X) × 줄(Y) × 층(Z), 결정 D2
 CAPACITY = COLS * LANES * LAYERS  # 16
 
 
+def grid_cell(slot: int) -> int:
+    """적재 순서 slot(D2) → robot_gateway 격자 칸 번호 = (층−1)×8 + (줄−1)×4 + (열−1) (voss_msgs.md MoveToZone PALLET).
+    gateway 는 다른 구역과 같은 grid 규칙(layer×(cols×rows) + row×cols + col, col 0 = −X 트럭 머리)으로 놓고,
+    줄 1 = row 0(+Y, 결정 D6 전 임시)이다. 10/12 실기 `zones.pallet.grid.order` [0,4,8,12,1,5,…] 와 같은 대응."""
+    col, layer, lane = slot_cell(slot)
+    return (layer - 1) * COLS * LANES + (lane - 1) * COLS + (col - 1)
+
+
 def slot_order(layers: int = LAYERS) -> tuple[int, ...]:
     """채우는 칸 순서. layers=2(기본) = slot 0 → 15. layers=1 = 1층 칸만(0·1·4·5·8·9·12·13) — 게이트에서 2층 놓기를
     시연에서 뺄 때(ADR-0014 B, sort_manager `pallet_layers`). 칸 번호 규칙(D2)·메시지는 그대로다."""

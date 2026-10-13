@@ -376,7 +376,10 @@ def test_failed_box_slot_without_box_above(cfg) -> None:
         ("C", 1, "PICK")
     ]
     o = pf.step(ctx, f.MoveDone(True, "OK", 0, 5 * MS))
-    assert [(a.zone, a.slot) for a in o.actions if isinstance(a, f.CallMove)] == [("PALLET", 1)]
+    # MoveToZone PALLET 은 gateway 격자 번호로 부른다(slot 1 = 1열 1층 2줄 → 격자 4, 10/13 통합)
+    assert [(a.zone, a.slot) for a in o.actions if isinstance(a, f.CallMove)] == [
+        ("PALLET", pp.grid_cell(1))
+    ]
 
 
 def test_layer2_box_pulled_down_onto_failed_slot(cfg) -> None:
@@ -388,7 +391,8 @@ def test_layer2_box_pulled_down_onto_failed_slot(cfg) -> None:
         ctx = o.ctx
     ctx, acts = drive(ctx, list(o.actions))
     drops = [a.slot for a in acts if isinstance(a, f.CallMove) and a.mode == "DROP"]
-    assert drops == [1, 0, 3]  # 칸 2 박스 → 칸 0, 칸 2 는 빈칸
+    # 칸 2 박스 → 칸 0, 칸 2 는 빈칸 (MoveToZone 은 gateway 격자 번호, 10/13 통합)
+    assert drops == [pp.grid_cell(s) for s in (1, 0, 3)]
     st = pf.pallet_state(ctx)
     cells = {pp.slot_cell(i) for i, s in enumerate(st["slot_state"]) if s == "DONE"}
     assert all((c, 1, ln) in cells for (c, la, ln) in cells if la == 2)  # 2층 아래는 늘 1층
