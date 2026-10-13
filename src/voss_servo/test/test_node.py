@@ -12,6 +12,7 @@ from voss_servo.belt_servo import BeltServoNode, pose_lag_note
 
 from voss_msgs.action import TrackAndGrasp
 from voss_msgs.msg import BoxTrack
+from voss_servo import sim_check as sc
 
 # 실행별 도메인 (RULES §2, 2026-10-10): 같은 PC 의 다른 세션·사용자 노드와 섞이지 않게.
 # 고정값·환경 변수에 기대지 않는다 (예: 남이 /voss/robot/gripper 를 띄워 두면 '서비스 없음' 시험이 깨진다)
@@ -424,6 +425,20 @@ def test_shutdown_mid_goal_logs_node_shutdown(ready_node, tmp_path) -> None:
 # ------------------------------------------------------------------ S2-T14 (DD 7절 N20)
 
 
+def _expected_profile(n) -> tuple[str, float, float]:
+    """기동 로그 첫 줄이 담아야 할 (프로파일, 하강 예상, 들기 예상) — control 함수로 계산."""
+    from voss_servo import control, fsm
+
+    c = n._ctrl
+    desc = control.z_move_time_s(
+        c.approach_dz - c.grasp_dz, c.descend_speed, c, control.z_law(fsm.DESCEND, c)
+    )
+    lift = control.z_move_time_s(
+        c.lift_dz - c.grasp_dz, c.lift_speed, c, control.z_law(fsm.LIFT, c)
+    )
+    return c.z_profile, round(desc, 2), round(lift, 2)
+
+
 def test_s2t14_profile_line_and_goal_end_key(ready_node) -> None:
     from voss_servo.belt_servo import GoalCtx
 
@@ -433,6 +448,8 @@ def test_s2t14_profile_line_and_goal_end_key(ready_node) -> None:
     line = n._z_profile_line()
     assert line.startswith("z 프로파일: p — 모든 phase P(kp_z 2)")  # 키 없음 = p
     assert "하강 예상 " in line and "(켜기: z.profile: trapezoid)" in line
+    # READY 문구 ↔ sim_check 정규식 (학민 리뷰 4번, 튜플 전체)
+    assert sc.parse_profile([f"[belt_servo]: {line}"]) == _expected_profile(n)
     state, _ = fsm.start()
     ctx = GoalCtx(FakeHandle(), "g1", 7, state, start=n._now(), vision_since=n._now())
     n._ctx = ctx
@@ -461,12 +478,15 @@ def test_s2t14_trapezoid_node_ready_values(trap_node) -> None:
 
     n = trap_node
     assert n.ready and n._ctrl.z_profile == "trapezoid"
-    assert n._z_profile_line().startswith(
-        "z 프로파일: trapezoid — DESCEND·LIFT 사다리꼴(감속 0.080"
-    )
+    line = n._z_profile_line()
+    assert line.startswith("z 프로파일: trapezoid — DESCEND·LIFT 사다리꼴(감속 0.080")
+    assert "PREPARE·TRACK·후퇴는 P" in line  # 후속 (나)
+    assert sc.parse_profile([f"[belt_servo]: {line}"]) == _expected_profile(n)
+    assert _expected_profile(n) == ("trapezoid", 1.70, 1.74)
     cutoff = 0.010  # READY_ARGS 의 vision_cutoff 10 mm
     assert n._blind_max_s == pytest.approx(control.descend_blind_max_s(cutoff, n._ctrl))
-    assert n._lift_max_s == pytest.approx(2.736, abs=1e-3)  # 사다리꼴 69 mm + 1.0
+    # 후퇴 상한 = P 식 (후속 (나)): READY_ARGS kp_z 2.0 → 2.260 + 1.0 (현장 kp_z 1.5 면 3.785, 사다리꼴 2.736 아님)
+    assert n._lift_max_s == pytest.approx(3.260, abs=0.005)
     assert n._room_need_s == pytest.approx(1.7025 + 2.1, abs=1e-3)  # close_time_max 2.1
     from voss_servo.belt_servo import GoalCtx
 

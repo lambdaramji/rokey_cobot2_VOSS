@@ -4,7 +4,8 @@
 - ideal: 명령 속도를 그대로 낸다.
 - delay_ramp(τ): 명령을 τ 늦게 받고, 자기 속도를 0.1 m/s² 램프로 명령 쪽으로 바꾼다
   (gateway speedl acc 100 mm/s², HLD 0.3 의 B 모델 — 10/12 틱 맞춤 평균 0.31 mm).
-TCP 추정은 로봇 실제 위치(외삽 없음)로 둔다 — 지연은 로봇 쪽에만 넣는다.
+TCP 추정은 기본으로 로봇 실제 위치(외삽 없음). 후속(HLD 12.2): Robot(pose_lag) 로 pose 지연, run_z(cfg_lag) 로
+설정 pose_lag 외삽, run_z(coast_ticks) 로 LIFT 도달 뒤 관성을 넣는다.
 """
 
 import math
@@ -61,14 +62,28 @@ TRAP = control.config_from_values(values(**{"z.profile": "trapezoid"}))
 
 
 class Robot:
-    """명령 → 실제 z 속도. tau 만큼 늦게 받고, ramp 가 있으면 그 가속으로만 속도를 바꾼다."""
+    """명령 → 실제 z 속도. tau 만큼 늦게 받고, ramp 가 있으면 그 가속으로만 속도를 바꾼다.
 
-    def __init__(self, z0: float, tau: float = 0.0, ramp: float | None = None) -> None:
+    pose_lag: 실제 pose 지연 — seen(t) 가 이만큼 옛 위치를 돌려준다 (S2-T14 후속, HLD 12.2).
+    """
+
+    def __init__(
+        self, z0: float, tau: float = 0.0, ramp: float | None = None, pose_lag: float = 0.0
+    ) -> None:
         self.z = z0  # 실제 TCP z
         self.v = 0.0  # 실제 z 속도
         self.tau, self.ramp = tau, ramp
         self.queue: deque = deque()  # (적용 시각, 명령 vz)
         self.cmd = 0.0  # 지금 적용 중인 명령
+        self.pose_lag = pose_lag
+        self.hist: list[tuple[float, float]] = [(-1.0, z0)]  # (시각, z) — 서브스텝마다
+
+    def seen(self, t: float) -> float:
+        """pose 가 보여 주는 z = 시각 t − pose_lag 의 실제 z. 지연 0 이면 지금 z 그대로."""
+        if self.pose_lag == 0.0:
+            return self.z  # 기존 시험과 비트 단위로 같게 (시각 비교를 하지 않는다)
+        when = t - self.pose_lag
+        return next(z for tt, z in reversed(self.hist) if tt <= when + 1e-12)
 
     def step(self, t: float, vz_cmd: float, sub: int = 10) -> None:
         """시각 t 에 명령 vz_cmd 를 보내고 dt 동안 sub 조각으로 적분한다."""
@@ -84,6 +99,8 @@ class Robot:
                 dv = self.cmd - self.v
                 self.v += max(-self.ramp * h, min(self.ramp * h, dv))  # 램프
             self.z += self.v * h
+            if self.pose_lag:
+                self.hist.append((now + h, self.z))  # 서브스텝마다 (틱마다면 실효 지연이 늘어난다)
 
 
 def make_geo(cfg: control.ControlConfig, z: float) -> control.Geometry:
@@ -92,10 +109,12 @@ def make_geo(cfg: control.ControlConfig, z: float) -> control.Geometry:
     return control.geometry(tcp, np.array([0.0, 0.0, TOP]), 100.0, False, 100.0, cfg)
 
 
-def run_z(cfg, phase, z0, robot=None, xy_ff=False, max_s=6.0):
+def run_z(cfg, phase, z0, robot=None, xy_ff=False, max_s=6.0, cfg_lag=0.0, coast_ticks=0):
     """phase 하나(DESCEND 또는 LIFT)를 전이까지 돌린다. DESCEND 는 이어서 GRASP 램프로 멈출 때까지.
 
-    반환 dict: t_reach(전이 시각), land(GRASP 중 실제 z 최소), top(LIFT 중 실제 z 최대), cmds, dv_max.
+    추정 z = robot.seen(t) + 마지막 명령 z × cfg_lag (control.tcp_now 와 같은 규칙, 설정 pose_lag).
+    LIFT 는 도달하면 끝, coast_ticks > 0 이면 도달 뒤 0 명령(VERIFY·후퇴 끝)으로 그만큼 더 돌려 관성을 잰다.
+    반환 dict: t_reach(전이 시각), land(GRASP 중 실제 z 최소), top(실제 z 최대), cmds, dv_max.
     """
     rob = robot or Robot(z0)
     prev = np.array([BELT if xy_ff else 0.0, 0.0, 0.0])  # 직전 발행 속도
@@ -103,11 +122,16 @@ def run_z(cfg, phase, z0, robot=None, xy_ff=False, max_s=6.0):
     land, top_z, cmds, dv_max = math.inf, -math.inf, [], 0.0
     grasp_ticks = 0
     while t < max_s:
-        g = make_geo(cfg, rob.z)
+        g = make_geo(
+            cfg, rob.seen(t) + float(prev[2]) * cfg_lag
+        )  # pose 지연이 있으면 옛 위치를 본다
         if cur == fsm.DESCEND and g.at_grasp_height:
             cur, t_reach = fsm.GRASP, t  # 파지 높이 도달 → GRASP (z 요구 0, clamp 램프로 정지)
         if cur == fsm.LIFT and g.at_lift_height and t_reach is None:
             t_reach = t
+            for k in range(coast_ticks):  # 도달 뒤 0 명령 — 로봇은 지연·램프만큼 더 간다
+                rob.step(t + k * DT, 0.0)
+                top_z = max(top_z, rob.z)
             break
         retreat = xy_ff and cur == fsm.LIFT
         cmd = control.command(cur, False, False, g, prev, DT, cfg, retreat=retreat)
@@ -234,19 +258,60 @@ def test_n6p_trap_landing_with_delay_and_ramp(tau, low_mm) -> None:
     assert out["land"] >= params.GATEWAY_Z_MIN_MM / 1000.0 + 0.001  # 하한 78 위
 
 
+@pytest.mark.parametrize(
+    ("real_lag", "cfg_lag", "tau", "low_mm", "high_mm"),
+    [
+        (
+            0.060,
+            0.0,
+            0.060,
+            -3.5,
+            -2.5,
+        ),  # 보정 안 된 60 ms — 착지 78.8 (HLD 12.2, 학민 76.8 은 τ100)
+        (0.060, 0.060, 0.060, -1.0, 9.0),  # 보정됨 — −0.5
+        (0.020, 0.0, 0.024, 0.0, 9.0),  # 현장형: joint_states 실제 15~20 ms · 설정 0 — +0.5
+    ],
+)
+def test_f6_trap_landing_with_pose_lag(real_lag, cfg_lag, tau, low_mm, high_mm) -> None:
+    rob = Robot(APPROACH, tau=tau, ramp=RAMP, pose_lag=real_lag)
+    out = run_z(TRAP, fsm.DESCEND, APPROACH, robot=rob, cfg_lag=cfg_lag)
+    assert low_mm <= (out["land"] - TARGET) * 1000.0 <= high_mm
+
+
 @pytest.mark.parametrize("tau", [0.024, 0.060, 0.100])
 def test_n6p_p_mode_lands_above_target(tau) -> None:
     out = run_z(P, fsm.DESCEND, APPROACH, robot=Robot(APPROACH, tau=tau, ramp=RAMP))
     assert (out["land"] - TARGET) * 1000.0 >= 1.0  # P 는 문턱 근처에서 멈춘다 (현장 +1.75~1.89)
 
 
-def test_n7_trap_lift_and_retreat_faster_and_bounded() -> None:
-    for xy_ff in (False, True):  # 정상 LIFT · 후퇴 RISING(xy FF)
-        trap = run_z(TRAP, fsm.LIFT, TARGET, xy_ff=xy_ff)
-        p = run_z(P, fsm.LIFT, TARGET, xy_ff=xy_ff)
-        assert trap["t_reach"] < p["t_reach"] - 0.5
-        assert trap["top"] <= LIFT_Z + 0.002  # 위로 지나침 ≤ tol (무해 쪽)
-        assert trap["dv_max"] <= 0.1 * DT + 1e-9
+def test_f1_z_law_retreat_is_p() -> None:
+    """후속 (나): 후퇴는 사다리꼴에서도 P (HLD 12.1). 정상 LIFT·DESCEND 는 사다리꼴 그대로."""
+    assert control.z_law(fsm.LIFT, TRAP, retreat=True) == control.Z_LAW_P
+    assert control.z_law(fsm.LIFT, TRAP) == control.Z_LAW_TRAP
+    assert control.z_law(fsm.DESCEND, TRAP) == control.Z_LAW_TRAP
+
+
+def test_f2_trap_retreat_equals_p_retreat() -> None:
+    """사다리꼴 모드의 후퇴 RISING 명령 = P 모드 후퇴 명령 (틱·비트 단위, 10/12 실기 동작 그대로)."""
+    a = run_z(TRAP, fsm.LIFT, TARGET, xy_ff=True)
+    b = run_z(P, fsm.LIFT, TARGET, xy_ff=True)
+    assert len(a["cmds"]) == len(b["cmds"])
+    assert all(np.array_equal(x.vel, y.vel) for x, y in zip(a["cmds"], b["cmds"], strict=True))
+
+
+def test_f3_lift_tail_command_and_coast() -> None:
+    """도달 직전 틱 z 명령(학민 제안)과 도달 뒤 관성까지 잰 진짜 지나침 (N7 교체)."""
+    trap, p = run_z(TRAP, fsm.LIFT, TARGET), run_z(P, fsm.LIFT, TARGET)  # 정상 LIFT
+    assert abs(float(trap["cmds"][-1].vel[2])) <= 0.006  # 꼬리 ≤ 6 mm/s
+    assert trap["t_reach"] < p["t_reach"] - 0.5  # 사다리꼴이 0.5 s 넘게 짧다
+    assert trap["dv_max"] <= 0.1 * DT + 1e-9
+    for cfg in (TRAP, P):  # 후퇴 (두 모드 모두 P)
+        out = run_z(cfg, fsm.LIFT, TARGET, xy_ff=True)
+        assert abs(float(out["cmds"][-1].vel[2])) <= 0.006
+    for xy_ff in (False, True):  # 지연 + 램프 τ24: 도달 뒤 20틱 관성 포함 최고 z
+        rob = Robot(TARGET, tau=0.024, ramp=RAMP)
+        out = run_z(TRAP, fsm.LIFT, TARGET, robot=rob, xy_ff=xy_ff, coast_ticks=20)
+        assert out["top"] <= LIFT_Z + 0.002  # 들기 목표 + 2 mm 안
 
 
 @pytest.mark.parametrize("robot_tau", [None, 0.024, 0.060, 0.100])
@@ -289,7 +354,7 @@ def test_n10_dependent_values_trapezoid() -> None:
     room = control.grasp_room_need_s(TRAP, 2.5)
     assert room == pytest.approx(4.2025, abs=1e-3)  # 1.7025 + 2.5
     assert control.descend_blind_max_s(0.030, TRAP) == pytest.approx(2.5025, abs=1e-3)
-    assert control.lift_max_s(TRAP) == pytest.approx(2.736, abs=1e-3)
+    assert control.lift_max_s(TRAP) == pytest.approx(3.785, abs=0.005)  # 후퇴는 P (후속 (나))
     need = control.retry_need_s(TRAP, room)  # 재상승은 P (2.660) 그대로
     assert need == pytest.approx(6.862, abs=2e-3)
     assert (0.550 - (BELT * need + 0.010)) * 1000.0 == pytest.approx(210.6, abs=0.2)  # 실패 x 문턱

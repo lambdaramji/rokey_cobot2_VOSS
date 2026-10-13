@@ -232,3 +232,69 @@ N5 회귀: 같은 입력으로 (a) 새 command (b) 옛 식을 재현한 참조 �
 ★ N19: fail_retreat·retry 의 x 기하 = 정렬 x + 48 mm/s × (모드별 하강 + 닫힘) 을 DD 5절 표 값으로 단언
 N9: trap_time_s ≥ 폐루프(ideal) 도달 시간, 차 ≤ 0.15 s (DESCEND 59 mm·LIFT 69 mm)
 ```
+
+## 10. 후속 (DD 10절, 10/13 — 후퇴만 P)
+
+```
+control.py
+    TRAP_PHASES 주석: "후퇴는 z_law 의 retreat 인자로 뺀다 (HLD 12.1 (나))"
+
+    함수 z_law(phase, cfg, retreat=False):
+        cfg.z_profile == trapezoid 이고 phase ∈ TRAP_PHASES 이고 retreat 가 아니면 → "TRAP"
+        → "P"                       # 후퇴 RISING 은 10/12 실기로 확인된 P 그대로
+
+    함수 z_command(z_t, v_down, v_up, phase, tcp_z, cfg, retreat=False):
+        z_t 가 None 이면 → 0.0
+        z_law(phase, cfg, retreat) == TRAP → z_speed_trap(...)      # 그대로
+        → z_speed(...)                                              # 그대로
+
+    command(...):                    # 한 줄
+        vz = z_command(z_t, v_down, v_up, phase, tcp z, cfg, retreat)   # 받은 retreat 를 넘긴다
+
+    lift_max_s(cfg):
+        expect = z_move_time_s(lift_dz − grasp_dz, lift_speed, cfg, z_law(LIFT, cfg, retreat=True))  # 항상 P
+        → expect + BLIND_DWELL_MARGIN_S          # 두 모드 3.785 s (docstring 예시도 정정)
+
+belt_servo.py
+    _z_profile_line (trapezoid 문구): "…), PREPARE·TRACK·후퇴는 P. {times} (되돌림: z.profile: p)"
+```
+
+```
+test_z_profile.py
+    Robot 에 pose 지연 추가:
+        __init__(..., pose_lag=0.0)        # 실제 pose 지연 (추정이 이만큼 옛 위치를 본다)
+        step 의 서브스텝마다 (시각, z) 기록을 남긴다    ★ 틱마다면 실효 지연이 66.7 ms 가 된다 (재검)
+        seen(t):
+            pose_lag == 0 이면 → 현재 z                  ★ 시각 비교 부동소수로 기존 시험이 바뀌지 않게
+            → 시각 t − pose_lag 이하 마지막 기록 z (처음엔 z0)
+    run_z(cfg, ..., robot, cfg_lag=0.0):
+        추정 z = robot.seen(t) + 마지막 명령 z × cfg_lag      # control.tcp_now 와 같은 규칙 (지평 = 설정 lag)
+        (robot.pose_lag 0 · cfg_lag 0 이면 지금과 같음 — 기존 시험 결과 불변)
+
+    F1 test_z_law_retreat_is_p:
+        z_law(LIFT, TRAP, retreat=True) == P, z_law(LIFT, TRAP) == TRAP, z_law(DESCEND, TRAP) == TRAP
+        # 정의상 retreat 이면 phase 와 무관하게 P. fsm 에서 후퇴는 LIFT 뿐이라 DESCEND·retreat 조합은 단언하지 않는다
+    F2 test_trap_retreat_equals_p_retreat:
+        a = run_z(TRAP, LIFT, TARGET, xy_ff=True), b = run_z(P, LIFT, TARGET, xy_ff=True)
+        len 같고 모든 cmds[i].vel 이 np.array_equal
+    run_z(..., coast_ticks=0):  ★ LIFT 도달 뒤 0 명령(VERIFY·후퇴 끝과 같음)으로 coast_ticks 틱 더 돌려 최고 z 를 잰다
+        반환 top = 도달 뒤까지 포함한 실제 z 최고값 (coast_ticks 0 이면 지금처럼 도달까지)
+    F3 (N7 교체) test_lift_tail_command:
+        정상 LIFT: trap = run_z(TRAP, LIFT, TARGET), p = run_z(P, …)
+            |trap.cmds[-1].vel[2]| ≤ 0.006, trap.t_reach < p.t_reach − 0.5, dv_max ≤ a·dt
+        후퇴: 두 모드 |cmds[-1].vel[2]| ≤ 0.006
+        (cmds[-1] = 도달 판정 직전 틱의 발행 명령 — run_z 가 도달 틱에서 끊으므로)
+        ★ 진짜 지나침: 지연+램프 τ24, coast_ticks 20 → 정상 LIFT·후퇴 모두 top ≤ LIFT_Z + 0.002
+    F4 (N10 수정): lift_max_s(TRAP) == 3.785
+    F6 (N6′ 추가) test_trap_landing_uncorrected_pose_lag:
+        실제 60 ms · 설정 0 · τ60 · 램프 → 착지 − 목표 ∈ [−3.5, −2.5] mm   # HLD 12.2 의 78.8 (−3.0)
+        실제 60 ms · 설정 60 · τ60 · 램프 → 착지 − 목표 ≥ −1.0 mm           # 보정되면 −0.5
+        ★ 현장형: 실제 20 ms · 설정 0 · τ24 · 램프 → 착지 − 목표 ≥ 0.0 mm     # +0.5 (HLD 12.2)
+
+test_node.py
+    F5: trap_node _lift_max_s == 3.785, _z_profile_line() 에 "PREPARE·TRACK·후퇴는 P"
+    F7 ★ 튜플 전체: p 노드 parse_profile([f"[belt_servo]: {line}"]) == ("p", round(하강 예상, 2), round(들기 예상, 2))
+        trap 노드 == ("trapezoid", 1.70, 1.74) — 예상값은 control.z_move_time_s 로 계산
+        (from voss_servo import sim_check as sc)
+```
+- 1D 하네스의 pose 지연은 2축 분석(fu_sim.py)과 수치가 조금 다를 수 있다 → F6 범위는 구현 뒤 실제 값을 보고 HLD 12.2 와 함께 적는다(범위를 결과에 맞춰 넓히지 않는다 — 다르면 원인부터 본다).
