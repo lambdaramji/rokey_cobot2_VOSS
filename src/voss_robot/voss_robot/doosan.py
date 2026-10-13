@@ -348,7 +348,9 @@ class RosDoosan:
         if (
             m.level < 2
         ):  # INFO(예 1216 speedl 가속 한계로 time 자동 조정)는 안내라 detail 에 남기지 않는다
-            self._log.info(f"두산 안내: {text}")
+            from voss_robot.state_logic import with_joints
+
+            self._log.info(f"두산 안내: {with_joints(text, m.code, self.latest_joints())}")
             return
         self.last_alarm = text  # WARN·ERROR (예 1206 NOT REACHABLE)
         self.alarm_seq += 1

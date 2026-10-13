@@ -31,6 +31,23 @@ CTRL_ESTOP = {6}
 CTRL_SAFETY = {3, 5, 9, 10}
 CTRL_OK = {1, 2}  # STANDBY·MOVING 만 운전 가능으로 본다
 
+# 두산 특이점 안내(level 1): 3205 Outside → Inside, 3206 Inside → Outside. 원인 자세(도달 한계 쪽인지)를
+# 보려고 그 순간 관절각을 같은 줄에 붙인다(#26, 10/12 C 칸 PLACE 왕복 46건 — 관절 기록이 없어 원인 미확정)
+SINGULARITY_CODES = {3205, 3206}
+
+
+def with_joints(text: str, code: int, joints) -> str:
+    """특이점 안내면 joint_states 최신 관절(deg)과 그 stamp 를 붙인 문구. 그 밖의 알람은 그대로.
+
+    joints = Doosan.latest_joints() 값 — (관절 deg 6개, header stamp ns) 또는 None(아직 못 받음)."""
+    if code not in SINGULARITY_CODES:
+        return text
+    if joints is None:
+        return f"{text} | 관절 없음(joint_states 미수신)"
+    deg, stamp_ns = joints
+    js = ", ".join(f"{v:.1f}" for v in deg)
+    return f"{text} | 관절 deg [{js}] @ {stamp_ns / 1e9:.3f}"
+
 
 @dataclass
 class Inputs:
