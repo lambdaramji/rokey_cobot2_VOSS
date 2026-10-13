@@ -18,7 +18,8 @@ from typing import Any
 # 사각 구간에서 나오는 높이 = 들어가는 높이 + 이 값 (fsm.py 와 같은 값, 순환 import 를 피하려고 여기 둔다)
 BLIND_EXIT_MARGIN_MM = 5.0
 # 사각 체류 상한 = 예상 하강 시간 + 이 여유 (s). 판단값 — 시연 중 오판 PAUSED 를 막게 넉넉히 (U9a-hld D3).
-# 로봇 실현 속도가 명령의 약 62 % 아래로 떨어져야 정상 하강도 걸린다 (U9a-dd 2.4)
+# 로봇 실현 속도가 명령의 약 62 %(z.profile p) / 약 48 %(trapezoid) 아래로 떨어져야 정상 하강도 걸린다
+# (U9a-dd 2.4, S2T14-hld D5)
 # 후퇴 상승 체류 상한 여유에도 같은 값을 쓴다 (U9b-dd 1절)
 BLIND_DWELL_MARGIN_S = 1.0
 # 안전 후퇴 중 보정 TCP z 가 박스 윗면 + 이 값을 넘으면 xy 를 0 으로 (판단값, U9b-dd 1절).
@@ -26,6 +27,10 @@ BLIND_DWELL_MARGIN_S = 1.0
 RETREAT_CLEAR_MM = 10.0
 # 재시도 상한 (계약: TrackAndGrasp.action attempts 최대 3)
 MAX_ATTEMPTS = 3
+# z.profile 값 (S2-T14). p = 모든 phase P 제어(기본, 시연 라인) / trapezoid = DESCEND·LIFT 만 사다리꼴
+Z_PROFILE_P = "p"
+Z_PROFILE_TRAP = "trapezoid"
+Z_PROFILES = (Z_PROFILE_P, Z_PROFILE_TRAP)
 # belt.direction_base 길이 허용 오차 (voss_config.md 값 규칙: 1 ± 0.01)
 DIRECTION_NORM_TOL = 0.01
 # belt.direction_base 의 수평(xy) 길이 하한 — 벨트는 수평. [0, 0, 1] 도 길이 검사는 통과하므로 따로 막는다
@@ -72,6 +77,11 @@ def _non_negative(v: Any) -> str | None:
 def _retry_range(v: Any) -> str | None:
     """재시도 상한은 1 ~ 3."""
     return None if 1 <= v <= MAX_ATTEMPTS else f"1~{MAX_ATTEMPTS} 이어야 함"
+
+
+def _z_profile(v: Any) -> str | None:
+    """z.profile 은 p 또는 trapezoid (S2T14-dd 1절)."""
+    return None if v in Z_PROFILES else "p 또는 trapezoid 이어야 함"  # 오타는 READY 거부
 
 
 def _not_empty(v: Any) -> str | None:
@@ -121,6 +131,8 @@ PARAM_SPECS: tuple[ParamSpec, ...] = (
     ParamSpec("z.descend_speed_mps", "float", "m/s", True, _positive),
     ParamSpec("z.lift_speed_mps", "float", "m/s", True, _positive),
     ParamSpec("z.height_tol_mm", "float", "mm", True, _positive),
+    # 선택 키: 없거나 null 이면 p (S2-T14 되돌림 스위치, yaml 한 줄)
+    ParamSpec("z.profile", "str", "-", False, _z_profile),
     ParamSpec("input.stale_timeout_s", "float", "s", True, _positive),
     ParamSpec("input.lost_timeout_s", "float", "s", True, _positive),
     ParamSpec("input.pose_lag_ms", "float", "ms", True, _non_negative),  # 측정값 60 (0 = 보정 없음)
@@ -317,6 +329,9 @@ def params_digest(values: dict[str, Any]) -> str:
     present = {
         k: values[k] for k in sorted(values) if values[k] is not None and k not in DIGEST_EXCLUDE
     }  # 값 있는 제어 설정만
+    profile = present.get("z.profile")
+    if profile == Z_PROFILE_P or _is_null_string(profile):
+        present.pop("z.profile")  # "p"·"null"·키 없음 → 같은 지문 (S2T14-dd 1절: P 시리즈 sha 유지)
     text = json.dumps(
         present,
         sort_keys=True,

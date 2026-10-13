@@ -9,6 +9,7 @@
       · log_dir · invalid_after_s · lost_after_s
       · (U9b) gripper(gateway|fake) · grip_plan · grip_close_s · max_attempts(retry.max_attempts 덮어쓰기)
         · box_start_x_mm (fake_box 시작 x) — 기본값이면 지금과 똑같이 동작
+      · (S2-T14) z_profile(p|trapezoid, z.profile 덮어쓰기 — 비우면 sim yaml 의 p)
 - gripper:=fake 면 fake_gripper 를 띄우고 belt_servo 의 /voss/robot/gripper 를 /voss/sim/gripper 로 remap
   (gateway 의 그리퍼 서비스는 떠 있지만 belt_servo 가 부르지 않는다, design/U9b-dd.md 6.2).
 - gateway 는 **항상 dry_run:=true** (인자로 받지 않는다 — 시뮬에서 실기로 새지 않게).
@@ -39,8 +40,8 @@ from voss_servo.launch_params import config_values, expand, file_sha, load_yaml
 GRIPPER_SRV = "/voss/robot/gripper"  # belt_servo 가 부르는 이름 (topics.md)
 
 
-def _write_overrides(folder: str, kp: str, max_attempts: str = "") -> str:
-    """kp·max_attempts 중 값이 있는 것만 덮어쓰는 작은 YAML 을 만들고 경로를 돌려준다."""
+def _write_overrides(folder: str, kp: str, max_attempts: str = "", z_profile: str = "") -> str:
+    """kp·max_attempts·z_profile 중 값이 있는 것만 덮어쓰는 작은 YAML 을 만들고 경로를 돌려준다."""
     os.makedirs(folder, exist_ok=True)
     path = os.path.join(folder, "sim_overrides.yaml")
     params: dict = {}
@@ -48,10 +49,17 @@ def _write_overrides(folder: str, kp: str, max_attempts: str = "") -> str:
         params["control"] = {"kp_per_s": float(kp)}  # P 게인
     if max_attempts:
         params["retry"] = {"max_attempts": int(max_attempts)}  # 재시도 상한 (U9b)
+    if z_profile:
+        params["z"] = {"profile": z_profile}  # z 속도 프로파일 p | trapezoid (S2-T14)
     body = {"belt_servo": {"ros__parameters": params}}
     with open(path, "w", encoding="utf-8") as f:
         yaml.safe_dump(body, f)
     return path
+
+
+def _wants_overrides(kp: str, max_attempts: str, z_profile: str) -> bool:
+    """덮어쓸 값이 하나라도 있나. 새 인자를 _write_overrides 에 넣으면 여기에도 넣는다 (S2-T14 재검 m5)."""
+    return bool(kp or max_attempts or z_profile)
 
 
 def _setup(context):
@@ -69,9 +77,9 @@ def _setup(context):
     robot_share = get_package_share_directory("voss_robot")
     log_dir = arg("log_dir")
     overrides = ""
-    if arg("kp") or arg("max_attempts"):  # kp·max_attempts 만 바꾸는 덮어쓰기 파일
+    if _wants_overrides(arg("kp"), arg("max_attempts"), arg("z_profile")):  # 덮어쓰기 파일
         folder = expand(log_dir) if log_dir else tempfile.mkdtemp(prefix="voss_sim_")
-        overrides = _write_overrides(folder, arg("kp"), arg("max_attempts"))
+        overrides = _write_overrides(folder, arg("kp"), arg("max_attempts"), arg("z_profile"))
     gripper = arg("gripper")
     if gripper not in ("gateway", "fake"):
         raise RuntimeError(f"sim.launch gripper:={gripper} — gateway 또는 fake")
@@ -130,6 +138,7 @@ def _setup(context):
     note = (
         f"sim.launch: scenario={arg('scenario')} object_mm={arg('object_mm')} "
         f"kp={arg('kp') or '(sim yaml)'} max_attempts={arg('max_attempts') or '(sim yaml)'} "
+        f"z_profile={arg('z_profile') or '(sim yaml)'} "
         f"gripper={gripper} plan={arg('grip_plan')} close={arg('grip_close_s')} "
         f"start_x={arg('box_start_x_mm')} log_dir={log_dir or '(sim yaml)'} — gateway dry_run 고정"
     )
@@ -150,6 +159,7 @@ def generate_launch_description() -> LaunchDescription:
         ("grip_close_s", "1.7", "fake 닫힘 지연 s"),
         ("max_attempts", "", "retry.max_attempts 덮어쓰기 (비우면 sim yaml)"),
         ("box_start_x_mm", str(DEFAULT_START_M[0] * 1000.0), "fake_box 시작 x mm"),
+        ("z_profile", "", "z.profile 덮어쓰기 p | trapezoid (비우면 sim yaml, S2-T14)"),
     ]
     decls = [DeclareLaunchArgument(n, default_value=d, description=t) for n, d, t in args]
     return LaunchDescription([*decls, OpaqueFunction(function=_setup)])

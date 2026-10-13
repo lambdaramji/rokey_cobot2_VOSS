@@ -34,6 +34,7 @@ belt_servo:
       descend_speed_mps: 0.05
       lift_speed_mps: 0.08
       height_tol_mm: 2.0
+      profile: p                    # S2-T14. sim_check --z-profile trapezoid / sim.launch z_profile:=trapezoid 로 덮어쓴다
     input:
       stale_timeout_s: 0.3
       lost_timeout_s: 0.5           # DESCEND 경주는 cutoff 30 으로 없앰 (U9a)

@@ -62,6 +62,7 @@ TICK_FIELDS: tuple[str, ...] = (
     "belt_speed_est_span_s",  # 그 맞춤에 쓴 관측의 시간 폭
     "clamped",  # 한계로 잘랐나 (U2)
     "cmd_rule",  # FF_P | FF | ZERO | ZERO_NO_POSE | ZERO_NO_OBS | ZERO_STOP
+    "z_v_cmd_mps",  # clamp 전 z 속도 요구값 (목표 z 없으면 null). 발행값은 cmd_vel_mps[2] (S2-T14)
     "dt_s",  # 가속 제한에 쓴 틱 간격
     "aligned",  # 전환 플래그 (TRACK → DESCEND)
     "at_grasp_height",  # 전환 플래그 (DESCEND → GRASP)
@@ -88,6 +89,7 @@ TICK_FIELDS: tuple[str, ...] = (
     "phase_t_lift_s",
     "phase_t_verify_s",
     "gripper",  # null | 그리퍼 호출 기록 dict (키 목록은 grip.call_record, design/U5-dd.md 4절)
+    "z_profile",  # "p" | "trapezoid" — 이 시도의 z 속도 프로파일 (S2-T14)
     "config_version",
     "config_sha256",
     "params_sha256",
@@ -126,6 +128,7 @@ ATTEMPT_FIELDS: tuple[str, ...] = (
     "gripper",
     "position_source",
     "calib_version",
+    "z_profile",
     "config_version",
     "config_sha256",
     "params_sha256",

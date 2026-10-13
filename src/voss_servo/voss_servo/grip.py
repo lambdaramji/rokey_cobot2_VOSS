@@ -157,6 +157,25 @@ def descend_time_s(dist_m: float, v: float, a: float, k: float, tol: float) -> f
     return accel + cruise + tail
 
 
+def trap_time_s(dist_m: float, v: float, a: float, a_dec: float, tol: float) -> float:
+    """사다리꼴 z 이동 예상 시간: 가속 a → 최고 속도 v → 감속 a_dec 로 "목표 + tol" 에서 멈춤 (S2T14-hld D4).
+
+    dist_m 이동 거리, tol 도달 허용치(조준점이 목표보다 tol 앞이라 실제로 가는 거리는 dist − tol).
+    예: (0.059, 0.05, 0.1, 0.08, 0.002) → 0.5 + 0.625 + 0.578 ≈ 1.702 s (30 Hz 폐루프는 약 1.63 s — 안전 쪽).
+    """
+    if min(v, a, a_dec, tol) <= 0:  # 기동 검사가 먼저 막는다 (방어)
+        raise ValueError("v·a·a_dec·tol 은 0 보다 커야 함")
+    span = dist_m - tol  # 조준 거리: 목표 + tol 까지
+    if span <= 0:
+        return 0.0  # 이미 도달 구간 안
+    s_acc = v * v / (2.0 * a)  # 0 → v 가속에 드는 거리
+    s_dec = v * v / (2.0 * a_dec)  # v → 0 감속에 드는 거리
+    if s_acc + s_dec <= span:  # 최고 속도에 닿는다 (사다리꼴)
+        return v / a + v / a_dec + (span - s_acc - s_dec) / v  # 가속 + 감속 + 등속
+    v_peak = math.sqrt(span / (1.0 / (2.0 * a) + 1.0 / (2.0 * a_dec)))  # 못 닿는다 (삼각형)
+    return v_peak / a + v_peak / a_dec
+
+
 def grasp_room_ok(
     tcp_x: float, x_max: float, belt_speed: float, need_s: float, margin_m: float
 ) -> bool:
