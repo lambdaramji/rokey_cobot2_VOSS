@@ -8,7 +8,7 @@
 - **하강 중 끊김**: 카메라가 공구축에서 약 8 cm 옆이라 TCP 가 박스 위로 내려가면 송장이 화면 아래 끝으로 빠지고, 가장자리에 걸린 송장은 내지 않으므로(`border_px`) 그 높이부터 BoxTrack 이 끊긴다. 10/10 g1_s1 녹화 재생(`tools/vision/box_overlay.py`, 10/11 김학민): 실제 마지막 BoxTrack 은 OK·LOST 모두 DESCEND 뒤 0.26~0.47 s, **윗면 +31~37 mm** — 핸드아이 모델(`tools/calib/descend_visibility.py`, TCP 가 박스 중심 위) 0° +37.4 와 맞는다. belt_servo 사각은 윗면 + 10 부터라 그 사이를 `lost_timeout_s` 0.5 s 안에 지나야 하는데, OK 20회의 사각 진입 때 관측 나이는 0.40~0.48 s(여유 0.02~0.10 s), 기울인 박스 3회는 0.56~0.59 s 로 LOST(measurements-1010 의도 시험). 틱의 `visible` 은 마지막 메시지를 lost_timeout 까지 유지하므로 실제 관측 시각으로 쓰지 않는다. 대응(사각 높이·lost 판정)은 servo(박병후) 판단.
 - 추론 지연 예산: 검출 ≤ 20 ms, 루프 ≤ 100 ms. 지연 측정 로그를 남긴다.
 - OCR: 분류코드(5.5 mm, 약 30 px)·동 이름(4.5 mm) 만 읽는다. 받는 사람은 무시. 편집거리 퍼지 매칭은 순수 함수로 두고 pytest.
-- 녹화 영상 재생 모드(`playback:=<file>`)를 둬서 로봇 없이 개발.
+- 녹화 영상 재생 모드(`playback:=<file>`)를 둬서 로봇 없이 개발. 기본은 녹화 시각을 그대로 낸다(분석용). 재생으로 sort_manager·belt_servo 를 돌릴 때는 `playback_restamp:=true`(첫 메시지를 지금에 맞추고 영상·pose 를 같이 옮김, `tracker_logic.PlaybackClock`) — 녹화 시각이면 sort_manager 가 "관측 시작 전 촬영"으로 버린다(10/11 voss_dry_run).
 - 완료 기준: 검출률 ≥ 99%, 정지 송장 50장 ≥ 95%, 추종 중 50장 ≥ 90%.
 - 모델 가중치는 커밋 금지. 경로·다운로드 방법만 README.
 

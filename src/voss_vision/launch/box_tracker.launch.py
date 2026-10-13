@@ -30,6 +30,8 @@ def generate_launch_description() -> LaunchDescription:
             DeclareLaunchArgument("detector", default_value="seg"),
             DeclareLaunchArgument("playback", default_value=""),
             DeclareLaunchArgument("playback_rate", default_value="1.0"),
+            # 재생 시각을 지금 시계로 (sort_manager·belt_servo 를 재생으로 돌릴 때만, voss_dry_run)
+            DeclareLaunchArgument("playback_restamp", default_value="false"),
             DeclareLaunchArgument("config_dir", default_value=DEFAULT_CONFIG_DIR),
             Node(
                 package="voss_vision",
@@ -44,6 +46,7 @@ def generate_launch_description() -> LaunchDescription:
                         "detector": LaunchConfiguration("detector"),
                         "playback": LaunchConfiguration("playback"),
                         "playback_rate": LaunchConfiguration("playback_rate"),
+                        "playback_restamp": LaunchConfiguration("playback_restamp"),
                         "homography_path": PathJoinSubstitution([cfg, "belt_homography.yaml"]),
                         "hand_eye_path": PathJoinSubstitution([cfg, "hand_eye.yaml"]),
                     },
