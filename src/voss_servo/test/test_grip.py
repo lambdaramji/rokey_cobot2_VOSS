@@ -111,7 +111,7 @@ def test_retried_and_busy_marked() -> None:
 
 
 def test_unavailable_reply_judged_device_error() -> None:
-    verdict, cause = fsm.judge_grip(grip.unavailable_reply(), 39.5, 43.5)
+    verdict, cause = fsm.judge_grip(grip.unavailable_reply(), 39.5, 44.0)
     assert (verdict, cause) == (fsm.DEVICE_ERROR, "GRIPPER_UNAVAILABLE")
 
 

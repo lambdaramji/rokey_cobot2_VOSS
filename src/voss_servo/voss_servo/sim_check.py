@@ -34,12 +34,19 @@ PHASES = ("PREPARE", "TRACK", "DESCEND", "GRASP", "LIFT", "VERIFY")  # 표준 �
 
 @dataclass(frozen=True)
 class Case:
-    """한 시험 경우: fake_box 시나리오 · gateway 물체 폭 · cancel 시각."""
+    """한 시험 경우: fake_box 시나리오 · gateway 물체 폭 · cancel 시각 (+ U9b 가짜 그리퍼·재시도 설정)."""
 
     name: str
     scenario: str
     object_mm: float
     cancel_after_s: float | None = None
+    # --- U9b (기본 None = 지금 동작) ---
+    grip_plan: str | None = None  # 값이 있으면 gripper:=fake grip_plan:=…
+    grip_close_s: float | None = None  # fake 닫힘 지연
+    max_attempts: int | None = None  # retry.max_attempts 덮어쓰기
+    start_x_mm: float | None = None  # fake_box 시작 x
+    kp: float | None = None  # control.kp_per_s (명령 인자 --kp 가 있으면 그것이 먼저)
+    timeout_s: float | None = None  # goal 결과 대기 한계 (명령 인자보다 길면 이 값)
 
 
 CASES: dict[str, Case] = {
@@ -49,6 +56,35 @@ CASES: dict[str, Case] = {
     "normal": Case("normal", "normal", 40.5),
     "two_boxes": Case("two_boxes", "two_boxes", 40.5),
     "empty": Case("empty", "normal", 0.0),  # 가짜 RG2 빈손 (U5 뒤)
+    "descend_lost": Case("descend_lost", "descend_cut", 40.5),  # 하강 중 +37 에서 끊김 (U9a)
+    "vanish": Case("vanish", "approach_cut", 40.5),  # 접근 중 +45 에서 정말 사라짐 (U9a)
+    # U9b: 1차 빈손 → 재시도 → 2차 쥠. sim 정렬 x 는 P 추격이 정한다(kp 1 이면 시작점과 무관하게 ≈ 72)
+    # → kp 3 + 시작 −250 으로 정렬 x ≈ −2, 닫힘 1.2 s 로 1차 실패 x ≈ 182 ≤ 재시도 문턱 225 (U9b-dd 6.3)
+    "retry": Case(
+        "retry",
+        "normal",
+        40.5,
+        grip_plan="empty,held",
+        grip_close_s=1.2,
+        max_attempts=3,
+        start_x_mm=-250.0,
+        kp=3.0,
+        timeout_s=60.0,
+    ),
+    # U9b: 현장 타이밍(정렬 x ≈ 72) 빈손 → 재시도 x 여유 없음 → 안전 후퇴 → GRASP_FAILED
+    "fail_retreat": Case(
+        "fail_retreat",
+        "normal",
+        40.5,
+        grip_plan="empty",
+        grip_close_s=1.7,
+        max_attempts=3,
+        timeout_s=45.0,
+    ),
+    # U9b: 폭 밖 → 먼저 열고 → 후퇴 → GRASP_FAILED/WIDTH_OUT
+    "wide": Case(
+        "wide", "normal", 40.5, grip_plan="wide", grip_close_s=1.7, max_attempts=3, timeout_s=45.0
+    ),
 }
 
 
@@ -62,6 +98,8 @@ class Expect:
     grasped: bool
     phases_exact: tuple[str, ...] | None = None
     phases_last: str | None = None  # 앞부분 규칙일 때 마지막 phase (없으면 무엇이든)
+    attempts: int | None = None  # result.attempts (None = 보지 않음, U9b)
+    retreat: bool = False  # 참이면 안전 후퇴로 끝났는지 본다 (J-ret, U9b)
 
 
 EXPECT: dict[tuple[str, str], Expect] = {
@@ -73,12 +111,35 @@ EXPECT: dict[tuple[str, str], Expect] = {
     ("pre_u5", "two_boxes"): Expect(ABORTED, "OUT_OF_REACH", "REACH_X_MAX", False, ("PREPARE",)),
     # U5 뒤 (U5 설계를 읽고 쓴 기대값 — U5 머지 뒤 실제로 확인, 다르면 U5 PR 에서 고친다)
     ("grasp", "normal"): Expect(SUCCEEDED, "OK", "", True, PHASES),
-    ("grasp", "empty"): Expect(ABORTED, "GRASP_FAILED", "NOT_DETECTED", False, None, "GRASP"),
+    # U9b: 실패는 안전 후퇴(phase LIFT) 뒤에 끝난다
+    ("grasp", "empty"): Expect(
+        ABORTED, "GRASP_FAILED", "NOT_DETECTED", False, None, "LIFT", retreat=True
+    ),
     ("grasp", "cancel"): Expect(CANCELED, "CANCELED", "STOP_OK", False),
+    # U9a: 하강 중 끊겨도 사각(+30)이 LOST 타이머보다 먼저 → 끝까지 / 접근 높이에서 사라지면 LOST
+    ("grasp", "descend_lost"): Expect(SUCCEEDED, "OK", "", True, PHASES),
+    ("grasp", "vanish"): Expect(ABORTED, "LOST", "BOX_MISSING", False, None, "TRACK"),
+    # U9b: 재시도 2회째 성공 / 여유 없어 후퇴 / 폭 밖 후퇴
+    ("grasp", "retry"): Expect(SUCCEEDED, "OK", "", True, (*PHASES[:4], *PHASES), attempts=2),
+    ("grasp", "fail_retreat"): Expect(
+        ABORTED, "GRASP_FAILED", "NOT_DETECTED", False, (*PHASES[:5],), attempts=1, retreat=True
+    ),
+    ("grasp", "wide"): Expect(
+        ABORTED, "GRASP_FAILED", "WIDTH_OUT", False, (*PHASES[:5],), attempts=1, retreat=True
+    ),
 }
 PROFILE_CASES: dict[str, tuple[str, ...]] = {
     "pre_u5": ("lost", "invalid", "cancel", "normal", "two_boxes"),
-    "grasp": ("normal", "empty", "cancel"),
+    "grasp": (
+        "normal",
+        "empty",
+        "cancel",
+        "descend_lost",
+        "vanish",
+        "retry",
+        "fail_retreat",
+        "wide",
+    ),
 }
 
 # 허용치 (사전 실험 실측: Δt 33.3 ms, watchdog 종료 뒤 0.71 s, hold 15틱 0.5 s)
@@ -87,6 +148,8 @@ PERIOD_TOL_MS = 3.0
 WATCHDOG_DELAY_S = (0.6, 0.9)
 TRACK_LOCK_TOL_M = 0.005
 FOLLOW_MIN_TICKS = 30
+CUT_GAP_TICKS = 2  # J12: 마지막 수신이 첫 사각 틱보다 이만큼(틱) 앞서야 "사각 전 끊김" (U9a-dd 4절)
+CUT_MIN_MARGIN_S = 0.2  # J12: 지시서 목표 여유 (LOST 시계 vs 사각 진입)
 ZERO_EPS = 1e-9
 
 # 대기 상한 (s)
@@ -101,7 +164,7 @@ SETTLE_S = 8.0  # watchdog 줄, 그 뒤 통계 줄 (통계는 5 s 마다)
 STOP_S = 15.0  # launch 종료 (launch 자체가 SIGTERM 5 s + SIGKILL 5 s 로 단계적 종료)
 
 REAL_DOMAIN = "30"  # 공용 PC·실로봇 도메인
-SIM_NODES = ("robot_gateway", "belt_servo", "fake_box")
+SIM_NODES = ("robot_gateway", "belt_servo", "fake_box", "fake_gripper")
 
 # gateway 로그 패턴 (robot_gateway.py 문구 기준 — 바뀌면 여기만 고친다, DD 6.8)
 TS = r"\[(\d+\.\d+)\] \[robot_gateway\]: "
@@ -173,11 +236,17 @@ def split_goal_ticks(ticks: list[dict]) -> tuple[list[dict], dict | None, list[d
     return ticks[:idx], ticks[idx], hold
 
 
-def judge_result(exp: Expect, status: int, reason: str, grasped: bool) -> Verdict:
-    """J1: result status·reason·grasped."""
+def judge_result(
+    exp: Expect, status: int, reason: str, grasped: bool, attempts: int | None = None
+) -> Verdict:
+    """J1: result status·reason·grasped (+ 기대값이 있으면 attempts, U9b)."""
     want = f"{exp.status}/{exp.reason}/grasped={exp.grasped}"
     got = f"{status}/{reason}/grasped={grasped}"
     ok = status == exp.status and reason == exp.reason and grasped == exp.grasped
+    if exp.attempts is not None:  # 재시도 case 는 시도 수까지 본다
+        want += f"/attempts={exp.attempts}"
+        got += f"/attempts={attempts}"
+        ok = ok and attempts == exp.attempts
     return _v("J1", "result", ok, want, got)
 
 
@@ -199,6 +268,20 @@ def judge_phases(exp: Expect, phases: list[str]) -> Verdict:
         ok = is_prefix and last_ok
         want = "표준 순서의 앞부분" + (f", 마지막 {exp.phases_last}" if exp.phases_last else "")
     return _v("J3", "phases", ok, want, str(list(phases)))
+
+
+def judge_retreat(terminal: dict | None, lift_dz_m: float, tol_m: float) -> Verdict:
+    """J-ret: 안전 후퇴로 끝났나 — 끝 틱 TCP z ≥ 박스 윗면 + 들기 − tol, retreat_done 참 (U9b)."""
+    want = f"≥ 윗면 +{(lift_dz_m - tol_m) * 1000:.0f} mm · retreat_done"
+    if terminal is None:
+        return _unknown("J-ret", "후퇴 끝 높이", want, "종료 틱 없음")
+    tcp, box = terminal.get("tcp_now_m"), terminal.get("position_base_m")
+    if not tcp or not box:
+        return _unknown("J-ret", "후퇴 끝 높이", want, "종료 틱에 TCP·박스 위치 없음")
+    above = float(tcp[2]) - float(box[2])  # 핑거 끝이 박스 윗면 위로 얼마나
+    done = terminal.get("retreat_done")
+    ok = above >= lift_dz_m - tol_m and done is True
+    return _v("J-ret", "후퇴 끝 높이", ok, want, f"+{above * 1000:.1f} mm · retreat_done={done}")
 
 
 def judge_last_zero(terminal: dict | None) -> Verdict:
@@ -262,6 +345,43 @@ def judge_follow(progress: list[dict], align_along_m: float) -> Verdict:
             bad.append("박스 하류인데 cmd 0")
     got = f"{len(rows)}틱, 위반 {len(bad)}" + (f": {sorted(set(bad))[:3]}" if bad else "")
     return _v("J11", "추종", not bad, want, got)
+
+
+def _above_top_mm(r: dict) -> str:
+    """틱의 추정 TCP 가 박스 윗면 위 몇 mm 인가 (값이 없으면 —)."""
+    tcp, box = r.get("tcp_now_m"), r.get("position_base_m")
+    if not tcp or not box:
+        return "—"
+    return f"{(float(tcp[2]) - float(box[2])) * 1000.0:+.1f}"
+
+
+def judge_descend_cut(
+    progress: list[dict], lost_timeout_s: float, min_margin_s: float = CUT_MIN_MARGIN_S
+) -> Verdict:
+    """J12: 하강 중 박스가 끊겼는데도 LOST 시계가 여유 있게 사각 진입에 졌다 (U9a-dd 4절)."""
+    want = f"사각 전 {CUT_GAP_TICKS}틱 이상 끊김 · 여유 ≥ {min_margin_s:g} s"
+    rows = [r for r in progress if r.get("phase") == "DESCEND"]
+    rows = [r for r in rows if r.get("box_rx_s") is not None and r.get("t_calc_s") is not None]
+    if not rows:
+        return _unknown("J12", "하강 끊김", want, "DESCEND 틱 없음")
+    blind = [r for r in rows if r.get("vision_blind")]
+    if not blind:
+        return _unknown("J12", "하강 끊김", want, "DESCEND 사각 틱 없음")
+    last_rx = max(float(r["box_rx_s"]) for r in rows)  # 하강 중 마지막으로 받은 시각
+    gap = float(blind[0]["t_calc_s"]) - last_rx  # 마지막 수신 → 사각 진입
+    if gap < CUT_GAP_TICKS / 30.0:
+        got = f"마지막 수신 → 사각 {gap:.3f} s"
+        return _v("J12", "하강 끊김", False, want, got + " (사각 전에 안 끊김 — 경주 없음)")
+    # 마지막 메시지를 처음 쓴 틱 = 끊긴 순간 (그 뒤 틱도 같은 box_rx_s 를 계속 갖는다)
+    cut_row = next(r for r in rows if float(r["box_rx_s"]) == last_rx)
+    seen = [r for r in rows if not r.get("vision_blind")]  # LOST 를 보는 틱들
+    max_age = max((float(r["t_calc_s"]) - float(r["box_rx_s"]) for r in seen), default=0.0)
+    margin = lost_timeout_s - max_age  # 이만큼 남기고 사각에 들어갔다
+    got = (
+        f"끊김 윗면 {_above_top_mm(cut_row)} mm · 사각 진입 {_above_top_mm(blind[0])} mm · "
+        f"최대 수신 나이 {max_age:.3f} s · 여유 {margin:.3f} s"
+    )
+    return _v("J12", "하강 끊김", margin >= min_margin_s, want, got)
 
 
 def line_distance(p: Any, start: Any, d: Any) -> float:
@@ -350,6 +470,20 @@ def judge_stop(facts: GatewayFacts, cancel: bool, win: tuple) -> Verdict:
     n = sum(s[2] for s in st)
     ok = n == want_n and len(lines) == want_n and all(r == "OK" for r in lines)
     return _v("J9", "stop", ok, want, f"stop {n} · 줄 {lines}")
+
+
+def launch_extra(case: Case) -> list[str]:
+    """case 의 U9b 설정 → sim.launch 인자 목록 (값이 없으면 빈 목록 = 지금 동작)."""
+    extra: list[str] = []
+    if case.grip_plan is not None:
+        extra += ["gripper:=fake", f"grip_plan:={case.grip_plan}"]
+        if case.grip_close_s is not None:
+            extra.append(f"grip_close_s:={case.grip_close_s:g}")
+    if case.max_attempts is not None:
+        extra.append(f"max_attempts:={case.max_attempts}")
+    if case.start_x_mm is not None:
+        extra.append(f"box_start_x_mm:={case.start_x_mm:g}")
+    return extra
 
 
 def preflight_problems(domain_id: str, node_names: list[str]) -> list[str]:
@@ -452,7 +586,7 @@ def default_config() -> str | None:
 
 
 def sim_values() -> dict[str, float]:
-    """설치된 belt_servo_sim.yaml 에서 판정에 쓰는 값 (zero_hold_s·rate_hz·align_tol_along)."""
+    """설치된 belt_servo_sim.yaml 에서 판정에 쓰는 값 (zero_hold_s·rate_hz·align_tol_along·lost_timeout)."""
     from ament_index_python.packages import get_package_share_directory
 
     from voss_servo.launch_params import flatten, load_yaml, node_section
@@ -463,6 +597,9 @@ def sim_values() -> dict[str, float]:
         "zero_hold_s": float(flat["zero_hold_s"]),
         "rate_hz": float(flat["rate_hz"]),
         "align_along_m": float(flat["control.align_tol_along_mm"]) / 1000.0,
+        "lost_timeout_s": float(flat["input.lost_timeout_s"]),
+        "lift_dz_m": float(flat["z.lift_above_top_mm"]) / 1000.0,  # J-ret (U9b)
+        "height_tol_m": float(flat["z.height_tol_mm"]) / 1000.0,
     }
 
 
@@ -555,8 +692,10 @@ class SimRunner:
             f"object_mm:={case.object_mm:g}",
             f"log_dir:={run_dir}",
         ]
-        if self.args.kp is not None:
-            cmd.append(f"kp:={self.args.kp}")
+        kp = self.args.kp if self.args.kp is not None else case.kp  # 명령 인자가 먼저
+        if kp is not None:
+            cmd.append(f"kp:={kp}")
+        cmd += launch_extra(case)  # U9b: 가짜 그리퍼·재시도·박스 시작 x
         env = dict(os.environ, PYTHONUNBUFFERED="1", RCUTILS_COLORIZED_OUTPUT="0")
         # 닫기는 run_case 의 finally
         log = open(os.path.join(run_dir, "launch.log"), "w", encoding="utf-8")
@@ -632,8 +771,9 @@ class SimRunner:
                 if cancel_after is not None and not out.cancel_sent and elapsed >= cancel_after:
                     handle.cancel_goal_async()
                     out.cancel_sent = True
-                if elapsed > self.args.goal_timeout_s:
-                    out.error = f"goal 결과 시간 초과 ({self.args.goal_timeout_s:g} s)"
+                limit = max(case.timeout_s or 0.0, self.args.goal_timeout_s)  # 재시도는 오래 걸린다
+                if elapsed > limit:
+                    out.error = f"goal 결과 시간 초과 ({limit:g} s)"
                     return out
             res = res_f.result()
             out.status, out.reason = res.status, res.result.reason
@@ -691,7 +831,7 @@ class SimRunner:
         if out.error:
             v.append(_unknown("J1", "result", f"{exp.status}/{exp.reason}", out.error))
         else:
-            v.append(judge_result(exp, out.status, out.reason, out.grasped))
+            v.append(judge_result(exp, out.status, out.reason, out.grasped, out.attempts))
         v.append(judge_cause(exp, goal_end))
         v.append(judge_phases(exp, out.phases))
         v.append(judge_last_zero(terminal))
@@ -708,6 +848,10 @@ class SimRunner:
         ]
         if self.args.profile == "pre_u5" and case.name in ("normal", "two_boxes"):
             v.append(judge_follow(progress, self.sim["align_along_m"]))
+        if exp.retreat:  # U9b: 안전 후퇴로 끝났나
+            v.append(judge_retreat(terminal, self.sim["lift_dz_m"], self.sim["height_tol_m"]))
+        if case.name == "descend_lost":
+            v.append(judge_descend_cut(progress, self.sim["lost_timeout_s"]))
         if case.name == "two_boxes":
             belt = next((r.get("belt_vel_mps") for r in ticks if r.get("belt_vel_mps")), None)
             rows = progress + ([terminal] if terminal else [])

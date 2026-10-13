@@ -4,7 +4,14 @@ import math
 
 import numpy as np
 import pytest
-from voss_servo.fake_box import belt_velocity, make_config, position_at, samples_at
+from voss_servo.fake_box import (
+    CUT_DEFAULT_MM,
+    belt_velocity,
+    cut_reached,
+    make_config,
+    position_at,
+    samples_at,
+)
 
 DIRECTION = [0.99992, -0.01292, 0.0]  # 레포 voss_config belt.direction_base (시험 입력)
 START = (-0.100, -0.271, 0.1008)
@@ -91,3 +98,33 @@ def test_bad_config_raises(kw: dict) -> None:
     """T-F7: 모르는 시나리오·길이 0 방향·길이 3 아님 → ValueError."""
     with pytest.raises(ValueError):
         cfg(**kw)
+
+
+# --- U9a: 높이로 끊는 시나리오 (design/U9a-dd.md 3절) ---
+
+
+def test_cut_default_heights() -> None:
+    assert CUT_DEFAULT_MM == {"descend_cut": 37.0, "approach_cut": 45.0}
+    assert cfg("descend_cut").cut_above_top_m == pytest.approx(0.037)
+    assert cfg("approach_cut", cut_above_top_mm=50).cut_above_top_m == pytest.approx(0.050)
+
+
+def test_cut_reached_threshold() -> None:
+    c, top = cfg("descend_cut"), START[2]
+    assert not cut_reached(c, top, None)  # pose 를 아직 모름
+    assert not cut_reached(c, top, top + 0.0371)  # 아직 위
+    assert cut_reached(c, top, top + 0.0369)  # 끊는 높이 아래
+    assert not cut_reached(cfg("normal"), top, top)  # cut 시나리오가 아니면 끊지 않는다
+
+
+@pytest.mark.parametrize("scenario", ["descend_cut", "approach_cut"])
+def test_cut_scenarios_send_nothing_when_cut(scenario) -> None:
+    c = cfg(scenario)
+    (s,) = samples_at(c, 1.0)  # 끊기 전에는 normal 과 같다
+    assert s.valid and s.track_id == 1
+    assert samples_at(c, 1.0, cut=True) == []  # 끊긴 뒤 미검출
+
+
+def test_cut_negative_height_raises() -> None:
+    with pytest.raises(ValueError):
+        cfg("descend_cut", cut_above_top_mm=-1.0)

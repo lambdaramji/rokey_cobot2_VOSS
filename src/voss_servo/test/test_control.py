@@ -399,3 +399,124 @@ def test_grasp_floor_blocked_reach_z_min() -> None:
 def test_reach_x_before_z_min() -> None:
     g = control.geometry(tcp_est(x=0.7), np.array([0.7, 0.0, 0.09]), NOW, True, NOW, CFG)
     assert g.reach == "X_MAX"  # 둘 다 걸리면 x 가 먼저
+
+
+# --- U9-c 벨트 속도 추정 (로그 전용, design/U9c-dd.md 4.3) ---
+
+T_EPOCH = 1_791_000_000.0  # 실제 stamp 크기 (큰 수 빼기 확인용)
+DIR_TILT = (math.cos(-0.0129), math.sin(-0.0129), 0.0)  # 10/10 벨트 방향 근처
+
+
+def belt_samples(n: int, v: float, rate: float = 30.0, noise: float = 0.0, seed: int = 0):
+    """벨트 방향으로 v m/s 로 가는 박스 관측 n 개 (가로·높이 흔들림 포함)."""
+    rng = np.random.default_rng(seed)
+    d = np.array(DIR_TILT)
+    perp = np.array([-d[1], d[0], 0.0])  # 가로 방향
+    out = []
+    for i in range(n):
+        t = T_EPOCH + i / rate
+        p = np.array([-0.1, -0.27, 0.10]) + d * v * (i / rate)
+        p = (
+            p + d * rng.normal(0.0, noise) + perp * 0.003 * math.sin(i)
+        )  # 벨트 방향 잡음 + 가로 흔들림
+        p[2] += 0.002 * math.cos(i)  # 높이 흔들림 (무시돼야 함)
+        out.append((t, p))
+    return out
+
+
+def test_belt_speed_fit_exact_line() -> None:
+    v, span = control.belt_speed_fit(belt_samples(60, 0.048), DIR_TILT, 90, 15, 0.5)
+    assert v == pytest.approx(0.048, abs=1e-9)  # 가로·높이 흔들림은 영향 없음
+    assert span == pytest.approx(59 / 30.0)
+
+
+def test_belt_speed_fit_noise_within_half_percent() -> None:
+    """σ 1 mm 잡음, 90점(3 s) → 0.5 % 안 (DD 4.5 기울기 σ 0.25 %)."""
+    v, _ = control.belt_speed_fit(
+        belt_samples(90, 0.048, noise=0.001, seed=3), DIR_TILT, 90, 15, 0.5
+    )
+    assert v == pytest.approx(0.048, rel=0.005)
+
+
+def test_belt_speed_fit_too_few_points() -> None:
+    assert control.belt_speed_fit(belt_samples(14, 0.048), DIR_TILT, 90, 15, 0.5) == (None, None)
+
+
+def test_belt_speed_fit_short_span_returns_span() -> None:
+    v, span = control.belt_speed_fit(belt_samples(20, 0.048, rate=60.0), DIR_TILT, 90, 15, 0.5)
+    assert v is None and span == pytest.approx(19 / 60.0)  # 0.32 s < 0.5
+
+
+def test_belt_speed_fit_same_stamps_is_none() -> None:
+    same = [(T_EPOCH, (0.001 * i, 0.0, 0.1)) for i in range(20)]
+    assert control.belt_speed_fit(same, DIR_TILT, 90, 15, 0.0) == (None, 0.0)
+
+
+def test_belt_speed_fit_uses_recent_points_only() -> None:
+    """앞 60점은 0.030, 뒤 90점은 0.048 로 가면 최근 90점만 본다."""
+    slow = belt_samples(60, 0.030)
+    t_last, p_last = slow[-1]
+    fast = [
+        (t_last + (i + 1) / 30.0, p_last + np.array(DIR_TILT) * 0.048 * (i + 1) / 30.0)
+        for i in range(90)
+    ]
+    v, _ = control.belt_speed_fit(slow + fast, DIR_TILT, 90, 15, 0.5)
+    assert v == pytest.approx(0.048, abs=1e-9)
+
+
+# --- U9a: 사각 체류 상한 (design/U9a-dd.md 2.2) ---
+
+
+def test_descend_blind_max_s_values() -> None:
+    cfg = control.config_from_values(values(**{"control.kp_z_per_s": 1.5}))  # 시연 kp_z
+    assert control.descend_blind_max_s(0.030, cfg) == pytest.approx(3.44, abs=0.01)  # 2.44 + 1.0
+    assert control.descend_blind_max_s(0.010, cfg) == pytest.approx(2.78, abs=0.01)  # 1.78 + 1.0
+
+
+# --- U9b: 안전 후퇴·재시도 여유 (design/U9b-dd.md 7.1 C1~C5) ---
+
+SHOW = control.config_from_values(  # 시연 설정 (kp_z 1.5, x_max 600)
+    values(**{"control.kp_z_per_s": 1.5, "reach.x_max_mm": 600.0})
+)
+
+
+def test_u9b_c1_z_plan_hold_z_keeps_height() -> None:
+    assert control.z_plan(fsm.LIFT, TOP, CFG, hold_z=True) == (None, 0.0, 0.0)
+    z_t, v_down, v_up = control.z_plan(fsm.LIFT, TOP, CFG)  # 기본은 그대로 들기 높이로
+    assert z_t == pytest.approx(LIFT) and v_down == 0.0 and v_up > 0.0
+
+
+def test_u9b_c2_retreat_xy_rules() -> None:
+    clear = TOP + 0.010  # 윗면 + 10 mm (RETREAT_CLEAR_MM)
+    assert control.retreat_xy((0.30, 0.0, GRASP), TOP, SHOW) == control.FF  # 아직 윗면 아래
+    assert control.retreat_xy((0.30, 0.0, clear - 1e-4), TOP, SHOW) == control.FF
+    assert control.retreat_xy((0.30, 0.0, clear), TOP, SHOW) == control.ZERO  # 넘음 → 수직
+    assert control.retreat_xy((0.60, 0.0, GRASP), TOP, SHOW) == control.ZERO  # x 끝 가드
+
+
+def test_u9b_c3_command_retreat_tick() -> None:
+    g = geo(box=(0.30, 0.0, TOP), tcp=(0.30, 0.0, GRASP), visible=False)
+    prev = np.array([BELT, 0.0, 0.0])
+    cmd = control.command(fsm.LIFT, False, False, g, prev, DT, CFG, retreat=True)
+    assert cmd.rule == control.FF and cmd.vel[0] > 0.0  # 박스와 같이 벨트 방향
+    assert cmd.vel[2] > 0.0  # 위로만
+    stop = control.command(fsm.LIFT, True, False, g, prev, DT, CFG, retreat=True)
+    assert stop.rule == control.ZERO_STOP and not np.any(stop.vel)  # 취소 = 즉시 0
+    hold = control.command(fsm.LIFT, False, False, g, prev, DT, CFG, retreat=True, hold_z=True)
+    assert hold.vel[2] == 0.0 and hold.rule == control.FF  # 개방 기다림: 높이 유지, 박스 따라감
+    normal = control.command(fsm.LIFT, False, False, g, prev, DT, CFG)  # 정상 들기는 그대로 xy 0
+    assert normal.rule == control.ZERO
+
+
+def test_u9b_c4_retry_need_and_lift_max() -> None:
+    room_need = 2.639 + 2.3  # 하강 예상 + 닫힘 상한 (belt_servo._grasp_room_need 와 같은 식)
+    assert control.retry_need_s(SHOW, room_need) == pytest.approx(7.60, abs=0.02)
+    assert control.lift_max_s(SHOW) == pytest.approx(3.785, abs=0.005)  # 2.785 + 1.0
+
+
+def test_u9b_c5_retry_room_ok() -> None:
+    need, margin = 7.60, 0.010  # 필요 x = 0.048 × 7.60 + 0.010 = 0.3748 → 문턱 x 0.2252
+    assert control.retry_room_ok(0.2250, need, BELT, SHOW, margin)
+    assert not control.retry_room_ok(0.2260, need, BELT, SHOW, margin)
+    assert not control.retry_room_ok(None, need, BELT, SHOW, margin)  # TCP 모름 → 후퇴
+    assert not control.retry_room_ok(0.0, None, BELT, SHOW, margin)  # 필요 시간 모름 → 후퇴

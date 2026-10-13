@@ -18,7 +18,7 @@
 | D5 | 서비스가 없을 때 | 요청 순간 `service_is_ready()` 거짓 → 기다리지 않고 DEVICE_ERROR(`GRIPPER_UNAVAILABLE`) | stop 의 `STOP_UNAVAILABLE` 과 같은 방식(U1) |
 | D6 | **x 여유 사전 검사** | TRACK → DESCEND 로 가려는 순간 `x_max − TCP x < 벨트속도 × (하강 예상 시간 + 닫힘 최대 시간) + 여유` 이면 **DESCEND 에 들어가지 않고** OUT_OF_REACH(cause `REACH_GRASP_ROOM`) | GRASP 중에는 FF 로 벨트를 따라가므로(U2) 닫히는 1.6~2.1 s 동안 약 80~100 mm 더 간다. 닫는 도중 x 끝에 닿으면 박스를 반쯤 쥔 채 끝난다 |
 | D7 | goal 이 끝났는데 그리퍼 호출이 아직 진행 중 | 서비스 호출은 취소할 수 없으므로 **그대로 두고 응답이 오면 버린다**(로그 `gripper_late_discarded`). 끝난 뒤 개방·닫기 요청은 새로 보내지 않는다 | 자동 개방 금지(MC-014). 예: GRASP 중 취소 → RG2 는 끝까지 닫힘 → 박스를 쥔 채 CANCELED 일 수 있다 — sort_manager·사람이 확인 |
-| D8 | T34 값의 기본 파일 | `config/belt_servo.yaml` 의 `grasp.hold_width_min_mm`·`max_mm` 을 null → **39.5·43.5**, 새 `grasp.close_time_max_s` **2.1** — 주석에 measurements-1008 #14 | #123 머지로 측정값이 main 에 있다. 범위 = "쥐었다고 인정하는 폭"이라 빈손은 범위 **밖(아래)** 이어야 한다. 하한 39.5 = 빈손 최대 38.7 **+** 0.8(쥔 최소 40.7 과는 1.2 — 두 무리 사이 틈 2.0 mm 의 가운데쯤), 상한 43.5 = 회전 최대 43.0 + 0.5. 경계값은 제안 |
+| D8 | T34 값의 기본 파일 | `config/belt_servo.yaml` 의 `grasp.hold_width_min_mm`·`max_mm` 을 null → **39.5·43.5**, 새 `grasp.close_time_max_s` **2.1** — 주석에 measurements-1008 #14 | #123 머지로 측정값이 main 에 있다. 범위 = "쥐었다고 인정하는 폭"이라 빈손은 범위 **밖(아래)** 이어야 한다. 하한 39.5 = 빈손 최대 38.7 **+** 0.8(쥔 최소 40.7 과는 1.2 — 두 무리 사이 틈 2.0 mm 의 가운데쯤), 상한 43.5 = 회전 최대 43.0 + 0.5. 경계값은 제안 (10/10 현장값 44.0 으로 변경, U-F) |
 | D9 | fake 환경 확인 | scratchpad **일회성 BoxTrack 발행 스크립트**(커밋 안 함) + main gateway `dry_run:=true dry_run_object_mm:=40.5`, belt_servo 는 `voss-ros ros2 run voss_servo belt_servo --ros-args --params-file <scratchpad 시험 yaml>` | 사용자 결정(10/09). **지시서 정리(10/09 주관 세션): OK·grasped=true 완료 기준은 자체 e2e pytest(FakeGripper·FakeClient)로 충족하고, gateway dry_run 스모크는 선택**(U3 sim.launch 가 머지돼 있으면 그것으로). U3 와는 서로 기다리지 않는다 |
 
 ## 1. 개념 두 개 (처음 보는 것만)
@@ -128,7 +128,7 @@ goal A 시도 1 닫기 벨 ── (3 s 넘어 TIMEOUT 처리, goal A 끝) ──
 | `grasp.close_time_max_s` | s | 2.1 | T34 닫힘 90→39 최대 (measurements-1008 #14, x 여유 계산용) |
 | `grasp.room_margin_mm` | mm | 10.0 (제안) | 판단값 |
 | `grasp.hold_width_min_mm` | mm | null → **39.5** | 빈손 최대 38.7 + 0.8 — 빈손이 범위 아래로 빠지게 (#14) |
-| `grasp.hold_width_max_mm` | mm | null → **43.5** | 회전 30° 까지 최대 43.0 + 0.5 (#14) |
+| `grasp.hold_width_max_mm` | mm | null → **43.5** | 회전 30° 까지 최대 43.0 + 0.5 (#14) (10/10 현장값 44.0 으로 변경, U-F) |
 
 예시 계산(접근 40 mm·kp_z 2·하강 상한 0.05·가속 0.1·height_tol 2, DD E5 식 — 재검 r1 로 P 감속 꼬리 포함): 하강 ≈ 2.19 s(U2 시뮬레이션 2.17 s 와 일치), 닫힘 2.1 s → 48 mm/s × 4.29 s ≈ 206 mm + 10 = **216 mm** → DESCEND 진입 때 TCP x ≤ 620 − 216 = **404 mm** 여야 한다. 관측 자세에서 정렬은 보통 x ≈ −13~+7 mm(U2 시뮬레이션)라 정상 흐름에서는 걸리지 않고, 늦게 정렬된 박스만 막는다.
 

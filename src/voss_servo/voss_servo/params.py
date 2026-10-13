@@ -17,6 +17,13 @@ from typing import Any
 
 # 사각 구간에서 나오는 높이 = 들어가는 높이 + 이 값 (fsm.py 와 같은 값, 순환 import 를 피하려고 여기 둔다)
 BLIND_EXIT_MARGIN_MM = 5.0
+# 사각 체류 상한 = 예상 하강 시간 + 이 여유 (s). 판단값 — 시연 중 오판 PAUSED 를 막게 넉넉히 (U9a-hld D3).
+# 로봇 실현 속도가 명령의 약 62 % 아래로 떨어져야 정상 하강도 걸린다 (U9a-dd 2.4)
+# 후퇴 상승 체류 상한 여유에도 같은 값을 쓴다 (U9b-dd 1절)
+BLIND_DWELL_MARGIN_S = 1.0
+# 안전 후퇴 중 보정 TCP z 가 박스 윗면 + 이 값을 넘으면 xy 를 0 으로 (판단값, U9b-dd 1절).
+# 보정 TCP 는 외삽으로 실제보다 몇 mm 앞설 수 있어 5 가 아니라 10
+RETREAT_CLEAR_MM = 10.0
 # 재시도 상한 (계약: TrackAndGrasp.action attempts 최대 3)
 MAX_ATTEMPTS = 3
 # belt.direction_base 길이 허용 오차 (voss_config.md 값 규칙: 1 ± 0.01)

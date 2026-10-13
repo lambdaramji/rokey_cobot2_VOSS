@@ -13,14 +13,14 @@ belt_servo:
       # 쥔 폭 범위 = "쥐었다고 인정하는 RG2 보고 폭" (grip_detected 가 주 판정, 폭은 보조). measurements-1008 #14 (T34):
       # 빈손 38.0~38.7 (범위 아래로 빠져야 함) · 0° 40.7~41.2 · 15°·30° 회전 42.0~43.0. 경계값은 제안
       hold_width_min_mm: 39.5       # 빈손 최대 38.7 + 0.8 (쥔 최소 40.7 과는 1.2)
-      hold_width_max_mm: 43.5       # 회전 최대 43.0 + 0.5
-      close_time_max_s: 2.1         # 닫힘 90→39 최대 시간 (T34 1.6~2.1 s). x 여유 계산에 쓴다
+      hold_width_max_mm: 44.0       # 10/10 G1 현장값(measurements-1010 #10), 회전 박스 42.0~43.0 + 여유 1.0
+      close_time_max_s: 2.3         # 닫힘 90→39 최대 시간. 10/10 최대 2128 ms(measurements-1010 7·8절) 위로 2.1→2.3 (U9-c). x 여유 계산에 쓴다
       room_margin_mm: 10.0          # x 여유 덧셈 (제안, 판단값). 정렬 순간 x_max − TCP x ≥ 벨트속도 × (하강 예상 + close_time_max) + 이 값
                                     # 이어야 DESCEND (아니면 OUT_OF_REACH, cause REACH_GRASP_ROOM). 하강 예상은 노드가 kp_z·descend_speed 로 계산
     reach:
       x_min_mm: -107.0              # 추종 가능 구간 TCP x (measurements #6, 748 mm)
-      x_max_mm: 620.0               # 유효값 (측정 구간은 638, measurements #6). gateway 가 x + v²/2a ≥ 638 에서 x 를 자르고
-                                    # 램프로 약 11.5 mm 더 가서 635~638 에 선다 → 638 − 11.5 − 여유 (PR #122 학민 리뷰, U2 DD 7.3)
+      x_max_mm: 600.0               # 유효값 (측정 구간은 638, measurements #6). 620 → 600 (U9-c): x 600~618 에서 TRACK z 가 처지고
+                                    # (measurements-1010 #13) 두산 특이점 안내 3205/3206 이 x≈600 에서 났다(#14). gateway x 자름(638 − 램프 11.5)보다 먼저 끝낸다
     control:
       kp_per_s: null                # P 게인 (1/s). 0 = FF 만. U4 실기에서 정함
       kp_z_per_s: null              # z P 게인 (1/s). kp_z × descend_speed ≤ max_acc (descend 0.05 면 ≤ 2). U4
@@ -32,21 +32,22 @@ belt_servo:
     z:
       approach_above_top_mm: null   # 하강 전 대기 높이 (관측 박스 윗면 기준). cutoff + 5 보다 커야 함
       lift_above_top_mm: null       # 들기 안전 높이 (관측 박스 윗면 기준)
-      vision_cutoff_above_top_mm: null  # 이 높이 아래는 비전 사각. 제안 10 (남현지 확인)
+      vision_cutoff_above_top_mm: null  # 이 높이 아래는 비전 사각. 제안 30 — 카메라 실제 이탈 윗면 +27~37 mm
+                                        # (measurements-1010 '의도 시험', U9a-hld). cutoff+5 < approach, height_tol < approach−(cutoff+5)
       descend_speed_mps: null       # 하강 속도 상한. 제안 0.05 (상한 약 0.06, U4 에서 바닥 근처 정지 거리 확인)
       lift_speed_mps: null          # 들기 속도 상한. 제안 0.08 (= max_speed)
       height_tol_mm: null           # "높이 도달" 허용치. 제안 2
     input:
       stale_timeout_s: null         # position_valid=false·pose 끊김 지속 기준. 제안 0.3
-      lost_timeout_s: null          # 내 track_id 미수신 지속 기준. 제안 0.5 (트래커 15프레임)
-      pose_lag_ms: 60.0             # pose stamp 가 실제보다 늦은 시간 (측정값, measurements-1008 #6, gateway pose_source: service 기준).
-                                    # gateway 를 joint_states 로 바꾸면 다시 잰다
+      lost_timeout_s: null          # 내 track_id 미수신 지속 기준. 제안 0.5 (트래커 15프레임). DESCEND 경주는 cutoff 30 으로 없앰 (U9a)
+      pose_lag_ms: 60.0             # pose stamp 가 실제보다 늦은 시간. gateway pose_source 와 짝: joint_states 운용 = 0(10/10 PL 시험값, measurements-1010 #10), service = 60(임시값).
+                                    # box_tracker 의 15 는 영상 대비 상대 지연이라 여기 쓰지 않음(DESIGN DEC-03)
       pose_extrap_max_ms: null      # TCP 외삽 지평 상한 (넘으면 상한까지만 외삽). 제안 200 (≥ pose_lag + 120: pose 값 0.1 s 갱신 + 메시지 20 ms)
-      blind_entry_max_age_s: null   # 하강 시작 때 마지막 유효 관측 나이(촬영 시각 기준) 상한. 제안 0.15
+      blind_entry_max_age_s: null   # 하강 시작 때 마지막 유효 관측 나이(촬영 시각 기준) 상한. 제안 0.15. TRACK→DESCEND 전환에서만 씀 (cutoff 와 무관)
     retry:
-      max_attempts: 1               # 1~3. U9 에서 3 으로 켠다 (U5 지시서: 재시도 동작은 U9)
+      max_attempts: 1               # 1~3. 1 유지 (U9b-dd 1절: 현장 정렬 x 에서는 재시도 x 여유가 없어 켜도 안전 후퇴)
     stop_timeout_s: 1.0             # stop 응답 기다리는 한계. 제안
-    gripper_timeout_s: 3.0          # 그리퍼 응답 기다리는 한계 (요청 한 건마다). 제안 (T34 닫힘 최대 2.1 s + 여유).
+    gripper_timeout_s: 3.0          # 그리퍼 응답 기다리는 한계 (요청 한 건마다). 제안 (10/10 닫힘 최대 2128 ms, close_time_max 2.3 + 여유).
                                     # 참고: gateway rg2_timeout_s 6.0 — belt_servo 가 3 s 에 포기해도 RG2 는 최대 6 s 까지
                                     # 잡혀 있어 다음 요청이 BUSY 가 될 수 있다 (BUSY 는 0.5 s 뒤 한 번 더 요청, 그래도 BUSY 면 DEVICE_ERROR)
     rate_hz: 30.0                   # 서보 루프 (topics.md 계약)

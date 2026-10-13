@@ -9,14 +9,15 @@
   비동기: 보내고 틱마다 들여다본다. goal 이 끝난 뒤 그리퍼 요청은 보내지 않는다(자동 개방 금지).
 - ADR-0010: speedl 은 스트림이 끊겨도 마지막 속도로 계속 간다 → 어떤 종료든 마지막 명령은 0.
 구조 (design/U1-hld.md): 콜백은 최신값만 보관 → 30 Hz 타이머 한 곳에서 판단·발행·로그.
-판단 로직은 순수 모듈 params·fsm·control·grip·log_schema 에 있다
-(control 설계: design/U2-*.md, grip 설계: design/U5-*.md).
+판단 로직은 순수 모듈 params·fsm·control·grip·log_schema·diagnose 에 있다
+(control 설계: design/U2-*.md, grip 설계: design/U5-*.md, 진단(로그 전용): design/U9c-*.md).
 """
 
 from __future__ import annotations
 
 import signal
-from dataclasses import dataclass, field
+from collections import deque
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from typing import Any
 
@@ -35,9 +36,15 @@ from std_srvs.srv import Trigger
 from voss_msgs.action import TrackAndGrasp
 from voss_msgs.msg import BoxTrack
 from voss_msgs.srv import Gripper
-from voss_servo import control, fsm, grip
+from voss_servo import control, diagnose, fsm, grip
 from voss_servo import log_schema as ls
-from voss_servo.params import PARAM_SPECS, check_params, params_digest, ready_log_line
+from voss_servo.params import (
+    BLIND_DWELL_MARGIN_S,
+    PARAM_SPECS,
+    check_params,
+    params_digest,
+    ready_log_line,
+)
 
 # QoS (topics.md QoS 표). box 구독 depth 5 는 소비자 재량: 박스마다 메시지가 따로 와서
 # depth 1 이면 같은 프레임의 다른 박스 메시지에 내 박스가 밀려날 수 있다 (depth 는 QoS 호환 조건 아님)
@@ -47,6 +54,7 @@ QOS_BOX = QoSProfile(
 QOS_FAST = QoSProfile(
     depth=1, reliability=ReliabilityPolicy.BEST_EFFORT, durability=DurabilityPolicy.VOLATILE
 )
+BOX_TOPIC = "/voss/vision/box"  # 구독 + LOST 때 발행자 수 조회 (U9-c)
 BOX_PRUNE_S = 2.0  # 이만큼 갱신 없는 다른 트랙 항목은 지운다 (파라미터와 무관한 상수)
 DEFAULT_RATE_HZ = 30.0  # rate_hz 가 없을 때 (READY 아님) 타이머 주기
 ZERO = (0.0, 0.0, 0.0)  # 속도 0
@@ -67,6 +75,19 @@ SNAPSHOT_NULL_KEYS = (
     "at_lift_height",
     "reach",
 )
+# 진단 값 키 (U9-c, 로그 전용). 0 유지·예외 경로에서는 null
+DIAG_KEYS = (
+    "obs_rx_age_s",
+    "other_box_rx_age_s",
+    "box_pub_count",
+    "tcp_vel_meas_mps",
+    "stall_ticks",
+    "belt_speed_est_mps",
+    "belt_speed_est_span_s",
+    "cause_fsm",
+)
+# 안전 후퇴·재시도 로그 키 (U9b-dd 5절). 0 유지·예외 경로에서는 goal 끝 때 값(스냅샷)
+RETREAT_KEYS = ("retreat", "retreat_reason", "retreat_done", "retry_room_ok")
 
 
 def _as_list(a: Any) -> list[float] | None:
@@ -77,6 +98,19 @@ def _as_list(a: Any) -> list[float] | None:
 def _as_float(x: Any) -> float | None:
     """NumPy 숫자 → float (None 이면 None)."""
     return None if x is None else float(x)
+
+
+def pose_lag_note(lag_ms: Any) -> str:
+    """READY 다음 줄 문구: pose_lag_ms 값으로 어느 gateway pose_source 짝인지 알려 준다 (로그 전용).
+
+    0 = joint_states 운용 시험값, 60 = service 임시값, 그 밖 = 값만 (measurements-1010 #10).
+    """
+    head = f"pose_lag_ms={lag_ms}"  # 값은 언제나 찍는다
+    if lag_ms == 0:  # gateway pose_source: joint_states 와 짝
+        return head + " — joint_states 운용 시험값(0)"
+    if lag_ms == 60:  # gateway pose_source: service 와 짝
+        return head + " — service 임시값(60, 영상 기준 lag 차용)"
+    return head  # 짝이 정해지지 않은 값은 설명을 붙이지 않는다
 
 
 def stamp_s(stamp: Any) -> float:
@@ -114,6 +148,13 @@ class GoalCtx:
     vision_since: float  # 비전 필요 구간이 시작된 시각 (box 끊김 판정의 기준 시각, 노드 시계)
     done: Future = field(default_factory=Future)  # 결과 봉투 (타이머가 채운다)
     blind: bool = False  # 지난 틱의 사각 판정
+    blind_since: float | None = None  # DESCEND 에서 사각이 시작된 시각 (U9a 체류 상한, 노드 시계)
+    # --- 안전 후퇴·재시도 (U9b-dd 4절) ---
+    lift_since: float | None = None  # LIFT 상승 시작 시각 (후퇴 상한·정상 들기 경고)
+    hold_since: float | None = None  # 개방 대기(hold_z) 시작 시각
+    retry_room_ok: bool | None = None  # 마지막 GRASP 실패 때 재시도 x 여유 (로그)
+    retreat_done: bool | None = None  # 후퇴로 끝났나: 끝 틱에 정한다 (로그)
+    lift_warned: bool = False  # 정상 LIFT 체류 경고를 냈나 (goal 당 1회)
     last_phase: str = ""  # 마지막으로 feedback 보낸 phase
     stop_future: Any = None  # stop 서비스 call_async 결과
     stop_sent: float | None = None  # stop 요청 보낸 시각
@@ -129,6 +170,18 @@ class GoalCtx:
     grip_seq: int = 0  # 이 goal 에서 보낸 그리퍼 요청 수
     grip_ready_reply: fsm.GripperReply | None = None  # 요청 순간 정해진 응답 (서비스 없음)
     grip_log: dict[str, Any] | None = None  # 로그 gripper 칸 (진행 중 또는 마지막 끝난 호출)
+    # --- U9-c 진단 (로그·경고 전용, 제어·전이에는 쓰지 않는다. design/U9c-dd.md 5절) ---
+    # 내 트랙 유효 관측열 (촬영 stamp, 위치) — 벨트 속도 추정용, 시도마다 새로
+    obs_hist: deque = field(default_factory=lambda: deque(maxlen=diagnose.FIT_MAX_POINTS))
+    stall_n: int = 0  # 명령 ≠ 0 인데 로봇이 안 움직인 연속 틱 수
+    speed_run: int = 0  # 벨트 속도 차이가 큰 새 관측 연속 수
+    speed_warned: bool = False  # 이 goal 에서 벨트 속도 WARN 을 냈나 (goal 당 1회)
+    other_rx: float | None = None  # 이 goal 중 다른 트랙 메시지를 마지막으로 받은 시각
+    phase_t: dict[str, float] = field(default_factory=dict)  # 이 시도의 phase 진입 시각
+    phase_t_next: dict[str, float] | None = None  # 재시도 때 다음 틱에 바꿔 넣을 새 시도 시각
+    phase_seen: str = ""  # 지난 틱에 단계 시각을 기록한 phase
+    diag: dict[str, Any] = field(default_factory=dict)  # 이번 틱 진단 값 (로그용)
+    diag_failed: bool = False  # 진단 예외를 이미 로그했나 (goal 당 1회)
 
 
 class BeltServoNode(Node):
@@ -144,6 +197,8 @@ class BeltServoNode(Node):
         self._pose: tuple[PoseStamped, float] | None = None  # (최신 pose, 받은 시각) — 끊김 판정용
         # (위치 값, 그 값이 처음 온 stamp) — 외삽 기준. 값이 0.1 s 마다만 바뀌는 pose 대응 (PR #122 리뷰)
         self._pose_value: tuple[tuple[float, float, float], float] | None = None
+        # 그 직전 (위치 값, 처음 온 stamp) — 값 차분으로 TCP 속도를 잰다 (U9-c 진단)
+        self._pose_prev_value: tuple[tuple[float, float, float], float] | None = None
         self._last_cmd = control.zero_cmd()  # 마지막 발행 속도 (TCP 외삽·가속 제한 입력)
         self.values = self._declare_params()  # {이름: 값 또는 None}
         self.ready = self._startup_check()  # READY 여부 (기동 때 한 번)
@@ -151,6 +206,9 @@ class BeltServoNode(Node):
         self._ctrl = control.config_from_values(self.values) if self.ready else None
         self.grip_late_discarded = 0  # 버린 늦은 그리퍼 응답 수 (U5 DD E8)
         self._room_need_s = self._grasp_room_need() if self.ready else None  # x 여유 계산용 시간
+        self._blind_max_s = self._blind_dwell_max() if self.ready else None  # 사각 체류 상한 (U9a)
+        self._retry_need_s = self._retry_need() if self.ready else None  # 재시도 x 여유 시간 (U9b)
+        self._lift_max_s = self._lift_max() if self.ready else None  # 후퇴 체류 상한 (U9b)
         self._setup_logs()
         self._setup_ros()
 
@@ -178,11 +236,8 @@ class BeltServoNode(Node):
             self.get_logger().info(line)
         if report.ready:
             self.get_logger().info("READY")
-            # pose_lag_ms 는 gateway pose_source 에 묶인 측정값이다 (gateway 가 바뀌면 다시 잰다)
-            self.get_logger().info(
-                f"pose_lag_ms={self.values.get('input.pose_lag_ms')} — gateway pose_source: service "
-                "기준 측정(measurements-1008 #6). joint_states 로 바꾸면 다시 잰다"
-            )
+            # pose_lag_ms 는 gateway pose_source 와 짝이 맞아야 한다 (joint_states → 0, service → 60)
+            self.get_logger().info(pose_lag_note(self.values.get("input.pose_lag_ms")))
         else:
             # 어떤 키가 문제인지 이름으로. READY 가 아니면 액션 서버를 만들지 않는다 (_setup_ros)
             self.get_logger().error(ready_log_line(report) + " — 액션 서버 미생성")
@@ -207,6 +262,36 @@ class BeltServoNode(Node):
         )
         return need_s
 
+    def _blind_dwell_max(self) -> float:
+        """DESCEND 사각 체류 상한 s. READY 때 한 번 계산하고 기동 로그에 남긴다 (U9a-dd 2.5)."""
+        cutoff_m = float(self._p("z.vision_cutoff_above_top_mm")) / 1000.0  # 사각 진입 높이
+        limit = control.descend_blind_max_s(cutoff_m, self._ctrl)
+        self.get_logger().info(
+            f"사각 체류 상한: DESCEND 사각이 {limit:.2f} s 넘으면 DEVICE_ERROR "
+            f"(하강 예상 {limit - BLIND_DWELL_MARGIN_S:.2f} + 여유 {BLIND_DWELL_MARGIN_S:g})"
+        )
+        return limit
+
+    def _retry_need(self) -> float:
+        """GRASP 실패 뒤 재시도 1회에 걸릴 시간 s. 기동 로그에 실패 x 문턱을 남긴다 (U9b-dd 4절)."""
+        cfg = self._ctrl
+        need_s = control.retry_need_s(cfg, self._room_need_s)  # 재상승 + 하강 + 닫힘 상한
+        margin_m = float(self._p("grasp.room_margin_mm")) / 1000.0
+        need_m = float(np.linalg.norm(cfg.belt_v)) * need_s + margin_m  # 그동안 벨트를 따라갈 길
+        self.get_logger().info(
+            f"재시도 x 여유: 실패 때 x_max 까지 {need_m * 1000.0:.0f} mm 이상 남아야 재시도 "
+            f"(실패 TCP x ≤ {(cfg.x_max - need_m) * 1000.0:.0f} mm, 아니면 안전 후퇴)"
+        )
+        return need_s
+
+    def _lift_max(self) -> float:
+        """후퇴 상승 체류 상한 s. 정상 들기는 넘어도 경고만 한다 (U9b-dd 4절, 재검 r1)."""
+        limit = control.lift_max_s(self._ctrl)
+        self.get_logger().info(
+            f"후퇴 체류 상한: 후퇴 상승이 {limit:.2f} s 넘으면 DEVICE_ERROR (정상 들기는 경고만)"
+        )
+        return limit
+
     def _setup_logs(self) -> None:
         """틱·시도 로그 파일 경로를 정하고 기동 로그에 절대 경로를 남긴다."""
         log_dir = self.values.get("log.dir") or "data/servo"
@@ -218,7 +303,7 @@ class BeltServoNode(Node):
 
     def _setup_ros(self) -> None:
         """구독·발행·클라이언트·액션 서버·타이머."""
-        self.create_subscription(BoxTrack, "/voss/vision/box", self._on_box, QOS_BOX)
+        self.create_subscription(BoxTrack, BOX_TOPIC, self._on_box, QOS_BOX)
         self.create_subscription(PoseStamped, "/voss/robot/pose", self._on_pose, QOS_FAST)
         self._cmd_pub = self.create_publisher(TwistStamped, "/voss/robot/servo_cmd", QOS_FAST)
         self._stop_cli = self.create_client(Trigger, "/voss/robot/stop")
@@ -265,6 +350,9 @@ class BeltServoNode(Node):
             last_valid = msg if valid else (prev.last_valid if prev else None)
             last_valid_rx = now if valid else (prev.last_valid_rx if prev else None)
             self._boxes[msg.track_id] = BoxEntry(msg, now, not valid, last_valid, last_valid_rx)
+            ctx = self._ctx
+            if ctx is not None and msg.track_id != ctx.track_id:
+                ctx.other_rx = now  # goal 중 다른 트랙 수신 (LOST 원인 판정, U9-c)
             self._prune_boxes(now)
         except Exception as exc:  # 콜백 예외로 노드가 죽지 않게
             self.get_logger().error(f"_on_box 예외: {exc!r}")
@@ -283,7 +371,11 @@ class BeltServoNode(Node):
             p = msg.pose.position
             stamp = stamp_s(msg.header.stamp)
             # 같은 값이 반복되면 처음 stamp 유지 → 외삽 지평에 값의 실제 나이가 들어간다
-            self._pose_value = control.pose_value_stamp(self._pose_value, (p.x, p.y, p.z), stamp)
+            value = control.pose_value_stamp(self._pose_value, (p.x, p.y, p.z), stamp)
+            if self._pose_value is not None and value is not self._pose_value:
+                # 값이 바뀜 → 직전 값 보관 (측정 속도, U9-c)
+                self._pose_prev_value = self._pose_value
+            self._pose_value = value
         except Exception as exc:
             self.get_logger().error(f"_on_pose 예외: {exc!r}")
 
@@ -320,6 +412,8 @@ class BeltServoNode(Node):
                 state=state,
                 start=now,
                 vision_since=now,
+                phase_t={state.phase: now},  # 첫 PREPARE 진입 = goal 시작 (U9-c)
+                phase_seen=state.phase,
             )
             self._ctx = ctx
             self._handle_actions(ctx, actions, now)
@@ -390,6 +484,8 @@ class BeltServoNode(Node):
             self._p("grasp.hold_width_max_mm"),
             self._p("retry.max_attempts"),
         )
+        tr = self._diagnose(ctx, tr, now)  # U9-c: 로그 값 + LOST 세부 원인 (전이·제어 불변)
+        self._note_retreat(ctx, ev, tr, now)  # U9b: 재시도 여유·후퇴 끝 기록, 정상 들기 경고
         ctx.state = tr.state
         self._handle_actions(ctx, tr.actions, now)
         cfg = self._ctrl
@@ -397,7 +493,15 @@ class BeltServoNode(Node):
         ctx.last_calc = now  # ② 그 다음 갱신
         # ③ 새 phase 기준 속도. stopping·terminal 이면 command 첫 줄에서 항상 0
         ctx.cmd = control.command(
-            tr.state.phase, tr.state.stopping, tr.terminal, ctx.geo, self._last_cmd, ctx.dt, cfg
+            tr.state.phase,
+            tr.state.stopping,
+            tr.terminal,
+            ctx.geo,
+            self._last_cmd,
+            ctx.dt,
+            cfg,
+            retreat=fsm.is_retreat(tr.state),  # 안전 후퇴면 xy 는 retreat_xy (U9b)
+            hold_z=tr.state.hold_z,  # 개방 기다리는 동안 높이 유지
         )
         vel = tuple(float(x) for x in ctx.cmd.vel)
         t_pub = self._publish(vel)
@@ -409,6 +513,40 @@ class BeltServoNode(Node):
         if tr.terminal:
             self._write_log(self._attempt_log, ls.to_attempt(tick, ls.GOAL_END))
             self._finish(ctx, tr.reason, tr.cause, tr.grasped, now, goal_end_logged=True)
+
+    def _note_retreat(
+        self, ctx: GoalCtx, ev: fsm.TickEvent, tr: fsm.Transition, now: float
+    ) -> None:
+        """재시도 여유 판단값·후퇴로 끝났나를 기록하고, 정상 들기가 늦으면 경고 1회 (U9b-dd 4절)."""
+        if tr.retry_room_ok is not None:  # GRASP 실패를 판단한 틱
+            ctx.retry_room_ok = tr.retry_room_ok
+        if (
+            tr.terminal
+        ):  # 후퇴를 끝까지 했으면 True, 후퇴 중 다른 이유로 끝나면 False, 후퇴 없으면 None
+            was_retreat = fsm.is_retreat(ctx.state)  # 전이 전 상태
+            ctx.retreat_done = True if tr.retreat_done else (False if was_retreat else None)
+        normal_lift = tr.state.phase == fsm.LIFT and not fsm.is_retreat(tr.state)
+        if ev.lift_overstay and normal_lift and not ctx.lift_warned:
+            # 박스를 쥔 성공 경로는 끊지 않는다 — 원인을 보이게만 (재검 r1 MAJOR-2)
+            lifted = now - ctx.lift_since if ctx.lift_since is not None else float("nan")
+            self.get_logger().warning(
+                f"들기 체류 {lifted:.2f} s > 상한 {self._lift_max_s:.2f} s — 로봇 속도·펜던트 "
+                "오버라이드 확인 (goal 은 계속)"
+            )
+            ctx.lift_warned = True
+
+    @staticmethod
+    def _retreat_values(ctx: GoalCtx, state: fsm.FsmState) -> dict[str, Any]:
+        """로그 후퇴·재시도 4키 (U9b-dd 5절)."""
+        stage = None
+        if fsm.is_retreat(state):
+            stage = "OPENING" if state.hold_z else "RISING"  # 개방 기다림 / 올라가는 중
+        return {
+            "retreat": stage,
+            "retreat_reason": state.exit_reason,
+            "retreat_done": ctx.retreat_done,
+            "retry_room_ok": ctx.retry_room_ok,
+        }
 
     def _tick_hold(self, now: float) -> None:
         """goal 종료 뒤 0 유지 틱: 0 발행 + 로그, 시간이 다 되면 busy 해제."""
@@ -439,6 +577,11 @@ class BeltServoNode(Node):
         if ctx.blind and not blind:
             ctx.vision_since = now  # 사각 → 보임: LOST/STALE 시계를 다시 센다
         ctx.blind = blind
+        # DESCEND 사각 시작 시각 (전이 전 phase 기준 — 사각 판정과 같은 기준)
+        ctx.blind_since = fsm.blind_since_next(ctx.blind_since, ctx.state.phase, blind, now)
+        # LIFT 상승 시작·개방 대기 시작 (전이 전 상태 기준, U9b)
+        ctx.lift_since = fsm.lift_since_next(ctx.lift_since, ctx.state, now)
+        ctx.hold_since = (ctx.hold_since or now) if ctx.state.hold_z else None
         box_lost, box_stale, pose_stale = fsm.input_flags(
             now,
             entry.rx if entry else None,
@@ -476,7 +619,31 @@ class BeltServoNode(Node):
             at_lift_height=bool(geo.at_lift_height) if geo else False,
             gripper=gripper,
             grasp_room=self._grasp_room(geo),
+            blind_overstay=fsm.blind_overstay(ctx.blind_since, now, self._blind_max_s),
+            retry_room=self._retry_room(geo),
+            hold_expired=self._hold_expired(ctx, geo, now),
+            lift_overstay=fsm.lift_overstay(ctx.lift_since, now, self._lift_max_s),
         )
+
+    def _retry_room(self, geo: control.Geometry | None) -> bool:
+        """지금 TCP x 에서 재시도 1회를 끝낼 x 여유가 있나. TCP 를 모르면 False = 후퇴 (U9b)."""
+        cfg = self._ctrl
+        return control.retry_room_ok(
+            float(geo.tcp[0]) if geo is not None else None,  # 보정 TCP x (다른 판정과 같은 TCP)
+            self._retry_need_s,
+            float(np.linalg.norm(cfg.belt_v)),
+            cfg,
+            float(self._p("grasp.room_margin_mm")) / 1000.0,  # mm → m
+        )
+
+    def _hold_expired(self, ctx: GoalCtx, geo: control.Geometry | None, now: float) -> bool:
+        """개방 대기가 상한(닫힘 상한 대용)을 넘었거나 TCP 가 x_max 에 닿았나 (U9b-dd 2.4, 재검 r1)."""
+        if ctx.hold_since is None:
+            return False  # 개방을 기다리고 있지 않다
+        limit_s = float(self._p("grasp.close_time_max_s"))  # 개방 시간 미측정 → 닫힘 상한을 대용
+        waited = now - ctx.hold_since > limit_s  # 같으면 아직 (다른 상한과 같은 규칙)
+        at_end = geo is not None and float(geo.tcp[0]) >= self._ctrl.x_max  # x 끝 가드
+        return waited or at_end
 
     def _grasp_room(self, geo: control.Geometry | None) -> bool:
         """정렬 순간 하강·닫힘을 끝낼 x 여유가 있나 (TCP 를 모르면 True — 그때는 정렬도 안 된다)."""
@@ -522,6 +689,108 @@ class BeltServoNode(Node):
                 f"goal 중 position_source 변경 {ctx.source}→{src} — 예측 리셋은 U9"
             )
         ctx.source = src
+
+    # ------------------------------------------------------------------ 진단 (U9-c, 로그 전용)
+
+    def _diagnose(self, ctx: GoalCtx, tr: fsm.Transition, now: float) -> fsm.Transition:
+        """로그용 진단 값을 채우고, LOST 면 세부 원인을 찾는다. 실패해도 goal 은 계속한다."""
+        try:
+            if ctx.phase_t_next is not None:  # 지난 틱에 재시도로 예약한 새 시도 시각
+                ctx.phase_t, ctx.phase_t_next = ctx.phase_t_next, None
+            entry = self._boxes.get(ctx.track_id)
+            new_obs = self._push_obs(ctx, entry)  # 관측열에 새 점이 들어갔나
+            v_meas = diagnose.measured_velocity(
+                self._pose_prev_value, self._pose_value, now, diagnose.POSE_HOLD_MAX_S
+            )
+            cmd_speed = float(np.linalg.norm(self._last_cmd))  # 직전 틱에 발행한 명령 크기
+            ctx.stall_n = diagnose.stall_count(ctx.stall_n, cmd_speed, diagnose.speed_of(v_meas))
+            est, span = self._speed_estimate(ctx, new_obs)
+            self._record_phase(ctx, tr, now)
+            ctx.diag = {
+                "tcp_vel_meas_mps": v_meas,
+                "belt_speed_est_mps": est,
+                "belt_speed_est_span_s": span,
+                "cause_fsm": tr.cause,  # 덮어쓰기 전 fsm 의 cause (매 틱)
+                "box_pub_count": None,  # LOST 틱에서만 조회
+            }
+            if tr.reason == fsm.LOST:
+                tr = self._refine_lost(ctx, tr, entry)
+            if tr.terminal:  # goal 끝: 벨트 속도 추정 한 줄 (B안, 로그 전용)
+                note = diagnose.speed_note(est, self._belt_speed(), span, len(ctx.obs_hist))
+                self.get_logger().info(note)
+        except Exception as exc:  # 진단이 제어를 끊지 않게 (재검 F6)
+            ctx.diag = {}  # 이번 틱 진단 값은 null 로
+            if tr.attempt_ended:  # 재시도 틱이면 새 시도 준비는 빠뜨리지 않는다 (재검 R2)
+                ctx.phase_t_next = {fsm.PREPARE: now}
+                ctx.obs_hist.clear()
+                ctx.speed_run = 0
+            if not ctx.diag_failed:
+                self.get_logger().error(f"진단 예외 (goal 은 계속): {exc!r}")
+                ctx.diag_failed = True
+        return tr
+
+    def _push_obs(self, ctx: GoalCtx, entry: BoxEntry | None) -> bool:
+        """내 트랙의 새 유효 관측을 관측열에 넣는다. 넣었으면 True."""
+        obs = entry.last_valid if entry else None
+        xyz = self._obs_xyz(obs)
+        if obs is None or xyz is None:
+            return False  # 유효 관측이 없음
+        st = stamp_s(obs.stamp)  # 촬영 시각
+        if ctx.obs_hist and st <= ctx.obs_hist[-1][0]:
+            return False  # 이미 넣은 관측 (틱 사이에 새 메시지가 없었다)
+        ctx.obs_hist.append((st, xyz))
+        return True
+
+    def _belt_speed(self) -> float:
+        """설정 벨트 속도 크기 m/s (FF 에 쓰는 값)."""
+        return float(np.linalg.norm(self._ctrl.belt_v))
+
+    def _speed_estimate(self, ctx: GoalCtx, new_obs: bool) -> tuple[float | None, float | None]:
+        """벨트 속도 추정 + 큰 차이가 이어지면 WARN 1회 (B안 10 %). FF 에는 쓰지 않는다."""
+        est, span = control.belt_speed_fit(
+            ctx.obs_hist,
+            self._ctrl.belt_dir_xy,
+            diagnose.FIT_MAX_POINTS,
+            diagnose.FIT_MIN_POINTS,
+            diagnose.FIT_MIN_SPAN_S,
+        )
+        belt = self._belt_speed()
+        ctx.speed_run, fire = diagnose.speed_warn_step(
+            ctx.speed_run, ctx.speed_warned, est, belt, span, new_obs, diagnose.SPEED_WARN_RATIO
+        )
+        if fire and est is not None and span is not None:
+            self.get_logger().warning(diagnose.speed_warn_text(est, belt, span))
+            ctx.speed_warned = True
+        return est, span
+
+    @staticmethod
+    def _record_phase(ctx: GoalCtx, tr: fsm.Transition, now: float) -> None:
+        """이 시도의 phase 진입 시각. 재시도면 새 시도는 다음 틱에 바꿔 넣는다 (재검 F1)."""
+        phase = tr.state.phase
+        if phase != ctx.phase_seen:
+            ctx.phase_t.setdefault(phase, now)  # 이 시도에서 처음 들어간 시각만
+        if tr.attempt_ended:
+            # 이 틱의 틱·ATTEMPT_END 행은 끝난 시도의 시각을 담아야 한다 → 지금 지우지 않는다
+            ctx.phase_t_next = {fsm.PREPARE: now}
+            ctx.obs_hist.clear()  # 실패한 파지가 박스를 밀었을 수 있다 (재검 F13)
+            ctx.speed_run = 0
+        ctx.phase_seen = phase
+
+    def _refine_lost(
+        self, ctx: GoalCtx, tr: fsm.Transition, entry: BoxEntry | None
+    ) -> fsm.Transition:
+        """LOST 의 세부 원인. 특정 원인이 있을 때만 cause 를 바꾼다 (fsm.py 는 그대로)."""
+        pubs = self._box_publishers()
+        ctx.diag["box_pub_count"] = pubs
+        cause = diagnose.lost_cause(pubs, entry.rx if entry else None, ctx.other_rx, ctx.stall_n)
+        return replace(tr, cause=cause) if cause else tr  # 없으면 fsm cause 유지 (U9-a 호환)
+
+    def _box_publishers(self) -> int | None:
+        """/voss/vision/box 발행자 수 (조회 실패면 None)."""
+        try:
+            return int(self.count_publishers(BOX_TOPIC))
+        except Exception:
+            return None
 
     # ------------------------------------------------------------------ 행동·서비스
 
@@ -707,6 +976,8 @@ class BeltServoNode(Node):
             stop_failed = cause.startswith("STOP_") and cause != "STOP_OK"
             note = " (정지 요청 응답 없음/오류)" if stop_failed else ""
             self.get_logger().warning(f"goal 종료 reason={reason} cause={cause}{note}")
+        if ctx.retreat_done is None and fsm.is_retreat(ctx.state):
+            ctx.retreat_done = False  # 후퇴 중 예외·노드 종료로 끝남 (정상 틱 경로는 _note_retreat)
         self._last_goal = {
             "goal_id": ctx.goal_id,
             "track_id": ctx.track_id,
@@ -716,6 +987,8 @@ class BeltServoNode(Node):
             "cause": cause,
             "grasped": grasped,
             "gripper": ctx.grip_log,  # 마지막 그리퍼 호출 기록 (GOAL_END 스냅샷에도)
+            "phase_t": dict(ctx.phase_t),  # 마지막 시도의 단계 시각 (스냅샷 행에도, U9-c)
+            "retreat": self._retreat_values(ctx, ctx.state),  # 후퇴·재시도 4키 (스냅샷 행에도, U9b)
         }
         # 진행 중 그리퍼 호출은 취소하지 않고 내려놓는다 → 응답이 오면 버린다 (HLD D7, 자동 개방 금지)
         self._orphan_gripper(ctx)
@@ -784,6 +1057,8 @@ class BeltServoNode(Node):
         return {
             "box_stamp_s": stamp_s(box.stamp) if box else None,
             "box_rx_s": entry.rx if entry else None,
+            "box_u_px": float(box.u) if box else None,  # 같은 메시지의 픽셀 (U9-c)
+            "box_v_px": float(box.v) if box else None,
             "pose_stamp_s": stamp_s(pose.header.stamp) if pose else None,
             "pose_rx_s": self._pose[1] if self._pose else None,
             "position_base_m": [p.x, p.y, p.z] if p else None,
@@ -831,10 +1106,34 @@ class BeltServoNode(Node):
             "cause": tr.cause,
             "grasped": tr.grasped,
             "gripper": ctx.grip_log,  # 진행 중 또는 마지막 끝난 호출 (U5 DD 4절)
+            **self._diag_values(ctx, now),
+            **self._retreat_values(ctx, tr.state),
+            **self._phase_t_values(ctx.phase_t),
             **self._control_values(ctx, ev),
             **self._input_values(ctx.track_id),
             **self._common_values(),
         }
+
+    def _diag_values(self, ctx: GoalCtx, now: float) -> dict[str, Any]:
+        """U9-c 진단 로그 값. 진단이 실패한 틱은 ctx.diag 값(측정 속도·추정·pub 수·cause_fsm)만 null."""
+        entry = self._boxes.get(ctx.track_id)
+        valid_rx = entry.last_valid_rx if entry else None
+        d = ctx.diag
+        return {
+            "obs_rx_age_s": now - valid_rx if valid_rx is not None else None,  # 수신 기준 나이
+            "other_box_rx_age_s": now - ctx.other_rx if ctx.other_rx is not None else None,
+            "box_pub_count": d.get("box_pub_count"),
+            "tcp_vel_meas_mps": d.get("tcp_vel_meas_mps"),
+            "stall_ticks": ctx.stall_n,
+            "belt_speed_est_mps": d.get("belt_speed_est_mps"),
+            "belt_speed_est_span_s": d.get("belt_speed_est_span_s"),
+            "cause_fsm": d.get("cause_fsm"),
+        }
+
+    @staticmethod
+    def _phase_t_values(phase_t: dict[str, float]) -> dict[str, Any]:
+        """단계 진입 시각 6키 (아직 안 들어간 단계는 null)."""
+        return {key: phase_t.get(phase) for phase, key in ls.PHASE_T_KEYS.items()}
 
     @staticmethod
     def _control_values(ctx: GoalCtx, ev: fsm.TickEvent) -> dict[str, Any]:
@@ -893,6 +1192,9 @@ class BeltServoNode(Node):
             "cause": cause,  # ZERO_HOLD = 종료 뒤 0 유지 구간 표시
             "grasped": g.get("grasped"),
             "gripper": g.get("gripper"),
+            **{k: None for k in DIAG_KEYS},  # 진단 값은 fsm 틱에만 (cause_fsm 도 null, 재검 F8)
+            **{k: (g.get("retreat") or {}).get(k) for k in RETREAT_KEYS},  # goal 끝 때 값 (U9b)
+            **self._phase_t_values(g.get("phase_t") or {}),
             **self._input_values(g.get("track_id")),
             **self._common_values(),
         }

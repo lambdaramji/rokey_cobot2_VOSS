@@ -264,10 +264,54 @@ def test_no_box_ends_lost_then_zero_hold_then_free(env) -> None:
         for m in client.cmds
     )
     ends = goal_ends(tmp)
+    # 이 시험에는 box 발행자가 아예 없다 → U9-c 진단이 VISION_DOWN 으로 세분 (fsm 은 BOX_MISSING)
     assert len(ends) == 2 and all(
-        e["reason"] == "LOST" and e["cause"] == "BOX_MISSING" for e in ends
+        e["reason"] == "LOST"
+        and e["cause"] == "VISION_DOWN"
+        and e["cause_fsm"] == "BOX_MISSING"
+        and e["box_pub_count"] == 0
+        for e in ends
     )
+    end = ends[-1]  # 단계 시각: PREPARE·TRACK 만 들어갔다 (U9-c)
+    assert end["phase_t_prepare_s"] < end["phase_t_track_s"] <= end["t_calc_s"]
+    assert end["phase_t_descend_s"] is None and end["phase_t_verify_s"] is None
     assert any(t["cause"] == "ZERO_HOLD" for t in read_jsonl(tmp / "ticks"))
+
+
+@pytest.mark.parametrize("env", [{"stop_ok": None, "box": "still"}], indirect=True)
+def test_other_track_only_ends_lost_box_missing(env) -> None:
+    """U9-c: 발행자는 있고 다른 트랙(7)만 계속 보이면 내 트랙(9) LOST 는 fsm cause BOX_MISSING 그대로."""
+    node, client, ex, tmp, _ = env
+    spin_for(ex, 0.2)  # 박스 발행자가 보이게
+    handle = send(client, ex, 9)
+    res = spin_until(ex, handle.get_result_async(), 5.0)
+    assert res.result.reason == "LOST"
+    end = goal_ends(tmp)[-1]
+    assert (end["cause"], end["cause_fsm"], end["box_pub_count"]) == (
+        "BOX_MISSING",
+        "BOX_MISSING",
+        1,
+    )
+    assert (
+        end["other_box_rx_age_s"] is not None and end["other_box_rx_age_s"] < 0.2
+    )  # 다른 트랙은 계속 옴
+
+
+def test_diagnose_exception_keeps_goal_running(env, monkeypatch) -> None:
+    """U9-c 재검 F6: 진단이 예외를 내도 goal 은 fsm 대로 끝나고(LOST/BOX_MISSING) 진단 값만 null."""
+    node, client, ex, tmp, _ = env
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("diag boom")
+
+    monkeypatch.setattr("voss_servo.diagnose.measured_velocity", boom)  # 진단 첫 계산에서 예외
+    handle = send(client, ex)
+    res = spin_until(ex, handle.get_result_async(), 5.0)
+    assert res.result.reason == "LOST"  # INTERNAL_EXCEPTION(DEVICE_ERROR) 이 아니다
+    end = goal_ends(tmp)[-1]
+    assert (
+        end["cause"] == "BOX_MISSING" and end["cause_fsm"] is None and end["box_pub_count"] is None
+    )
 
 
 def test_cancel_without_stop_service_is_device_error(env) -> None:
@@ -381,6 +425,14 @@ def test_u5_normal_grasp_ok(env) -> None:
     assert node.grip_late_discarded == 0 and last_cmd_zero(client)
     end = goal_ends(tmp)[-1]
     assert end["gripper"]["kind"] == "VERIFY" and end["gripper"]["verdict"] == "HELD"
+    # U9-c: 가짜 박스는 벨트 속도 그대로 → 추정 ≈ 0.048 m/s, 가짜 pose 는 명령대로 움직임 → 정지 오탐 없음
+    assert end["belt_speed_est_mps"] == pytest.approx(0.048, rel=0.02)
+    ticks = [t for t in read_jsonl(tmp / "ticks") if t["cause"] != "ZERO_HOLD"]
+    assert max(t["stall_ticks"] for t in ticks) < 10
+    assert end["phase_t_prepare_s"] < end["phase_t_track_s"] < end["phase_t_descend_s"]
+    assert (
+        end["phase_t_grasp_s"] < end["phase_t_lift_s"] < end["phase_t_verify_s"] <= end["t_calc_s"]
+    )
 
 
 @pytest.mark.parametrize("env", [{**MOVING, "gripper": {"CLOSE": [EMPTY]}}], indirect=True)
@@ -400,6 +452,41 @@ def test_u5_empty_hand_grasp_failed_no_open(env) -> None:
     spin_for(ex, 0.6)
     assert gripper.widths() == [90.0, 39.0]  # grasped=false 여도 자동 개방 없음
     assert node.grip_late_discarded == 0 and last_cmd_zero(client)
+    # U9b: 결과 전에 안전 후퇴 — 끝 틱은 들기 높이(윗면 +50 − tol) 위, 후퇴를 끝까지 했다
+    end = goal_ends(tmp)[-1]
+    assert (end["retreat_reason"], end["retreat_done"], end["phase"]) == (
+        "GRASP_FAILED",
+        True,
+        "LIFT",
+    )
+    assert end["retry_room_ok"] is not None  # GRASP 실패 판단 때 값이 남는다
+    ticks = [t for t in read_jsonl(tmp / "ticks") if t["terminal"] and t["cause"] != "ZERO_HOLD"]
+    above = ticks[-1]["tcp_now_m"][2] - ticks[-1]["position_base_m"][2]
+    assert above >= 0.048  # 핑거 끝이 박스 윗면 + 48 mm 위 (파지 높이 −19 mm 에서 끝나지 않음)
+
+
+RETRY = {
+    **MOVING,
+    "gripper": {"CLOSE": [EMPTY]},  # 1번째 닫기 빈손 → 재시도. 2번째 닫기부터는 HELD (VERIFY 응답)
+    "params": {**MOVING["params"], "retry.max_attempts": 2},
+}
+
+
+@pytest.mark.parametrize("env", [RETRY], indirect=True)
+def test_retry_phase_times_per_attempt(env) -> None:
+    """U9-c 재검 F1: ATTEMPT_END 행은 끝난 시도의 단계 시각, GOAL_END 행은 마지막 시도의 시각."""
+    node, client, ex, tmp, gripper = env
+    spin_for(ex, 0.2)
+    handle = send(client, ex)
+    res = spin_until(ex, handle.get_result_async(), 25.0)
+    assert res.result.attempts == 2
+    rows = read_jsonl(tmp / "attempts")
+    first = [a for a in rows if a["event"] == "ATTEMPT_END"][0]
+    last = [a for a in rows if a["event"] == "GOAL_END"][-1]
+    assert first["cause"] == "NOT_DETECTED" and first["phase_t_grasp_s"] is not None
+    assert first["phase_t_lift_s"] is None  # 첫 시도는 GRASP 에서 끝났다
+    assert last["phase_t_prepare_s"] > first["phase_t_grasp_s"]  # 새 시도는 재시도 뒤에 시작
+    assert last["phase_t_grasp_s"] > first["phase_t_grasp_s"]
 
 
 LATE = {

@@ -79,8 +79,9 @@ def test_phases_exact_and_prefix() -> None:
     assert sc.judge_phases(prefix, ["PREPARE", "TRACK"]).status == "PASS"
     assert sc.judge_phases(prefix, ["PREPARE", "DESCEND"]).status == "FAIL"  # TRACK 건너뜀
     last = sc.EXPECT[("grasp", "empty")]
-    assert sc.judge_phases(last, ["PREPARE", "TRACK", "DESCEND", "GRASP"]).status == "PASS"
-    assert sc.judge_phases(last, ["PREPARE", "TRACK"]).status == "FAIL"  # GRASP 에 못 감
+    # U9b: 빈손은 안전 후퇴(phase LIFT) 뒤에 끝난다
+    assert sc.judge_phases(last, ["PREPARE", "TRACK", "DESCEND", "GRASP", "LIFT"]).status == "PASS"
+    assert sc.judge_phases(last, ["PREPARE", "TRACK", "DESCEND", "GRASP"]).status == "FAIL"
 
 
 def test_last_zero_and_zero_hold() -> None:
@@ -188,3 +189,98 @@ def test_preflight() -> None:
     assert sc.preflight_problems("30", [])
     problems = sc.preflight_problems("34", ["sim_check", "robot_gateway"])
     assert problems and "robot_gateway" in problems[0]
+
+
+# --- U9a: J12 하강 끊김 판정 (design/U9a-dd.md 4절) ---
+
+
+def descend_rows(cut_t: float, blind_t: float, end_t: float = 1.2) -> list[dict]:
+    """DESCEND 틱: cut_t 까지 매 틱 수신, blind_t 부터 사각 (t 는 DESCEND 시작 기준 s)."""
+    rows, n = [], 0
+    while n / 30.0 <= end_t:
+        t = T0 + n / 30.0
+        rx = T0 + min(n / 30.0, cut_t)  # cut_t 뒤로는 새 메시지가 없다
+        row = tick(t, phase="DESCEND", t_calc_s=t, box_rx_s=rx, vision_blind=n / 30.0 >= blind_t)
+        row["position_base_m"] = [0.0, -0.27, 0.1008]
+        row["tcp_now_m"] = [0.0, -0.27, 0.1408 - 0.02 * n / 30.0]  # 20 mm/s 로 내려간다
+        rows.append(row)
+        n += 1
+    return rows
+
+
+def test_judge_descend_cut_pass() -> None:
+    v = sc.judge_descend_cut(descend_rows(cut_t=0.30, blind_t=0.467), 0.5)
+    assert v.status == "PASS" and "여유" in v.actual  # 최대 나이 약 0.13 → 여유 약 0.37
+    assert "끊김 윗면 +34.0 mm" in v.actual  # 끊긴 순간(0.30 s) 높이, 사각 뒤 틱이 아니다
+
+
+def test_judge_descend_cut_fail_small_margin() -> None:
+    v = sc.judge_descend_cut(descend_rows(cut_t=0.10, blind_t=0.467), 0.5)
+    assert v.status == "FAIL"  # 최대 나이 약 0.33 → 여유 약 0.17 < 0.2
+
+
+def test_judge_descend_cut_fail_no_cut() -> None:
+    v = sc.judge_descend_cut(descend_rows(cut_t=9.0, blind_t=0.467), 0.5)
+    assert v.status == "FAIL" and "경주 없음" in v.actual  # 사각까지 계속 받았다
+
+
+def test_judge_descend_cut_unknown() -> None:
+    assert sc.judge_descend_cut([], 0.5).status == "UNKNOWN"  # DESCEND 틱 없음
+    no_blind = descend_rows(cut_t=0.3, blind_t=9.0)
+    assert sc.judge_descend_cut(no_blind, 0.5).status == "UNKNOWN"  # 사각 틱 없음
+
+
+def test_grasp_profile_has_u9a_cases() -> None:
+    assert {"descend_lost", "vanish"} <= set(sc.PROFILE_CASES["grasp"])  # U9b 가 뒤에 덧붙임
+    assert sc.EXPECT[("grasp", "descend_lost")].reason == "OK"
+    assert sc.EXPECT[("grasp", "vanish")].cause == "BOX_MISSING"
+
+
+# --- U9b: 재시도·안전 후퇴 case (design/U9b-dd.md 6.3, 7.1 S1) ---
+
+
+def test_u9b_cases_and_expectations() -> None:
+    assert sc.PROFILE_CASES["grasp"][-3:] == ("retry", "fail_retreat", "wide")
+    retry = sc.EXPECT[("grasp", "retry")]
+    assert retry.attempts == 2 and retry.phases_exact == (*sc.PHASES[:4], *sc.PHASES)
+    for name, cause in (("fail_retreat", "NOT_DETECTED"), ("wide", "WIDTH_OUT")):
+        e = sc.EXPECT[("grasp", name)]
+        assert (e.reason, e.cause, e.retreat) == ("GRASP_FAILED", cause, True)
+        assert e.phases_exact == tuple(sc.PHASES[:5])  # …GRASP, LIFT(후퇴)
+    empty = sc.EXPECT[("grasp", "empty")]
+    assert empty.phases_last == "LIFT" and empty.retreat  # 후퇴 뒤에 끝난다
+
+
+def test_u9b_launch_extra() -> None:
+    assert sc.launch_extra(sc.CASES["normal"]) == []  # 기존 case 는 지금과 같은 인자
+    extra = sc.launch_extra(sc.CASES["retry"])
+    assert extra == [
+        "gripper:=fake",
+        "grip_plan:=empty,held",
+        "grip_close_s:=1.2",
+        "max_attempts:=3",
+        "box_start_x_mm:=-250",
+    ]
+    assert sc.CASES["retry"].kp == 3.0 and sc.CASES["retry"].timeout_s == 60.0
+
+
+def test_u9b_judge_result_attempts() -> None:
+    e = sc.EXPECT[("grasp", "retry")]
+    assert sc.judge_result(e, sc.SUCCEEDED, "OK", True, 2).status == "PASS"
+    v = sc.judge_result(e, sc.SUCCEEDED, "OK", True, 1)
+    assert v.status == "FAIL" and "attempts=1" in v.actual
+    plain = sc.EXPECT[("grasp", "normal")]  # attempts 기대 없음 → 보지 않는다
+    assert sc.judge_result(plain, sc.SUCCEEDED, "OK", True, 7).status == "PASS"
+
+
+def test_u9b_judge_retreat() -> None:
+    end = tick(T0, (0.0, 0.0, 0.0), terminal=True, retreat_done=True)
+    end["position_base_m"] = [0.30, -0.27, 0.1008]
+    end["tcp_now_m"] = [0.34, -0.27, 0.1008 + 0.0485]  # 윗면 +48.5 mm
+    assert sc.judge_retreat(end, 0.050, 0.002).status == "PASS"
+    low = dict(end, tcp_now_m=[0.30, -0.27, 0.1008 - 0.019])  # 파지 높이에서 끝남
+    assert sc.judge_retreat(low, 0.050, 0.002).status == "FAIL"
+    undone = dict(end, retreat_done=False)
+    assert sc.judge_retreat(undone, 0.050, 0.002).status == "FAIL"
+    assert sc.judge_retreat(None, 0.050, 0.002).status == "UNKNOWN"
+    assert sc.judge_retreat(dict(end, position_base_m=None), 0.050, 0.002).status == "UNKNOWN"

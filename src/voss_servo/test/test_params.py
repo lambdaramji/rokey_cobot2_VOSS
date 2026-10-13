@@ -3,6 +3,7 @@
 import array
 from pathlib import Path
 
+import pytest
 import yaml
 from voss_servo.params import check_params, params_digest, ready_log_line
 
@@ -20,7 +21,7 @@ def valid_values() -> dict:
         "config_sha256": "abc",
         "grasp.tcp_z_below_top_mm": 19.0,
         "grasp.hold_width_min_mm": 39.5,
-        "grasp.hold_width_max_mm": 43.5,
+        "grasp.hold_width_max_mm": 44.0,
         "reach.x_min_mm": -107.0,
         "reach.x_max_mm": 638.0,
         "control.kp_per_s": 0.0,
@@ -314,10 +315,58 @@ def test_default_yaml_has_t34_and_gripper_values() -> None:
     path = Path(__file__).resolve().parents[1] / "config" / "belt_servo.yaml"
     p = yaml.safe_load(path.read_text())["belt_servo"]["ros__parameters"]
     g = p["grasp"]
-    # measurements-1008 #14 (T34) 근거 값과 제안값
+    # measurements-1008 #14 (T34) 근거 값과 제안값, close_time_max 는 10/10 최대 2128 ms 로 2.3 (U9-c)
     assert (g["hold_width_min_mm"], g["hold_width_max_mm"], g["close_time_max_s"]) == (
         39.5,
-        43.5,
-        2.1,
+        44.0,
+        2.3,
     )
     assert (g["room_margin_mm"], p["gripper_timeout_s"]) == (10.0, 3.0)
+
+
+CONFIG_DIR = Path(__file__).resolve().parents[1] / "config"
+U9C_FILES = ["belt_servo.yaml", "belt_servo_real.yaml.example", "belt_servo_sim.yaml"]
+
+
+@pytest.mark.parametrize("name", U9C_FILES)
+def test_u9c_values_in_all_yaml(name) -> None:
+    """U9-c: x_max 600 (measurements-1010 #13·#14), close_time_max 2.3 (7·8절 2128 ms) — 3개 파일 모두."""
+    p = yaml.safe_load((CONFIG_DIR / name).read_text())["belt_servo"]["ros__parameters"]
+    assert (p["reach"]["x_max_mm"], p["grasp"]["close_time_max_s"]) == (600.0, 2.3)
+
+
+def test_u9c_values_pass_cross_checks() -> None:
+    """x_max 600·close 2.3 + gripper_timeout 3.0 은 READY, timeout = close 2.3 이면 거부 (경계)."""
+    values = valid_values()
+    values["reach.x_max_mm"], values["grasp.close_time_max_s"] = 600.0, 2.3
+    assert check_params(values).ready
+    values["gripper_timeout_s"] = 2.3  # 닫힘 최대와 같다
+    assert "gripper_timeout_s" in invalid_keys(values)
+
+
+# --- U9a: cutoff 30 교차 검사 (design/U9a-dd.md 1절) ---
+
+
+def test_cutoff30_passes_cross_checks() -> None:
+    values = valid_values()
+    values["z.vision_cutoff_above_top_mm"] = 30.0  # 이탈 35 < 접근 40, tol 2 < 40 − 35
+    assert check_params(values).ready
+
+
+def test_cutoff33_fails_height_tol() -> None:
+    values = valid_values()
+    values["z.vision_cutoff_above_top_mm"] = 33.0  # 이탈 38 → 40 − 38 = 2 = tol → 거부
+    assert invalid_keys(values) == ["z.height_tol_mm"]
+
+
+def test_cutoff35_fails_approach() -> None:
+    values = valid_values()
+    values["z.vision_cutoff_above_top_mm"] = 35.0  # 이탈 40 = 접근 40 → 거부
+    assert "z.approach_above_top_mm" in invalid_keys(values)
+
+
+def test_sim_yaml_cutoff_is_30() -> None:
+    node = yaml.safe_load((CONFIG_DIR / "belt_servo_sim.yaml").read_text())["belt_servo"][
+        "ros__parameters"
+    ]
+    assert node["z"]["vision_cutoff_above_top_mm"] == 30.0

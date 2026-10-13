@@ -22,6 +22,11 @@ def at(phase, attempts=0):
     return FsmState(phase, attempts, False)
 
 
+def _retreating(reason, cause, hold_z=False, attempts=1):
+    """안전 후퇴 중 상태 (U9b)."""
+    return FsmState(fsm.LIFT, attempts, False, reason, cause, hold_z)
+
+
 def run_to_grasp(max_attempts=3):
     """PREPARE → TRACK → DESCEND → GRASP 까지 진행한 상태."""
     s, actions = fsm.start()
@@ -49,35 +54,44 @@ def test_normal_six_phases_end_ok() -> None:
 
 
 def test_close_done_without_detection_does_not_lift() -> None:
-    tr = step(at(fsm.GRASP, 1), TickEvent(gripper=EMPTY), max_attempts=3)
+    # U9b: 재시도는 x 여유가 있을 때만 (retry_room 기본 False)
+    tr = step(at(fsm.GRASP, 1), TickEvent(gripper=EMPTY, retry_room=True), max_attempts=3)
     assert tr.state.phase == fsm.PREPARE  # LIFT 가 아니라 재시도
     assert tr.attempt_ended and tr.cause == "NOT_DETECTED"
     assert tr.actions == (fsm.GRIPPER_OPEN,)
 
 
-def test_width_out_of_range_retries() -> None:
-    tr = step(at(fsm.GRASP, 1), TickEvent(gripper=WIDE), max_attempts=3)
-    assert tr.state.phase == fsm.PREPARE and tr.cause == "WIDTH_OUT"
+def test_width_out_of_range_retreats_opening_first() -> None:
+    # U9b r1: 폭 밖은 여유·시도가 남아도 항상 후퇴 (먼저 연다)
+    tr = step(at(fsm.GRASP, 1), TickEvent(gripper=WIDE, retry_room=True), max_attempts=3)
+    assert tr.state.phase == fsm.LIFT and fsm.is_retreat(tr.state) and not tr.terminal
+    assert tr.state.hold_z and tr.actions == (fsm.GRIPPER_OPEN,) and tr.cause == "WIDTH_OUT"
 
 
-def test_drop_in_verify_retries() -> None:
-    tr = step(at(fsm.VERIFY, 1), TickEvent(gripper=EMPTY), max_attempts=3)
-    assert tr.state.phase == fsm.PREPARE and tr.cause == "DROPPED"
+def test_drop_in_verify_ends_without_retry() -> None:
+    # U9b: 들다 놓침은 재시도 없이 바로 끝 (이미 들기 높이, 재정렬까지 x 363 mm 필요)
+    tr = step(at(fsm.VERIFY, 1), TickEvent(gripper=EMPTY, retry_room=True), max_attempts=3)
+    assert tr.terminal and (tr.reason, tr.cause) == (fsm.GRASP_FAILED, "DROPPED")
+    assert tr.actions == ()
 
 
-def test_max_attempts_one_fails_on_first_miss() -> None:
-    tr = step(at(fsm.GRASP, 1), TickEvent(gripper=EMPTY), max_attempts=1)
-    assert tr.terminal and tr.reason == fsm.GRASP_FAILED  # U9 전 기본값 1
+def test_max_attempts_one_retreats_on_first_miss() -> None:
+    tr = step(at(fsm.GRASP, 1), TickEvent(gripper=EMPTY, retry_room=True), max_attempts=1)
+    assert not tr.terminal and fsm.is_retreat(tr.state)  # U9b: 끝내기 전에 안전 후퇴
+    assert tr.state.exit_reason == fsm.GRASP_FAILED and tr.actions == ()  # 닫힌 채
 
 
-def test_three_misses_end_grasp_failed() -> None:
-    tr = step(at(fsm.GRASP, 3), TickEvent(gripper=EMPTY), max_attempts=3)
-    assert tr.terminal and tr.reason == fsm.GRASP_FAILED and tr.state.attempts == 3
+def test_three_misses_retreat_then_grasp_failed() -> None:
+    tr = step(at(fsm.GRASP, 3), TickEvent(gripper=EMPTY, retry_room=True), max_attempts=3)
+    assert fsm.is_retreat(tr.state) and tr.state.attempts == 3
+    tr = step(tr.state, TickEvent(at_lift_height=True, vision_blind=True))
+    assert tr.terminal and tr.reason == fsm.GRASP_FAILED and tr.cause == "NOT_DETECTED"
+    assert tr.retreat_done and tr.state.attempts == 3
 
 
 def test_max_attempts_capped_by_contract() -> None:
-    tr = step(at(fsm.GRASP, 3), TickEvent(gripper=EMPTY), max_attempts=9)
-    assert tr.reason == fsm.GRASP_FAILED  # 계약 상한 3 을 넘지 않는다
+    tr = step(at(fsm.GRASP, 3), TickEvent(gripper=EMPTY, retry_room=True), max_attempts=9)
+    assert tr.state.exit_reason == fsm.GRASP_FAILED  # 계약 상한 3 을 넘지 않는다 → 후퇴
 
 
 # --- 입력·영역 ---
@@ -120,7 +134,9 @@ def test_out_of_reach() -> None:
 
 def test_gripper_comm_error_is_device_error() -> None:
     bad = GripperReply(ok=False, width_mm=0.0, grip_detected=False, message="COMM_ERROR")
-    tr = step(at(fsm.GRASP, 1), TickEvent(gripper=bad))
+    tr = step(at(fsm.GRASP, 1), TickEvent(gripper=bad))  # GRASP = 낮은 자리 → 후퇴 (U9b)
+    assert tr.state.exit_reason == fsm.DEVICE_ERROR and tr.cause == "GRIPPER_COMM_ERROR"
+    tr = step(at(fsm.PREPARE, 0), TickEvent(gripper=bad))  # 처음 개방 = 높은 자리 → 바로 끝
     assert tr.reason == fsm.DEVICE_ERROR and tr.cause == "GRIPPER_COMM_ERROR"
 
 
@@ -264,19 +280,37 @@ def test_no_room_ignored_outside_track() -> None:
 def test_gripper_failure_codes_are_device_error(code) -> None:
     reply = GripperReply(ok=False, width_mm=0.0, grip_detected=False, message=code)
     tr = step(at(fsm.GRASP, 1), TickEvent(gripper=reply))
-    assert (tr.reason, tr.cause) == (fsm.DEVICE_ERROR, f"GRIPPER_{code}")
-    assert tr.actions == ()
+    # U9b: GRASP 중 그리퍼 오류는 닫힌 채 후퇴한 뒤 DEVICE_ERROR (개방 행동 없음)
+    assert (tr.state.exit_reason, tr.cause) == (fsm.DEVICE_ERROR, f"GRIPPER_{code}")
+    assert tr.actions == () and not tr.state.hold_z
 
 
 # --- U5: 끝나는 전이에는 행동이 없다 ("grasped=false 면 개방 없음"의 FSM 쪽 보장) ---
 
 _TERMINAL_CASES = [
     (at(fsm.VERIFY, 1), TickEvent(gripper=HELD), 3, fsm.OK),
-    (at(fsm.GRASP, 1), TickEvent(gripper=EMPTY), 1, fsm.GRASP_FAILED),
     (at(fsm.VERIFY, 1), TickEvent(gripper=EMPTY), 1, fsm.GRASP_FAILED),  # 떨어뜨림
-    (at(fsm.GRASP, 3), TickEvent(gripper=WIDE), 3, fsm.GRASP_FAILED),
+    # U9b: GRASP 실패는 후퇴 끝(들기 높이 도달)에서 끝난다 — 그 끝 전이에도 행동이 없다
     (
-        at(fsm.GRASP, 1),
+        _retreating(fsm.GRASP_FAILED, "NOT_DETECTED"),
+        TickEvent(at_lift_height=True),
+        1,
+        fsm.GRASP_FAILED,
+    ),
+    (
+        _retreating(fsm.GRASP_FAILED, "WIDTH_OUT"),
+        TickEvent(at_lift_height=True),
+        3,
+        fsm.GRASP_FAILED,
+    ),
+    (
+        _retreating(fsm.DEVICE_ERROR, "GRIPPER_TIMEOUT"),
+        TickEvent(at_lift_height=True),
+        3,
+        fsm.DEVICE_ERROR,
+    ),
+    (
+        at(fsm.VERIFY, 1),
         TickEvent(gripper=GripperReply(False, 0.0, False, "TIMEOUT")),
         3,
         fsm.DEVICE_ERROR,
@@ -300,3 +334,238 @@ def test_terminal_transitions_have_no_actions(state, ev, max_attempts, reason) -
     tr = step(state, ev, max_attempts)
     assert tr.terminal and tr.reason == reason
     assert tr.actions == ()  # 끝난 뒤 개방·닫기 요청이 나갈 길이 없다
+
+
+# --- U9a: cutoff 30 히스테리시스 · DESCEND 사각 체류 상한 (design/U9a-dd.md 2.3·2.4·6절) ---
+
+CUT30 = 30.0  # 시연 cutoff (윗면 +30 mm 진입, +35 mm 이탈)
+
+
+@pytest.mark.parametrize("was_blind", [False, True])
+def test_cutoff30_track_band_visible(was_blind) -> None:
+    # TRACK 접근 높이 띠 38~42 mm 에 x≥600 처짐 1.3 mm 가 겹쳐도(38.7) 사각이 아니다
+    top = 0.100
+    assert not fsm.is_vision_blind(fsm.TRACK, top + 0.0387, top, CUT30, was_blind)
+    assert not fsm.is_vision_blind(fsm.TRACK, top + 0.042, top, CUT30, was_blind)
+
+
+def test_cutoff30_exit_needs_above_35() -> None:
+    top = 0.100
+    assert fsm.is_vision_blind(fsm.PREPARE, top + 0.0349, top, CUT30, was_blind=True)  # 아직 안에
+    assert not fsm.is_vision_blind(fsm.PREPARE, top + 0.0351, top, CUT30, was_blind=True)  # 나옴
+
+
+def test_retry_rise_exits_above_35() -> None:
+    # 재시도 PREPARE: 파지 높이(−17)에서 접근 높이(+40)로 1 mm 씩 올라가며 사각이 언제 풀리나
+    top, blind, exit_mm = 0.100, True, None
+    for mm in range(-17, 41):
+        blind = fsm.is_vision_blind(fsm.PREPARE, top + mm / 1000.0, top, CUT30, blind)
+        if not blind and exit_mm is None:
+            exit_mm = mm  # 처음 사각에서 나온 높이
+    assert exit_mm == 36  # +35 초과에서 처음 풀린다 (정수 mm 걸음)
+    assert not blind  # 접근 높이에서는 보인다
+
+
+def test_blind_since_starts_in_descend_blind() -> None:
+    assert fsm.blind_since_next(None, fsm.DESCEND, True, 5.0) == 5.0
+
+
+def test_blind_since_keeps_first_time() -> None:
+    assert fsm.blind_since_next(5.0, fsm.DESCEND, True, 6.0) == 5.0
+
+
+@pytest.mark.parametrize(
+    "phase, blind",
+    [(fsm.DESCEND, False), (fsm.GRASP, True), (fsm.TRACK, True), (fsm.PREPARE, True)],
+)
+def test_blind_since_clears_when_visible_or_other_phase(phase, blind) -> None:
+    assert fsm.blind_since_next(5.0, phase, blind, 6.0) is None
+
+
+def test_blind_since_retry_sequence() -> None:
+    # DESCEND 사각 → GRASP → 재시도 PREPARE(사각) → 다시 DESCEND 사각: 두 번째는 새 시각
+    s = fsm.blind_since_next(None, fsm.DESCEND, True, 1.0)
+    s = fsm.blind_since_next(s, fsm.GRASP, True, 3.0)
+    assert s is None
+    s = fsm.blind_since_next(s, fsm.PREPARE, True, 5.0)
+    assert s is None
+    assert fsm.blind_since_next(s, fsm.DESCEND, True, 9.0) == 9.0
+
+
+def test_blind_overstay_boundary() -> None:
+    limit, dt = 3.44, 1.0 / 30.0
+    assert not fsm.blind_overstay(10.0, 10.0 + limit, limit)  # 같으면 아직 아님
+    assert not fsm.blind_overstay(10.0, 10.0 + limit - dt, limit)  # 1틱 전
+    assert fsm.blind_overstay(10.0, 10.0 + limit + dt, limit)  # 1틱 뒤
+    assert not fsm.blind_overstay(None, 99.0, limit)  # 사각 아님
+    assert not fsm.blind_overstay(10.0, 99.0, None)  # 상한 모름 (방어)
+
+
+def test_step_descend_overstay_device_error() -> None:
+    tr = step(at(fsm.DESCEND), TickEvent(vision_blind=True, blind_overstay=True))
+    assert tr.terminal and tr.reason == fsm.DEVICE_ERROR and tr.cause == fsm.DESCEND_BLIND_TIMEOUT
+
+
+@pytest.mark.parametrize("phase", [fsm.TRACK, fsm.GRASP, fsm.LIFT])
+def test_step_overstay_ignored_outside_descend(phase) -> None:
+    tr = step(at(phase, attempts=1), TickEvent(vision_blind=True, blind_overstay=True))
+    assert not tr.terminal
+
+
+def test_step_overstay_pose_stale_first() -> None:
+    tr = step(at(fsm.DESCEND), TickEvent(pose_stale=True, blind_overstay=True))
+    assert tr.reason == fsm.STALE_INPUT and tr.cause == "POSE_MISSING"
+
+
+def test_step_overstay_reach_first() -> None:
+    tr = step(at(fsm.DESCEND), TickEvent(reach="X_MAX", blind_overstay=True))
+    assert tr.reason == fsm.OUT_OF_REACH and tr.cause == "REACH_X_MAX"
+
+
+def test_step_overstay_cancel_first() -> None:
+    tr = step(at(fsm.DESCEND), TickEvent(cancel_requested=True, blind_overstay=True))
+    assert tr.state.stopping and not tr.terminal
+
+
+def test_step_overstay_wins_over_grasp_height_same_tick() -> None:
+    # 같은 틱에 파지 높이 도달과 겹치면 시간 초과가 이긴다 (보수적, U9a-dd 2.4)
+    tr = step(at(fsm.DESCEND), TickEvent(at_grasp_height=True, blind_overstay=True))
+    assert tr.terminal and tr.cause == fsm.DESCEND_BLIND_TIMEOUT
+
+
+# --- U9b: 재시도 여유 · 안전 후퇴 (design/U9b-dd.md 7.1) ---
+
+TIMEOUT_REPLY = GripperReply(ok=False, width_mm=0.0, grip_detected=False, message="TIMEOUT")
+
+
+def test_u9b_t1_retry_when_room() -> None:
+    tr = step(at(fsm.GRASP, 1), TickEvent(gripper=EMPTY, retry_room=True), max_attempts=3)
+    assert tr.state.phase == fsm.PREPARE and tr.attempt_ended and tr.retry_room_ok is True
+    assert tr.actions == (fsm.GRIPPER_OPEN,) and not fsm.is_retreat(tr.state)
+
+
+def test_u9b_t2_no_room_retreats_closed() -> None:
+    tr = step(at(fsm.GRASP, 1), TickEvent(gripper=EMPTY, retry_room=False), max_attempts=3)
+    assert not tr.terminal and not tr.attempt_ended
+    assert (tr.state.phase, tr.state.exit_reason, tr.state.exit_cause) == (
+        fsm.LIFT,
+        fsm.GRASP_FAILED,
+        "NOT_DETECTED",
+    )
+    assert tr.actions == () and not tr.state.hold_z and tr.retry_room_ok is False
+
+
+def test_u9b_t3_attempts_used_retreats_even_with_room() -> None:
+    tr = step(at(fsm.GRASP, 1), TickEvent(gripper=EMPTY, retry_room=True), max_attempts=1)
+    assert fsm.is_retreat(tr.state) and tr.retry_room_ok is True  # 여유는 있었지만 시도 다 씀
+
+
+def test_u9b_t4_dropped_ends_immediately() -> None:
+    tr = step(at(fsm.VERIFY, 1), TickEvent(gripper=EMPTY, retry_room=True), max_attempts=3)
+    assert tr.terminal and tr.cause == "DROPPED" and not tr.retreat_done
+
+
+def test_u9b_t5_width_out_opens_then_rises_then_ends() -> None:
+    tr = step(at(fsm.GRASP, 1), TickEvent(gripper=WIDE, retry_room=True), max_attempts=3)
+    assert tr.state.hold_z and tr.actions == (fsm.GRIPPER_OPEN,)
+    tr = step(tr.state, TickEvent(vision_blind=True))  # 개방 기다림: 그대로
+    assert tr.state.hold_z and not tr.terminal
+    tr = step(tr.state, TickEvent(gripper=OPENED, vision_blind=True))  # 개방 응답
+    assert not tr.state.hold_z and fsm.is_retreat(tr.state) and not tr.terminal
+    tr = step(tr.state, TickEvent(at_lift_height=True, vision_blind=True))
+    assert tr.terminal and (tr.reason, tr.cause) == (fsm.GRASP_FAILED, "WIDTH_OUT")
+    assert tr.retreat_done and not tr.grasped and tr.actions == ()
+
+
+def test_u9b_t6_hold_expired_rises_without_reply() -> None:
+    s = _retreating(fsm.GRASP_FAILED, "WIDTH_OUT", hold_z=True)
+    tr = step(s, TickEvent(hold_expired=True, vision_blind=True))
+    assert not tr.state.hold_z and tr.state.exit_reason == fsm.GRASP_FAILED  # exit 그대로
+    # 상승 중 늦게 온 개방 OK 는 무시된다 (판정을 보지 않음)
+    tr = step(tr.state, TickEvent(gripper=OPENED, vision_blind=True))
+    assert fsm.is_retreat(tr.state) and not tr.terminal
+
+
+def test_u9b_t7_grasp_close_error_retreats_then_device_error() -> None:
+    tr = step(at(fsm.GRASP, 1), TickEvent(gripper=TIMEOUT_REPLY))
+    assert fsm.is_retreat(tr.state) and tr.state.exit_reason == fsm.DEVICE_ERROR
+    tr = step(tr.state, TickEvent(at_lift_height=True, vision_blind=True))
+    assert tr.terminal and (tr.reason, tr.cause) == (fsm.DEVICE_ERROR, "GRIPPER_TIMEOUT")
+
+
+def test_u9b_t8_open_no_reply_during_retreat_overrides_exit() -> None:
+    s = _retreating(fsm.GRASP_FAILED, "WIDTH_OUT", hold_z=True)
+    tr = step(s, TickEvent(gripper=TIMEOUT_REPLY, vision_blind=True))
+    assert not tr.state.hold_z and not tr.terminal  # 닫힌 채 바로 상승
+    assert (tr.state.exit_reason, tr.state.exit_cause) == (fsm.DEVICE_ERROR, "GRIPPER_TIMEOUT")
+
+
+def test_u9b_t9_first_prepare_gripper_error_ends() -> None:
+    tr = step(at(fsm.PREPARE, 0), TickEvent(gripper=TIMEOUT_REPLY))
+    assert tr.terminal and tr.reason == fsm.DEVICE_ERROR  # 관측 자세 높이 = 위험 없음
+
+
+def test_u9b_t10_retry_prepare_gripper_error_retreats() -> None:
+    tr = step(at(fsm.PREPARE, 1), TickEvent(gripper=TIMEOUT_REPLY))
+    assert fsm.is_retreat(tr.state) and tr.state.exit_reason == fsm.DEVICE_ERROR
+
+
+def test_u9b_t11_cancel_during_retreat() -> None:
+    s = _retreating(fsm.GRASP_FAILED, "NOT_DETECTED")
+    tr = step(s, TickEvent(cancel_requested=True))
+    assert tr.state.stopping and tr.actions == (fsm.REQUEST_STOP,)
+    tr = step(tr.state, TickEvent(stop_result=StopResult(fsm.STOP_OK), at_lift_height=True))
+    assert tr.terminal and tr.reason == fsm.CANCELED and not tr.retreat_done
+
+
+def test_u9b_t12_pose_stale_during_retreat() -> None:
+    tr = step(_retreating(fsm.GRASP_FAILED, "NOT_DETECTED"), TickEvent(pose_stale=True))
+    assert tr.terminal and (tr.reason, tr.cause) == (fsm.STALE_INPUT, "POSE_MISSING")
+
+
+def test_u9b_t13_overstay_only_for_retreat() -> None:
+    tr = step(_retreating(fsm.GRASP_FAILED, "NOT_DETECTED"), TickEvent(lift_overstay=True))
+    assert tr.terminal and (tr.reason, tr.cause) == (fsm.DEVICE_ERROR, fsm.RETREAT_TIMEOUT)
+    tr = step(at(fsm.LIFT, 1), TickEvent(lift_overstay=True, vision_blind=True))
+    assert (
+        not tr.terminal and tr.state.phase == fsm.LIFT
+    )  # 정상 들기(박스 쥔 채)는 끊지 않는다 (r1)
+
+
+def test_u9b_t14_retreat_not_cut_by_x_end() -> None:
+    tr = step(_retreating(fsm.GRASP_FAILED, "NOT_DETECTED"), TickEvent(reach="X_MAX"))
+    assert not tr.terminal and fsm.is_retreat(tr.state)
+
+
+def test_u9b_t15_lost_during_retry_prepare() -> None:
+    tr = step(at(fsm.PREPARE, 1), TickEvent(box_lost=True, vision_blind=False))
+    assert tr.terminal and tr.reason == fsm.LOST
+
+
+def test_u9b_t16_lift_since_and_overstay_edges() -> None:
+    lift, held = at(fsm.LIFT, 1), _retreating(fsm.GRASP_FAILED, "WIDTH_OUT", hold_z=True)
+    assert fsm.lift_since_next(None, lift, 5.0) == 5.0  # 상승 시작
+    assert fsm.lift_since_next(5.0, lift, 6.0) == 5.0  # 처음 시각 유지
+    assert fsm.lift_since_next(5.0, held, 6.0) is None  # 개방 기다림은 세지 않는다
+    assert fsm.lift_since_next(5.0, at(fsm.VERIFY, 1), 6.0) is None
+    assert not fsm.lift_overstay(5.0, 8.79, 3.79)  # 같으면 아직
+    assert fsm.lift_overstay(5.0, 8.80, 3.79)
+    assert not fsm.lift_overstay(None, 99.0, 3.79) and not fsm.lift_overstay(5.0, 99.0, None)
+
+
+def test_u9b_t17_default_event_has_no_retry_room() -> None:
+    assert TickEvent().retry_room is False  # 모르면 재시도하지 않는다
+    tr = step(at(fsm.GRASP, 1), TickEvent(gripper=EMPTY), max_attempts=3)
+    assert fsm.is_retreat(tr.state)
+
+
+def test_u9b_retreat_never_leaks_into_verify() -> None:
+    tr = step(_retreating(fsm.GRASP_FAILED, "NOT_DETECTED"), TickEvent(at_lift_height=True))
+    assert tr.terminal and tr.state.phase == fsm.LIFT and fsm.GRIPPER_VERIFY not in tr.actions
+
+
+def test_u9b_is_low() -> None:
+    assert fsm.is_low(at(fsm.GRASP, 1)) and fsm.is_low(at(fsm.PREPARE, 1))
+    assert fsm.is_low(_retreating(fsm.GRASP_FAILED, "NOT_DETECTED"))
+    assert not fsm.is_low(at(fsm.PREPARE, 0)) and not fsm.is_low(at(fsm.VERIFY, 1))
+    assert not fsm.is_low(at(fsm.LIFT, 1))  # 박스 쥔 정상 들기
