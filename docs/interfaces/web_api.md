@@ -78,6 +78,9 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 - manager 접수 결과는 SSE `command_ack` 이벤트로 온다(hmi_bridge 가 `/voss/sort/command` 응답을 `voss/command/ack` 로 회신). 완료는 `state`·`result` 이벤트로 본다.
 - 브로커 끊김: `503 {"ok": false, "message": "MQTT_DOWN"}`, HMI 버튼 비활성화.
 - 원격에서 움직이는 명령: `403 FORBIDDEN_REMOTE`(위 공통 절). `stop` 은 원격·로컬 모두 받는다.
+- **Sprint 2 인자 검사 (S2-T08, 발행 전에 Spring Boot 가 본다):**
+  - `palletize` — `args` 는 `{"route": [...]}` 키 하나. `route` = 문자열 배열 1~3개·중복 없음·빈 문자열 없음(배송 순서, 첫 배송지부터). 형식이 틀리면 `400 INVALID_QUERY`, zone_map 정식 동 이름이 아니면(별칭 포함) `400 UNKNOWN_DONG`. MQTT `voss/command` 에는 `args` 를 그대로 싣는다(쉼표 문자열로 바꾸는 것은 hmi_bridge, mqtt.md). 시작 조건(처리 중 박스 없음·팔레트 칸 0·교시)은 manager 가 보고 `command_ack` 로 거부한다.
+  - `reset_zone` — `zone` 에 `PALLET` 추가(A/B/C/RECHECK/HOLD/PALLET).
 
 ### `GET /api/stream` — SSE (React 실시간 갱신)
 | event | data | 원천 |
@@ -89,8 +92,12 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 | `command_ack` | `voss/command/ack` JSON | Command 응답 |
 | `log_status` | `{"status": "OK|DB_ERROR|SPOOL_FULL|STARTING", "stamp": "…"}` | `/voss/log/status` (hmi_bridge 전달) |
 | `link` | `{"mqtt": "UP|DOWN"}` | Spring Boot 브로커 연결 |
-- 접속 직후 Spring Boot 가 마지막 `state`·`zone_map`·`robot`·`log_status` 를 한 번씩 보낸다(늦게 연 브라우저도 바로 표시).
+| `pallet_state` | `voss/pallet/state` JSON 그대로 | PalletState (Sprint 2 S2-T08 — 바뀔 때, retained. 계획 직후·첫 PICK 전 한 번 + 박스마다) |
+- 접속 직후 Spring Boot 가 마지막 `state`·`zone_map`·`robot`·`log_status`·`pallet_state` 를 한 번씩 보낸다(늦게 연 브라우저도 바로 표시).
 - 3초 이상 `state` 가 없으면 HMI 는 `UNKNOWN` 으로 표시한다(값을 0·정상으로 위장하지 않음).
+- `state` 의 값은 voss_msgs.md SortState 그대로 받는다 — Sprint 2 `PALLETIZING` 포함. 목록에 없는 값은 버린다(그러면 3초 뒤 UNKNOWN).
+- `pallet_state` 는 바뀔 때만 와서 나이로 장애를 가르지 않는다. 마지막 배치도를 계속 보이되 `link` 가 DOWN 이거나 SSE 가 끊기면 "갱신 안 됨"으로 표시한다. `run_id == ""` 이면 실행 없음(빈 팔레트). 칸 배열 인덱스 = slot 0~15(voss_msgs.md PalletState).
+- 팔레타이징 이력(`pallet_log`) 조회 API 는 이번 스프린트에 두지 않는다. 배치도와 기록의 대조(NFR-14)는 DB 에서 `SELECT … FROM pallet_log WHERE run_id = …` 로 한다(docker/db/README.md).
 - HMI 반영 ≤ 1초 측정: manager 상태 변경 로그 → DOM(전체), hmi_bridge 수신 → DOM(부분) 둘 다 기록(#54 MC-031).
 
 ## FastAPI `/ai` (음성 ROS 노드 전용, ADR-0006)
@@ -124,6 +131,7 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 - 검증: SYS-FR-022 / VT-022, SYS-PF-005 / VT-049
 
 ## 변경 이력
+- 2026-10-13: **Sprint 2 S2-T08 웹 쪽**(BRD v1.5 TR-PAL-10 — 제안, 정의석 확인 필요). SSE `pallet_state`(접속 직후 스냅샷 포함, 나이 판정 없음), `palletize`·`reset_zone PALLET` 인자 검사, SortState `PALLETIZING` 수용 명시, `pallet_log` 웹 조회는 두지 않음.
 - 2026-10-12: **Sprint 2**(S2-T01 — 제안). `POST /api/commands` 에 `palletize`(로봇을 움직이므로 공용 PC 로컬만). 팔레트 배치도 SSE·이력 조회(`pallet_log`)는 S2-T08 에서 정한다.
 - 2026-10-08: #20 MQTT 계약 확정에 맞춰 1883/wlo1은 개발 디버그 때만 임시 개방하고 시연 때 차단하도록 정합.
 - 2026-10-07: `SortState.session_id`(#78) 머지에 맞춰 "현재 세션" 확정 — 임시 규칙(최근 `sort_log` 행) 삭제, `session_id == ""` 이면 `NO_SESSION`(#78 김학민 🟢, `/api/sessions/current` 는 예정 수량만), `next` 예정 수량은 첫 결과가 아니라 `start` 때 붙임. "의존" 절 삭제.
