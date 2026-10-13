@@ -20,7 +20,7 @@ zones:               # 두산 posx: x y z rx ry rz, mm/deg. 플랜지 기준(TCP
                      # grid: 같은 구역에 여러 개를 놓을 칸. cols = X(벨트 방향) 칸 수, rows = Y 칸 수, pitch_mm = 칸 간격, offset_mm(선택, 기본 0) = 칸 줄 중심의 X 위치(pose 기준). pose 는 트레이 중심
                      # layers(선택, 기본 1) = 쌓는 층 수, layer_mm(선택, 기본 27 = 박스 높이) = 층 간격. 칸 수 = cols × rows × layers.
                      # 칸 번호는 1층부터 채운다: slot = layer × (cols × rows) + row × cols + col, 놓기 z = pose z + layer × layer_mm
-                     # pitch_y_mm(선택, 기본 pitch_mm) = Y 줄 간격. 줄 위치 = (row − (rows−1)/2) × pitch_y_mm (pose 기준, row 0 이 −Y)
+                     # pitch_y_mm(선택, 기본 pitch_mm) = Y 줄 간격. 줄 위치 = ((rows−1)/2 − row) × pitch_y_mm (pose 기준, **row 0 이 +Y** — 10/12 실측 기준, 커밋 7373e06·zone_motion.py)
                      # col_dy_mm(선택, cols 개) = 열마다 Y 보정(mm). 그 열의 모든 줄·층 칸에 더한다(트럭 +X 끝 열 +10)
                      # order(선택) = 앞쪽 칸을 채우는 순서(0..n−1 을 한 번씩, sort_manager 만 씀). n 번째 박스 → order[n], 넘어가면 n 그대로(2층 등)
                      # in_tray_tcp_z_mm(선택, zones.<z> 키) = 이 구역의 트레이 안 이동 최저 TCP z(robot_gateway). 없으면 zone_min_in_tray_tcp_z_mm(60)
