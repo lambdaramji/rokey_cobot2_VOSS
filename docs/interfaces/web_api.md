@@ -1,5 +1,7 @@
 # 웹·AI HTTP API (Spring Boot `/api`, FastAPI `/ai`)
 
+2026-10-13 확장 제안: SSE `box_motion`은 MQTT `voss/box_motion` JSON을 그대로 전달한다. `GRASPED`는 확인된 파지, `RELEASED`는 확인된 그리퍼 개방이다. `robot_pose.orientation`은 TCP 기준 박스 오프셋 회전용이다. Truck 수량은 계속 `/api/sessions/current.by_zone`의 DB 집계만 사용한다. 상세: [box_carry_proposal.md](box_carry_proposal.md).
+
 ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React, `/api` → Spring Boot(127.0.0.1:8080) 로 넘어간다. **Nginx 는 `/ai` 를 넘기지 않는다** — FastAPI 는 음성 ROS 노드만 `http://127.0.0.1:8000` 으로 부른다(Wi-Fi 에서 OpenAI 사용량이 나가지 않게). 브라우저·Spring Boot 는 ROS 에 직접 붙지 않는다(ROS ↔ 웹은 MQTT, `mqtt.md`).
 
 ## 공통
@@ -86,12 +88,21 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 | `result` | `voss/result` JSON 그대로 | SortResult (박스당 1건) |
 | `zone_map` | `voss/zone_map` JSON | retained |
 | `robot` | `voss/robot` JSON | RobotState |
+| `box_track` | `voss/box_track` JSON 그대로 | BoxTrack 유효 좌표·트랙 ID, 최대 10 Hz/트랙. 재전송 없음 |
+| `robot_pose` | `voss/robot_pose` JSON 그대로 | TCP base_link 좌표, 최대 20 Hz. 재전송 없음 |
+| `robot_joints` (제안) | `voss/robot_joints` JSON 그대로 | 기존 6축 JointState, rad, 최대 20 Hz. 저장·재전송 없음. [계약 제안](robot_joints_fk_proposal.md) |
 | `command_ack` | `voss/command/ack` JSON | Command 응답 |
 | `log_status` | `{"status": "OK|DB_ERROR|SPOOL_FULL|STARTING", "stamp": "…"}` | `/voss/log/status` (hmi_bridge 전달) |
 | `link` | `{"mqtt": "UP|DOWN"}` | Spring Boot 브로커 연결 |
 - 접속 직후 Spring Boot 가 마지막 `state`·`zone_map`·`robot`·`log_status` 를 한 번씩 보낸다(늦게 연 브라우저도 바로 표시).
 - 3초 이상 `state` 가 없으면 HMI 는 `UNKNOWN` 으로 표시한다(값을 0·정상으로 위장하지 않음).
 - HMI 반영 ≤ 1초 측정: manager 상태 변경 로그 → DOM(전체), hmi_bridge 수신 → DOM(부분) 둘 다 기록(#54 MC-031).
+
+### 음성 상태 SSE 추가 제안 (승인 전)
+
+기존 `GET /api/stream`에 `voice_status` 이벤트를 추가한다. `/api/events`는 실제 계약에 없으므로 사용하지 않는다.
+데이터는 `phase`, `event_id`, `utterance_id`이며 [voice_status.md](voice_status.md)의 검증·중복·연결 처리 규칙을 따른다.
+이 이벤트는 접속 직후 snapshot/재연결 replay 대상이 아니다. 다른 SSE 이벤트·DB·명령 API는 그대로다.
 
 ## FastAPI `/ai` (음성 ROS 노드 전용, ADR-0006)
 브라우저는 쓰지 않는다(Nginx 미노출). voice_listener·intent_parser 가 `http://127.0.0.1:8000` 으로 직접 호출한다. stop 키워드는 FastAPI 를 거치지 않는다(intent_json.md). `OPENAI_API_KEY` 는 이 컨테이너 환경 변수에만 둔다.

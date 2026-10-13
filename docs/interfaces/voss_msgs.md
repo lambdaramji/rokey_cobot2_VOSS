@@ -1,5 +1,12 @@
 # voss_msgs 필드 정의 (src/voss_msgs 와 1:1 — 둘 다 같이 고친다)
 
+## BoxMotion 확장 제안 (2026-10-13, 담당 3인 승인 전달)
+
+새 main의 `src/voss_msgs` IDL에는 아직 반영되지 않았다. 메시지·서비스 타입 해시가
+바뀌므로 관련 노드 담당자 승인과 일괄 재빌드 전에는 운영 계약으로 사용하지 않는다.
+
+`BoxMotion.msg`: `string session_id`, `string box_id`, `int32 track_id`, `string phase` (`GRASPED`/`RELEASED`), `builtin_interfaces/Time stamp`, `string zone`. `GRASPED`는 manager의 `TrackAndGrasp.Result(reason=OK, grasped=true)` 확인 시각, `RELEASED`는 gateway의 PLACE RG2 개방 성공 `placed_stamp`이다. 이벤트는 실제 로봇 제어에 사용하지 않는다. `MoveToZone.Request` 끝에는 시각화 상관관계용 `session_id`, `box_id`, `track_id`를 추가한다. 자세한 발행·보정 제한은 [box_carry_proposal.md](box_carry_proposal.md)에 기록한다.
+
 ## msg
 | 타입 | 필드 | 비고 |
 |---|---|---|

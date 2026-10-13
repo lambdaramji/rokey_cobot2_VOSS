@@ -1,5 +1,7 @@
 # 노드·토픽·서비스·액션 (SRD 9장 제안 — 10/05 팀 확정)
 
+2026-10-13 확장 제안: `/voss/box_motion` (`voss_msgs/BoxMotion`, reliable·volatile·depth 10)은 manager가 검증된 파지 결과 `GRASPED`를, robot_gateway가 실제 RG2 개방 완료 `RELEASED`를 발행한다. `session_id`·`box_id`·`track_id`를 유지하며 hmi_bridge가 표시 전용으로 구독한다. [box_carry_proposal.md](box_carry_proposal.md)의 실측 오프셋은 별도 확인 전까지 미확정이다. 6축 표시용 기존 `/dsr01/joint_states` 전달은 [robot_joints_fk_proposal.md](robot_joints_fk_proposal.md) 제안 참조.
+
 규칙: 토픽 `/voss/<영역>/<이름>`, 서비스·액션 `/voss/<영역>/<동사>`. 커스텀 타입은 `voss_msgs`.
 
 | 노드 | 패키지 / 담당 | 발행 / 제공 | 구독 / 호출 |
@@ -8,7 +10,7 @@
 | intent_parser | voss_voice / 정의석 | `/voss/voice/intent` (voss_msgs/Intent), `/voss/voice/say` (되묻기·이력 조회 응답, 중복 억제는 intent_parser) | `/voss/voice/transcript`, `/voss/sort/zone_map` (동·구역·별칭 허용 목록. YAML 직접 읽기 금지), `/voss/sort/state` (answer 의 box_id). 이력 질의는 REST `GET /api/stats` |
 | speech_out | voss_voice / 정의석 | 내장 스피커 | `/voss/voice/say` (std_msgs/String) |
 | sort_manager | voss_manager / 남현지 | `/voss/sort/state` (voss_msgs/SortState), `/voss/sort/result` (voss_msgs/SortResult), `/voss/sort/zone_map` (voss_msgs/ZoneMap, transient_local), `/voss/voice/say`. 서비스: `/voss/sort/command` (srv/Command), `/voss/sort/update_zone_map` (srv/UpdateZoneMap). `/voss/voice/say` 는 같은 box_id 의 같은 이벤트를 한 번만 발행 | `/voss/voice/intent`, `/voss/vision/box`, `/voss/vision/label`, `/voss/robot/state`·`/voss/log/status` (준비 판단). 액션 호출 `/voss/servo/track_and_grasp`. 서비스 호출 `/voss/robot/stop` (std_srvs/srv/Trigger — #50 회신 순서: stop 명령을 받으면 **최우선**으로 부르고, 그다음 action cancel → PAUSED(MC-014). belt_servo 도 cancel 때 stop 을 부르므로 중복 호출·최종 순서는 SRD v1.0 F-04 에서 확정. F-04 제안: sort_manager 는 stop 응답을 기다리지 않고 cancel → PAUSED, stop 이 false·timeout 이면 PAUSED 유지·not_ready 에 ROBOT·로그 후 사람 확인으로 resume — 남현지 #84 리뷰), `/voss/robot/move_to_zone`, `/voss/robot/gripper` (TrackAndGrasp goal 실행 중에는 부르지 않는다 — goal 중 호출자는 belt_servo 하나, #53 MC-013), `/voss/vision/read_label` (RECHECK 상태에서) |
-| hmi_bridge | voss_hmi / 정의석 | MQTT `voss/state`, `voss/result`, `voss/zone_map`, `voss/robot`, `voss/command/ack` (JSON) | MQTT `voss/command` → `/voss/sort/command` 호출. `/voss/sort/state`, `/voss/sort/result`, `/voss/sort/zone_map`, `/voss/robot/state`, `/voss/log/status` 구독 (HMI 의 로그 상태 표시. MQTT 전달 토픽은 mqtt.md) |
+| hmi_bridge | voss_hmi / 정의석 | MQTT `voss/state`, `voss/result`, `voss/zone_map`, `voss/robot`, `voss/box_track`, `voss/robot_pose`, `voss/command/ack` (JSON) | MQTT `voss/command` → `/voss/sort/command` 호출. `/voss/sort/state`, `/voss/sort/result`, `/voss/sort/zone_map`, `/voss/robot/state`, `/voss/vision/box`, `/voss/robot/pose`, `/voss/log/status` 구독 (MQTT 전달 계약은 mqtt.md) |
 | sort_logger | voss_hmi / 정의석 | DB 테이블 `sort_log`(유일키 box_id), `/voss/log/status` (std_msgs/String `STARTING`/`OK`/`DB_ERROR`/`SPOOL_FULL`, 1 Hz) | `/voss/sort/result` |
 | realsense2_camera | (외부, voss_bringup 이 `camera_namespace:=''` 로 기동) | `/camera/color/image_raw` (sensor_msgs/Image), `/camera/color/camera_info` | — |
 | box_tracker | voss_vision / 남현지 | `/voss/vision/box` (voss_msgs/BoxTrack, 픽셀 + 베이스 좌표 m) 30 Hz, `/voss/vision/label_crop` (voss_msgs/LabelCrop, 선명 프레임만) | `/camera/color/image_raw`, `/voss/sort/state` (크롭의 stage 를 정하는 데만 씀), `/voss/robot/pose` (TCP. 이동 중 좌표: 촬영 시각 pose 보간. 핸드아이 촬영 자세도 같은 TCP pose 로 기록 → `T_tcp→camera`) |
