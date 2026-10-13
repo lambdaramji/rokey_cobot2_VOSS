@@ -28,11 +28,11 @@
 ## 판정 (2026-10-13 18:00 — 회의 뒤 채운다)
 | 기능 | 회차 | 결과 | 근거(기록표·bag·pallet_log) | 시연 |
 |---|---|---|---|---|
-| 팔레타이징 | 1 (15:25:24, run_id `20261013T152524-29d8`, 김학민 공용 PC) | **완주 16/16 DONE**, FAILED 0 — 16칸 3개 동(S8, 대치 → 역삼 → 청담), 2층 8칸, 대치 3개 초과로 남음. 박스당 최대 15.0 s(NFR-15 ≤ 30) | HEAD 0918757(통합 4b3f66c + cc1d0fe·5c3bba9·0918757), 설정 sha256 c829cb0f3e21, pallet_log 19행(DONE 16 + OVERFLOW 3), 기록표 `s2gate_rows.auto.md` | **단계 9 포함 — 조건부** |
+| 팔레타이징 | 1 (15:25:24, run_id `20261013T152524-29d8`, 김학민 공용 PC) | **완주 16/16 DONE**, FAILED 0 — 16칸 3개 동(S8, 대치 → 역삼 → 청담), 2층 8칸, 대치 3개 초과로 남음. 박스당 최대 15.0 s(NFR-15 ≤ 30) | 실행 코드 cc1d0fe(= 4b3f66c + 커밋 전 같은 voss_manager 변경 — 16:01 커밋), 10/12 수동 명령으로 기동(voss_up 안 씀), 설정 sha256 c829cb0f3e21, pallet_log 19행(DONE 16 + OVERFLOW 3), 기록표 `s2gate_rows.auto.md` | **단계 9 포함 — 조건부** |
 | 음성 시스템 기동 | 0 (시도 못 함) | **성공 없음** — 실패 단계 "단계 0 이전 — voss_launcher(S2-T09) 미구현": integ·새 레포 전체 브랜치·v11 번들 어디에도 없어 ROS 를 다 끄면 "시스템 켜줘"를 받을 노드가 없다. 같은 날 AI 컨테이너 꺼짐(DB 만 동작), TTS 는 OpenAI 연결 실패로 무음, 공용 PC GPU 커널 문제로 미인식 | 김학민 Slack 10/13 17:54 | **단계 0 제외** — g0-runbook 수동 기동 |
 
 **근거 기록** (판정 표의 "근거" 칸이 가리키는 것)
-- 공용 PC 코드: `git rev-parse --short HEAD` **0918757**(통합 4b3f66c 위 김학민 cc1d0fe·5c3bba9·0918757, PR #32), `sha256sum config/voss_config.yaml` **c829cb0f3e21…**(= `scripts/measure_1012/voss_config.demo.yaml`)
+- 공용 PC 코드: **cc1d0fe(= 4b3f66c + 커밋 전 같은 변경)** — 게이트(15:25) 때 HEAD 는 4b3f66c 이고 voss_manager 변경은 커밋 전이었다. 그 변경을 16:01 에 cc1d0fe 로 커밋했고 voss_manager .py 는 14:30 이후 바뀌지 않았다. 5c3bba9(bringup 카메라 namespace)·0918757(문서)은 16:06~16:07 에 더한 커밋이고 게이트는 10/12 수동 명령으로 기동해 voss_up 을 쓰지 않았다 — 실행 코드는 같아 판정에 영향 없음(김학민 정정 10/13 18:30). PL 결정 기록(17:51)의 "HEAD 0918757" 은 이 문장으로 바로잡는다. `sha256sum config/voss_config.yaml` **c829cb0f3e21…**(= `scripts/measure_1012/voss_config.demo.yaml`)
 - 녹화: `~/voss_data/1013/s2gate_pal`(sprint2-gate.md §3 토픽) · 기록표 행: `python3 -m voss_manager.pallet_gate ~/voss_data/1013/s2gate_pal` 출력(`s2gate_rows.md`)에 사람 칸(입력·실물·밀림·DB 행)을 채운 것
 - DB: §3 5번 SQL 결과 행 수 = 기록표 "pallet_log 행" 기대값
 - 결정 상태(10/13 투표): **D3 = 16칸 3개 동 완주**(제안안 1개 동 8칸 대신), **D4 = 대치 → 역삼 → 청담**, **D7 = 20개 중 16개 이상**(ADR-0012 변경). #37 결정(1층 FAILED 면 위층 당겨 놓기 — 그 회차는 FAILED 가 있어 미완주), D5 ______(웹 3D 확인 결과)
