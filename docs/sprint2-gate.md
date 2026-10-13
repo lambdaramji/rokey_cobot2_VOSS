@@ -77,7 +77,7 @@ python3 -m voss_manager.pallet_gate ~/voss_data/1013/s2gate_pal --out ~/voss_dat
 | 팔레타이징 | 음성 기동 | 시연 단계 |
 |---|---|---|
 | 완주 1회 이상 | 성공 1회 이상 | 0~9 전부 |
-| D3 기준 완주 없음, 1층만 완주(2층 실패) 기록 있음 | — | 9 를 1층만 쓰는 1개 동 경로로 줄임 — 2층 놓기는 시연에서 뺀다 |
+| D3 기준 완주 없음, 1층만 완주(2층 실패) 기록 있음 | — | 9 를 1층만 쓰는 1개 동 경로(역삼)로 줄임 — sort_manager `pallet_layers: 1`(대본 §6 B), 2층 놓기는 시연에서 뺀다 |
 | 완주 없음, 1개 동도 없음 | — | 9 제외 |
 | — | 성공 없음 | 0 제외(수동 기동) |
 
@@ -88,3 +88,4 @@ python3 -m voss_manager.pallet_gate ~/voss_data/1013/s2gate_pal --out ~/voss_dat
 - 2026-10-12: 초안 (S2-T13). BRD v1.4 10.2·10.8 기준, 판정 정의·전제·순서·기록표·판정 표.
 - 2026-10-13: **BRD v1.5** — 팔레타이징 기준을 결정 D3 제안(1개 동 8칸, 2층 4칸 포함 — 구현 채우기 순서에 맞춤)으로, 완주 정의에 2층 안정·초과/경로 제외 행 포함, pallet_log 조회 열(slot·열·층·줄), 트레이 8칸(D1) 전제.
 - 2026-10-13 오후: 전제 첫 줄을 v1.5 로(`cols` 없음·PalletState 확인), 웹 HMI 전제, 녹화에 `/voss/voice/say`·`intent`, 기록표 행 도구 `voss_manager.pallet_gate`(6번), #37 당겨 놓기 기록.
+- 2026-10-13 저녁 전: §6 B 를 실행할 수 있게 sort_manager `pallet_layers: 1`(대본 §6 B).
