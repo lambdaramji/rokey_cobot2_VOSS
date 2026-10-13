@@ -19,7 +19,7 @@ ROS_TYPES = (
     "priority",
     "answer",
     "recheck",
-    "load_truck",
+    "palletize",
     "update_zone_map",
 )  # Intent 로 보내는 것
 QUERY_KINDS = ("count_by_dong", "held_count", "remaining_count")
@@ -35,8 +35,14 @@ RECHECK_START_RE = re.compile(
     r"재확인(?:을)?(?:시작|진행|처리)?(?:해|해줘|해주세요|하자|합니다|할게|해요)?"
 )
 
-# "청담동, 대치동, 역삼동 순으로 트럭에 실어" → load_truck(10/12 시연, LLM 없이). 트럭 + 싣는 말이 있으면
-LOAD_TRUCK_RE = re.compile(r"트럭.*(?:실어|싣|적재|태워|올려|옮겨)|(?:실어|싣|적재|태워|올려|옮겨).*트럭")
+# "대치, 역삼, 청담 순서로 실어줘"·"… 순으로 트럭에 실어" → palletize(BRD TR-PAL-01, LLM 없이).
+# 트럭·팔레트 + 싣는 말, 또는 "순(서)…싣는 말"이 있으면. 말한 순서 = 싣는 순서(10/13 결정)
+PALLETIZE_RE = re.compile(
+    r"(?:트럭|팔레트).*(?:실어|싣|적재|태워|올려|옮겨)"
+    r"|(?:실어|싣|적재|태워|올려|옮겨).*(?:트럭|팔레트)"
+    r"|순(?:서)?(?:대로|으로|로)?(?:실어|싣|적재)"
+)
+SAY_PALLET_ORDER = "싣는 순서를 동 이름으로 말씀해 주세요. 예를 들어 대치, 역삼, 청담 순서로 실어줘."
 
 # 정지 키워드: 공백·문장부호를 지운 뒤 포함 여부로 본다. 오인식으로 멈추는 쪽은 허용한다.
 STOP_KEYWORDS = ("멈춰", "멈추", "정지", "스톱", "스탑", "그만", "stop")
@@ -189,11 +195,11 @@ def decide_recheck_start(raw_text: str) -> Decision | None:
     return Decision("publish", intent=_intent("recheck", raw_text=raw_text))
 
 
-def decide_load_truck(raw_text: str, view: ZoneMapView | None) -> Decision | None:
-    """'청담동 대치동 역삼동 순으로 트럭에 실어' → load_truck, dong = 말한 순서 "청담동,대치동,역삼동".
-    동을 말하지 않으면 빈값(sort_manager 가 zone_map 순서로). 받을 수 있는 상태인지는 sort_manager 가 판단한다."""
+def decide_palletize(raw_text: str, view: ZoneMapView | None) -> Decision | None:
+    """'대치, 역삼, 청담 순서로 실어줘' → palletize, dong = 말한 순서 "대치동,역삼동,청담동"(BRD TR-PAL-01).
+    동을 하나도 말하지 않으면 되묻는다. 받을 수 있는 상태인지·중복은 sort_manager 가 판단한다."""
     s = _squash(raw_text)
-    if LOAD_TRUCK_RE.search(s) is None:
+    if PALLETIZE_RE.search(s) is None:
         return None
     if view is None:
         return Decision("say", say=SAY_NOT_READY)
@@ -202,8 +208,10 @@ def decide_load_truck(raw_text: str, view: ZoneMapView | None) -> Decision | Non
         i = s.find(alias)
         if alias and i >= 0 and (dong not in found or i < found[dong]):
             found[dong] = i
+    if not found:
+        return Decision("say", say=SAY_PALLET_ORDER)
     order = sorted(found, key=found.get)
-    return Decision("publish", intent=_intent("load_truck", dong=",".join(order), raw_text=raw_text))
+    return Decision("publish", intent=_intent("palletize", dong=",".join(order), raw_text=raw_text))
 
 
 def decide_destination_answer(

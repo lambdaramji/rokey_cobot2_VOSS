@@ -13,7 +13,14 @@ from typing import Any
 
 import yaml
 
-ZONES = ("A", "B", "C", "RECHECK", "HOLD", "TRUCK")  # MoveToZone zone 값(대문자). config 키는 대소문자 무시. TRUCK = 팔레타이징(로컬 10/12)
+ZONES = (
+    "A",
+    "B",
+    "C",
+    "RECHECK",
+    "HOLD",
+    "PALLET",
+)  # MoveToZone zone 값(대문자). config 키는 대소문자 무시. PALLET = 팔레타이징 트레이(BRD 10.7)
 LAYER_MM = 27.0  # grid.layer_mm 기본 = 박스 높이 (voss_config.md grid layers)
 
 
@@ -63,7 +70,11 @@ def gateway_params(cfg: dict[str, Any], sha: str) -> dict[str, Any]:
             layers = grid.get("layers", 1)
             layers = layers if isinstance(layers, int) and not isinstance(layers, bool) else 1
             lmm = grid.get("layer_mm", LAYER_MM)
-            lmm = float(lmm) if isinstance(lmm, int | float) and not isinstance(lmm, bool) else LAYER_MM
+            lmm = (
+                float(lmm)
+                if isinstance(lmm, int | float) and not isinstance(lmm, bool)
+                else LAYER_MM
+            )
             py = grid.get("pitch_y_mm")
             py = float(py) if isinstance(py, int | float) and not isinstance(py, bool) else None
             cdy = grid.get("col_dy_mm")  # 열마다 Y 보정, cols 개(선택)

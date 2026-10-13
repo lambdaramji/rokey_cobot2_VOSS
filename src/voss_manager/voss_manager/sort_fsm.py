@@ -8,6 +8,7 @@ step(ctx, event) → Out(ctx', actions, reply). ctx 는 바꾸지 않고 새 값
   불확실(후보 없음 UNKNOWN·LOW_CONF·불일치)하면 PICKING 의 목적지가 재확인 구역 → RECHECK(VIEW → ReadLabel)
   → 확정이면 PICK → 목적 구역 PLACE, 아니면 ASKING(질문 30 s) → 답 → PICK → PLACE / 무응답 → HOLD.
   (SRD v1.0 §5.7 질문, voss_msgs.md MoveToZone 재확인 실패 분기·ReadLabel, #51 MC-017)
+  palletize(분류 뒤 별도 명령) → PALLETIZING(구역 칸 PICK → 팔레트 칸 DROP 반복) → OBSERVE → RUNNING (BRD 10.4).
 여기서 정한 규칙은 src/voss_manager/CLAUDE.md "운용 규칙" 에 적는다.
 """
 
@@ -25,7 +26,7 @@ IDLE, RUNNING, PICKING, RECHECK, ASKING, PAUSED = (
     "ASKING",
     "PAUSED",
 )
-LOADING = "LOADING"  # 트럭 적재(load_truck, 로컬 10/12 시연): 구역 트레이에서 집어 트럭에 놓는다
+PALLETIZING = "PALLETIZING"  # 팔레타이징(BRD 10.4): 구역 트레이에서 집어 팔레트(트럭 짐칸)에 놓는다
 ACTIVE = (RUNNING, PICKING, RECHECK, ASKING)  # start(ALL)·priority 를 받는 운전 상태
 ZONES = ("A", "B", "C", "RECHECK", "HOLD")
 SORT_ZONES = ("A", "B", "C")
@@ -37,7 +38,8 @@ PH_VIEW, PH_READ, PH_PICK = (
     "READ",
     "PICK",
 )  # 재확인: 구역 보기 → 다시 읽기 → 재확인 칸에서 집기
-PH_TPICK, PH_TPLACE = "TPICK", "TPLACE"  # 트럭 적재: 구역 칸에서 집기 → 트럭 칸에 놓기(STAY)
+PH_PPICK, PH_PDROP = "PPICK", "PDROP"  # 팔레타이징: 구역 칸에서 집기 → 팔레트 칸에 놓기(DROP)
+PICK_TRIES = 3  # 팔레타이징 집기 GRIP_FAIL 이면 2회 더(BRD TR-PAL-05)
 HOLD_WORDS = ("HOLD", "보류")
 ASK_TIMEOUT_NS = 30_000_000_000  # 질문 발화부터 30 s (SRD §5.7)
 
@@ -55,8 +57,15 @@ class Config:
     capacity: dict[str, int]  # 구역(대문자) → 칸 수 = grid cols × rows × layers
     confidence_min: float
     version: str  # ZoneMap.version = SortResult.rule_version (≤ 16자)
-    order: dict[str, tuple[int, ...]] = field(default_factory=dict)  # 구역 → 채우는 칸 순서(grid.order)
-    truck_capacity: int = 0  # zones.truck 칸 수(cols × rows × layers), 없으면 0 = 트럭 적재 안 함
+    order: dict[str, tuple[int, ...]] = field(
+        default_factory=dict
+    )  # 구역 → 채우는 칸 순서(grid.order)
+    pallet_capacity: int = (
+        0  # zones.pallet 칸 수(cols × rows × layers), 없으면 0 = 팔레타이징 안 함
+    )
+    per_layer: dict[str, int] = field(
+        default_factory=dict
+    )  # 구역 → 한 층 칸 수(cols × rows). 위층 칸 = 아래 칸 + 이 수
 
     def slot_at(self, zone: str, n: int) -> int:
         """구역에 n 번째로 놓는 박스의 칸. grid.order 가 있으면 그 순서, 넘어가면 n 그대로(2층 등)."""
@@ -100,7 +109,7 @@ def load_config(raw: dict) -> Config:
             raise ValueError(f"aliases {dong} 가 zone_map 에 없음")
 
     zones = {str(k).upper(): v for k, v in (raw.get("zones") or {}).items()}
-    capacity, order = {}, {}
+    capacity, order, per_layer = {}, {}, {}
     for z in ZONES:
         grid = (zones.get(z) or {}).get("grid") or {}
         cols, rows = grid.get("cols"), grid.get("rows")
@@ -110,31 +119,50 @@ def load_config(raw: dict) -> Config:
         if isinstance(layers, bool) or not isinstance(layers, int) or layers < 1:
             raise ValueError(f"zones.{z.lower()}.grid.layers 는 1 이상 정수: {layers!r}")
         capacity[z] = int(cols) * int(rows) * layers
+        per_layer[z] = int(cols) * int(rows)
         # order(선택): 앞쪽 칸을 채우는 순서 — 먼 칸을 트레이가 빌 때 낮게 지나가 놓으려고(voss_config.md grid)
-        o = grid.get("order")
-        if o is not None:
-            if (
-                not isinstance(o, list)
-                or not o
-                or any(isinstance(k, bool) or not isinstance(k, int) for k in o)
-                or sorted(o) != list(range(len(o)))
-                or len(o) > capacity[z]
-            ):
-                raise ValueError(f"zones.{z.lower()}.grid.order 는 0..n−1 을 한 번씩: {o!r}")
-            order[z] = tuple(o)
+        if (o := _grid_order(z, grid, capacity[z])) is not None:
+            order[z] = o
 
-    truck = 0  # 선택: zones.truck (팔레타이징, 로컬 10/12)
-    tg = (zones.get("TRUCK") or {}).get("grid") or {}
-    if tg:
-        tl = tg.get("layers", 1)
-        if not tg.get("cols") or not tg.get("rows") or isinstance(tl, bool) or not isinstance(tl, int) or tl < 1:
-            raise ValueError(f"zones.truck.grid 의 cols·rows·layers 가 어긋남: {tg!r}")
-        truck = int(tg["cols"]) * int(tg["rows"]) * tl
+    pallet = 0  # 선택: zones.pallet (팔레타이징, BRD 10.4·10.7)
+    pg = (zones.get("PALLET") or {}).get("grid") or {}
+    if pg:
+        pl = pg.get("layers", 1)
+        if (
+            not pg.get("cols")
+            or not pg.get("rows")
+            or isinstance(pl, bool)
+            or not isinstance(pl, int)
+            or pl < 1
+        ):
+            raise ValueError(f"zones.pallet.grid 의 cols·rows·layers 가 어긋남: {pg!r}")
+        pallet = int(pg["cols"]) * int(pg["rows"]) * pl
+        # order = 적재 순서(10/13 결정: 트럭 안쪽 열부터 열 단위 — 1열 1층 0·4 → 2층 8·12 → 2열 …)
+        if (o := _grid_order("PALLET", pg, pallet)) is not None:
+            order["PALLET"] = o
 
     version = str(raw.get("version", ""))
     if not version or len(version) > 16:
         raise ValueError(f"version 이 비었거나 16자 초과: {version!r}")
-    return Config(zone_map, codes, aliases, capacity, float(conf), version, order, truck)
+    return Config(
+        zone_map, codes, aliases, capacity, float(conf), version, order, pallet, per_layer
+    )
+
+
+def _grid_order(zone: str, grid: dict, capacity: int) -> tuple[int, ...] | None:
+    """grid.order(선택) 검사: 0..n−1 을 한 번씩, n ≤ 칸 수. 없으면 None."""
+    o = grid.get("order")
+    if o is None:
+        return None
+    if (
+        not isinstance(o, list)
+        or not o
+        or any(isinstance(k, bool) or not isinstance(k, int) for k in o)
+        or sorted(o) != list(range(len(o)))
+        or len(o) > capacity
+    ):
+        raise ValueError(f"zones.{zone.lower()}.grid.order 는 0..n−1 을 한 번씩: {o!r}")
+    return tuple(o)
 
 
 def zone_map_entries(cfg: Config) -> list[tuple[str, str, str, list[str]]]:
@@ -161,8 +189,8 @@ def intent_to_command(kind: str, dong: str, zone: str, box_id: str) -> tuple[str
         return "answer", f"{box_id}|{dong or zone}"
     if k == "recheck":
         return "recheck", ""
-    if k == "load_truck":
-        return "load_truck", dong  # dong = 싣는 순서 "청담동,대치동,역삼동" (비우면 zone_map 순서)
+    if k == "palletize":
+        return "palletize", dong  # dong = 싣는 순서 "대치동,역삼동,청담동" (BRD route, 말한 순서)
     return None
 
 
@@ -257,13 +285,22 @@ class Ctx:
     )
     # 재확인 미루기(10/12 시연): 재확인 칸에 놓기만 하고 분류를 이어 간다. `recheck` 명령에 칸 순서대로 처리
     defer_recheck: bool = False
-    recheck_queue: tuple[Box, ...] = ()  # 재확인 칸에 보관 중인(아직 다시 읽지 않은) 박스, 놓은 순서
+    recheck_queue: tuple[
+        Box, ...
+    ] = ()  # 재확인 칸에 보관 중인(아직 다시 읽지 않은) 박스, 놓은 순서
     draining: bool = False  # recheck 명령으로 보관 박스를 처리하는 중 — 한 개 끝나면 다음 것
-    # 트럭 적재(load_truck): 남은 (구역, n번째) — n 은 그 구역에 놓은 순번, 칸 = cfg.slot_at(구역, n)
-    truck_count: int = 0  # 트럭에 놓은 수 = 다음 트럭 칸 (start·reset_zone TRUCK 에 0)
+    # 팔레타이징(palletize): 남은 (구역, n번째) — n 은 그 구역에 놓은 순번, 칸 = cfg.slot_at(구역, n)
+    pallet_count: int = 0  # 팔레트에 놓은 수 = 다음 적재 순번, 칸 = cfg.slot_at("PALLET", n) (start·reset_zone PALLET 에 0)
     load_plan: tuple[tuple[str, int], ...] = ()
     load_item: tuple[str, int] | None = None  # 지금 집거나 놓는 것
-    load_done: int = 0  # 이번 load_truck 으로 실은 수
+    load_tries: int = 0  # load_item 집기 시도 수(GRIP_FAIL 재시도, PICK_TRIES)
+    load_done: dict[str, int] = field(default_factory=dict)  # 이번 palletize 로 구역별 실은 수
+    load_failed: tuple[tuple[str, int], ...] = ()  # 이번 palletize 에서 못 집은 (구역, 칸)
+    load_over: tuple[tuple[str, int], ...] = ()  # 16칸을 넘어 싣지 않는 (구역, 수)
+    load_excl: tuple[tuple[str, int], ...] = ()  # 경로에 없어 싣지 않는 (구역, 수)
+    blocked: frozenset[str] = (
+        frozenset()
+    )  # 집기 실패 박스가 남은 구역 — reset_zone 전까지 놓기·팔레타이징 안 함
 
 
 def new_ctx(
@@ -484,8 +521,8 @@ def _on_command(ctx: Ctx, ev: Command) -> Out:
         return Out(replace(nxt, state=PAUSED), tuple(acts), (True, "stop 접수"))
 
     if cmd == "start":
-        if ctx.state == LOADING:
-            return _reject(ctx, "트럭 적재 중 — 끝난 뒤 또는 stop")
+        if ctx.state == PALLETIZING:
+            return _reject(ctx, "팔레타이징 중 — 끝난 뒤 또는 stop")
         if arg.upper() not in ("", "ALL"):
             return _reject(ctx, f"start 인자는 빈값 또는 ALL: {arg}")
         if ctx.state in ACTIVE:
@@ -512,9 +549,10 @@ def _on_command(ctx: Ctx, ev: Command) -> Out:
             noted=frozenset(),
             box=None,
             stop_requested=False,
-            truck_count=0,
+            pallet_count=0,
             load_plan=(),
             load_item=None,
+            blocked=frozenset(),
             resume_to="",
         )
         log = Log("info", f"세션 {ev.new_session_id} 시작, 우선 {ctx.priority or '전체'}")
@@ -544,8 +582,8 @@ def _on_command(ctx: Ctx, ev: Command) -> Out:
         nr = not_ready_items(ctx, ev.not_ready)
         if nr:
             return _reject(ctx, "준비 안 됨: " + ", ".join(nr))
-        if ctx.resume_to in ("LOAD", "TPLACE"):
-            return _resume_load(ctx, ev.now_ns)
+        if ctx.resume_to in RESUME_PALLET:
+            return _resume_pallet(ctx, ev.now_ns)
         if ctx.box is not None and ctx.resume_to:
             return _resume_recheck(ctx, ev.now_ns)
         # 보관 박스 처리 중 멈췄으면 분류로 돌아간다 — 남은 보관 박스는 recheck 를 다시 보내 이어 간다
@@ -554,32 +592,38 @@ def _on_command(ctx: Ctx, ev: Command) -> Out:
 
     if cmd == "reset_zone":
         zone = arg.upper()
-        if zone == "TRUCK" and ctx.cfg.truck_capacity:
+        if zone == "PALLET" and ctx.cfg.pallet_capacity:
             if ctx.state != PAUSED:
                 return _reject(ctx, "reset_zone 은 PAUSED 에서만")
-            if ctx.resume_to in ("LOAD", "TPLACE"):
-                return _reject(ctx, "트럭 적재가 멈춘 상태 — resume 으로 끝낸 뒤 비운다")
+            if ctx.resume_to in RESUME_PALLET:
+                return _reject(ctx, "팔레타이징이 멈춘 상태 — resume 으로 끝낸 뒤 비운다")
             return Out(
-                replace(ctx, truck_count=0),
-                (Log("info", "트럭 비움 확인, 칸 0"),),
-                (True, "TRUCK 비움"),
+                replace(ctx, pallet_count=0),
+                (Log("info", "팔레트 비움 확인, 칸 0"),),
+                (True, "PALLET 비움"),
             )
         if zone not in ZONES:
             return _reject(ctx, f"모르는 구역: {arg}")
         if ctx.state != PAUSED:
             return _reject(ctx, "reset_zone 은 PAUSED 에서만")
+        if ctx.resume_to in RESUME_PALLET and zone in SORT_ZONES:
+            return _reject(ctx, "팔레타이징이 멈춘 상태 — resume 으로 끝낸 뒤 비운다")
         if zone == "RECHECK" and ctx.box is not None and ctx.box.recheck_slot >= 0:
             return _reject(
                 ctx, f"{ctx.box.box_id} 가 재확인 구역에서 처리 중 — resume 으로 끝낸 뒤 비운다"
             )
         if zone == "RECHECK" and ctx.recheck_queue:
             ids = ", ".join(b.box_id for b in ctx.recheck_queue)
-            return _reject(ctx, f"재확인 칸에 보관 중인 박스가 있다({ids}) — recheck 로 처리한 뒤 비운다")
+            return _reject(
+                ctx, f"재확인 칸에 보관 중인 박스가 있다({ids}) — recheck 로 처리한 뒤 비운다"
+            )
         slots = {**ctx.slots, zone: 0}
         full = "" if ctx.full_zone == zone else ctx.full_zone
         busy = frozenset() if zone == "RECHECK" else ctx.recheck_busy
         return Out(
-            replace(ctx, slots=slots, full_zone=full, recheck_busy=busy),
+            replace(
+                ctx, slots=slots, full_zone=full, recheck_busy=busy, blocked=ctx.blocked - {zone}
+            ),
             (Log("info", f"{zone} 구역 비움 확인, 칸 0"),),
             (True, f"{zone} 비움"),
         )
@@ -595,8 +639,8 @@ def _on_command(ctx: Ctx, ev: Command) -> Out:
         out = _next_recheck(replace(ctx, draining=True), ev.now_ns)
         return Out(out.ctx, out.actions, (True, f"재확인 시작 ({len(ctx.recheck_queue)}개)"))
 
-    if cmd == "load_truck":
-        return _on_load_truck(ctx, arg, ev)
+    if cmd == "palletize":
+        return _on_palletize(ctx, arg, ev)
 
     return _reject(ctx, f"모르는 명령: {ev.command}")
 
@@ -642,7 +686,7 @@ def _on_label(ctx: Ctx, ev: LabelSeen) -> Out:
         zone, slot = "RECHECK", _free_recheck_slot(ctx)
         if slot < 0:
             return _zone_full(ctx, "RECHECK", decided)
-    elif ctx.slots[zone] >= ctx.cfg.capacity[zone]:
+    elif ctx.slots[zone] >= ctx.cfg.capacity[zone] or zone in ctx.blocked:
         return _zone_full(ctx, zone, decided)
     else:
         slot = ctx.cfg.slot_at(zone, ctx.slots[zone])
@@ -712,13 +756,15 @@ def _free_recheck_slot(ctx: Ctx) -> int:
 
 
 def _zone_full(ctx: Ctx, zone: str, decided: frozenset[int]) -> Out:
-    return Out(
-        replace(ctx, state=PAUSED, full_zone=zone, decided=decided),
-        (
-            Log("warn", f"{zone} 구역 가득 참 ({ctx.cfg.capacity[zone]}칸) → PAUSED"),
-            Say(f"{_zone_word(zone)} 구역이 가득 찼습니다. 비운 뒤 알려 주세요."),
-        ),
-    )
+    if zone in ctx.blocked:  # 팔레타이징에서 집지 못한 박스가 남은 구역
+        log = Log("warn", f"{zone} 구역에 집지 못한 박스가 남아 있음 → PAUSED (확인 후 reset_zone)")
+        say = Say(
+            f"{_zone_word(zone)} 구역에 집지 못한 박스가 있습니다. 확인하고 비운 뒤 알려 주세요."
+        )
+    else:
+        log = Log("warn", f"{zone} 구역 가득 참 ({ctx.cfg.capacity[zone]}칸) → PAUSED")
+        say = Say(f"{_zone_word(zone)} 구역이 가득 찼습니다. 비운 뒤 알려 주세요.")
+    return Out(replace(ctx, state=PAUSED, full_zone=zone, decided=decided), (log, say))
 
 
 def _zone_word(zone: str) -> str:
@@ -823,8 +869,8 @@ def _on_goal(ctx: Ctx, ev: GoalDone) -> Out:
 
 
 def _on_move(ctx: Ctx, ev: MoveDone) -> Out:
-    if ctx.phase in (PH_TPICK, PH_TPLACE):
-        return _on_load_move(ctx, ev)
+    if ctx.phase in (PH_PPICK, PH_PDROP):
+        return _on_pallet_move(ctx, ev)
     if ctx.phase == PH_HOME:
         if not ev.ok:
             return Out(
@@ -1153,146 +1199,307 @@ def _on_stop_done(ctx: Ctx, ev: StopDone) -> Out:
     )
 
 
-# ---------------------------------------------------------------- 트럭 적재 (로컬 10/12 시연)
+# ---------------------------------------------------------------- 팔레타이징 (BRD 10.4·10.5, 10/13 결정)
+# 말한 순서 = 싣는 순서(트럭 안쪽부터). 팔레트 칸은 grid.order(열 단위) 순서로 채운다.
+
+RESUME_PALLET = (
+    "PALLET",
+    "PPICK",
+    "PDROP",
+)  # resume_to: 다음 박스부터 | 같은 칸 다시 집기 | 든 박스 놓기
 
 
 def load_order(cfg: Config, arg: str) -> tuple[str, ...] | str:
-    """'청담동,대치동,역삼동'·'C B A' → 구역 순서. 비우면 zone_map 순서. 모르는 이름이면 오류 문장."""
+    """'대치동,역삼동,청담동'·'B A C' → 구역 순서(말한 순서). 비었거나 모르는 이름·중복이면 오류 문장(TR-PAL-01)."""
     out: list[str] = []
     for tok in [t for t in re.split(r"[,\s>/→·]+", arg.strip()) if t]:
         dong = cfg.dong_of(tok)
         zone = cfg.zone_map[dong] if dong else tok.upper()
         if zone not in SORT_ZONES:
             return f"모르는 동·구역: {tok}"
-        if zone not in out:
-            out.append(zone)
+        if zone in out:
+            return f"같은 동·구역을 두 번 말함: {tok}"
+        out.append(zone)
     if not out:
-        out = list(dict.fromkeys(cfg.zone_map.values()))
+        return "싣는 순서(동 이름)가 없음 — 예: 대치, 역삼, 청담 순서로 실어줘"
     return tuple(out)
 
 
-def _on_load_truck(ctx: Ctx, arg: str, ev: Command) -> Out:
-    """작업자가 말한 동 순서대로, 구역마다 놓은 역순(2층 먼저 — 트레이 안 경로가 빈 칸 위로 지나게)으로
-    집어 트럭 칸 0 부터 놓는다. 트럭이 차거나 실을 것이 없으면 끝(남은 박스는 다음 트럭)."""
-    cap = ctx.cfg.truck_capacity
+def pallet_plan(
+    slots: dict[str, int], route: tuple[str, ...], free: int
+) -> tuple[tuple[tuple[str, int], ...], tuple[tuple[str, int], ...], tuple[tuple[str, int], ...]]:
+    """배치 계획(BRD TR-PAL-04, 순수 함수) → (싣는 순서 (구역, n), 초과 (구역, 수), 경로 제외 (구역, 수)).
+
+    구역 박스 수 = slots(놓은 순번). 남은 칸(free) 이하면 모두, 넘으면 물량 많은 구역부터 min(물량, 남은 칸) —
+    물량이 같으면 나중에 싣는 구역(먼저 내릴 동)이 후순위. 싣는 순서는 말한 순서이고, 구역 안은 놓은 역순
+    (위층·나중에 놓은 것 먼저 — 아래 칸을 막지 않고, 트레이 안 경로가 빈 칸 위로 지나게).
+    """
+    count = {z: slots.get(z, 0) for z in route}
+    alloc, left = {}, free
+    for z in sorted(route, key=lambda z: (-count[z], route.index(z))):
+        alloc[z] = min(count[z], left)
+        left -= alloc[z]
+    plan = tuple((z, n) for z in route for n in range(count[z] - 1, count[z] - 1 - alloc[z], -1))
+    over = tuple((z, count[z] - alloc[z]) for z in route if count[z] > alloc[z])
+    excl = tuple((z, slots[z]) for z in SORT_ZONES if z not in route and slots.get(z, 0))
+    return plan, over, excl
+
+
+def _dong_word(cfg: Config, zone: str) -> str:
+    """구역 → 말할 이름(그 구역의 첫 동, 없으면 구역)."""
+    return next((d for d, z in cfg.zone_map.items() if z == zone), zone)
+
+
+def _counts(
+    cfg: Config, items: tuple[tuple[str, int], ...] | dict[str, int], say: bool = False
+) -> str:
+    pairs = items.items() if isinstance(items, dict) else items
+    return ", ".join(f"{_dong_word(cfg, z) if say else z} {k}" for z, k in pairs if k) or (
+        "" if say else "없음"
+    )
+
+
+def _on_palletize(ctx: Ctx, arg: str, ev: Command) -> Out:
+    """작업자가 말한 순서대로 구역 칸에서 집어(PICK) 팔레트에 적재 순서대로 놓는다(DROP, 홈 복귀 없음)."""
+    cap = ctx.cfg.pallet_capacity
     if cap <= 0:
-        return _reject(ctx, "voss_config 에 zones.truck 이 없음")
+        return _reject(ctx, "voss_config 에 zones.pallet 이 없음")
     if ctx.state not in (RUNNING, PAUSED) or ctx.phase != PH_NONE or ctx.box is not None:
-        return _reject(ctx, f"{ctx.state} 에서는 트럭 적재 불가 (분류 중 박스가 끝난 뒤)")
+        return _reject(ctx, f"{ctx.state} 에서는 팔레타이징 불가 — 분류 중인 박스를 마친 뒤 다시")
     if ctx.resume_to:
         return _reject(ctx, f"멈춘 작업({ctx.resume_to})이 있음 — resume 으로 끝낸 뒤")
-    nr = [k for k in ("ROBOT",) if k in not_ready_items(ctx, ev.not_ready)]
-    if nr:
+    if ctx.full_zone:
+        return _reject(ctx, f"{ctx.full_zone} 구역 가득 참 — reset_zone 먼저")
+    if "ROBOT" in not_ready_items(ctx, ev.not_ready):
         return _reject(ctx, "준비 안 됨: ROBOT")
-    zones = load_order(ctx.cfg, arg)
-    if isinstance(zones, str):
-        return _reject(ctx, zones)
-    free = cap - ctx.truck_count
-    if free <= 0:
-        return _reject(ctx, f"트럭 가득 ({cap}칸) — 비운 뒤 reset_zone TRUCK")
-    plan = tuple((z, n) for z in zones for n in reversed(range(ctx.slots[z])))[:free]
+    route = load_order(ctx.cfg, arg)
+    if isinstance(route, str):
+        return _reject(ctx, route)
+    if ctx.pallet_count:
+        return _reject(ctx, f"팔레트에 이미 {ctx.pallet_count}개 — 비운 뒤 reset_zone PALLET")
+    if bad := [z for z in route if z in ctx.blocked]:
+        return _reject(ctx, f"{', '.join(bad)} 구역에 집지 못한 박스가 있음 — 확인 후 reset_zone")
+    plan, over, excl = pallet_plan(ctx.slots, route, cap)
     if not plan:
-        return _reject(ctx, f"{', '.join(zones)} 구역에 실을 박스가 없음")
-    out = _load_next(
-        replace(ctx, state=LOADING, load_plan=plan, load_done=0, stop_requested=False), ev.now_ns
+        return _reject(ctx, f"{', '.join(route)} 구역에 실을 박스가 없음")
+    nxt = replace(
+        ctx,
+        state=PALLETIZING,
+        load_plan=plan,
+        load_done={},
+        load_failed=(),
+        load_over=over,
+        load_excl=excl,
+        stop_requested=False,
     )
-    word = " → ".join(zones)
-    msg = f"트럭 적재 시작 {word}: {len(plan)}개 (트럭 {ctx.truck_count}/{cap})"
-    return Out(out.ctx, (Log("info", msg), *out.actions), (True, msg))
+    out = _load_next(nxt, ev.now_ns)
+    word = " → ".join(route)
+    msg = f"팔레타이징 시작 {word}: {len(plan)}개, 초과 {_counts(ctx.cfg, over)}, 경로 제외 {_counts(ctx.cfg, excl)}"
+    say = f"{', '.join(_dong_word(ctx.cfg, z) for z in route)} 순서로 싣겠습니다."
+    if over:
+        say += f" 배송 물량이 남습니다: {_counts(ctx.cfg, over, say=True)}개."
+    return Out(out.ctx, (Log("info", msg), Say(say), *out.actions), (True, msg))
 
 
 def _load_next(ctx: Ctx, now_ns: int) -> Out:
-    cap = ctx.cfg.truck_capacity
-    if not ctx.load_plan or ctx.truck_count >= cap:
+    if not ctx.load_plan or ctx.pallet_count >= ctx.cfg.pallet_capacity:
         return _load_finish(ctx, now_ns)
     (zone, n), rest = ctx.load_plan[0], ctx.load_plan[1:]
     slot = ctx.cfg.slot_at(zone, n)
+    t = ctx.cfg.slot_at("PALLET", ctx.pallet_count)
     return Out(
-        replace(ctx, load_plan=rest, load_item=(zone, n), phase=PH_TPICK),
+        replace(ctx, load_plan=rest, load_item=(zone, n), load_tries=0, phase=PH_PPICK),
         (
             CallMove(zone, slot, "PICK"),
-            Log("info", f"트럭 적재: {zone} 칸 {slot} 집기 → 트럭 칸 {ctx.truck_count}"),
+            Log(
+                "info",
+                f"팔레타이징 {ctx.pallet_count + 1}번째: {zone} 칸 {slot} 집기 → 팔레트 칸 {t}",
+            ),
         ),
     )
 
 
 def _load_finish(ctx: Ctx, now_ns: int) -> Out:
-    cap = ctx.cfg.truck_capacity
-    left = {z: ctx.slots[z] for z in SORT_ZONES if ctx.slots[z]}
-    rest = ", ".join(f"{z} {k}" for z, k in left.items()) or "없음"
-    full = " — 트럭 가득" if ctx.truck_count >= cap else ""
+    cfg, cap = ctx.cfg, ctx.cfg.pallet_capacity
+    done = sum(ctx.load_done.values())
+    left = {z: ctx.slots[z] for z in SORT_ZONES if ctx.slots[z] and z not in ctx.blocked}
+    full = " — 가득" if ctx.pallet_count >= cap else ""
+    failed = ", ".join(f"{z} 칸 {s}" for z, s in ctx.load_failed) or "없음"
     nxt, acts = _enter_running(
         replace(ctx, load_plan=(), load_item=None, resume_to=""), now_ns, stop_requested=False
     )
-    text = f"트럭 적재 끝: 이번 {ctx.load_done}개, 트럭 {ctx.truck_count}/{cap}{full}. 남은 박스 {rest}"
-    return Out(nxt, (*acts, Log("info", text), Say(f"트럭에 {ctx.load_done}개를 실었습니다.")))
+    text = (
+        f"팔레타이징 끝: 이번 {done}개({_counts(cfg, ctx.load_done)}), 팔레트 {ctx.pallet_count}/{cap}{full}. "
+        f"초과 {_counts(cfg, ctx.load_over)}, 경로 제외 {_counts(cfg, ctx.load_excl)}, 실패 {failed}. "
+        f"구역에 남은 박스 {_counts(cfg, left)}"
+        + (f", 확인 필요 구역 {', '.join(sorted(ctx.blocked))}(reset_zone)" if ctx.blocked else "")
+    )
+    say = f"팔레트에 {done}개를 실었습니다."
+    if s := _counts(cfg, ctx.load_done, say=True):
+        say += f" {s}개."
+    if ctx.load_over:
+        say += f" 초과로 남은 박스 {_counts(cfg, ctx.load_over, say=True)}개."
+    if ctx.load_excl:
+        say += f" 경로에 없어 남은 박스 {_counts(cfg, ctx.load_excl, say=True)}개."
+    if ctx.load_failed:
+        say += f" 집지 못한 박스 {len(ctx.load_failed)}개가 있습니다."
+    return Out(nxt, (*acts, Log("info", text), Say(say)))
 
 
-def _on_load_move(ctx: Ctx, ev: MoveDone) -> Out:
+def _below(
+    cfg: Config, zone: str, slot: int, plan: tuple[tuple[str, int], ...]
+) -> tuple[tuple[str, int], ...]:
+    """plan 중 zone 의 slot 바로 아래 층 칸들(위 박스가 남아 있으면 집을 수 없다)."""
+    per = cfg.per_layer.get(zone, 0)
+    if not per or slot < per:
+        return ()
+    return tuple(
+        (z, n)
+        for z, n in plan
+        if z == zone and cfg.slot_at(z, n) % per == slot % per and cfg.slot_at(z, n) < slot
+    )
+
+
+def _on_pallet_move(ctx: Ctx, ev: MoveDone) -> Out:
+    cfg = ctx.cfg
     zone, n = ctx.load_item or ("", -1)
-    slot = ctx.cfg.slot_at(zone, n) if zone else -1
-    t = ctx.truck_count
+    slot = cfg.slot_at(zone, n) if zone else -1
+    t = cfg.slot_at("PALLET", ctx.pallet_count)
     paused = ctx.state == PAUSED
-    if ctx.phase == PH_TPICK:
+    if ctx.phase == PH_PPICK:
         if ev.ok:
-            # 놓은 역순으로 집으니 그 구역의 다음 칸 = n (빈 칸)
-            nxt = replace(ctx, slots={**ctx.slots, zone: min(ctx.slots[zone], n)})
+            # 놓은 역순으로 집으니 그 구역의 다음 칸 = n (빈 칸). 집기 실패가 있던 구역은 가득으로 둔다(reset_zone 대기)
+            if zone not in ctx.blocked:
+                nxt = replace(ctx, slots={**ctx.slots, zone: min(ctx.slots[zone], n)})
+            else:
+                nxt = ctx
             if paused:
                 return Out(
-                    replace(nxt, phase=PH_NONE, resume_to="TPLACE"),
-                    (Log("warn", f"{zone} 칸 {slot} 박스를 든 채 멈춤 — resume 하면 트럭 칸 {t} 에 놓는다"),),
+                    replace(nxt, phase=PH_NONE, resume_to="PDROP"),
+                    (
+                        Log(
+                            "warn",
+                            f"{zone} 칸 {slot} 박스를 든 채 멈춤 — resume 하면 팔레트 칸 {t} 에 놓는다",
+                        ),
+                    ),
                 )
             return Out(
-                replace(nxt, phase=PH_TPLACE),
-                (CallMove("TRUCK", t, "STAY"), Log("info", f"{zone} 칸 {slot} 집음 → 트럭 칸 {t}")),
+                replace(nxt, phase=PH_PDROP),
+                (
+                    CallMove("PALLET", t, "DROP"),
+                    Log("info", f"{zone} 칸 {slot} 집음 → 팔레트 칸 {t}"),
+                ),
             )
         if ev.message.startswith("GRIP_FAIL") and "열고 상승함" in ev.message:
-            # 집지 못하고 열어 올라왔다(박스는 칸에 그대로거나 칸이 비었다) → 건너뛴다
-            skip = Log("warn", f"{zone} 칸 {slot} 집기 실패 — 건너뜀: {ev.message}")
-            base = replace(ctx, phase=PH_NONE, load_item=None)
+            # 집지 못하고 열어 올라왔다(박스는 칸에 그대로거나 칸이 비었다) → 2회까지 다시(BRD TR-PAL-05)
+            tries = ctx.load_tries + 1
+            if tries < PICK_TRIES:
+                log = Log(
+                    "warn",
+                    f"{zone} 칸 {slot} 집기 실패(시도 {tries}/{PICK_TRIES}) — 다시: {ev.message}",
+                )
+                if paused:
+                    return Out(
+                        replace(ctx, phase=PH_NONE, load_tries=tries, resume_to="PPICK"), (log,)
+                    )
+                return Out(replace(ctx, load_tries=tries), (log, CallMove(zone, slot, "PICK")))
+            # 그래도 실패 → FAILED, 다음 박스. 그 칸 아래층 칸은 위 박스가 막아 함께 뺀다. 구역은 사람이 확인할 때까지 막는다
+            below = _below(cfg, zone, slot, ctx.load_plan)
+            failed = ((zone, slot), *((z, cfg.slot_at(z, k)) for z, k in below))
+            plan = tuple(i for i in ctx.load_plan if i not in below)
+            acts: list = [
+                Log(
+                    "error",
+                    f"{zone} 칸 {slot} 집기 {PICK_TRIES}회 실패 → FAILED, 다음 박스: {ev.message}",
+                ),
+            ]
+            if below:
+                acts.append(
+                    Log(
+                        "warn",
+                        f"{zone} 칸 {', '.join(str(s) for _, s in failed[1:])} 는 위 박스에 막혀 집지 않음",
+                    )
+                )
+            base = replace(
+                ctx,
+                phase=PH_NONE,
+                load_item=None,
+                load_plan=plan,
+                load_failed=ctx.load_failed + failed,
+                blocked=ctx.blocked | {zone},
+                slots={
+                    **ctx.slots,
+                    zone: cfg.capacity[zone],
+                },  # 남은 박스 위치를 모른다 → 구역 가득으로 두고 reset_zone 대기
+            )
             if paused:
-                return Out(replace(base, resume_to="LOAD"), (skip,))
+                return Out(replace(base, resume_to="PALLET"), tuple(acts))
             out = _load_next(base, ev.now_ns)
-            return Out(out.ctx, (skip, *out.actions))
-        acts: list = [Log("error", f"{zone} 칸 {slot} 집기 실패 {ev.message} → PAUSED")]
+            return Out(out.ctx, (*acts, *out.actions))
+        acts = [Log("error", f"{zone} 칸 {slot} 집기 실패 {ev.message} → PAUSED")]
         if not paused:
-            acts.append(Say("트럭 적재 중 문제가 생겨 일시정지했습니다."))
+            acts.append(Say("팔레타이징 중 문제가 생겨 일시정지했습니다."))
         back = replace(
             ctx, state=PAUSED, phase=PH_NONE, load_item=None, load_plan=((zone, n), *ctx.load_plan)
         )
-        return Out(replace(back, resume_to="LOAD"), tuple(acts))
-    # PH_TPLACE
+        return Out(replace(back, resume_to="PALLET"), tuple(acts))
+    # PH_PDROP
     placed = ev.placed_stamp_ns != 0
+    done = {**ctx.load_done, zone: ctx.load_done.get(zone, 0) + 1} if placed else ctx.load_done
     nxt = replace(
-        ctx,
-        phase=PH_NONE,
-        truck_count=t + (1 if placed else 0),
-        load_done=ctx.load_done + (1 if placed else 0),
+        ctx, phase=PH_NONE, pallet_count=ctx.pallet_count + (1 if placed else 0), load_done=done
     )
     if ev.ok and not paused:
         out = _load_next(replace(nxt, load_item=None), ev.now_ns)
-        return Out(out.ctx, (Log("info", f"트럭 칸 {t} 적재 완료"), *out.actions))
-    if placed:
-        # 트럭에 놓았다(복귀 실패·stop 포함) → resume 하면 다음 박스
-        acts = [Log("warn" if paused else "error", f"트럭 칸 {t} 놓음, ok={ev.ok} {ev.message} → PAUSED")]
-        if not paused and not ev.ok:
-            acts.append(Say("트럭 적재 중 문제가 생겨 일시정지했습니다."))
-        return Out(replace(nxt, state=PAUSED, load_item=None, resume_to="LOAD"), tuple(acts))
-    # 놓기 전 실패 — 박스를 든 채일 수 있다(자동 개방 없음). resume 하면 같은 트럭 칸에 다시 놓기
-    acts = [Log("error", f"트럭 칸 {t} 에 놓기 전 실패 {ev.message} — 박스를 든 채일 수 있음 → PAUSED")]
-    if not paused:
-        acts.append(Say("트럭 적재 중 문제가 생겨 일시정지했습니다."))
-    return Out(replace(nxt, state=PAUSED, resume_to="TPLACE"), tuple(acts))
-
-
-def _resume_load(ctx: Ctx, now_ns: int) -> Out:
-    base = replace(ctx, state=LOADING, stop_requested=False, resume_to="")
-    if ctx.resume_to == "TPLACE":
-        t = ctx.truck_count
         return Out(
-            replace(base, phase=PH_TPLACE),
-            (CallMove("TRUCK", t, "STAY"), Log("info", f"resume — 트럭 칸 {t} 에 놓기")),
-            (True, "resume 접수 (트럭에 놓기)"),
+            out.ctx,
+            (
+                Log("info", f"팔레트 칸 {t} 적재 완료 ({nxt.pallet_count}/{cfg.pallet_capacity})"),
+                *out.actions,
+            ),
+        )
+    if placed:
+        # 팔레트에 놓았다(복귀 실패·stop 포함) → resume 하면 다음 박스
+        acts = [
+            Log(
+                "warn" if paused else "error",
+                f"팔레트 칸 {t} 놓음, ok={ev.ok} {ev.message} → PAUSED",
+            )
+        ]
+        if not paused and not ev.ok:
+            acts.append(Say("팔레타이징 중 문제가 생겨 일시정지했습니다."))
+        return Out(replace(nxt, state=PAUSED, load_item=None, resume_to="PALLET"), tuple(acts))
+    # 놓기 전 실패 — 박스를 든 채일 수 있다(자동 개방 없음). resume 하면 같은 팔레트 칸에 다시 놓기
+    acts = [
+        Log(
+            "error", f"팔레트 칸 {t} 에 놓기 전 실패 {ev.message} — 박스를 든 채일 수 있음 → PAUSED"
+        )
+    ]
+    if not paused:
+        acts.append(Say("팔레타이징 중 문제가 생겨 일시정지했습니다."))
+    return Out(replace(nxt, state=PAUSED, resume_to="PDROP"), tuple(acts))
+
+
+def _resume_pallet(ctx: Ctx, now_ns: int) -> Out:
+    base = replace(ctx, state=PALLETIZING, stop_requested=False, resume_to="")
+    if ctx.resume_to == "PDROP":
+        t = ctx.cfg.slot_at("PALLET", ctx.pallet_count)
+        return Out(
+            replace(base, phase=PH_PDROP),
+            (CallMove("PALLET", t, "DROP"), Log("info", f"resume — 팔레트 칸 {t} 에 놓기")),
+            (True, "resume 접수 (팔레트에 놓기)"),
+        )
+    if ctx.resume_to == "PPICK" and ctx.load_item:
+        zone, n = ctx.load_item
+        slot = ctx.cfg.slot_at(zone, n)
+        return Out(
+            replace(base, phase=PH_PPICK),
+            (CallMove(zone, slot, "PICK"), Log("info", f"resume — {zone} 칸 {slot} 다시 집기")),
+            (True, "resume 접수 (다시 집기)"),
         )
     out = _load_next(base, now_ns)
-    return Out(out.ctx, (Log("info", "resume — 트럭 적재 계속"), *out.actions), (True, "resume 접수 (트럭 적재)"))
+    return Out(
+        out.ctx,
+        (Log("info", "resume — 팔레타이징 계속"), *out.actions),
+        (True, "resume 접수 (팔레타이징)"),
+    )

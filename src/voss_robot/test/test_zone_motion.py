@@ -3,11 +3,11 @@
 import pytest
 from voss_robot.zone_motion import (
     SAFE_Z_MM,
+    crosses_back,
     pick_grip_ok,
     pick_pose,
-    row_stage_slot,
-    crosses_back,
     plan_move,
+    row_stage_slot,
     slot_offset,
     slot_pose,
 )
@@ -33,11 +33,17 @@ def test_slot_pose_shifts_x_only():
     assert slot_pose(A, [3, 1, 60], 0) == pytest.approx([153.49, *A[1:]])
 
 
-def test_truck_4x2_two_layers_slots():
+def test_pallet_4x2_two_layers_slots():
     grid = [4, 2, 50, 0, 2, 27, 60]
     assert [slot_offset(grid, k) for k in range(8)] == [
-        (-75.0, 30.0), (-25.0, 30.0), (25.0, 30.0), (75.0, 30.0),
-        (-75.0, -30.0), (-25.0, -30.0), (25.0, -30.0), (75.0, -30.0),
+        (-75.0, 30.0),
+        (-25.0, 30.0),
+        (25.0, 30.0),
+        (75.0, 30.0),
+        (-75.0, -30.0),
+        (-25.0, -30.0),
+        (25.0, -30.0),
+        (75.0, -30.0),
     ]
     z0, z8 = slot_pose([0] * 6, grid, 0)[2], slot_pose([0] * 6, grid, 8)[2]
     assert slot_offset(grid, 15) == (75.0, -30.0) and z8 - z0 == 27.0
@@ -126,18 +132,24 @@ def test_pick_grip_ok_needs_detect_and_width_range():
     assert "밖" in pick_grip_ok(True, True, 39.0, 39.5, 44.0)
 
 
-def test_observe_to_truck_goes_round_the_front_not_behind_the_base():
-    # 10/12 실기: OBSERVE → 트럭 직선이 베이스 뒤(−X)를 지나 팔이 반대로 돌고 축 가까이서 느려져 TIMEOUT
-    truck0 = slot_pose([-163.76, 170.18, 258.27, 35.36, -180.0, -54.64], [4, 2, 50, 0, 2, 27, 60], 0)
-    steps = plan_move(OBS, truck0)
+def test_observe_to_pallet_goes_round_the_front_not_behind_the_base():
+    # 10/12 실기: OBSERVE → 팔레트 직선이 베이스 뒤(−X)를 지나 팔이 반대로 돌고 축 가까이서 느려져 TIMEOUT
+    pallet0 = slot_pose(
+        [-163.76, 170.18, 258.27, 35.36, -180.0, -54.64], [4, 2, 50, 0, 2, 27, 60], 0
+    )
+    steps = plan_move(OBS, pallet0)
     names = [n for n, _ in steps]
-    assert names[0].startswith("arc") and names[-2:] == ["over", "descend"]  # OBSERVE 는 safe_z 위라 상승 없음
+    assert names[0].startswith("arc") and names[-2:] == [
+        "over",
+        "descend",
+    ]  # OBSERVE 는 safe_z 위라 상승 없음
     pts = [OBS] + [p for _, p in steps]
-    for a, b in zip(pts, pts[1:]):
+    for a, b in zip(pts, pts[1:], strict=False):
         assert not crosses_back(a, b)
     import math
+
     assert min(math.hypot(p[0], p[1]) for n, p in steps if n.startswith("arc")) > 250
-    back = plan_move(truck0, OBS)
+    back = plan_move(pallet0, OBS)
     assert back[0][0] == "rise" and back[1][0].startswith("arc") and back[-1][0] == "over"
 
 

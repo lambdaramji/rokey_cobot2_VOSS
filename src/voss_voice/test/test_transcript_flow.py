@@ -292,7 +292,8 @@ def test_punctuated_destination_is_rejected_outside_asking() -> None:
 
 
 @pytest.mark.parametrize(
-    "text", ["송장 확인 불가", "송장 확인 불가.", "확인 불가입니다", "보류", "보류로 보내", "판독 불가"]
+    "text",
+    ["송장 확인 불가", "송장 확인 불가.", "확인 불가입니다", "보류", "보류로 보내", "판독 불가"],
 )
 def test_unreadable_answer_goes_to_hold_without_llm(text: str) -> None:
     """질문 중 '송장 확인 불가'·'보류' 는 LLM 없이 보류 답 (10/12 시연 문형)."""
@@ -320,7 +321,9 @@ def test_unreadable_answer_without_question_is_rejected() -> None:
     assert published == [] and spoken == ["지금은 답할 질문이 없습니다."]
 
 
-@pytest.mark.parametrize("text", ["재확인 시작", "재확인 시작해 줘.", "재확인 진행", "재확인 해줘", "재확인"])
+@pytest.mark.parametrize(
+    "text", ["재확인 시작", "재확인 시작해 줘.", "재확인 진행", "재확인 해줘", "재확인"]
+)
 def test_recheck_start_without_llm(text: str) -> None:
     def unexpected_llm(text: str, allowed: dict) -> dict:
         raise AssertionError("LLM을 호출하면 안 됩니다")

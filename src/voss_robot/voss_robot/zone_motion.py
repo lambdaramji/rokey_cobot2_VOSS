@@ -26,7 +26,7 @@ def _layers(grid: Sequence[float]) -> tuple[int, float]:
 def slot_offset(grid: Sequence[float], slot: int) -> tuple[float, float]:
     """grid = [cols, rows, pitch_mm(, offset_mm(, layers, layer_mm(, pitch_y_mm(, col_dy × cols))))] → (dx, dy) mm.
     offset_mm = 칸 줄 중심의 X 위치(트레이 중심 기준, 먼 트레이에서 팔이 닿는 −X 쪽으로 당김 — 10/08). pitch_y_mm =
-    Y 줄 간격(없으면 pitch_mm). row 0 = +Y 줄. col_dy = 열마다 Y 보정(트럭 +X 끝 열 +10 — 베이스에 너무 가까워 10/12 실기 1206).
+    Y 줄 간격(없으면 pitch_mm). row 0 = +Y 줄. col_dy = 열마다 Y 보정(10/12 팔레트 +X 끝 열 1206 에 +10 을 시도 — 모자라 트레이를 +Y 80 mm 옮김).
     2층부터는 1층 칸 위치를 다시 쓴다. 범위 밖이면 ValueError."""
     cols, rows, pitch = int(grid[0]), int(grid[1]), float(grid[2])
     pitch_y = float(grid[6]) if len(grid) > 6 else pitch
@@ -112,7 +112,7 @@ def crosses_back(a: Sequence[float], b: Sequence[float]) -> bool:
 def front_arc(
     start: Sequence[float], end: Sequence[float], z: float, step_deg: float = ARC_STEP_DEG
 ) -> list[tuple[str, list[float]]]:
-    """수평 이동이 베이스 뒤를 지나면(OBSERVE ↔ 트럭, 10/12 실기: 뒤로 돌다 축 가까이서 느려져 TIMEOUT) 앞쪽
+    """수평 이동이 베이스 뒤를 지나면(OBSERVE ↔ 팔레트, 10/12 실기: 뒤로 돌다 축 가까이서 느려져 TIMEOUT) 앞쪽
     (트레이 쪽, +X)으로 도는 경유점 [("arcN", posx)]. 각도는 atan2 그대로 이어 ±180° 를 넘지 않게, 반지름은
     양 끝 사이를 고르게, 높이 z, 자세는 end. 뒤를 안 지나면 []."""
     if not crosses_back(start, end):
@@ -124,5 +124,7 @@ def front_arc(
     for k in range(1, n):
         t = k / n
         a, r = ts + (te - ts) * t, rs + (re - rs) * t
-        out.append((f"arc{k}", [r * math.cos(a), r * math.sin(a), float(z), *[float(v) for v in end[3:]]]))
+        out.append(
+            (f"arc{k}", [r * math.cos(a), r * math.sin(a), float(z), *[float(v) for v in end[3:]]])
+        )
     return out

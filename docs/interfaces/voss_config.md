@@ -30,7 +30,7 @@ zones:               # 두산 posx: x y z rx ry rz, mm/deg. 플랜지 기준(TCP
   C:       {pose: null, grid: {cols: 3, rows: 1, pitch_mm: 60}}
   recheck: {pose: null, grid: {cols: 2, rows: 1, pitch_mm: 60}, view_pose: null}   # view_pose: MoveToZone(RECHECK, VIEW) 때 카메라가 재확인 구역 송장을 보는 자세. 플랜지 posx, 교시 전 null(김학민 T35, #51 MC-017)
   hold:    {pose: null, grid: {cols: 2, rows: 1, pitch_mm: 60}}
-  truck:   {pose: null, grid: {cols: 4, rows: 2, pitch_mm: 50, pitch_y_mm: 60, layers: 2}}   # 선택. 팔레타이징(트럭) 트레이 — robot_gateway MoveToZone(TRUCK) 만 읽는다(로컬 10/12)
+  pallet:  {pose: null, grid: {cols: 4, rows: 2, pitch_mm: 50, pitch_y_mm: 60, layers: 2, order: [0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15]}}   # 선택. 팔레타이징 트레이(BRD 10.7) — robot_gateway MoveToZone(PALLET) 칸 좌표, sort_manager 칸 수·적재 순서(order)
 observe_pose: null   # 벨트 위 관측·대기 자세 (= 홈). 플랜지 기준
 robot:
   tcp_offset_mm: [1.382, 2.684, 246.642]   # 플랜지 → TCP(핑거 끝) 오프셋, 툴 좌표 mm. 펜던트 툴·TCP 등록(GripperDA_v1) 또는 등록 없음이어야 하고(gateway 가 MoveToZone 마다 재서 맞춤),
@@ -87,3 +87,4 @@ timing:
 - 2026-10-12 (로컬 시험 브랜치): 팔레타이징(구역 트레이 → 트럭)용. `gripper.pick_open_mm` 추가(선택) — 3×2 트레이에서 90 으로 열면 옆 줄 박스에 핑거가 닿아서. robot_gateway: MoveToZone PICK 을 A·B·C·HOLD 에도 허용(칸 위로 TCP 120 이 안 되면 출입구 칸 위로 트레이 안에서 나와 올라감 — 집는 순서는 놓은 순서의 역순이어야 지나가는 칸이 비어 있다), 수평 이동이 베이스 뒤(−X)를 지나면 앞쪽으로 원호 경유(OBSERVE ↔ 트럭, 10/12 실기 TIMEOUT).
 - 2026-10-12 (로컬 시험 브랜치): grid `col_dy_mm` 추가(선택). 트럭 칸 3(베이스에서 166 mm)이 놓는 높이에서 1206(닿지 않음) — 성공한 모든 칸은 J2 ≥ −20.3°·J3 ≤ 132.7°, 칸 3 은 −26.0°·135.8°. 사용자 결정으로 +X 끝 열(칸 3·7·11·15)만 +Y 10 mm(ikin: J3 135.0°, 성공 여부는 실기 확인).
 - 2026-10-12 (로컬 시험 브랜치): MoveToZone mode `STAY` 추가(voss_msgs) — 놓고 OBSERVE 로 돌아가지 않고 칸 위(못 닿으면 출입구 칸 위)로 올라가 멈춘다. 트럭 적재 뒤 바로 다음 구역 박스 집기. 실기 16개 집기·트럭 적재 성공(집은 폭 40.3~41.2 mm). robot_gateway launch `zone_acc_mm_s2` 인자 추가(속도 올리기).
+- 2026-10-13 (로컬 시험 브랜치, BRD v1.5 10.7 이름에 맞춤 — 10/13 결정): zones `truck` → `pallet`, MoveToZone zone `TRUCK` → `PALLET`, mode `STAY` → `DROP`. `zones.pallet.grid.order` = 적재 순서(말한 순서대로 트럭 안쪽 1열부터 열 단위: 1층 0·4 → 2층 8·12 → 2열 1·5·9·13 …). 칸 번호(층 × 8 + 줄 × 4 + 열, 줄 0 = +Y)는 그대로라 robot_gateway 좌표는 바뀌지 않는다. sort_manager 가 칸 수(16)와 order 를 읽는다. 트레이는 10/12 에 +Y 80 mm 옮겨 재교시(칸 3 1206 해결, col_dy 는 쓰지 않음).

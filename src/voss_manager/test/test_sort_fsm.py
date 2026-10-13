@@ -124,7 +124,13 @@ def test_layers_multiply_capacity() -> None:
 
 def test_grid_order_validated() -> None:
     raw = raw_config()
-    raw["zones"]["C"]["grid"] = {"cols": 3, "rows": 2, "pitch_mm": 50, "layers": 2, "order": [5, 2, 4, 1, 3, 0]}
+    raw["zones"]["C"]["grid"] = {
+        "cols": 3,
+        "rows": 2,
+        "pitch_mm": 50,
+        "layers": 2,
+        "order": [5, 2, 4, 1, 3, 0],
+    }
     cfg = f.load_config(raw)
     assert [cfg.slot_at("C", n) for n in range(8)] == [5, 2, 4, 1, 3, 0, 6, 7]
     assert cfg.slot_at("A", 3) == 3
@@ -828,7 +834,9 @@ def test_recheck_command_drains_in_slot_order(cfg: f.Config) -> None:
     ctx, _, _ = run(ctx, read(False, t=50_000 * MS))
     assert ctx.state == f.ASKING and ctx.box.candidates == tuple(cfg.zone_map)
     ctx, acts, rep = run(ctx, f.Command("answer", f"{first}|역삼동", 55_000 * MS))
-    assert rep == [(True, "역삼동 접수")] and of(acts, f.CallMove) == [f.CallMove("RECHECK", 0, "PICK")]
+    assert rep == [(True, "역삼동 접수")] and of(acts, f.CallMove) == [
+        f.CallMove("RECHECK", 0, "PICK")
+    ]
     ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", 0, 60_000 * MS))
     assert of(acts, f.CallMove) == [f.CallMove("A", 0, "")]
     # 놓고 나면 다음 보관 박스(칸 1)로 바로
@@ -842,7 +850,9 @@ def test_recheck_command_drains_in_slot_order(cfg: f.Config) -> None:
     ctx = view_ok(ctx, t=66_000 * MS)
     ctx, _, _ = run(ctx, read(False, t=75_000 * MS))
     ctx, acts, rep = run(ctx, f.Command("answer", f"{second}|HOLD", 80_000 * MS))
-    assert rep == [(True, "보류 접수")] and of(acts, f.CallMove) == [f.CallMove("RECHECK", 1, "PICK")]
+    assert rep == [(True, "보류 접수")] and of(acts, f.CallMove) == [
+        f.CallMove("RECHECK", 1, "PICK")
+    ]
     ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", 0, 85_000 * MS))
     assert of(acts, f.CallMove) == [f.CallMove("HOLD", 0, "")]
     ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", 87_000 * MS, 90_000 * MS))
@@ -882,7 +892,13 @@ def test_intent_recheck_maps_to_command() -> None:
 def test_grid_order_fills_far_slot_first_then_second_layer_on_slot_0() -> None:
     # 10/12 실기: C 칸 5(+X·+Y 끝) 위로 TCP 60 이 안 닿아 트레이가 빌 때 먼저 낮게 지나가 놓는다
     raw = raw_config()
-    raw["zones"]["C"]["grid"] = {"cols": 3, "rows": 2, "pitch_mm": 50, "layers": 2, "order": [5, 2, 4, 1, 3, 0]}
+    raw["zones"]["C"]["grid"] = {
+        "cols": 3,
+        "rows": 2,
+        "pitch_mm": 50,
+        "layers": 2,
+        "order": [5, 2, 4, 1, 3, 0],
+    }
     ctx = running(f.load_config(raw))
     got = []
     for k in range(7):
@@ -891,105 +907,197 @@ def test_grid_order_fills_far_slot_first_then_second_layer_on_slot_0() -> None:
     assert got == [5, 2, 4, 1, 3, 0, 6] and ctx.slots["C"] == 7
 
 
-# ---------------------------------------------------------------- 트럭 적재 (로컬 10/12)
+# ---------------------------------------------------------------- 팔레타이징 (BRD 10.4·10.5, 10/13 결정)
+
+COLUMN_ORDER = [
+    0,
+    4,
+    8,
+    12,
+    1,
+    5,
+    9,
+    13,
+    2,
+    6,
+    10,
+    14,
+    3,
+    7,
+    11,
+    15,
+]  # 트럭 안쪽 열부터, 열 안 1층 → 2층
+FILL = [2, 5, 1, 4, 0, 3]  # A·B·C 채우는 순서(10/12)
+REV = [3, 0, 4, 1, 5, 2]  # 그 역순 = 집는 순서
+GRIP_FAIL = "GRIP_FAIL: 집기 확인 실패 — grip 없음(폭 38.0 mm) / 열고 상승함(박스는 칸에 그대로)"
 
 
-def truck_cfg() -> f.Config:
+def pallet_cfg() -> f.Config:
     raw = raw_config()
     for z in ("A", "B", "C"):
-        raw["zones"][z]["grid"] = {"cols": 3, "rows": 2, "pitch_mm": 60, "layers": 2, "order": [2, 5, 1, 4, 0, 3]}
-    raw["zones"]["truck"] = {"grid": {"cols": 4, "rows": 2, "pitch_mm": 50, "layers": 2}}
+        raw["zones"][z]["grid"] = {"cols": 3, "rows": 2, "pitch_mm": 60, "layers": 2, "order": FILL}
+    raw["zones"]["pallet"] = {
+        "grid": {"cols": 4, "rows": 2, "pitch_mm": 50, "layers": 2, "order": COLUMN_ORDER}
+    }
     return f.load_config(raw)
 
 
 def loaded(a: int = 7, b: int = 6, c: int = 6) -> f.Ctx:
-    """시연 상태: A 1층 6 + 2층 1, B·C 6, 보류 1."""
-    ctx = running(truck_cfg())
+    """시연 상태: A 1층 6 + 2층 1(칸 6), B·C 6, 보류 1."""
+    ctx = running(pallet_cfg())
     return replace(ctx, slots={**ctx.slots, "A": a, "B": b, "C": c, "HOLD": 1})
 
 
-def drive_load(ctx: f.Ctx, acts: list, t0: int = 10_000 * MS) -> tuple[f.Ctx, list]:
-    """CallMove 마다 성공 응답을 넣어 끝까지 간다. (ctx, [(zone, slot, mode)])."""
-    seen, t = [], t0
+def drive_load(ctx: f.Ctx, acts: list, t0: int = 10_000 * MS) -> tuple[f.Ctx, list, list]:
+    """CallMove 마다 성공 응답을 넣어 끝까지 간다. (ctx, [(zone, slot, mode)], 액션 전부)."""
+    seen, t, every = [], t0, list(acts)
     while True:
         moves = of(acts, f.CallMove)
         if not moves:
-            return ctx, seen
+            return ctx, seen, every
         m = moves[-1]
         seen.append((m.zone, m.slot, m.mode))
         if m.zone == "OBSERVE":
             ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", 0, t))
-            return ctx, seen
+            return ctx, seen, every + acts
         t += 1000 * MS
-        stamp = t if m.mode == "STAY" else 0
+        stamp = t if m.mode == "DROP" else 0
         ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", stamp, t))
+        every += acts
 
 
 def test_load_order_parses_dongs_aliases_and_zones() -> None:
-    cfg = truck_cfg()
-    assert f.load_order(cfg, "청담동,대치동,역삼동") == ("C", "B", "A")
+    cfg = pallet_cfg()
+    assert f.load_order(cfg, "대치동,역삼동,청담동") == ("B", "A", "C")
     assert f.load_order(cfg, "청담 → 역삼") == ("C", "A")
     assert f.load_order(cfg, "b a") == ("B", "A")
-    assert f.load_order(cfg, "") == ("A", "B", "C")
+    assert "없음" in f.load_order(cfg, "")  # 0개면 되묻는다(TR-PAL-01)
+    assert "두 번" in f.load_order(cfg, "역삼, 역삼동")  # 중복
     assert "모르는" in f.load_order(cfg, "청담동,강남동")
-    assert cfg.truck_capacity == 16 and f.load_config(raw_config()).truck_capacity == 0
+    assert cfg.pallet_capacity == 16 and f.load_config(raw_config()).pallet_capacity == 0
+    assert cfg.slot_at("PALLET", 4) == 1 and cfg.per_layer["A"] == 6
 
 
-def test_load_truck_follows_spoken_order_reverse_fill_and_stops_at_16() -> None:
-    ctx, acts, rep = run(loaded(), cmd("load_truck", "청담동,대치동,역삼동", t=5000 * MS))
-    assert rep[0][0] and ctx.state == f.LOADING
-    ctx, seen = drive_load(ctx, acts)
+def test_pallet_plan_brd_example_overflow_by_volume() -> None:
+    # BRD 10.4 예시(10/13 결정 반영): "대치, 역삼, 청담" = 싣는 순서. 역삼 7 > 대치 6 = 청담 6 → 나중에 싣는 청담이 후순위
+    plan, over, excl = f.pallet_plan({"A": 7, "B": 6, "C": 6}, ("B", "A", "C"), 16)
+    assert plan == tuple(
+        [("B", n) for n in range(5, -1, -1)]
+        + [("A", n) for n in range(6, -1, -1)]
+        + [("C", 5), ("C", 4), ("C", 3)]
+    )
+    assert over == (("C", 3),) and excl == ()
+    # 16 이하면 모두, 경로에 없는 구역은 경로 제외
+    plan, over, excl = f.pallet_plan({"A": 7, "B": 6, "C": 6}, ("C", "A"), 16)
+    assert len(plan) == 13 and over == () and excl == (("B", 6),)
+    # 수량은 물량 순(B 8·C 8 이 먼저 16칸을 채워 A 3개는 초과), 싣는 순서는 말한 순서
+    plan, over, _ = f.pallet_plan({"A": 3, "B": 8, "C": 8}, ("A", "B", "C"), 16)
+    assert [z for z, _ in plan] == ["B"] * 8 + ["C"] * 8 and over == (("A", 3),)
+    plan, over, _ = f.pallet_plan({"A": 3, "B": 8, "C": 7}, ("C", "A", "B"), 16)
+    assert [z for z, _ in plan] == ["C"] * 7 + ["A"] + ["B"] * 8 and over == (("A", 2),)
+
+
+def test_palletize_brd_example_column_fill_and_stops_at_16() -> None:
+    ctx, acts, rep = run(loaded(), cmd("palletize", "대치동,역삼동,청담동", t=5000 * MS))
+    assert rep[0][0] and ctx.state == f.PALLETIZING
+    assert "대치동, 역삼동, 청담동 순서로 싣겠습니다." in of(acts, f.Say)[0].text
+    assert "청담동 3" in of(acts, f.Say)[0].text  # 배송 물량 남음
+    ctx, seen, every = drive_load(ctx, acts)
     picks = [(z, s) for z, s, m in seen if m == "PICK"]
-    rev = [3, 0, 4, 1, 5, 2]  # 채운 순서 2,5,1,4,0,3 의 역순
-    assert picks == [("C", s) for s in rev] + [("B", s) for s in rev] + [("A", s) for s in (6, 3, 0, 4)]
-    assert [s for z, s, m in seen if z == "TRUCK"] == list(range(16))
-    assert all(m == "STAY" for z, _, m in seen if z == "TRUCK")
-    assert seen[-1] == ("OBSERVE", 0, "")  # 16개 뒤 홈으로, 분류 상태로 돌아감
-    assert ctx.state == f.RUNNING and ctx.truck_count == 16
-    assert (ctx.slots["A"], ctx.slots["B"], ctx.slots["C"]) == (3, 0, 0)  # A 에 3개 남음(다음 트럭)
+    assert picks == [("B", s) for s in REV] + [("A", s) for s in [6, *REV]] + [
+        ("C", s) for s in REV[:3]
+    ]
+    assert [s for z, s, m in seen if z == "PALLET"] == COLUMN_ORDER
+    assert all(m == "DROP" for z, _, m in seen if z == "PALLET")
+    assert seen[-1] == ("OBSERVE", 0, "")  # 16개 뒤에만 홈으로, 분류 상태로 돌아감
+    assert ctx.state == f.RUNNING and ctx.pallet_count == 16
+    assert (ctx.slots["A"], ctx.slots["B"], ctx.slots["C"]) == (0, 0, 3)  # 청담 3개는 구역에 남음
+    end = of(every, f.Say)[-1].text
+    assert "16개를 실었습니다" in end and "청담동 3" in end
 
 
-def test_load_truck_skips_empty_slot_and_continues() -> None:
-    ctx, acts, _ = run(loaded(a=2, b=0, c=0), cmd("load_truck", "역삼동"))
-    assert of(acts, f.CallMove) == [f.CallMove("A", 5, "PICK")]  # A 두 번째로 놓은 칸 = 5
-    msg = "GRIP_FAIL: 집기 확인 실패 — grip 없음(폭 38.0 mm) / 열고 상승함(박스는 칸에 그대로)"
-    ctx, acts, _ = run(ctx, f.MoveDone(False, msg, 0, 1))
-    assert ctx.state == f.LOADING and of(acts, f.CallMove) == [f.CallMove("A", 2, "PICK")]
+def test_palletize_grip_fail_retries_twice_then_fails_and_skips_slot_below() -> None:
+    ctx, acts, _ = run(loaded(a=7, b=0, c=0), cmd("palletize", "역삼동"))
+    assert of(acts, f.CallMove) == [f.CallMove("A", 6, "PICK")]  # 2층 칸 6 먼저
+    for k in (1, 2):
+        ctx, acts, _ = run(ctx, f.MoveDone(False, GRIP_FAIL, 0, k))
+        assert ctx.load_tries == k and of(acts, f.CallMove) == [f.CallMove("A", 6, "PICK")]
+    ctx, acts, _ = run(ctx, f.MoveDone(False, GRIP_FAIL, 0, 3))
+    # 3번째도 실패 → 칸 6 FAILED, 그 아래 칸 0 도 막혀 뺌 → 다음은 칸 3
+    assert ctx.load_failed == (("A", 6), ("A", 0)) and "A" in ctx.blocked
+    assert ctx.state == f.PALLETIZING and of(acts, f.CallMove) == [f.CallMove("A", 3, "PICK")]
+    ctx, seen, every = drive_load(ctx, acts)
+    assert [s for z, s, m in seen if m == "PICK"] == [3, 4, 1, 5, 2]
+    assert (
+        ctx.pallet_count == 5 and ctx.slots["A"] == 12
+    )  # 남은 박스 위치를 모름 → 구역 가득, reset_zone 대기
+    assert "집지 못한 박스 2개" in of(every, f.Say)[-1].text
+    # 막힌 구역에는 놓지 않고 멈춘다(사람이 확인 → reset_zone)
+    ctx, acts = placed(ctx, 40, t=60_000 * MS, code="S07-01", dong="역삼동")
+    assert ctx.state == f.PAUSED and ctx.full_zone == "A"
+    ctx, _, rep = run(ctx, cmd("reset_zone", "A"))
+    assert rep[0][0] and "A" not in ctx.blocked and ctx.slots["A"] == 0
 
 
-def test_load_truck_stop_while_holding_then_resume_places_on_truck() -> None:
-    ctx, acts, _ = run(loaded(a=1, b=0, c=0), cmd("load_truck", "A"))
+def test_palletize_retry_succeeds_on_second_try() -> None:
+    ctx, _, _ = run(loaded(a=1, b=0, c=0), cmd("palletize", "A"))
+    ctx, acts, _ = run(ctx, f.MoveDone(False, GRIP_FAIL, 0, 1))
+    ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", 0, 2))
+    assert of(acts, f.CallMove) == [f.CallMove("PALLET", 0, "DROP")] and ctx.load_failed == ()
+
+
+def test_palletize_stop_while_holding_then_resume_drops_on_pallet() -> None:
+    ctx, acts, _ = run(loaded(a=1, b=0, c=0), cmd("palletize", "A"))
     ctx, _, _ = run(ctx, cmd("stop"))
-    assert ctx.state == f.PAUSED and ctx.phase == f.PH_TPICK
+    assert ctx.state == f.PAUSED and ctx.phase == f.PH_PPICK
     ctx, _, _ = run(ctx, f.MoveDone(True, "OK", 0, 1))  # 집기는 끝났다 — 든 채 멈춤
-    assert ctx.resume_to == "TPLACE" and ctx.slots["A"] == 0
+    assert ctx.resume_to == "PDROP" and ctx.slots["A"] == 0
     ctx, acts, rep = run(ctx, cmd("resume"))
-    assert rep[0][0] and of(acts, f.CallMove) == [f.CallMove("TRUCK", 0, "STAY")]
+    assert rep[0][0] and of(acts, f.CallMove) == [f.CallMove("PALLET", 0, "DROP")]
     ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", 5, 6))
-    assert ctx.truck_count == 1 and of(acts, f.CallMove) == [f.CallMove("OBSERVE", 0, "")]
+    assert ctx.pallet_count == 1 and of(acts, f.CallMove) == [f.CallMove("OBSERVE", 0, "")]
 
 
-def test_load_truck_pick_error_pauses_and_retries_same_box() -> None:
-    ctx, _, _ = run(loaded(a=1, b=0, c=0), cmd("load_truck", "A"))
+def test_palletize_stop_during_retry_resumes_same_pick() -> None:
+    ctx, _, _ = run(loaded(a=1, b=0, c=0), cmd("palletize", "A"))
+    ctx, _, _ = run(ctx, cmd("stop"))
+    ctx, _, _ = run(ctx, f.MoveDone(False, GRIP_FAIL, 0, 1))
+    assert ctx.resume_to == "PPICK" and ctx.load_tries == 1
+    _, acts, rep = run(ctx, cmd("resume"))
+    assert rep[0][0] and of(acts, f.CallMove) == [f.CallMove("A", 2, "PICK")]
+
+
+def test_palletize_pick_error_pauses_and_retries_same_box() -> None:
+    ctx, _, _ = run(loaded(a=1, b=0, c=0), cmd("palletize", "A"))
     ctx, acts, _ = run(ctx, f.MoveDone(False, "LIMIT: 목표 자세에 팔이 닿지 않음", 0, 1))
-    assert ctx.state == f.PAUSED and ctx.resume_to == "LOAD" and of(acts, f.Say)
+    assert ctx.state == f.PAUSED and ctx.resume_to == "PALLET" and of(acts, f.Say)
     _, acts, _ = run(ctx, cmd("resume"))
     assert of(acts, f.CallMove) == [f.CallMove("A", 2, "PICK")]
 
 
-def test_load_truck_rejections_and_reset() -> None:
+def test_palletize_rejections_and_reset() -> None:
     ctx = loaded()
-    assert run(f.new_ctx(f.load_config(raw_config())), cmd("load_truck"))[2][0][0] is False  # truck 없음
-    assert run(loaded(a=0, b=0, c=0), cmd("load_truck", "A"))[2][0][1].endswith("실을 박스가 없음")
-    full = replace(ctx, truck_count=16)
-    assert "트럭 가득" in run(full, cmd("load_truck"))[2][0][1]
-    paused, _, _ = run(full, cmd("stop"))
-    p2, _, rep = run(paused, cmd("reset_zone", "truck"))
-    assert rep[0][0] and p2.truck_count == 0
-    busy, _, _ = run(ctx, cmd("load_truck", "A"))
-    assert run(busy, cmd("load_truck", "B"))[2][0][0] is False
-    assert run(busy, start(1))[2][0][0] is False  # 적재 중 start 는 새 세션을 열지 않는다
+    assert (
+        run(f.new_ctx(f.load_config(raw_config())), cmd("palletize", "A"))[2][0][0] is False
+    )  # pallet 없음
+    assert run(loaded(a=0, b=0, c=0), cmd("palletize", "A"))[2][0][1].endswith("실을 박스가 없음")
+    assert "없음" in run(ctx, cmd("palletize", ""))[2][0][1]
+    used = replace(ctx, pallet_count=3)
+    assert (
+        "reset_zone PALLET" in run(used, cmd("palletize", "A"))[2][0][1]
+    )  # 팔레트가 비어야 시작(TR-PAL-02)
+    paused, _, _ = run(used, cmd("stop"))
+    p2, _, rep = run(paused, cmd("reset_zone", "pallet"))
+    assert rep[0][0] and p2.pallet_count == 0
+    busy, _, _ = run(ctx, cmd("palletize", "A"))
+    assert run(busy, cmd("palletize", "B"))[2][0][0] is False
+    assert run(busy, start(1))[2][0][0] is False  # 팔레타이징 중 start 는 새 세션을 열지 않는다
+    blocked = replace(ctx, blocked=frozenset({"A"}))
+    assert "reset_zone" in run(blocked, cmd("palletize", "A"))[2][0][1]
 
 
-def test_intent_load_truck_maps_to_command() -> None:
-    assert f.intent_to_command("load_truck", "청담동,대치동,역삼동", "", "") == ("load_truck", "청담동,대치동,역삼동")
+def test_intent_palletize_maps_to_command() -> None:
+    assert f.intent_to_command("palletize", "대치동,역삼동,청담동", "", "") == (
+        "palletize",
+        "대치동,역삼동,청담동",
+    )

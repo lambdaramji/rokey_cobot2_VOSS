@@ -21,7 +21,7 @@ from voss_voice.intent_logic import (
     decide_bare_dong,
     decide_destination_answer,
     decide_hold_answer,
-    decide_load_truck,
+    decide_palletize,
     decide_recheck_start,
     is_stop,
     stats_sentence,
@@ -95,9 +95,9 @@ class TranscriptFlow:
             if d is None:
                 d = decide_recheck_start(text)
 
-            # 4-3. "청담동, 대치동, 역삼동 순으로 트럭에 실어" → 트럭 적재 (LLM 없이)
+            # 4-3. "대치, 역삼, 청담 순서로 실어줘" → 팔레타이징 (LLM 없이, 말한 순서 = 싣는 순서)
             if d is None:
-                d = decide_load_truck(text, view)
+                d = decide_palletize(text, view)
 
             # 5. 단독 동 이름이 아니라면 기존 GPT-4o 경로를 사용한다.
             if d is None:

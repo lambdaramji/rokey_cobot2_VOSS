@@ -2,7 +2,7 @@
 # 10/12 3×2(+2층) 칸 적재 확인: 사람이 그리퍼에 박스를 넣고 → 닫기 → MoveToZone PLACE.
 # ⚠ 로봇이 움직인다 — 사람이 비상정지 옆에서 실행(CLAUDE.md 규칙 6). robot_gateway 서비스만 부른다.
 # 사용: bash scripts/measure_1012/place_test.sh          (A → B → C 전부)
-#       bash scripts/measure_1012/place_test.sh C        (C 만, 여러 개면 B C 처럼, 트럭은 TRUCK)
+#       bash scripts/measure_1012/place_test.sh C        (C 만, 여러 개면 B C 처럼, 팔레트는 PALLET)
 #       bash scripts/measure_1012/place_test.sh fill A   (시연 상태 19개: 1층 6개씩 + A 만 2층)
 # T1 브링업·T2 robot_gateway 만 띄운 상태에서. sort_manager·belt_servo 는 끈다.
 source ~/voss_g0_env.sh
@@ -11,7 +11,7 @@ declare -A ORDER=(
   [A]="2 5 1 4 0 3 6"   # 10/12 칸 번호: 위 줄(+Y) 0·1·2, 아래 줄 3·4·5. +X 끝부터 채움, 2층 6 = 칸 0 위
   [B]="2 5 1 4 0 3 6"
   [C]="2 5 1 4 0 3 6"   # C 칸 2(+X·+Y 끝)는 빈 트레이에 맨 먼저 (칸 0 위 거쳐 TCP 40)
-  [TRUCK]="0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15"   # 4×2 1층(0~7) → 2층(8~15, 같은 자리 위)
+  [PALLET]="0 4 8 12 1 5 9 13 2 6 10 14 3 7 11 15"   # 10/13: 트럭 안쪽 열부터 열 단위(1층 2칸 → 2층 2칸). 칸 번호 = 층×8 + 줄×4 + 열
 )
 ZONES=("$@")
 [ ${#ZONES[@]} -eq 0 ] && ZONES=(A B C)

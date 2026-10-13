@@ -245,13 +245,17 @@ def test_bare_dong_requires_active_question(state: str, box_id: str) -> None:
     assert decision.say == SAY_NO_QUESTION
 
 
-def test_load_truck_keeps_spoken_order() -> None:
-    from voss_voice.intent_logic import decide_load_truck
+def test_palletize_keeps_spoken_order() -> None:
+    from voss_voice.intent_logic import SAY_PALLET_ORDER, decide_palletize
 
-    d = decide_load_truck("청담동, 대치동, 역삼동 순으로 트럭에 실어 줘", VIEW)
-    assert d.kind == "publish" and d.intent["type"] == "load_truck"
-    assert d.intent["dong"] == "청담동,대치동,역삼동"
-    assert decide_load_truck("역삼 청담 순서로 트럭에 적재해", VIEW).intent["dong"] == "역삼동,청담동"
-    assert decide_load_truck("트럭에 실어", VIEW).intent["dong"] == ""  # 순서 없음 = sort_manager 기본
-    assert decide_load_truck("트럭에 실어", None).say == SAY_NOT_READY
-    assert decide_load_truck("역삼동으로 보내", VIEW) is None
+    d = decide_palletize("헬로 로키, 대치, 역삼, 청담 순서로 실어줘", VIEW)  # BRD 10.8 단계 9 문형
+    assert d.kind == "publish" and d.intent["type"] == "palletize"
+    assert d.intent["dong"] == "대치동,역삼동,청담동"
+    assert decide_palletize("청담동, 대치동, 역삼동 순으로 트럭에 실어 줘", VIEW).intent["dong"] == (
+        "청담동,대치동,역삼동"
+    )
+    assert decide_palletize("역삼 청담 순서대로 팔레트에 적재해", VIEW).intent["dong"] == "역삼동,청담동"
+    assert decide_palletize("트럭에 실어", VIEW).say == SAY_PALLET_ORDER  # 순서 없음 → 되묻기
+    assert decide_palletize("트럭에 실어", None).say == SAY_NOT_READY
+    assert decide_palletize("역삼동으로 보내", VIEW) is None
+    assert decide_palletize("대치동부터 분류해", VIEW) is None
