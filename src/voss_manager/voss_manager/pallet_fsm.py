@@ -12,6 +12,10 @@
   쥐고 있으면 놓고, 놓쳤으면 FAILED·DROPPED 로 두고 작업자에게 알린다. 계획은 다시 세우지 않는다(칸이 당겨지지 않게).
 - 1층 칸 박스가 FAILED 면 그 바로 위 2층 칸 박스를 빈 1층 칸에 당겨 놓고 위층 칸은 비운다(pending #37 결정) — 빈칸 위에
   박스를 올리지 않는다(기울거나 떨어짐).
+- 2층 트레이에서 위층 박스가 FAILED 면 그 바로 아래층 칸 박스는 집지 않고 FAILED·BLOCKED 로 원래 칸에 둔다(10/13 PL 결정
+  K5, v1.6 TR-PAL-05) — 실패한 박스가 위에 남아 있을 수 있어 아래 칸을 집으면 부딪친다. 위층부터 집으므로(pallet_plan)
+  위층 결과가 먼저 난다.
+- 재확인 칸에 보관한 박스가 남아 있으면 palletize 를 받지 않는다(10/13 PL 결정 K9) — recheck 를 먼저.
 - 다 옮기면 관측 자세로 → 트레이가 다 빈 구역은 칸 카운터 0 → 구역별 실은 수·초과·경로 제외·실패 안내 → 시작 전 상태로.
 여기서 정한 규칙은 src/voss_manager/CLAUDE.md 에 적는다.
 """
@@ -28,6 +32,7 @@ PH_LIST, PH_PICK, PH_DROP, PH_HOME = "PALLET_LIST", "PALLET_PICK", "PALLET_DROP"
 MAX_PICK = 3  # 처음 + 재시도 2 (TR-PAL-05)
 NO, YES, MAYBE = "NO", "YES", "MAYBE"  # 지금 박스를 쥐고 있나: 아니오 / 집음 / 집다가 멈춤(모름)
 BUSY_MSG = "분류 중인 박스를 마친 뒤 다시 말씀해 주세요"
+RECHECK_FIRST_MSG = "재확인 대기 박스 {n}개가 있습니다. 재확인을 먼저 해 주세요"  # K9
 
 
 @dataclass(frozen=True)
@@ -251,6 +256,8 @@ def _on_palletize(ctx: f.Ctx, ev: f.Command) -> f.Out:
         return _reject(ctx, BUSY_MSG)
     if ctx.state == f.IDLE and not ctx.session_id:
         return _reject(ctx, "분류 세션이 없음 — 분류를 먼저 한다")
+    if ctx.recheck_queue:  # 재확인 칸 박스는 대상 조회에 안 잡혀 팔레트에 못 싣고 남는다 (K9)
+        return _reject(ctx, RECHECK_FIRST_MSG.format(n=len(ctx.recheck_queue)))
     if ctx.stop_failed:
         return _reject(ctx, "정지 응답 미확인 — 로봇 확인 후 stop 을 다시 보내 성공을 받은 뒤")
     missing = [k for k in ("ROBOT", "LOG") if k in f.not_ready_items(ctx, ev.not_ready)]
@@ -319,7 +326,7 @@ def _on_list(ctx: f.Ctx, ev: ListDone) -> f.Out:
     acts += [PalletOut(run.run_id, ctx.session_id, u.box_id, u.dong, u.route_index, u.zone, u.slot,
                        -1, 0, 0, 0, u.reason, "", 0, ev.now_ns) for u in plan.unloaded]  # fmt: skip
     acts.append(PublishPalletState())  # 배치도·집계·경고를 첫 PICK 보다 먼저 (TR-PAL-10 ①)
-    return _next(replace(ctx, pallet=replace(run, plan=plan)), acts)
+    return _next(replace(ctx, pallet=replace(run, plan=plan)), acts, ev.now_ns)
 
 
 def _abort(ctx: f.Ctx, run: Run, why: str, spoken: str) -> f.Out:
@@ -346,16 +353,39 @@ def _pick(ctx: f.Ctx, m: pp.Move, acts: list) -> f.Out:
     )  # fmt: skip
 
 
-def _next(ctx: f.Ctx, acts: list) -> f.Out:
-    """다음 박스 집기, 없으면 관측 자세로."""
-    run = replace(run_of(ctx), attempts=0, holding=NO)
-    m = current(run)
+def blocked_by(run: Run, m: pp.Move, layer_cells: dict[str, int]) -> str:
+    """m 의 트레이 칸 바로 위층 칸에 남은 박스(이번 실행에서 FAILED 이거나 싣지 않는 박스)의 box_id, 없으면 "" (K5).
+    layer_cells = sort_fsm.Config.layer_cells (2층 이상 구역 → 한 층 칸 수)."""
+    n = layer_cells.get(m.zone.upper(), 0)
+    if not n:
+        return ""
+    above = m.slot + n
+    outcome = dict(run.results)
+    for u in run.plan.moves:
+        if u.zone == m.zone and u.slot == above and outcome.get(u.box_id) == "FAILED":
+            return u.box_id
+    for u in run.plan.unloaded:  # 계획상 위층부터 집어 생기지 않지만, 남는 박스 아래는 집지 않는다
+        if u.zone == m.zone and u.slot == above:
+            return u.box_id
+    return ""
+
+
+def _next(ctx: f.Ctx, acts: list, now_ns: int = 0) -> f.Out:
+    """다음 박스 집기, 없으면 관측 자세로. 위층 박스가 남은 아래 칸 박스는 FAILED·BLOCKED 로 넘긴다 (K5)."""
+    ctx = replace(ctx, pallet=replace(run_of(ctx), attempts=0, holding=NO))
+    acts = list(acts)
+    while (m := current(run_of(ctx))) is not None and (
+        top := blocked_by(run_of(ctx), m, ctx.cfg.layer_cells)
+    ):
+        ctx, more = _finish_box(ctx, m, "FAILED", "BLOCKED", now_ns)
+        acts += [*more, f.Log("warn", f"{m.box_id} {m.zone} 칸 {m.slot} — 위층 {top} 이 남아 집지 않고 원래 칸에 둔다 (K5)")]  # fmt: skip
+    run = run_of(ctx)
     if m is None:
         return f.Out(
             replace(ctx, phase=PH_HOME, pallet=replace(run, stage="HOME")),
             (*acts, f.CallMove("OBSERVE", 0, ""), f.Log("info", "팔레트 적재 끝 → 관측 자세")),
         )
-    return _pick(replace(ctx, pallet=run), m, acts)
+    return _pick(ctx, m, acts)
 
 
 def planned_box(plan: pp.Plan, slot: int) -> str:
@@ -468,7 +498,7 @@ def _on_pick(ctx: f.Ctx, run: Run, m: pp.Move, ev: f.MoveDone) -> f.Out:
         nctx, acts = _finish_box(ctx, m, "FAILED", "GRIP_FAIL", ev.now_ns)
         if paused:
             return f.Out(replace(nctx, phase=f.PH_NONE), tuple(acts))
-        return _next(nctx, acts)
+        return _next(nctx, acts, ev.now_ns)
     # 정지·장비 실패 — 박스가 그리퍼에 있을 수도 있다(상승 중 실패는 쥔 채 멈춘다). resume 때 파지 확인
     run = replace(run, holding=MAYBE, stage="PICK")
     return _pause(ctx, run, f"{m.box_id} 집기 중 {ev.message} → PAUSED")
@@ -478,7 +508,7 @@ def _on_drop(ctx: f.Ctx, run: Run, m: pp.Move, ev: f.MoveDone) -> f.Out:
     if ev.placed_stamp_ns:
         nctx, acts = _finish_box(ctx, m, "DONE", _fail_reason(ctx, ev), ev.placed_stamp_ns)
         if ev.ok and ctx.state == PALLETIZING:
-            return _next(nctx, acts)
+            return _next(nctx, acts, ev.now_ns)
         if ctx.state == f.PAUSED:
             return f.Out(replace(nctx, phase=f.PH_NONE), tuple(acts))
         return _pause(nctx, run_of(nctx), f"{m.box_id} 놓았으나 {ev.message} → PAUSED", acts)
@@ -530,10 +560,10 @@ def _on_resume(ctx: f.Ctx, ev: f.Command) -> f.Out:
     m = current(run)
     ok = (True, "resume 접수 (팔레타이징)")
     if run.stage == "HOME" or m is None:
-        out = _next(base, [f.Log("info", "resume — 관측 자세로")])
+        out = _next(base, [f.Log("info", "resume — 관측 자세로")], ev.now_ns)
         return f.Out(out.ctx, out.actions, ok)
     if run.stage == "NEXT":
-        out = _next(base, [f.Log("info", "resume — 다음 박스")])
+        out = _next(base, [f.Log("info", "resume — 다음 박스")], ev.now_ns)
         return f.Out(out.ctx, out.actions, ok)
     if run.holding in (YES, MAYBE):
         if ev.grip_mm < 0:
@@ -551,7 +581,7 @@ def _on_resume(ctx: f.Ctx, ev: f.Command) -> f.Out:
             # 든 박스를 놓쳤다 (TR-PAL-08) — 어디 있는지 모르니 FAILED 로 두고 작업자에게 알린다
             nctx, acts = _finish_box(base, m, "FAILED", "DROPPED", ev.now_ns)
             acts.append(f.Say(f"{m.box_id[-3:]}번 박스를 놓쳤습니다. 작업자가 확인해 주세요."))
-            out = _next(nctx, acts)
+            out = _next(nctx, acts, ev.now_ns)
             return f.Out(out.ctx, out.actions, ok)
         # 집다가 멈췄는데 쥐고 있지 않다 → 박스는 원래 칸에 있다, 다시 집는다
     out = _pick(

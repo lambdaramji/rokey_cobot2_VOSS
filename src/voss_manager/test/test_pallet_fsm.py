@@ -570,3 +570,60 @@ def test_two_layer_tray_from_config_picks_upper_layer_first(cfg) -> None:
     picks = [(z, s) for z, s, m in moves(acts) if m == "PICK"]
     assert [s for z, s in picks if z == "A"] == [6, 0, 1, 2, 3, 4, 5]
     assert [z for z, _ in picks] == ["C"] * 6 + ["A"] * 7 + ["B"] * 3
+
+
+def two_layer(cfg_raw_path: str = REPO_CONFIG) -> f.Config:
+    """A·B·C 트레이를 2층(한 층 6칸)으로 바꾼 설정 — 10/13 게이트 실기와 같다."""
+    with open(cfg_raw_path, encoding="utf-8") as fh:
+        raw = yaml.safe_load(fh)
+    for z in ("A", "B", "C"):
+        raw["zones"][z]["grid"].update(rows=2, layers=2)
+    return replace(f.load_config(raw), pallet_ready=True)
+
+
+def test_upper_tray_box_failed_blocks_the_cell_below() -> None:
+    """K5 (10/13 PL, v1.6 TR-PAL-05): 위층 칸 6 박스가 GRIP_FAIL 3회 → 그 아래 칸 0 박스는 집지 않고
+    FAILED·BLOCKED(시도 0) 로 원래 칸에 둔다. 나머지는 그대로 옮긴다."""
+    ctx, acts = started(two_layer(), Y, {Y: 7})
+
+    def answer(a, i, t):
+        if a.mode == "PICK" and a.zone == "A" and a.slot == 6:
+            return f.MoveDone(False, "GRIP_FAIL: 집기 확인 실패", 0, t)
+        return ok_all(a, i, t)
+
+    ctx, acts = gateway(ctx, acts, answer)
+    picks = [s for z, s, m in moves(acts) if m == "PICK"]
+    assert picks == [6, 6, 6, 1, 2, 3, 4, 5]  # 칸 0 은 한 번도 집지 않는다
+    res = [(r.box_id[-3:], r.outcome, r.reason, r.attempts) for r in of(acts, pf.PalletOut)]
+    assert res[:2] == [("007", "FAILED", "GRIP_FAIL", 3), ("001", "FAILED", "BLOCKED", 0)]
+    assert [o for _, o, _, _ in res[2:]] == ["DONE"] * 5
+    assert any("(K5)" in a.text for a in of(acts, f.Log))
+    assert "옮기지 못한 박스는 007번, 001번" in says(acts)[-1]
+    run = pf.run_of(ctx)
+    done = [b for b, o in run.results if o == "DONE"]
+    assert ctx.state == f.RUNNING
+    assert "A" not in pp.emptied_zones(
+        run.plan, done
+    )  # A 트레이가 비지 않아 칸 카운터를 0 으로 되돌리지 않음
+
+
+def test_lower_tray_failure_does_not_block_anything() -> None:
+    """K5 는 위층 실패만 — 아래층 칸 0 이 실패해도 칸 6(위층, 이미 옮김)·나머지는 그대로."""
+    ctx, acts = started(two_layer(), Y, {Y: 7})
+
+    def answer(a, i, t):
+        if a.mode == "PICK" and a.zone == "A" and a.slot == 0:
+            return f.MoveDone(False, "GRIP_FAIL", 0, t)
+        return ok_all(a, i, t)
+
+    ctx, acts = gateway(ctx, acts, answer)
+    assert [s for z, s, m in moves(acts) if m == "PICK"] == [6, 0, 0, 0, 1, 2, 3, 4, 5]
+    assert [r.reason for r in of(acts, pf.PalletOut) if r.outcome == "FAILED"] == ["GRIP_FAIL"]
+
+
+def test_palletize_refused_while_recheck_boxes_wait(cfg) -> None:
+    """K9 (10/13 PL): 재확인 칸에 보관한 박스가 있으면 palletize 를 받지 않는다 — recheck 를 먼저."""
+    ctx = replace(running(cfg), recheck_queue=(object(), object()))
+    out = pf.step(ctx, palletize())
+    assert out.reply == (False, "재확인 대기 박스 2개가 있습니다. 재확인을 먼저 해 주세요")
+    assert out.ctx.state == f.RUNNING and not of(out.actions, pf.CallList)
