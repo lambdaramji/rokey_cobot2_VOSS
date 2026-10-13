@@ -1001,6 +1001,7 @@ def test_palletize_brd_example_column_fill_and_stops_at_16() -> None:
     ctx, acts, rep = run(loaded(), cmd("palletize", "대치동,역삼동,청담동", t=5000 * MS))
     assert rep[0][0] and ctx.state == f.PALLETIZING
     assert "대치동, 역삼동, 청담동 순서로 싣겠습니다." in of(acts, f.Say)[0].text
+    assert "첫 배송지 청담동은 문 쪽입니다." in of(acts, f.Say)[0].text  # TR-PAL-10 ②
     assert "청담동 3" in of(acts, f.Say)[0].text  # 배송 물량 남음
     ctx, seen, every = drive_load(ctx, acts)
     picks = [(z, s) for z, s, m in seen if m == "PICK"]

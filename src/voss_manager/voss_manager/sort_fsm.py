@@ -1296,6 +1296,8 @@ def _on_palletize(ctx: Ctx, arg: str, ev: Command) -> Out:
     word = " → ".join(route)
     msg = f"팔레타이징 시작 {word}: {len(plan)}개, 초과 {_counts(ctx.cfg, over)}, 경로 제외 {_counts(ctx.cfg, excl)}"
     say = f"{', '.join(_dong_word(ctx.cfg, z) for z in route)} 순서로 싣겠습니다."
+    # 마지막에 싣는 동 = 첫 배송지, 트럭 문 쪽 (TR-PAL-10 ②)
+    say += f" 첫 배송지 {_dong_word(ctx.cfg, plan[-1][0])}은 문 쪽입니다."
     if over:
         say += f" 배송 물량이 남습니다: {_counts(ctx.cfg, over, say=True)}개."
     return Out(out.ctx, (Log("info", msg), Say(say), *out.actions), (True, msg))
