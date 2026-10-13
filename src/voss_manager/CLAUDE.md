@@ -10,7 +10,7 @@
 - `sort_fsm.py` 순수 전이 `step(ctx, event) → Out(ctx, actions, reply)`. `readiness.py` 준비 판단. `sort_manager.py` 는 입출력·장비 호출 시간 초과만(단일 스레드 executor, 잠금 없음).
 - 파라미터 `config/sort_manager.yaml`, voss_config 는 `config_path`(launch `config_dir`, 기본 `VOSS_CONFIG_DIR` → 레포 `config/`). 어긋난 설정은 기동 거부.
 - 로봇 없이 시험: `tools/mock/g0_mock.py` (belt_servo·gateway·logger·비전 대역, 아무것도 움직이지 않음).
-- `pallet_plan.py` 팔레타이징 배치 계획(S2-T04, **BRD v1.5** 10.4): 팔레트 4열 × 2줄 × 2층 = 16칸 고정, slot = (열−1)×4 + (층−1)×2 + (줄−1)(결정 D2). 대상 16개 이하면 전부, 넘으면 물량 많은 순(동률이면 먼저 방문하는 동이 후순위)으로 `allocate()` — 못 실은 박스는 OVERFLOW, 경로 밖 동은 EXCLUDED(`Plan.unloaded`, 원래 칸에 그대로). 위치는 수량과 따로 마지막 방문 동부터 slot 0 → 15(열 단위, 열 안 1층 2칸 → 2층 2칸, 같은 층 1줄 → 2줄 — D6 제안). 한 동의 일부만 실을 때는 (구역, 칸) 앞의 박스부터(명세 미정). 같은 구역·칸에 PLACED 가 둘이면(세션 중 reset_zone) 나중 것만. 재개는 다시 계획하지 않고 `remaining()`. 시험 = 정답 생성기·S1~S8·불변식 500회(`test/test_pallet_plan.py`).
+- `pallet_plan.py` 팔레타이징 배치 계획(S2-T04, **BRD v1.5** 10.4): 팔레트 4열 × 2줄 × 2층 = 16칸 고정, slot = (열−1)×4 + (층−1)×2 + (줄−1)(결정 D2). 대상 16개 이하면 전부, 넘으면 물량 많은 순(동률이면 먼저 방문하는 동이 후순위)으로 `allocate()` — 못 실은 박스는 OVERFLOW, 경로 밖 동은 EXCLUDED(`Plan.unloaded`, 원래 칸에 그대로). 위치는 수량과 따로 마지막 방문 동부터 slot 0 → 15(열 단위, 열 안 1층 2칸 → 2층 2칸, 같은 층 1줄 → 2줄 — D6 제안). 한 동의 일부만 실을 때는 (구역, 칸) 앞의 박스부터(명세 미정). **2층 트레이(voss_config grid `layers` ≥ 2 → `Config.layer_cells`)는 구역 안에서 위층 박스부터 집는다**(`tray_layer_cells`, 10/13 게이트 — 칸 6 이 칸 0 위). 일부만 실으면 아래층이 남는다. 1층 트레이는 칸 순서 그대로. 같은 구역·칸에 PLACED 가 둘이면(세션 중 reset_zone) 나중 것만. 재개는 다시 계획하지 않고 `remaining()`. 시험 = 정답 생성기·S1~S8·불변식 500회(`test/test_pallet_plan.py`).
 
 ## 운용 규칙 (T20, SRD F-04/06/07·T23 확정 전 값은 제안)
 - **분류 결정:** RUNNING 에서 OBSERVE 도착 뒤 촬영된 stage 1 판독으로 정한다. 확실(분류코드 우선, 동 이름과 같고 `confidence ≥ ocr.confidence_min`)하면 목적 구역으로 바로 집는다. 한 번에 한 박스.

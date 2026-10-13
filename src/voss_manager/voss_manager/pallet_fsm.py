@@ -301,7 +301,9 @@ def _on_list(ctx: f.Ctx, ev: ListDone) -> f.Out:
     if not ev.ok:
         return _abort(ctx, run, f"작업 기록 조회 실패 {ev.message}", "작업 기록을 읽지 못해")
     try:
-        plan = pp.plan_pallet(run.route, ev.placements, layers=ctx.pallet_layers)
+        plan = pp.plan_pallet(
+            run.route, ev.placements, layers=ctx.pallet_layers, tray_layer_cells=ctx.cfg.layer_cells
+        )
     except pp.PlanError as e:
         return _abort(ctx, run, str(e), str(e) + " —")
     acts: list = [

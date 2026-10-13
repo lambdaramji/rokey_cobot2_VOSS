@@ -62,6 +62,9 @@ class Config:
     order: dict[str, tuple[int, ...]] = field(
         default_factory=dict
     )  # 구역 → 채우는 칸 순서(grid.order)
+    layer_cells: dict[str, int] = field(
+        default_factory=dict
+    )  # 2층 이상 구역 → 한 층 칸 수(cols × rows). 칸의 층 = slot // 이 값 — 팔레타이징이 위층부터 집는다
 
     def slot_at(self, zone: str, n: int) -> int:
         """구역에 n 번째로 놓는 박스의 칸. grid.order 가 있으면 그 순서, 넘어가면 n 그대로(2층 등)."""
@@ -105,7 +108,7 @@ def load_config(raw: dict) -> Config:
             raise ValueError(f"aliases {dong} 가 zone_map 에 없음")
 
     zones = {str(k).upper(): v for k, v in (raw.get("zones") or {}).items()}
-    capacity, order = {}, {}
+    capacity, order, layer_cells = {}, {}, {}
     for z in ZONES:
         grid = (zones.get(z) or {}).get("grid") or {}
         cols, rows = grid.get("cols"), grid.get("rows")
@@ -115,6 +118,8 @@ def load_config(raw: dict) -> Config:
         if isinstance(layers, bool) or not isinstance(layers, int) or layers < 1:
             raise ValueError(f"zones.{z.lower()}.grid.layers 는 1 이상 정수: {layers!r}")
         capacity[z] = int(cols) * int(rows) * layers
+        if layers > 1:
+            layer_cells[z] = int(cols) * int(rows)
         # order(선택): 앞쪽 칸을 채우는 순서 — 먼 칸을 트레이가 빌 때 낮게 지나가 놓으려고(voss_config.md grid)
         o = grid.get("order")
         if o is not None:
@@ -135,7 +140,9 @@ def load_config(raw: dict) -> Config:
     pallet_ready = (
         isinstance(pose, list) and len(pose) == 6 and all(isinstance(v, (int, float)) for v in pose)
     )
-    return Config(zone_map, codes, aliases, capacity, float(conf), version, pallet_ready, order)
+    return Config(
+        zone_map, codes, aliases, capacity, float(conf), version, pallet_ready, order, layer_cells
+    )
 
 
 def zone_map_entries(cfg: Config) -> list[tuple[str, str, str, list[str]]]:
