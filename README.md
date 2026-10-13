@@ -14,7 +14,7 @@
 ## 빠른 시작
 ```bash
 # 개발 환경: docs/setup/dev-environment.md
-cd ~/voss_ws && git clone https://github.com/lambdaramji/rokey_cobot2_VOSS.git src/rokey_cobot2_VOSS
+cd ~/voss_ws && git clone https://github.com/rokeyhak/rokey_cobot2_VOSS.git src/rokey_cobot2_VOSS   # 시연까지 임시 레포(ADR-0015)
 colcon build --symlink-install && source install/setup.bash
 ```
 
