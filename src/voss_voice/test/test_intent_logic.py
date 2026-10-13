@@ -300,7 +300,9 @@ def test_palletize_keeps_spoken_order() -> None:
     d = decide_palletize("헬로 로키, 대치, 역삼, 청담 순서로 실어줘", VIEW)  # BRD 10.8 단계 9 문형
     assert d.kind == "publish" and d.intent["type"] == "palletize"
     assert d.intent["route"] == ["대치동", "역삼동", "청담동"] and d.intent["dong"] == ""
-    assert decide_palletize("청담동, 대치동, 역삼동 순으로 트럭에 실어 줘", VIEW).intent["route"] == [
+    assert decide_palletize("청담동, 대치동, 역삼동 순으로 트럭에 실어 줘", VIEW).intent[
+        "route"
+    ] == [
         "청담동",
         "대치동",
         "역삼동",
