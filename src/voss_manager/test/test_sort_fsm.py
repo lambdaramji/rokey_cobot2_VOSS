@@ -774,3 +774,107 @@ def test_six_states_single_run(cfg: f.Config) -> None:
         seen.append(ctx.state)
     assert set(seen) == {f.IDLE, f.RUNNING, f.PICKING, f.RECHECK, f.ASKING, f.PAUSED}
     assert seen[-1] == f.RUNNING
+
+
+# ---------------------------------------------------------------- 재확인 미루기 (defer_recheck, 10/12 시연)
+
+
+def deferred(cfg: f.Config) -> f.Ctx:
+    ctx, _, _ = run(
+        f.new_ctx(cfg, defer_recheck=True), start(0), f.MoveDone(True, "OK", 0, 1000 * MS)
+    )
+    return ctx
+
+
+def park(ctx: f.Ctx, track: int, t: int) -> tuple[f.Ctx, list]:
+    """판독 실패 박스 → 파지 → 재확인 칸에 놓기(보관)."""
+    return run(
+        ctx,
+        label(track, code="", dong="", conf=0.0, t=t),
+        f.GoalDone(True, True, "OK", 1, t + 3000 * MS),
+        f.MoveDone(True, "OK", t + 6000 * MS, t + 8000 * MS),
+    )[:2]
+
+
+def test_deferred_recheck_parks_and_keeps_sorting(cfg: f.Config) -> None:
+    ctx, acts = park(deferred(cfg), 3, 2000 * MS)
+    assert ctx.state == f.RUNNING and ctx.box is None and ctx.phase == f.PH_NONE
+    assert not [m for m in of(acts, f.CallMove) if m.mode == "VIEW"] and not of(acts, f.Result)
+    assert [b.recheck_slot for b in ctx.recheck_queue] == [0] and ctx.recheck_busy == {0}
+    assert ctx.stage_start_ns == 10_000 * MS  # PLACE 응답(OBSERVE 복귀) 뒤부터 관측
+
+    ctx, _ = placed(ctx, 4, t=20_000 * MS)  # 일반 박스는 그대로 분류
+    assert ctx.slots["B"] == 1 and len(ctx.recheck_queue) == 1
+    ctx, _ = park(ctx, 5, 40_000 * MS)
+    assert [b.recheck_slot for b in ctx.recheck_queue] == [0, 1] and ctx.state == f.RUNNING
+
+    ctx, acts, _ = run(ctx, label(6, code="", dong="", conf=0.0, t=60_000 * MS))  # 칸 2개 다 참
+    assert ctx.state == f.PAUSED and ctx.full_zone == "RECHECK"
+
+
+def test_recheck_command_drains_in_slot_order(cfg: f.Config) -> None:
+    ctx, _, rep = run(deferred(cfg), cmd("recheck"))
+    assert rep == [(False, "재확인 칸에 보관 중인 박스가 없음")]
+    ctx, _ = park(ctx, 3, 2000 * MS)
+    ctx, _ = park(ctx, 5, 20_000 * MS)
+    first, second = (b.box_id for b in ctx.recheck_queue)
+
+    ctx, acts, rep = run(ctx, cmd("recheck", t=40_000 * MS))
+    assert rep == [(True, "재확인 시작 (2개)")] and ctx.draining
+    assert ctx.state == f.RECHECK and ctx.box.box_id == first and ctx.box.recheck_slot == 0
+    assert of(acts, f.CallMove) == [f.CallMove("RECHECK", 0, "VIEW")]
+
+    # ① 다시 읽어도 모름 → 질문(후보 전체) → 작업자 "역삼동" → 재확인 칸 0 에서 집어 A 에 놓기
+    ctx = view_ok(ctx, t=41_000 * MS)
+    ctx, _, _ = run(ctx, read(False, t=50_000 * MS))
+    assert ctx.state == f.ASKING and ctx.box.candidates == tuple(cfg.zone_map)
+    ctx, acts, rep = run(ctx, f.Command("answer", f"{first}|역삼동", 55_000 * MS))
+    assert rep == [(True, "역삼동 접수")] and of(acts, f.CallMove) == [f.CallMove("RECHECK", 0, "PICK")]
+    ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", 0, 60_000 * MS))
+    assert of(acts, f.CallMove) == [f.CallMove("A", 0, "")]
+    # 놓고 나면 다음 보관 박스(칸 1)로 바로
+    ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", 62_000 * MS, 65_000 * MS))
+    (res,) = of(acts, f.Result)
+    assert (res.box_id, res.outcome, res.zone, res.decided_by) == (first, "PLACED", "A", "OPERATOR")
+    assert ctx.state == f.RECHECK and ctx.box.box_id == second and ctx.box.recheck_slot == 1
+    assert of(acts, f.CallMove) == [f.CallMove("RECHECK", 0, "VIEW")]
+
+    # ② 작업자 "송장 확인 불가"(HOLD) → 재확인 칸 1 에서 집어 보류 칸 0
+    ctx = view_ok(ctx, t=66_000 * MS)
+    ctx, _, _ = run(ctx, read(False, t=75_000 * MS))
+    ctx, acts, rep = run(ctx, f.Command("answer", f"{second}|HOLD", 80_000 * MS))
+    assert rep == [(True, "보류 접수")] and of(acts, f.CallMove) == [f.CallMove("RECHECK", 1, "PICK")]
+    ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", 0, 85_000 * MS))
+    assert of(acts, f.CallMove) == [f.CallMove("HOLD", 0, "")]
+    ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", 87_000 * MS, 90_000 * MS))
+    (res,) = of(acts, f.Result)
+    assert (res.box_id, res.outcome, res.zone) == (second, "HELD", "HOLD")
+    assert ctx.state == f.RUNNING and not ctx.draining and not ctx.recheck_queue
+    assert ctx.recheck_busy == frozenset() and ctx.stage_start_ns == 90_000 * MS
+
+
+def test_operator_answer_goes_to_second_layer_when_zone_has_six(cfg: f.Config) -> None:
+    raw = raw_config()
+    raw["zones"]["A"]["grid"] = {"cols": 3, "rows": 2, "pitch_mm": 60, "layers": 2}
+    ctx = deferred(f.load_config(raw))
+    ctx = replace(ctx, slots={**ctx.slots, "A": 6})
+    ctx, _ = park(ctx, 3, 2000 * MS)
+    ctx, _, _ = run(ctx, cmd("recheck", t=40_000 * MS))
+    ctx = view_ok(ctx, t=41_000 * MS)
+    ctx, _, _ = run(ctx, read(False, t=50_000 * MS))
+    ctx, _, _ = run(ctx, f.Command("answer", f"{ctx.box.box_id}|역삼동", 55_000 * MS))
+    ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", 0, 60_000 * MS))
+    assert of(acts, f.CallMove) == [f.CallMove("A", 6, "")]  # 칸 6 = 칸 0 위 2층
+
+
+def test_recheck_rejected_while_box_in_progress_and_reset_blocked(cfg: f.Config) -> None:
+    ctx, _ = park(deferred(cfg), 3, 2000 * MS)
+    busy, _, rep = run(ctx, label(4, t=20_000 * MS), cmd("recheck"))
+    assert busy.state == f.PICKING and rep[1][0] is False
+    paused, _, _ = run(ctx, cmd("stop"))
+    _, _, rep = run(paused, cmd("reset_zone", "RECHECK"))
+    assert rep[0][0] is False and "보관" in rep[0][1]
+
+
+def test_intent_recheck_maps_to_command() -> None:
+    assert f.intent_to_command("recheck", "", "", "") == ("recheck", "")

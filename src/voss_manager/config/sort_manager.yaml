@@ -2,6 +2,7 @@
 sort_manager:
   ros__parameters:
     home_first: true              # start·resume 때 MoveToZone(OBSERVE) 를 먼저 부르고, 도착 뒤부터 판독을 받는다
+    defer_recheck: true           # 재확인 칸에 놓기만 하고 분류 계속, recheck 명령에 몰아서 처리 (10/12 시연, 로컬 시험 브랜치)
     check_label_stamp: true       # LabelRead.stamp ≥ 관측 시작(OBSERVE 도착) 인 결과만 채택. 녹화 재생 시험에서만 false
     track_fresh_s: 0.5            # 이 시간 안에 BoxTrack 이 온 트랙만 "시야에 있음"
     pose_max_age_s: 0.5           # ROBOT 과도 규칙 (voss_msgs.md SortState)
