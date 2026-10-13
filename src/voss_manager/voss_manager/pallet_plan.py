@@ -25,6 +25,16 @@ SORT_ZONES = ("A", "B", "C")
 MAX_ROUTE = 3  # 경로 동 최대
 COLS, LANES, LAYERS = 4, 2, 2  # 열(X) × 줄(Y) × 층(Z), 결정 D2
 CAPACITY = COLS * LANES * LAYERS  # 16
+
+
+def slot_order(layers: int = LAYERS) -> tuple[int, ...]:
+    """채우는 칸 순서. layers=2(기본) = slot 0 → 15. layers=1 = 1층 칸만(0·1·4·5·8·9·12·13) — 게이트에서 2층 놓기를
+    시연에서 뺄 때(ADR-0014 B, sort_manager `pallet_layers`). 칸 번호 규칙(D2)·메시지는 그대로다."""
+    if layers not in (1, 2):
+        raise ValueError(f"layers={layers} — 1 | 2")
+    return tuple(s for s in range(CAPACITY) if slot_cell(s)[1] <= layers)
+
+
 OVERFLOW, EXCLUDED = "OVERFLOW", "EXCLUDED"
 
 
@@ -63,7 +73,7 @@ class Move:
     route_index: int  # 경로 순번 (0 = 첫 배송지)
     zone: str
     slot: int
-    pallet_slot: int  # 0~15 = 옮기는 순서 − 1
+    pallet_slot: int  # 0~15. 기본(2층)은 옮기는 순서 − 1, 1층만이면 slot_order(1) 의 차례
 
     @property
     def cell(self) -> tuple[int, int, int]:
@@ -92,6 +102,7 @@ class Plan:
     skipped: tuple[str, ...] = ()  # 대상에서 뺀 기록과 이유 (로그용)
     # 지금 A·B·C 트레이에 있는 박스 (구역, 칸, box_id) — 경로 밖·초과 포함. 다 옮긴 구역의 칸 카운터를 되돌리는 데 쓴다
     occupied: tuple[tuple[str, int, str], ...] = ()
+    capacity: int = CAPACITY  # 쓸 수 있는 칸 수 (1층만이면 8)
 
     def counts(self) -> tuple[tuple[str, int, int, int], ...]:
         """(동, 실을 수, 초과 수, 경로 제외 수) — 경로 동(방문 순서) 다음에 경로 밖 동(이름 순). HMI·TTS·DB 가 함께 쓴다."""
@@ -139,21 +150,27 @@ def parse_route(arg: str, dong_of: Callable[[str], str]) -> tuple[str, ...]:
     return route
 
 
-def allocate(route: Sequence[str], counts: dict[str, int]) -> dict[str, int]:
-    """동별 실을 수 (TR-PAL-04 ①②). 16 이하면 전부, 넘으면 물량 많은 순 · 동률이면 먼저 방문하는 동이 후순위."""
+def allocate(
+    route: Sequence[str], counts: dict[str, int], capacity: int = CAPACITY
+) -> dict[str, int]:
+    """동별 실을 수 (TR-PAL-04 ①②). capacity(16) 이하면 전부, 넘으면 물량 많은 순 · 동률이면 먼저 방문하는 동이 후순위."""
     total = sum(counts.get(d, 0) for d in route)
-    if total <= CAPACITY:
+    if total <= capacity:
         return {d: counts.get(d, 0) for d in route}
     visit = {d: i for i, d in enumerate(route)}
-    left, load = CAPACITY, {}
+    left, load = capacity, {}
     for d in sorted(route, key=lambda d: (-counts.get(d, 0), -visit[d])):
         load[d] = min(counts.get(d, 0), left)
         left -= load[d]
     return load
 
 
-def plan_pallet(route: Sequence[str], placements: Iterable[Placement]) -> Plan:
-    """경로 + 적재 기록 → Plan. 대상에 칸 기록이 없거나 옮길 박스가 없으면 PlanError (TR-PAL-03)."""
+def plan_pallet(
+    route: Sequence[str], placements: Iterable[Placement], layers: int = LAYERS
+) -> Plan:
+    """경로 + 적재 기록 → Plan. 대상에 칸 기록이 없거나 옮길 박스가 없으면 PlanError (TR-PAL-03).
+    layers=1 이면 1층 칸만 쓴다(용량 8, slot_order)."""
+    order = slot_order(layers)
     route = tuple(route)
     check_route(route)
     in_route = set(route)
@@ -200,7 +217,7 @@ def plan_pallet(route: Sequence[str], placements: Iterable[Placement]) -> Plan:
         raise PlanError(f"옮길 박스가 없음: {', '.join(route)}")
 
     # 3) 수량 (위치와 따로)
-    load = allocate(route, {d: len(b) for d, b in by_dong.items()})
+    load = allocate(route, {d: len(b) for d, b in by_dong.items()}, len(order))
     overflow: list[Unloaded] = []
     for i, d in enumerate(route):
         for zone, slot, box_id in sorted(by_dong[d])[load[d] :]:
@@ -211,11 +228,17 @@ def plan_pallet(route: Sequence[str], placements: Iterable[Placement]) -> Plan:
     for i in reversed(range(len(route))):
         d = route[i]
         for zone, slot, box_id in sorted(by_dong[d])[: load[d]]:
-            moves.append(Move(box_id, d, i, zone, slot, len(moves)))
+            moves.append(Move(box_id, d, i, zone, slot, order[len(moves)]))
     unloaded = tuple(sorted(overflow + excluded, key=lambda u: (u.zone, u.slot, u.box_id)))
     empty = tuple(d for d in route if not by_dong[d])
     return Plan(
-        route, tuple(moves), unloaded, empty, tuple(sorted(skipped)), tuple(sorted(occupied))
+        route,
+        tuple(moves),
+        unloaded,
+        empty,
+        tuple(sorted(skipped)),
+        tuple(sorted(occupied)),
+        len(order),
     )
 
 

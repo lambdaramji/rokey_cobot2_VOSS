@@ -304,3 +304,36 @@ def test_parse_route_with_aliases_and_errors() -> None:
 
 def test_sort_zones_match_fsm() -> None:
     assert pp.SORT_ZONES == f.SORT_ZONES
+
+
+# ---------------------------------------------------------------- 1층만 (ADR-0014 B, sort_manager pallet_layers)
+
+
+def test_slot_order_layer1_only_skips_second_layer() -> None:
+    assert pp.slot_order() == tuple(range(16))
+    assert pp.slot_order(1) == (0, 1, 4, 5, 8, 9, 12, 13)
+    assert all(pp.slot_cell(s)[1] == 1 for s in pp.slot_order(1))
+    with pytest.raises(ValueError):
+        pp.slot_order(3)
+
+
+def test_layer1_only_one_dong_fills_first_layer_column_by_column() -> None:
+    """대본 §6 B: "역삼동 실어줘" → 역삼 7개가 1열·2열·3열 1층 2칸씩 + 4열 1줄."""
+    plan = pp.plan_pallet((Y,), placements({Y: 7}), layers=1)
+    assert [m.pallet_slot for m in plan.moves] == [0, 1, 4, 5, 8, 9, 12]
+    assert [m.cell for m in plan.moves][-1] == (4, 1, 1)
+    assert plan.capacity == 8 and plan.overflow == 0
+
+
+def test_layer1_only_overflow_uses_capacity_8() -> None:
+    """S1 경로(대치 → 역삼 → 청담, 역삼 7·대치 6·청담 6) 를 1층 8칸에: 물량 순 역삼 7, 남은 1칸은 동률 중 나중 방문 청담."""
+    plan = pp.plan_pallet((D, Y, C), placements({Y: 7, D: 6, C: 6}), layers=1)
+    assert [(r[0], r[1], r[2]) for r in plan.counts()] == [(D, 0, 6), (Y, 7, 0), (C, 1, 5)]
+    assert [(m.dong, m.pallet_slot) for m in plan.moves][:2] == [(C, 0), (Y, 1)]
+    assert plan.overflow == 11 and plan.capacity == 8
+
+
+def test_default_two_layers_unchanged() -> None:
+    a = pp.plan_pallet((D, Y, C), placements({Y: 7, D: 6, C: 6}))
+    b = pp.plan_pallet((D, Y, C), placements({Y: 7, D: 6, C: 6}), layers=2)
+    assert a == b and [m.pallet_slot for m in a.moves] == list(range(16)) and a.capacity == 16

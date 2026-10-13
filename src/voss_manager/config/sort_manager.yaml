@@ -16,4 +16,5 @@ sort_manager:
     robot_busy_grace_s: 1.5       # 우리 goal·MoveToZone 이 끝난 뒤 이 시간 안의 RobotState BUSY 는 준비로 본다(서보 스트림 꼬리)
     state_period_s: 0.4           # /voss/sort/state 주기 발행 2.5 Hz (계약 ≥ 2 Hz, MC-026 — 여유를 둔다)
     list_timeout_s: 3.0           # /voss/log/list_placements(팔레타이징 대상 조회) 응답. 없거나 시간 초과면 팔레타이징을 시작하지 않는다
+    pallet_layers: 2              # 2 = 16칸(2층), 1 = 1층 8칸만 — 게이트에서 2층 놓기를 시연에서 뺐을 때(ADR-0014 B). 칸 번호·메시지는 그대로
     pallet_hold_width_mm: [39.5, 44.0]  # 팔레타이징 재개 때 파지 확인 — RG2 보고 폭이 이 안이면 쥐고 있음(빈손 닫힘 보고 39, gateway zone_pick_width_mm 와 같은 근거)
