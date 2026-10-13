@@ -1,6 +1,6 @@
 # VOSS 레포 스타터 키트 — 적용 순서
 
-레포: https://github.com/lambdaramji/rokey_cobot2_VOSS (현재 README 하나)
+레포: https://github.com/rokeyhak/rokey_cobot2_VOSS_2 (시연까지 임시 — ADR-0015. 옛 주소 lambdaramji/rokey_cobot2_VOSS 는 계정 정지로 닫힘)
 
 ## 0. 이 키트가 무엇을 담고 있나
 - `CLAUDE.md` — 팀 공유 지침. 모든 팀원의 Claude Code 가 자동으로 읽음 (절대 규칙 8개, 명령, 일정 핵심)
