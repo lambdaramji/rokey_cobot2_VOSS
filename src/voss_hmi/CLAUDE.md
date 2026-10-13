@@ -10,4 +10,5 @@
   - 실행 전: `sudo mkdir -p /var/lib/voss/spool && sudo chown $USER /var/lib/voss/spool`, `export VOSS_DB_LOGGER_PASSWORD=…`(docker/db/.env 와 같은 값).
   - 실제 DB 시험: `VOSS_TEST_DB_PORT=5432 … pytest test/test_db_writer_postgres.py` (값이나 psycopg2 가 없으면 그 파일만 건너뜀 — 모듈 수준 importorskip 은 다른 시험 수집까지 막아서 쓰지 않는다).
   - **Sprint 2 (S2-T07, BRD v1.5, 남현지)**: `sort_log.slot`(-1 → NULL) 기록, `/voss/pallet/result` → `pallet_log`(싣지 않은 박스 OVERFLOW·EXCLUDED 포함, 별도 스풀 `pallet_log.jsonl`, 로그 접두어 `pallet_log db_committed`), 서비스 `/voss/log/list_placements`(그 세션 PLACED·A/B/C + DONE 여부, 실패 `INVALID`·`SPOOL_PENDING`·`DB_ERROR`). `/voss/log/status` 는 두 저장 흐름 중 나쁜 쪽. 연결 때 스키마를 보고 마이그레이션 전 DB 면 slot 없이 쓰며 경고(`docker/db/migrations/20261012_sprint2_pallet.sql`).
+- hmi_bridge Sprint 2 (S2-T08 브리지 쪽, BRD v1.5): MQTT `palletize`(args `route` 1~3개·중복 없음 → `Command` arg 쉼표 문자열), `reset_zone` 에 `PALLET`, `/voss/pallet/state` → `voss/pallet/state`(QoS 1, retained), `voss/result` 에 `slot`. ACL 은 `config/mosquitto.acl.example`(bridge write·web read `voss/pallet/state`). 웹 3D 화면은 결정 D5.
 - 결정 필요: MQTT JSON·Mosquitto 위치 (pending #13, 10/08). 웹 스택·DB 종류는 ADR-0006 으로 결정

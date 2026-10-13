@@ -45,9 +45,19 @@ def test_sort_log_slot_minus_one_is_null() -> None:
 def test_pallet_row_keeps_unloaded_with_nulls() -> None:
     done = pallet_result_to_row(pallet_result())
     assert list(done) == PALLET_LOG_COLUMNS
-    assert (done["result"], done["pallet_slot"], done["pallet_col"], done["pallet_layer"]) == ("DONE", 6, 2, 2)
+    assert (done["result"], done["pallet_slot"], done["pallet_col"], done["pallet_layer"]) == (
+        "DONE",
+        6,
+        2,
+        2,
+    )
     over = pallet_result_to_row(pallet_result("OVERFLOW"))
-    assert (over["result"], over["pallet_slot"], over["pallet_col"], over["pallet_lane"]) == ("OVERFLOW", None, None, None)
+    assert (over["result"], over["pallet_slot"], over["pallet_col"], over["pallet_lane"]) == (
+        "OVERFLOW",
+        None,
+        None,
+        None,
+    )
     excl = pallet_result_to_row(pallet_result("EXCLUDED", route_index=-1))
     assert excl["route_index"] == -1 and excl["finished_at"].startswith("1970-01-01T00:00:20.5")
 
@@ -56,7 +66,13 @@ def test_placements_reply() -> None:
     t = datetime(2026, 10, 13, 9, 0, 0, 250000, tzinfo=UTC)
     rows = [("S-001", "역삼동", "A", 0, t, False), ("S-002", "역삼동", "A", None, t, True)]
     ok, msg, items = list_placements_reply("S", 0, lambda sid: rows)
-    assert ok and msg == "" and items[0]["slot"] == 0 and items[1]["slot"] == -1 and items[1]["palletized"]
+    assert (
+        ok
+        and msg == ""
+        and items[0]["slot"] == 0
+        and items[1]["slot"] == -1
+        and items[1]["palletized"]
+    )
     assert items[0]["stamp"] == divmod(round(t.timestamp() * 1e9), 1_000_000_000)
     assert placements_from_rows([]) == []
     assert list_placements_reply("", 0, lambda sid: rows)[1].startswith("INVALID")
@@ -70,7 +86,9 @@ def test_placements_reply() -> None:
 
 
 def test_sql_shapes() -> None:
-    assert "slot" not in sort_log_columns(False) and sort_log_columns(True)[-1] == "slot"  # 마이그레이션 전 DB
+    assert (
+        "slot" not in sort_log_columns(False) and sort_log_columns(True)[-1] == "slot"
+    )  # 마이그레이션 전 DB
     sql = insert_sql("pallet_log", PALLET_LOG_COLUMNS, "run_id, box_id")
     assert "ON CONFLICT (run_id, box_id) DO NOTHING RETURNING box_id" in sql
     assert "s.result = 'PLACED'" in PLACEMENTS_SQL and "p.result = 'DONE'" in PLACEMENTS_SQL
