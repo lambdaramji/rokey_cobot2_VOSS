@@ -59,7 +59,9 @@ class Config:
     pallet_ready: bool = (
         False  # zones.pallet.pose 교시됨 (Sprint 2) — 아니면 palletize 를 받지 않는다
     )
-    order: dict[str, tuple[int, ...]] = field(default_factory=dict)  # 구역 → 채우는 칸 순서(grid.order)
+    order: dict[str, tuple[int, ...]] = field(
+        default_factory=dict
+    )  # 구역 → 채우는 칸 순서(grid.order)
 
     def slot_at(self, zone: str, n: int) -> int:
         """구역에 n 번째로 놓는 박스의 칸. grid.order 가 있으면 그 순서, 넘어가면 n 그대로(2층 등)."""
@@ -133,9 +135,7 @@ def load_config(raw: dict) -> Config:
     pallet_ready = (
         isinstance(pose, list) and len(pose) == 6 and all(isinstance(v, (int, float)) for v in pose)
     )
-    return Config(
-        zone_map, codes, aliases, capacity, float(conf), version, pallet_ready, order
-    )
+    return Config(zone_map, codes, aliases, capacity, float(conf), version, pallet_ready, order)
 
 
 def zone_map_entries(cfg: Config) -> list[tuple[str, str, str, list[str]]]:
@@ -270,7 +270,9 @@ class Ctx:
 
     # 재확인 미루기(10/12 시연): 재확인 칸에 놓기만 하고 분류를 이어 간다. `recheck` 명령에 칸 순서대로 처리
     defer_recheck: bool = False
-    recheck_queue: tuple[Box, ...] = ()  # 재확인 칸에 보관 중인(아직 다시 읽지 않은) 박스, 놓은 순서
+    recheck_queue: tuple[
+        Box, ...
+    ] = ()  # 재확인 칸에 보관 중인(아직 다시 읽지 않은) 박스, 놓은 순서
     draining: bool = False  # recheck 명령으로 보관 박스를 처리하는 중 — 한 개 끝나면 다음 것
 
 
@@ -579,7 +581,9 @@ def _on_command(ctx: Ctx, ev: Command) -> Out:
             )
         if zone == "RECHECK" and ctx.recheck_queue:
             ids = ", ".join(b.box_id for b in ctx.recheck_queue)
-            return _reject(ctx, f"재확인 칸에 보관 중인 박스가 있다({ids}) — recheck 로 처리한 뒤 비운다")
+            return _reject(
+                ctx, f"재확인 칸에 보관 중인 박스가 있다({ids}) — recheck 로 처리한 뒤 비운다"
+            )
         slots = {**ctx.slots, zone: 0}
         full = "" if ctx.full_zone == zone else ctx.full_zone
         busy = frozenset() if zone == "RECHECK" else ctx.recheck_busy

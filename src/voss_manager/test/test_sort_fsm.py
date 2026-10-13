@@ -124,7 +124,13 @@ def test_layers_multiply_capacity() -> None:
 
 def test_grid_order_validated() -> None:
     raw = raw_config()
-    raw["zones"]["C"]["grid"] = {"cols": 3, "rows": 2, "pitch_mm": 50, "layers": 2, "order": [5, 2, 4, 1, 3, 0]}
+    raw["zones"]["C"]["grid"] = {
+        "cols": 3,
+        "rows": 2,
+        "pitch_mm": 50,
+        "layers": 2,
+        "order": [5, 2, 4, 1, 3, 0],
+    }
     cfg = f.load_config(raw)
     assert [cfg.slot_at("C", n) for n in range(8)] == [5, 2, 4, 1, 3, 0, 6, 7]
     assert cfg.slot_at("A", 3) == 3
@@ -841,7 +847,9 @@ def test_recheck_command_drains_in_slot_order(cfg: f.Config) -> None:
     ctx, _, _ = run(ctx, read(False, t=50_000 * MS))
     assert ctx.state == f.ASKING and ctx.box.candidates == tuple(cfg.zone_map)
     ctx, acts, rep = run(ctx, f.Command("answer", f"{first}|역삼동", 55_000 * MS))
-    assert rep == [(True, "역삼동 접수")] and of(acts, f.CallMove) == [f.CallMove("RECHECK", 0, "PICK")]
+    assert rep == [(True, "역삼동 접수")] and of(acts, f.CallMove) == [
+        f.CallMove("RECHECK", 0, "PICK")
+    ]
     ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", 0, 60_000 * MS))
     assert of(acts, f.CallMove) == [f.CallMove("A", 0, "")]
     # 놓고 나면 다음 보관 박스(칸 1)로 바로
@@ -855,7 +863,9 @@ def test_recheck_command_drains_in_slot_order(cfg: f.Config) -> None:
     ctx = view_ok(ctx, t=66_000 * MS)
     ctx, _, _ = run(ctx, read(False, t=75_000 * MS))
     ctx, acts, rep = run(ctx, f.Command("answer", f"{second}|HOLD", 80_000 * MS))
-    assert rep == [(True, "보류 접수")] and of(acts, f.CallMove) == [f.CallMove("RECHECK", 1, "PICK")]
+    assert rep == [(True, "보류 접수")] and of(acts, f.CallMove) == [
+        f.CallMove("RECHECK", 1, "PICK")
+    ]
     ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", 0, 85_000 * MS))
     assert of(acts, f.CallMove) == [f.CallMove("HOLD", 0, "")]
     ctx, acts, _ = run(ctx, f.MoveDone(True, "OK", 87_000 * MS, 90_000 * MS))
@@ -895,7 +905,13 @@ def test_intent_recheck_maps_to_command() -> None:
 def test_grid_order_fills_far_slot_first_then_second_layer_on_slot_0() -> None:
     # 10/12 실기: C 칸 5(+X·+Y 끝) 위로 TCP 60 이 안 닿아 트레이가 빌 때 먼저 낮게 지나가 놓는다
     raw = raw_config()
-    raw["zones"]["C"]["grid"] = {"cols": 3, "rows": 2, "pitch_mm": 50, "layers": 2, "order": [5, 2, 4, 1, 3, 0]}
+    raw["zones"]["C"]["grid"] = {
+        "cols": 3,
+        "rows": 2,
+        "pitch_mm": 50,
+        "layers": 2,
+        "order": [5, 2, 4, 1, 3, 0],
+    }
     ctx = running(f.load_config(raw))
     got = []
     for k in range(7):
