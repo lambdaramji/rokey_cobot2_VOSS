@@ -20,7 +20,7 @@ def valid_values() -> dict:
         "config_sha256": "abc",
         "grasp.tcp_z_below_top_mm": 19.0,
         "grasp.hold_width_min_mm": 39.5,
-        "grasp.hold_width_max_mm": 43.5,
+        "grasp.hold_width_max_mm": 44.0,
         "reach.x_min_mm": -107.0,
         "reach.x_max_mm": 638.0,
         "control.kp_per_s": 0.0,
@@ -317,7 +317,7 @@ def test_default_yaml_has_t34_and_gripper_values() -> None:
     # measurements-1008 #14 (T34) 근거 값과 제안값
     assert (g["hold_width_min_mm"], g["hold_width_max_mm"], g["close_time_max_s"]) == (
         39.5,
-        43.5,
+        44.0,
         2.1,
     )
     assert (g["room_margin_mm"], p["gripper_timeout_s"]) == (10.0, 3.0)

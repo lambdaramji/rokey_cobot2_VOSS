@@ -21,7 +21,7 @@ belt_servo:
       tcp_z_below_top_mm: 19.0      # 결정값 — 파지 높이 TCP z = position_base.z − 19 mm (topics.md·pending #16)
       # 아래 4키는 U5 #131 기준 (measurements-1008 #14, T34). #131 머지 전 main 노드는 close_time·room_margin 을 무시한다
       hold_width_min_mm: 39.5       # 쥔 폭 범위 하한 (RG2 보고값). 빈손 최대 38.7 + 0.8 — 경계값은 제안
-      hold_width_max_mm: 43.5       # 쥔 폭 범위 상한. 회전 최대 43.0 + 0.5 — 경계값은 제안
+      hold_width_max_mm: 44.0       # 쥔 폭 범위 상한. 10/10 G1 현장값(measurements-1010 #10), 회전 박스 42.0~43.0 + 여유 1.0
       close_time_max_s: 2.1         # 닫힘 90→39 최대 시간 (T34 1.6~2.1 s). x 여유 계산에 쓴다
       room_margin_mm: 10.0          # x 여유 덧셈 (제안, 판단값). 부족하면 DESCEND 전에 OUT_OF_REACH(REACH_GRASP_ROOM)
     reach:
@@ -45,7 +45,8 @@ belt_servo:
     input:
       stale_timeout_s: null         # position_valid=false·pose 끊김 지속 기준. 제안 0.3
       lost_timeout_s: null          # 내 track_id 미수신 지속 기준. 제안 0.5
-      pose_lag_ms: 60.0             # 측정값 — pose stamp 지연 (measurements-1008 #6, gateway pose_source: service 기준)
+      pose_lag_ms: 60.0             # pose stamp 지연. gateway pose_source 와 짝: joint_states 운용 = 0(10/10 PL 시험값, measurements-1010 #10), service = 60(임시값).
+                                    # box_tracker 의 15 는 영상 대비 상대 지연이라 여기 쓰지 않음(DESIGN DEC-03)
       pose_extrap_max_ms: null      # TCP 외삽 지평 상한. 제안 200
       blind_entry_max_age_s: null   # 하강 시작 때 마지막 유효 관측 나이 상한. 제안 0.15
     retry:

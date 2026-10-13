@@ -79,6 +79,19 @@ def _as_float(x: Any) -> float | None:
     return None if x is None else float(x)
 
 
+def pose_lag_note(lag_ms: Any) -> str:
+    """READY 다음 줄 문구: pose_lag_ms 값으로 어느 gateway pose_source 짝인지 알려 준다 (로그 전용).
+
+    0 = joint_states 운용 시험값, 60 = service 임시값, 그 밖 = 값만 (measurements-1010 #10).
+    """
+    head = f"pose_lag_ms={lag_ms}"  # 값은 언제나 찍는다
+    if lag_ms == 0:  # gateway pose_source: joint_states 와 짝
+        return head + " — joint_states 운용 시험값(0)"
+    if lag_ms == 60:  # gateway pose_source: service 와 짝
+        return head + " — service 임시값(60, 영상 기준 lag 차용)"
+    return head  # 짝이 정해지지 않은 값은 설명을 붙이지 않는다
+
+
 def stamp_s(stamp: Any) -> float:
     """builtin_interfaces/Time → 초."""
     return stamp.sec + stamp.nanosec * 1e-9
@@ -178,11 +191,8 @@ class BeltServoNode(Node):
             self.get_logger().info(line)
         if report.ready:
             self.get_logger().info("READY")
-            # pose_lag_ms 는 gateway pose_source 에 묶인 측정값이다 (gateway 가 바뀌면 다시 잰다)
-            self.get_logger().info(
-                f"pose_lag_ms={self.values.get('input.pose_lag_ms')} — gateway pose_source: service "
-                "기준 측정(measurements-1008 #6). joint_states 로 바꾸면 다시 잰다"
-            )
+            # pose_lag_ms 는 gateway pose_source 와 짝이 맞아야 한다 (joint_states → 0, service → 60)
+            self.get_logger().info(pose_lag_note(self.values.get("input.pose_lag_ms")))
         else:
             # 어떤 키가 문제인지 이름으로. READY 가 아니면 액션 서버를 만들지 않는다 (_setup_ros)
             self.get_logger().error(ready_log_line(report) + " — 액션 서버 미생성")

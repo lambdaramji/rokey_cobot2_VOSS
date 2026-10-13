@@ -130,7 +130,7 @@
 | `grasp.close_time_max_s` | float | s | ✅ | > 0 | 2.1 (measurements-1008 #14) |
 | `grasp.room_margin_mm` | float | mm | ✅ | ≥ 0 | 10.0 (제안) |
 | `grasp.hold_width_min_mm` | (기존) | mm | | | null → 39.5 |
-| `grasp.hold_width_max_mm` | (기존) | mm | | | null → 43.5 |
+| `grasp.hold_width_max_mm` | (기존) | mm | | | null → 43.5 (10/10 현장값 44.0 으로 변경, U-F) |
 
 교차 검사(E9): `gripper_timeout_s > grasp.close_time_max_s` · `grasp.hold_width_max_mm < gripper.pre_open_mm` · `grasp.hold_width_min_mm > gripper.grasp_width_mm`.
 yaml 주석: 폭 범위 근거(빈손 38.0~38.7 은 범위 아래, 0° 40.7~41.2, 회전 30° 까지 43.0), 닫힘 1.6~2.1 s, x 여유 식, 판단값은 "제안" 표기. `gripper_timeout_s` 옆에 "gateway `rg2_timeout_s` 6.0 — belt_servo 가 3 s 에 포기해도 RG2 자원은 최대 6 s 까지 잡혀 다음 요청이 BUSY 가 될 수 있다" 주석(재검 r1).
@@ -156,10 +156,10 @@ yaml 주석: 폭 범위 근거(빈손 38.0~38.7 은 범위 아래, 0° 40.7~41.2
 5. **종료 전이에는 행동이 없다**: 모든 terminal 경로(OK·GRASP_FAILED·DEVICE_ERROR·OUT_OF_REACH·LOST·STALE·CANCELED·stop 실패)에서 `actions == ()` (parametrize) — "grasped=false 면 개방 없음"의 FSM 쪽 보장
 
 ### 6.3 `test_params.py` 추가 — 5개
-새 키 미전달 → missing · timeout ≤ close_time_max → invalid · hold_max ≥ pre_open → invalid · hold_min ≤ grasp_width → invalid · `config/belt_servo.yaml` 의 hold 39.5·43.5·close 2.1·timeout 3.0·margin 10 (파일 읽기)
+새 키 미전달 → missing · timeout ≤ close_time_max → invalid · hold_max ≥ pre_open → invalid · hold_min ≤ grasp_width → invalid · `config/belt_servo.yaml` 의 hold 39.5·43.5·close 2.1·timeout 3.0·margin 10 (파일 읽기) (10/10 현장값 44.0 으로 변경, U-F)
 
 ### 6.4 `test_node.py` 수정·추가 — 6개
-- `READY_ARGS` 에 새 키 3개 추가, hold_width_max 41.5 → 43.5.
+- `READY_ARGS` 에 새 키 3개 추가, hold_width_max 41.5 → 43.5. (10/10 현장값 44.0 으로 변경, U-F)
 - 가짜 future 로(spin 없이): ① 서비스 없음 → 다음 poll 이 UNAVAILABLE 응답 ② goal 이 끝날 때 진행 중이던 호출 → 고아 → 그 future 가 나중에 끝나면 카운터 +1, 새 goal 의 `_poll_gripper` 는 그 응답을 보지 않음 ③ BUSY → 0.5 s 대기 뒤 재요청(seq +1), 다음 CLOSE 는 seq 3 ④ stopping 중에는 poll 안 함 ⑤ (r2) BUSY 대기 중 서비스가 사라지면 재요청하지 않고 바로 UNAVAILABLE ⑥ 시간초과 뒤 늦은 응답 버림
 
 ### 6.5 `test_action_e2e.py` (가짜 gateway 확장) — 지시서 4 케이스 + 4개

@@ -8,7 +8,7 @@ import rclpy
 from builtin_interfaces.msg import Time
 from geometry_msgs.msg import PoseStamped
 from rclpy.action import GoalResponse
-from voss_servo.belt_servo import BeltServoNode
+from voss_servo.belt_servo import BeltServoNode, pose_lag_note
 
 from voss_msgs.action import TrackAndGrasp
 from voss_msgs.msg import BoxTrack
@@ -79,6 +79,18 @@ def test_box_nan_position_counts_as_invalid(node) -> None:
     )  # 마지막 유효 관측을 덮지 않는다
 
 
+@pytest.mark.parametrize(
+    ("lag", "tail"),
+    [
+        (0.0, " — joint_states 운용 시험값(0)"),  # gateway joint_states 짝
+        (60.0, " — service 임시값(60, 영상 기준 lag 차용)"),  # gateway service 짝
+        (15.0, ""),  # 그 밖 값은 숫자만 (box_tracker 값을 잘못 넣어도 짝을 단정하지 않는다)
+    ],
+)
+def test_ready_pose_lag_note_by_value(lag, tail) -> None:
+    assert pose_lag_note(lag) == f"pose_lag_ms={lag}" + tail  # 값에 따라 문구를 고른다
+
+
 READY_ARGS = [
     "belt.speed_cmps:=4.8",
     "belt.direction_base:=[0.99992,-0.01292,0.0]",
@@ -88,7 +100,7 @@ READY_ARGS = [
     "timing.latency_offset_ms:=0.0",
     "grasp.tcp_z_below_top_mm:=19.0",
     "grasp.hold_width_min_mm:=39.5",
-    "grasp.hold_width_max_mm:=43.5",
+    "grasp.hold_width_max_mm:=44.0",
     "reach.x_min_mm:=-107.0",
     "reach.x_max_mm:=638.0",
     "control.kp_per_s:=0.0",

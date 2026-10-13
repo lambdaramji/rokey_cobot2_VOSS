@@ -11,7 +11,7 @@ belt_servo:
     grasp:
       tcp_z_below_top_mm: 19.0
       hold_width_min_mm: 39.5
-      hold_width_max_mm: 43.5
+      hold_width_max_mm: 44.0       # 10/10 G1 현장값(measurements-1010 #10), 회전 박스 42.0~43.0 + 여유 1.0
       close_time_max_s: 2.1
       room_margin_mm: 10.0
     reach:
@@ -35,7 +35,8 @@ belt_servo:
     input:
       stale_timeout_s: 0.3
       lost_timeout_s: 0.5
-      pose_lag_ms: 60.0
+      pose_lag_ms: 60.0             # gateway pose_source 와 짝: joint_states 운용 = 0(10/10 PL 시험값, measurements-1010 #10), service = 60(임시값).
+                                    # box_tracker 의 15 는 영상 대비 상대 지연이라 여기 쓰지 않음(DESIGN DEC-03)
       pose_extrap_max_ms: 200.0
       blind_entry_max_age_s: 0.15
     retry:
