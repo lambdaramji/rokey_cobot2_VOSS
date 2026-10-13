@@ -49,6 +49,8 @@ CASES: dict[str, Case] = {
     "normal": Case("normal", "normal", 40.5),
     "two_boxes": Case("two_boxes", "two_boxes", 40.5),
     "empty": Case("empty", "normal", 0.0),  # 가짜 RG2 빈손 (U5 뒤)
+    "descend_lost": Case("descend_lost", "descend_cut", 40.5),  # 하강 중 +37 에서 끊김 (U9a)
+    "vanish": Case("vanish", "approach_cut", 40.5),  # 접근 중 +45 에서 정말 사라짐 (U9a)
 }
 
 
@@ -75,10 +77,13 @@ EXPECT: dict[tuple[str, str], Expect] = {
     ("grasp", "normal"): Expect(SUCCEEDED, "OK", "", True, PHASES),
     ("grasp", "empty"): Expect(ABORTED, "GRASP_FAILED", "NOT_DETECTED", False, None, "GRASP"),
     ("grasp", "cancel"): Expect(CANCELED, "CANCELED", "STOP_OK", False),
+    # U9a: 하강 중 끊겨도 사각(+30)이 LOST 타이머보다 먼저 → 끝까지 / 접근 높이에서 사라지면 LOST
+    ("grasp", "descend_lost"): Expect(SUCCEEDED, "OK", "", True, PHASES),
+    ("grasp", "vanish"): Expect(ABORTED, "LOST", "BOX_MISSING", False, None, "TRACK"),
 }
 PROFILE_CASES: dict[str, tuple[str, ...]] = {
     "pre_u5": ("lost", "invalid", "cancel", "normal", "two_boxes"),
-    "grasp": ("normal", "empty", "cancel"),
+    "grasp": ("normal", "empty", "cancel", "descend_lost", "vanish"),
 }
 
 # 허용치 (사전 실험 실측: Δt 33.3 ms, watchdog 종료 뒤 0.71 s, hold 15틱 0.5 s)
@@ -87,6 +92,8 @@ PERIOD_TOL_MS = 3.0
 WATCHDOG_DELAY_S = (0.6, 0.9)
 TRACK_LOCK_TOL_M = 0.005
 FOLLOW_MIN_TICKS = 30
+CUT_GAP_TICKS = 2  # J12: 마지막 수신이 첫 사각 틱보다 이만큼(틱) 앞서야 "사각 전 끊김" (U9a-dd 4절)
+CUT_MIN_MARGIN_S = 0.2  # J12: 지시서 목표 여유 (LOST 시계 vs 사각 진입)
 ZERO_EPS = 1e-9
 
 # 대기 상한 (s)
@@ -262,6 +269,43 @@ def judge_follow(progress: list[dict], align_along_m: float) -> Verdict:
             bad.append("박스 하류인데 cmd 0")
     got = f"{len(rows)}틱, 위반 {len(bad)}" + (f": {sorted(set(bad))[:3]}" if bad else "")
     return _v("J11", "추종", not bad, want, got)
+
+
+def _above_top_mm(r: dict) -> str:
+    """틱의 추정 TCP 가 박스 윗면 위 몇 mm 인가 (값이 없으면 —)."""
+    tcp, box = r.get("tcp_now_m"), r.get("position_base_m")
+    if not tcp or not box:
+        return "—"
+    return f"{(float(tcp[2]) - float(box[2])) * 1000.0:+.1f}"
+
+
+def judge_descend_cut(
+    progress: list[dict], lost_timeout_s: float, min_margin_s: float = CUT_MIN_MARGIN_S
+) -> Verdict:
+    """J12: 하강 중 박스가 끊겼는데도 LOST 시계가 여유 있게 사각 진입에 졌다 (U9a-dd 4절)."""
+    want = f"사각 전 {CUT_GAP_TICKS}틱 이상 끊김 · 여유 ≥ {min_margin_s:g} s"
+    rows = [r for r in progress if r.get("phase") == "DESCEND"]
+    rows = [r for r in rows if r.get("box_rx_s") is not None and r.get("t_calc_s") is not None]
+    if not rows:
+        return _unknown("J12", "하강 끊김", want, "DESCEND 틱 없음")
+    blind = [r for r in rows if r.get("vision_blind")]
+    if not blind:
+        return _unknown("J12", "하강 끊김", want, "DESCEND 사각 틱 없음")
+    last_rx = max(float(r["box_rx_s"]) for r in rows)  # 하강 중 마지막으로 받은 시각
+    gap = float(blind[0]["t_calc_s"]) - last_rx  # 마지막 수신 → 사각 진입
+    if gap < CUT_GAP_TICKS / 30.0:
+        got = f"마지막 수신 → 사각 {gap:.3f} s"
+        return _v("J12", "하강 끊김", False, want, got + " (사각 전에 안 끊김 — 경주 없음)")
+    # 마지막 메시지를 처음 쓴 틱 = 끊긴 순간 (그 뒤 틱도 같은 box_rx_s 를 계속 갖는다)
+    cut_row = next(r for r in rows if float(r["box_rx_s"]) == last_rx)
+    seen = [r for r in rows if not r.get("vision_blind")]  # LOST 를 보는 틱들
+    max_age = max((float(r["t_calc_s"]) - float(r["box_rx_s"]) for r in seen), default=0.0)
+    margin = lost_timeout_s - max_age  # 이만큼 남기고 사각에 들어갔다
+    got = (
+        f"끊김 윗면 {_above_top_mm(cut_row)} mm · 사각 진입 {_above_top_mm(blind[0])} mm · "
+        f"최대 수신 나이 {max_age:.3f} s · 여유 {margin:.3f} s"
+    )
+    return _v("J12", "하강 끊김", margin >= min_margin_s, want, got)
 
 
 def line_distance(p: Any, start: Any, d: Any) -> float:
@@ -452,7 +496,7 @@ def default_config() -> str | None:
 
 
 def sim_values() -> dict[str, float]:
-    """설치된 belt_servo_sim.yaml 에서 판정에 쓰는 값 (zero_hold_s·rate_hz·align_tol_along)."""
+    """설치된 belt_servo_sim.yaml 에서 판정에 쓰는 값 (zero_hold_s·rate_hz·align_tol_along·lost_timeout)."""
     from ament_index_python.packages import get_package_share_directory
 
     from voss_servo.launch_params import flatten, load_yaml, node_section
@@ -463,6 +507,7 @@ def sim_values() -> dict[str, float]:
         "zero_hold_s": float(flat["zero_hold_s"]),
         "rate_hz": float(flat["rate_hz"]),
         "align_along_m": float(flat["control.align_tol_along_mm"]) / 1000.0,
+        "lost_timeout_s": float(flat["input.lost_timeout_s"]),
     }
 
 
@@ -708,6 +753,8 @@ class SimRunner:
         ]
         if self.args.profile == "pre_u5" and case.name in ("normal", "two_boxes"):
             v.append(judge_follow(progress, self.sim["align_along_m"]))
+        if case.name == "descend_lost":
+            v.append(judge_descend_cut(progress, self.sim["lost_timeout_s"]))
         if case.name == "two_boxes":
             belt = next((r.get("belt_vel_mps") for r in ticks if r.get("belt_vel_mps")), None)
             rows = progress + ([terminal] if terminal else [])

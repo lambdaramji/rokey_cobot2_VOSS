@@ -462,3 +462,12 @@ def test_belt_speed_fit_uses_recent_points_only() -> None:
     ]
     v, _ = control.belt_speed_fit(slow + fast, DIR_TILT, 90, 15, 0.5)
     assert v == pytest.approx(0.048, abs=1e-9)
+
+
+# --- U9a: 사각 체류 상한 (design/U9a-dd.md 2.2) ---
+
+
+def test_descend_blind_max_s_values() -> None:
+    cfg = control.config_from_values(values(**{"control.kp_z_per_s": 1.5}))  # 시연 kp_z
+    assert control.descend_blind_max_s(0.030, cfg) == pytest.approx(3.44, abs=0.01)  # 2.44 + 1.0
+    assert control.descend_blind_max_s(0.010, cfg) == pytest.approx(2.78, abs=0.01)  # 1.78 + 1.0

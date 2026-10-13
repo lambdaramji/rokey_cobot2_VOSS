@@ -2,7 +2,9 @@
 
 - 설계: design/U3-dd.md 4절, pseudo 3절.
 - 박스 하나를 벨트 속도로 움직인다. 시나리오: normal · invalid_after_s(T 뒤 position_valid=false)
-  · lost_after_s(T 뒤 발행 안 함 = 미검출) · two_boxes(다른 track_id 박스 하나 더).
+  · lost_after_s(T 뒤 발행 안 함 = 미검출) · two_boxes(다른 track_id 박스 하나 더)
+  · descend_cut / approach_cut(TCP 가 윗면 + H mm 아래로 오면 발행을 멈추고 다시 내지 않음 — 카메라가
+    박스를 놓치는 것 흉내, design/U9a-dd.md 3절).
 - 계약(topics.md): BoxTrack position_base = 박스 윗면 중심(m, base_link), stamp = 촬영 시각 역할(발행 시각),
   발행 QoS best_effort·volatile·depth 1, 미검출 프레임은 발행하지 않는다.
 - 벨트 속도·방향은 필수 파라미터다 (sim.launch 가 voss_config 에서 읽어 넘긴다 — 숫자를 여기 복사하지 않는다).
@@ -16,7 +18,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import rclpy
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, PoseStamped
 from rcl_interfaces.msg import ParameterDescriptor
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
@@ -24,7 +26,9 @@ from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPo
 
 from voss_msgs.msg import BoxTrack
 
-SCENARIOS = ("normal", "invalid_after_s", "lost_after_s", "two_boxes")
+# 높이로 끊는 시나리오 → 끊는 높이 기본값 (윗면 기준 mm). 회전 박스 실측 이탈 최대 +36.7 / 접근 높이 +40 위
+CUT_DEFAULT_MM = {"descend_cut": 37.0, "approach_cut": 45.0}
+SCENARIOS = ("normal", "invalid_after_s", "lost_after_s", "two_boxes", *CUT_DEFAULT_MM)
 # 기본 시작 위치 (m): 카메라 유효 범위 상류 끝 x · 관측 자세 y · 벨트 면 73.8 + 박스 27 mm (U3-dd 4.1)
 DEFAULT_START_M = (-0.100, -0.271, 0.1008)
 DEFAULT_SECOND_OFFSET_M = (0.060, 0.040, 0.0)  # two_boxes 둘째: 60 mm 하류 · 40 mm 옆
@@ -58,6 +62,7 @@ class FakeBoxConfig:
     lost_after_s: float
     second_track_id: int
     second_offset: tuple[float, float, float]  # 둘째 박스 = 첫째 + 이만큼 (m)
+    cut_above_top_m: float = 0.0  # cut 시나리오: TCP 가 윗면 + 이 값 아래로 오면 끊는다 (m)
 
 
 def belt_velocity(speed_cmps: float, direction) -> tuple[float, float, float]:
@@ -86,10 +91,17 @@ def make_config(
     lost_after_s: float,
     second_track_id: int,
     second_offset,
+    cut_above_top_mm: float | None = None,
 ) -> FakeBoxConfig:
-    """파라미터 → FakeBoxConfig. 모르는 시나리오·잘못된 방향이면 ValueError."""
+    """파라미터 → FakeBoxConfig. 모르는 시나리오·잘못된 방향·음수 끊는 높이면 ValueError."""
     if scenario not in SCENARIOS:
         raise ValueError(f"모르는 scenario: {scenario} (가능: {', '.join(SCENARIOS)})")
+    # 끊는 높이: 주어지지 않으면 시나리오 기본값 (cut 시나리오가 아니면 쓰이지 않는다)
+    cut_mm = CUT_DEFAULT_MM.get(scenario, 0.0)
+    if cut_above_top_mm is not None:
+        cut_mm = float(cut_above_top_mm)  # 파라미터로 바꾼 값
+    if cut_mm < 0.0:
+        raise ValueError(f"cut_above_top_mm 는 0 이상이어야 함: {cut_mm}")
     return FakeBoxConfig(
         scenario=scenario,
         track_id=int(track_id),
@@ -99,12 +111,22 @@ def make_config(
         lost_after_s=float(lost_after_s),
         second_track_id=int(second_track_id),
         second_offset=tuple(float(x) for x in second_offset),
+        cut_above_top_m=cut_mm / 1000.0,  # mm → m
     )
 
 
-def samples_at(cfg: FakeBoxConfig, t: float) -> list[BoxSample]:
-    """시작 뒤 t 초에 보낼 박스 목록 (design/U3-dd.md 4.2 표)."""
+def cut_reached(cfg: FakeBoxConfig, box_z: float, tcp_z: float | None) -> bool:
+    """TCP 가 끊는 높이에 닿았나 (cut 시나리오만). pose 를 아직 모르면 거짓."""
+    if cfg.scenario not in CUT_DEFAULT_MM or tcp_z is None:
+        return False
+    return tcp_z <= box_z + cfg.cut_above_top_m  # 윗면 + H 이하로 내려왔다
+
+
+def samples_at(cfg: FakeBoxConfig, t: float, cut: bool = False) -> list[BoxSample]:
+    """시작 뒤 t 초에 보낼 박스 목록 (design/U3-dd.md 4.2 표). cut = 높이로 끊긴 뒤인가 (U9a)."""
     p1 = position_at(cfg.start, cfg.vel, t)  # 첫째 박스 위치
+    if cfg.scenario in CUT_DEFAULT_MM:
+        return [] if cut else [BoxSample(cfg.track_id, p1, True)]  # 끊기 전에는 normal 과 같다
     if cfg.scenario == "invalid_after_s":
         return [BoxSample(cfg.track_id, p1, t < cfg.invalid_after_s)]  # 위치는 계속 움직인다
     if cfg.scenario == "lost_after_s":
@@ -132,6 +154,7 @@ class FakeBoxNode(Node):
         lost_after = p("lost_after_s", 8.0).value
         second_id = p("second_track_id", 2).value
         second_offset = p("second_offset_m", list(DEFAULT_SECOND_OFFSET_M)).value
+        cut_mm = p("cut_above_top_mm", None, free).value  # 없으면 시나리오 기본값 (U9a)
         if speed is None or direction is None:
             raise ValueError("speed_cmps·direction_base 필수 (sim.launch 가 voss_config 에서 넘김)")
         self.cfg = make_config(
@@ -144,8 +167,14 @@ class FakeBoxNode(Node):
             lost_after,
             second_id,
             second_offset,
+            cut_mm,
         )  # 틀리면 ValueError → main 이 종료 코드 1
         self.pub = self.create_publisher(BoxTrack, "/voss/vision/box", QOS_BOX_PUB)
+        self._tcp_z: float | None = None  # 가짜 로봇 TCP z (m) — cut 시나리오만 씀
+        self._cut = False  # 한 번 끊기면 다시 내지 않는다 (래치)
+        if self.cfg.scenario in CUT_DEFAULT_MM:
+            # gateway dry_run 이 servo_cmd 를 적분해 내는 TCP 자세 (best_effort, 최신 1개)
+            self.create_subscription(PoseStamped, "/voss/robot/pose", self._on_pose, QOS_BOX_PUB)
         self.t0 = time.monotonic()  # 시나리오 시계 시작 (노드 생성 시각)
         self.create_timer(1.0 / rate, self._tick)
         c = self.cfg
@@ -153,13 +182,23 @@ class FakeBoxNode(Node):
             f"fake_box: scenario={c.scenario} track={c.track_id} "
             f"start_mm={[round(x * 1000, 1) for x in c.start]} "
             f"vel_mm_s={[round(x * 1000, 2) for x in c.vel]} rate={rate:g} Hz "
-            f"invalid_after={c.invalid_after_s:g}s lost_after={c.lost_after_s:g}s"
+            f"invalid_after={c.invalid_after_s:g}s lost_after={c.lost_after_s:g}s "
+            f"cut_above_top={c.cut_above_top_m * 1000:g}mm"
         )
+
+    def _on_pose(self, msg: PoseStamped) -> None:
+        """TCP 높이만 보관한다."""
+        self._tcp_z = float(msg.pose.position.z)
 
     def _tick(self) -> None:
         """한 틱: 지금 보낼 박스들을 BoxTrack 으로 발행."""
         t = time.monotonic() - self.t0  # 시작 뒤 경과 (s)
-        for s in samples_at(self.cfg, t):
+        box_z = self.cfg.start[2]  # 박스 윗면 z (벨트 z 속도 0 → 움직여도 그대로)
+        if not self._cut and cut_reached(self.cfg, box_z, self._tcp_z):
+            self._cut = True  # 래치: 이 뒤로는 발행하지 않는다
+            above_mm = (self._tcp_z - box_z) * 1000.0  # 끊긴 순간 TCP 의 윗면 위 높이
+            self.get_logger().info(f"fake_box: TCP 윗면 +{above_mm:.1f} mm — 발행 중단 (cut)")
+        for s in samples_at(self.cfg, t, self._cut):
             msg = BoxTrack()
             msg.track_id = s.track_id
             msg.stamp = self.get_clock().now().to_msg()  # 촬영 시각 역할
