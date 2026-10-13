@@ -16,7 +16,7 @@
 - stage 1(입구 관측)만 읽는다: LabelCrop → `find_label_in_crop`(크롭 중심 송장) → `crop_upright` → PaddleOCR(`ocr_engine.read_label`, 글자가 없으면 180° 돌려 한 번 더) → `match_label` → 트랙별 다수결(`label_vote`, NONE 은 분모 제외) → `/voss/vision/label`.
 - 후보는 `/voss/sort/zone_map` 에서만. 발행자는 엔진 예열 + zone_map 수신 뒤에 만든다(sort_manager 의 OCR 준비 = 발행자 존재).
 - OCR 은 작업 스레드 하나, 트랙마다 최신 크롭 1장만 대기, 같은 동 2장 + confidence_min 이상이면 그 트랙은 더 안 읽는다.
-- 호스트 G0 는 PaddleOCR venv(`--system-site-packages`)로: `ros2 launch voss_vision label_reader.launch.py python:=<venv>/bin/python`. GPU·컨테이너는 T22.
+- 호스트 G0 는 PaddleOCR venv(`--system-site-packages`)로: `ros2 launch voss_vision label_reader.launch.py python:=<venv>/bin/python`. 컨테이너(T22 #31)는 `docker/vision/` — 같은 venv 방식(`/opt/voss_ocr`, `VOSS_OCR_PYTHON`), config 는 `VOSS_CONFIG_DIR=/opt/voss/config` 읽기 전용, GPU 는 `compose.gpu.yml`(`ocr_device:=gpu:0`).
 - 아직 없음: stage 2(추종 중, 선명도 가중) — T19 2차.
 
 ## label_reader 재판독 (stage 3, T23 #32)
