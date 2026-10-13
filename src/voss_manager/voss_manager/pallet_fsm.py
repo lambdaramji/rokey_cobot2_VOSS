@@ -217,7 +217,7 @@ def step(ctx: f.Ctx, ev) -> f.Out:
             )
         if cmd == "resume" and _paused_run(ctx):
             return _on_resume(ctx, ev)
-        if cmd in ("start", "priority", "answer", "reset_zone") and ctx.state == PALLETIZING:
+        if cmd in ("start", "priority", "answer", "reset_zone", "recheck") and ctx.state == PALLETIZING:
             return _reject(ctx, f"팔레타이징 중에는 {cmd} 를 받지 않음 — 끝나거나 stop 뒤")
         return f.step(ctx, ev)
     if isinstance(ev, ListDone):
