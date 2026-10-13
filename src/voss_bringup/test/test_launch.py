@@ -207,4 +207,5 @@ def test_camera_runs_in_root_namespace() -> None:
         s for s in HOST.host_plan(args(dry_run="false")) if s.target == "realsense2_camera_node"
     )
     assert (cam.name, cam.namespace) == ("camera", "/")
-    assert HOST.to_action(cam).expanded_node_namespace in ("/", None) or True  # Node 생성 자체가 되는지
+    # launch 전에는 expanded_node_namespace 가 늘 미지정이라, Node 에 넘긴 값(이름 맹글링된 내부 속성)을 본다
+    assert HOST.to_action(cam)._Node__node_namespace == "/"

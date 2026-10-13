@@ -12,6 +12,9 @@
   쥐고 있으면 놓고, 놓쳤으면 FAILED·DROPPED 로 두고 작업자에게 알린다. 계획은 다시 세우지 않는다(칸이 당겨지지 않게).
 - 1층 칸 박스가 FAILED 면 그 바로 위 2층 칸 박스를 빈 1층 칸에 당겨 놓고 위층 칸은 비운다(pending #37 결정) — 빈칸 위에
   박스를 올리지 않는다(기울거나 떨어짐).
+- 2층 트레이 위층 박스가 3회 다 GRIP_FAIL 이면 FAILED 로 기록하고 PAUSED + "○ 구역 2층 박스를 집지 못했습니다. 박스를
+  치운 뒤 재개해 주세요"(10/13 PL 결정 Q5/K5) — 그 박스가 아래 칸 위에 남아 있어 바로 아래 칸을 집으면 부딪친다.
+  작업자가 치운 뒤 resume 하면 다음 박스(위층부터 집으므로 그 아래 칸)부터 이어 간다.
 - 다 옮기면 관측 자세로 → 트레이가 다 빈 구역은 칸 카운터 0 → 구역별 실은 수·초과·경로 제외·실패 안내 → 시작 전 상태로.
 여기서 정한 규칙은 src/voss_manager/CLAUDE.md 에 적는다.
 """
@@ -358,6 +361,12 @@ def _next(ctx: f.Ctx, acts: list) -> f.Out:
     return _pick(replace(ctx, pallet=run), m, acts)
 
 
+def tray_layer(cfg: f.Config, m: pp.Move) -> int:
+    """m 이 놓여 있던 트레이 칸의 층(1부터). 1층뿐인 구역은 1 (Config.layer_cells, cc1d0fe)."""
+    n = cfg.layer_cells.get(m.zone.upper(), 0)
+    return m.slot // n + 1 if n else 1
+
+
 def planned_box(plan: pp.Plan, slot: int) -> str:
     """그 칸에 계획된 box_id (없으면 ""). 1층만 쓰면 옮기는 차례 ≠ 칸 번호라 칸으로 찾는다."""
     return next((m.box_id for m in plan.moves if m.pallet_slot == slot), "")
@@ -468,6 +477,14 @@ def _on_pick(ctx: f.Ctx, run: Run, m: pp.Move, ev: f.MoveDone) -> f.Out:
         nctx, acts = _finish_box(ctx, m, "FAILED", "GRIP_FAIL", ev.now_ns)
         if paused:
             return f.Out(replace(nctx, phase=f.PH_NONE), tuple(acts))
+        layer = tray_layer(ctx.cfg, m)
+        if layer > 1:  # 위층 박스가 아래 칸 위에 남았다 — 사람이 치울 때까지 멈춘다 (Q5/K5)
+            text = f"{m.zone} 구역 {layer}층 박스를 집지 못했습니다. 박스를 치운 뒤 재개해 주세요."
+            log = f"{m.box_id} {m.zone} 칸 {m.slot}({layer}층) 집기 실패 — 아래 칸을 집기 전에 PAUSED (K5)"
+            return f.Out(
+                replace(nctx, state=f.PAUSED, phase=f.PH_NONE),
+                (*acts, f.Log("warn", log), f.Say(text)),
+            )
         return _next(nctx, acts)
     # 정지·장비 실패 — 박스가 그리퍼에 있을 수도 있다(상승 중 실패는 쥔 채 멈춘다). resume 때 파지 확인
     run = replace(run, holding=MAYBE, stage="PICK")

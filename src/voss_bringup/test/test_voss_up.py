@@ -138,6 +138,9 @@ def test_print_and_refusals_start_nothing(tmp_path, monkeypatch, capsys) -> None
         raise AssertionError("띄우면 안 된다")
 
     monkeypatch.setattr(vu.Runner, "start", boom)
+    # --real 은 ~/voss_g0_env.sh 가 있으면 source 한다 — 공용 PC 의 그 파일이 VOSS_ROBOT_HOST 를 다시 채워
+    # 거부 대신 확인 질문(input)까지 가지 않게 홈을 비운다
+    monkeypatch.setenv("HOME", str(tmp_path))
     assert vu.main(["up", "--real", "--print", "--run-dir", str(tmp_path)]) == 0
     out = capsys.readouterr().out
     assert "아무것도 띄우지 않았다" in out and "${VOSS_ROBOT_HOST}" in out

@@ -570,3 +570,52 @@ def test_two_layer_tray_from_config_picks_upper_layer_first(cfg) -> None:
     picks = [(z, s) for z, s, m in moves(acts) if m == "PICK"]
     assert [s for z, s in picks if z == "A"] == [6, 0, 1, 2, 3, 4, 5]
     assert [z for z, _ in picks] == ["C"] * 6 + ["A"] * 7 + ["B"] * 3
+
+
+def two_layer() -> f.Config:
+    """A·B·C 트레이를 2층(한 층 6칸)으로 바꾼 설정 — 10/13 게이트 실기와 같다."""
+    with open(REPO_CONFIG, encoding="utf-8") as fh:
+        raw = yaml.safe_load(fh)
+    for z in ("A", "B", "C"):
+        raw["zones"][z]["grid"].update(rows=2, layers=2)
+    return replace(f.load_config(raw), pallet_ready=True)
+
+
+def test_upper_tray_box_failed_pauses_until_cleared() -> None:
+    """Q5/K5 (10/13 PL): 위층 칸 6 박스가 GRIP_FAIL 3회 → FAILED 기록 + PAUSED + 안내, 그 아래 칸 0 은 집지 않는다.
+    작업자가 치운 뒤 resume 하면 칸 0 부터 이어 간다."""
+    ctx, acts = started(two_layer(), Y, {Y: 7})
+
+    def answer(a, i, t):
+        if a.mode == "PICK" and a.zone == "A" and a.slot == 6:
+            return f.MoveDone(False, "GRIP_FAIL: 집기 확인 실패", 0, t)
+        return ok_all(a, i, t)
+
+    ctx, acts = gateway(ctx, acts, answer)
+    assert ctx.state == f.PAUSED and ctx.phase == f.PH_NONE
+    assert [s for z, s, m in moves(acts) if m == "PICK"] == [6, 6, 6]  # 칸 0 을 집지 않고 멈춤
+    res = [(r.box_id[-3:], r.outcome, r.reason, r.attempts) for r in of(acts, pf.PalletOut)]
+    assert res == [("007", "FAILED", "GRIP_FAIL", 3)]
+    assert says(acts)[-1] == "A 구역 2층 박스를 집지 못했습니다. 박스를 치운 뒤 재개해 주세요."
+    assert pf.current_box_id(ctx) == ""  # 다음 박스로 넘어갈 차례(NEXT)
+
+    out = pf.step(ctx, cmd("resume", t=60_000 * MS))
+    assert out.reply == (True, "resume 접수 (팔레타이징)")
+    ctx, acts = gateway(out.ctx, list(out.actions), ok_all)
+    assert [s for z, s, m in moves(acts) if m == "PICK"] == [0, 1, 2, 3, 4, 5]
+    assert [r.outcome for r in of(acts, pf.PalletOut)] == ["DONE"] * 6
+    assert ctx.state == f.RUNNING and "옮기지 못한 박스는 007번" in says(acts)[-1]
+
+
+def test_lower_tray_failure_goes_on_without_pause() -> None:
+    """아래층(칸 0) 박스 실패는 위에 남는 박스가 없으니 멈추지 않고 다음 박스로 (기존 TR-PAL-05)."""
+    ctx, acts = started(two_layer(), Y, {Y: 7})
+
+    def answer(a, i, t):
+        if a.mode == "PICK" and a.zone == "A" and a.slot == 0:
+            return f.MoveDone(False, "GRIP_FAIL", 0, t)
+        return ok_all(a, i, t)
+
+    ctx, acts = gateway(ctx, acts, answer)
+    assert [s for z, s, m in moves(acts) if m == "PICK"] == [6, 0, 0, 0, 1, 2, 3, 4, 5]
+    assert ctx.state == f.RUNNING and not any("치운 뒤" in t for t in says(acts))

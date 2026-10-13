@@ -36,6 +36,8 @@
 | 11 | `ros2 run voss_voice voice_listener --ros-args -p mode:=text` (OpenAI 키 장애로 텍스트 입력) |
 | 13 | `ros2 service call /voss/sort/command voss_msgs/srv/Command "{command: start}"` |
 
+- T2 전에 펜던트 툴·TCP = **GripperDA_v1** 인지 확인한다(docs/g0-runbook.md). T3 시작 줄이 `컨트롤러 TCP 등록 voss_config 와 같음 (차 0.0 mm)` 이어야 한다.
+  `TCP 등록 없음 → 플랜지 좌표로 명령` 이면 움직이긴 하지만 펜던트 공간 제한이 핑거 끝을 막지 못한다(10/12 실기가 이 상태였다).
 - T3 시작 줄에서 PALLET 구역, vel [450.0, 45.0], acc [900.0, 90.0], blend 30.0 mm 를 확인한다.
 - 팔레타이징은 T11 텍스트 대신 `"{command: palletize, arg: '대치동,역삼동,청담동'}"` 로도 된다. 멈춤 `stop`, 이어서 `resume`.
 - 다시 하려면 팔레트를 비우고 `stop` → `reset_zone PALLET` → `resume`.

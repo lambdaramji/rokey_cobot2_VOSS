@@ -1,13 +1,13 @@
 # Sprint 2 게이트 — 10/13(화) 18:00, 공용 PC
 
-> **기준 (BRD v1.5 10.2·결정 D3 — 전원 결정 전 제안):** 팔레타이징은 **결정 D3 기준으로 실기 1회 완주**, 음성 시스템 기동은 **실기 1회 성공**. D3 이 정해지기 전에는 아래 "D3 제안"으로 판정한다(16칸 2층 완주는 일이 많고 최대 약 8분이라 10/14 리허설에서 확인). 못 미친 기능은 시연에서 빼고(팔레타이징은 1개 동 경로로 줄일 수 있다), 남은 시간은 1~9장 리허설에 쓴다. 판정은 PL, 기록은 ADR-0014.
+> **기준 (BRD v1.5 10.2·결정 D3 — 10/13 전원 투표로 결정):** 팔레타이징은 **16칸 3개 동(시연 단계 9 = 시나리오 S8) 실기 1회 완주**, 음성 시스템 기동은 **실기 1회 성공**. 못 미친 기능은 시연에서 빼거나 줄이고(2층이 안 되면 1층만 쓰는 1개 동 경로, 대본 §6 B), 남은 시간은 1~9장 리허설에 쓴다. 판정은 PL, 기록은 ADR-0014.
 >
 > **로봇·벨트·그리퍼를 움직이는 명령은 모두 사람이 비상정지 옆에서 실행한다**(CLAUDE.md 규칙 6). 역할·비상정지·벨트 정지 담당과 기동 순서는 `docs/g0-runbook.md` 그대로다. 로봇 시간이 겹치면 1~9장 원래 기능(리허설·재확인 흐름)이 먼저다(BRD 10.2 우선순위).
 
 ## 1. 판정 정의 (측정 중 바꾸지 않는다)
 | 항목 | 정의 |
 |---|---|
-| 팔레타이징 회차 | 분류 세션으로 박스를 A·B·C 에 놓은 뒤 보낸 `palletize` 1회. **D3 제안**: 경로 1개 동(역삼), 대상 8개 → 칸 0~7 = 1열·2열의 1층 4칸 + **2층 4칸**(구현 순서: 열마다 1층 2칸 → 2층 2칸). BRD 의 예시 "1층 8칸 + 2층 1칸"은 구현된 채우기 순서와 달라 같은 의도(2층 포함, 16칸보다 짧게)로 바꿨다. 16칸·3개 동(시연 단계 9, 시나리오 S8)은 10/14 리허설 |
+| 팔레타이징 회차 | 분류 세션으로 박스 20개(pending #19)를 처리해 A·B·C 에 **역삼 7·대치 6·청담 6** 이 PLACED 된 뒤 보낸 `palletize` 1회 — **경로 대치 → 역삼 → 청담(결정 D4)**. 계획 = 칸 1~16 에 청담 6 → 역삼 7 → 대치 3, **대치 3개는 초과(OVERFLOW)로 원래 칸에 남는다**, 첫 배송지 대치동은 문 쪽(4열). 결정 D3(10/13 투표) — 시연 단계 9 와 같은 회차다 |
 | 팔레타이징 완주 | 계획된 박스 **전부** PalletResult `DONE`(PICK 재시도 포함) **그리고** 실물이 계획 칸에 놓임(1열 = 왼쪽 트럭 머리, 2층은 1층 위에 안정) **그리고** 옆 박스 밀림 0 **그리고** `pallet_log` 행 수 = 박스 수(초과·경로 제외가 있으면 그 행 포함) **그리고** 관측 자세 복귀·"팔레트 적재를 마쳤습니다" |
 | 팔레타이징 미완주 | `FAILED` 가 하나라도 있음, 사람이 박스를 손으로 고침, 비상정지, 칸이 계획과 다름, 2층 박스가 기울거나 떨어짐. 원인은 표에 남긴다. 게이트 시각 전까지 다시 해도 되고 모든 회차를 남긴다. 1층 박스가 FAILED 면 그 위 2층 박스는 빈 1층 칸에 놓인다(pending #37 결정) — FAILED 가 있으니 미완주이고, 당겨 놓은 박스가 실물로 그 칸에 놓였는지 함께 적는다 |
 | 입력 경로 | 음성(S2-T06)·HMI(S2-T08)·`ros2 service call` 모두 인정하고 표에 적는다 — 게이트는 팔레타이징 동작을 판정한다 |
@@ -23,7 +23,7 @@ GitHub 계정 정지(10/12)로 머지가 막히면 공용 PC 는 같은 브랜�
 | DB 마이그레이션 `docker/db/migrations/20261012_sprint2_pallet.sql` | 정의석 | `\d pallet_log`, `sort_log.slot` |
 | sort_logger: `slot` 기록·`pallet_log`·`/voss/log/list_placements`(S2-T07) | 정의석 | `ros2 service list \| grep list_placements` |
 | 팔레트 교시 `zones.pallet.pose`·16칸 2층 ikin·베이스 재측정(S2-T02), X·Y 피치·개방 폭(pending #23), **A·B·C 트레이 8·8·6칸(D1, S2-T21)** | 김학민 + 남현지 | voss_config 값, measurements |
-| gateway PICK(A·B·C 칸)·`PALLET` slot 0~15 + `DROP`(2층 +27 mm)·관절 경유점(S2-T03, D2 — `cols` 없음) | 김학민 | 게이트 8칸(1·2열, 2층 4칸) DROP 각 1회, 밀림 0 |
+| gateway PICK(A·B·C 칸)·`PALLET` 격자 칸 0~15 + `DROP`(2층 +27 mm)·앞쪽 원호 경유점(김학민 10/12 실기, 10/13 통합) | 김학민 | 16칸 DROP(10/12 실기 16칸 성공), 밀림 0 |
 | sort_manager PALLETIZING(S2-T05) | 남현지 | 로그 "팔레트 교시 됨", 단독 시험 통과 |
 | voss_launcher·기동 프로필(S2-T09·T10) | 정의석 + 김학민 | 수동 기동과 같은 launch·환경 파일 |
 | 웹 HMI(S2-T08 웹 쪽) — 웹 이미지 재빌드, Mosquitto ACL `voss/pallet/state`(bridge write·web read), `.env` `VOSS_MQTT_ENABLED=true` | 정의석 + 남현지 | HMI 04 패널에 3D 팔레트·집계가 뜬다(재생 확인은 `scripts/integration/README.md` S2-T08, sort_manager 끈 상태) |
@@ -38,14 +38,14 @@ ros2 bag record -s mcap -o ~/voss_data/1013/s2gate_pal --include-hidden-topics \
   /voss/sort/state /voss/sort/result /voss/pallet/state /voss/pallet/result \
   /voss/robot/pose /voss/robot/state /voss/log/status /voss/voice/say /voss/voice/intent /rosout
 ```
-3. 트레이·팔레트가 비었는지 눈으로 확인 → `start` → 역삼 송장 박스 8개를 차례로 투입해 A 에 8칸 PLACED(**트레이 8칸 = 결정 D1 반영 뒤** — 3칸이면 4번째에서 "구역 가득" PAUSED). 3개 동 16칸 리허설은 대본 §2 의 20개.
+3. 트레이·팔레트가 비었는지 눈으로 확인 → `start` → 박스 20개(대본 §2 구성)를 차례로 투입해 A·B·C 에 역삼 7·대치 6·청담 6 PLACED(공용 PC 설정 = 트레이 3×2 × 2층 = 12칸). 흐린 송장은 작업자 답, 판별 불가는 보류로 간다. **시간: 분류 약 10분 + 팔레타이징 약 8분 — 17:20 전에 시작한다.**
 4. 벨트 위 박스가 없고 SortState 가 RUNNING·`box_id=""` 일 때(비상정지 담당 준비 확인 뒤):
 ```bash
-ros2 service call /voss/sort/command voss_msgs/srv/Command "{command: palletize, arg: '역삼동'}"
+ros2 service call /voss/sort/command voss_msgs/srv/Command "{command: palletize, arg: '대치동,역삼동,청담동'}"   # 또는 음성 "헬로, 로키. 대치, 역삼, 청담 순서로 실어줘"·HMI 경로 입력
 ```
 5. 끝나면 확인:
 ```bash
-ros2 topic echo /voss/pallet/state --once        # state DONE, done 8, slot_state 앞 8칸 DONE, overflow_warning false
+ros2 topic echo /voss/pallet/state --once        # state DONE, total 16, done 16, slot_state 16칸 DONE, overflow_warning true, overflow 대치 3
 docker compose -f ~/voss_ws/src/rokey_cobot2_VOSS/docker/db/compose.yml exec db psql -U voss_admin -d voss -c \
   "SELECT box_id, dong, route_index, zone, slot, pallet_slot, pallet_col, pallet_layer, pallet_lane, result, reason, attempts, finished_at FROM pallet_log ORDER BY finished_at;"
 ```
@@ -64,7 +64,7 @@ python3 -m voss_manager.pallet_gate ~/voss_data/1013/s2gate_pal --out ~/voss_dat
 
 | 회차 | 시각 | 입력 | 경로 | 박스 수 | DONE | FAILED(원인) | 계획 칸대로(2층 포함) | 밀림 | pallet_log 행 | 박스당 최대 s (NFR-15 ≤ 30) | 판정 |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | | | 역삼 (D3 제안) | | | | | | | | |
+| 1 | | | 대치 → 역삼 → 청담 (D3·D4) | | | | | | | | |
 | 2 | | | | | | | | | | | |
 
 **음성 시스템 기동**
@@ -89,3 +89,4 @@ python3 -m voss_manager.pallet_gate ~/voss_data/1013/s2gate_pal --out ~/voss_dat
 - 2026-10-13: **BRD v1.5** — 팔레타이징 기준을 결정 D3 제안(1개 동 8칸, 2층 4칸 포함 — 구현 채우기 순서에 맞춤)으로, 완주 정의에 2층 안정·초과/경로 제외 행 포함, pallet_log 조회 열(slot·열·층·줄), 트레이 8칸(D1) 전제.
 - 2026-10-13 오후: 전제 첫 줄을 v1.5 로(`cols` 없음·PalletState 확인), 웹 HMI 전제, 녹화에 `/voss/voice/say`·`intent`, 기록표 행 도구 `voss_manager.pallet_gate`(6번), #37 당겨 놓기 기록.
 - 2026-10-13 저녁 전: §6 B 를 실행할 수 있게 sort_manager `pallet_layers: 1`(대본 §6 B).
+- 2026-10-13 오후: **D3·D4·D7 투표 결과** — 게이트 팔레타이징 = 16칸 3개 동(S8) 완주, 경로 대치 → 역삼 → 청담, 박스 20개 사전 투입, 확인 기대값(16 DONE·초과 3·pallet_log 19행), 시작 시각 17:20 전.
