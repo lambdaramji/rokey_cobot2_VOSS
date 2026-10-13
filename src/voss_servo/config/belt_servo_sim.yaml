@@ -44,7 +44,9 @@ belt_servo:
     retry:
       max_attempts: 1
     stop_timeout_s: 1.0
-    gripper_timeout_s: 3.0
+    gripper_timeout_s: 4.0          # 4.0 — **임시책**(10/13 사용자 결정): 10/12 경주 해결 전 기울어진 박스 실기(26°)에서 닫힘 3.08 s 로 3.0 초과 → DEVICE_ERROR(실제로는 쥠).
+                                    # J6 회전 파지(S2-T18)가 들어오면 3.0 으로 재검토. 교차 검사 > close_time_max 2.5 통과.
+                                    # 참고: gateway rg2_timeout_s 6.0 이라 4 s 에 포기해도 다음 요청이 BUSY 일 수 있다
     rate_hz: 30.0
     zero_hold_s: 0.5
     log:

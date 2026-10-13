@@ -322,7 +322,8 @@ def test_default_yaml_has_t34_and_gripper_values() -> None:
         44.0,
         2.5,
     )
-    assert (g["room_margin_mm"], p["gripper_timeout_s"]) == (10.0, 3.0)
+    # gripper_timeout 4.0 = 10/13 임시책 (기울어진 박스 닫힘 3.08 s, S2-T29). J6 회전 파지(S2-T18) 뒤 3.0 재검토
+    assert (g["room_margin_mm"], p["gripper_timeout_s"]) == (10.0, 4.0)
 
 
 CONFIG_DIR = Path(__file__).resolve().parents[1] / "config"
