@@ -12,6 +12,6 @@ int32 pallet_col               # 1~4 (1 = 트럭 머리 −X, 4 = 문 +X), 싣�
 int32 pallet_lane              # 1~2, 싣지 않으면 0
 int32 pallet_layer             # 1~2 (2 = +27 mm), 싣지 않으면 0
 string outcome                 # DONE | FAILED | OVERFLOW | EXCLUDED
-string reason                  # "" | GRIP_FAIL | DROPPED | STOPPED | DEVICE_ERROR
+string reason                  # "" | GRIP_FAIL | DROPPED | BLOCKED | STOPPED | DEVICE_ERROR
 int32 attempts                 # PICK 시도 수 (처음 + 재시도 최대 2), 싣지 않으면 0
 builtin_interfaces/Time stamp  # DONE = DROP 개방 완료(placed_stamp), FAILED = 확정, OVERFLOW·EXCLUDED = 계획 시각
