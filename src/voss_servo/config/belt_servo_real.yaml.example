@@ -51,7 +51,7 @@ belt_servo:
       pose_extrap_max_ms: null      # TCP 외삽 지평 상한. 제안 200
       blind_entry_max_age_s: null   # 하강 시작 때 마지막 유효 관측 나이 상한. 제안 0.15. TRACK→DESCEND 전환에서만 씀 (cutoff 와 무관)
     retry:
-      max_attempts: 1               # U9 에서 3 으로 켠다
+      max_attempts: 1               # 1 유지 (U9b-dd 1절, 실기 확인 전)
     stop_timeout_s: 1.0             # stop 응답 기다리는 한계
     gripper_timeout_s: 3.0          # 그리퍼 응답 기다리는 한계 (요청마다). 제안 — 10/10 닫힘 최대 2128 ms(close_time_max 2.3) + 여유
     rate_hz: 30.0                   # 서보 루프 (topics.md 계약)

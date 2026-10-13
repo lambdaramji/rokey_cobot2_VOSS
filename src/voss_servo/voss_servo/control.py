@@ -18,7 +18,7 @@ from typing import Any
 import numpy as np
 
 from voss_servo import fsm, grip
-from voss_servo.params import BLIND_DWELL_MARGIN_S, GATEWAY_Z_MIN_MM
+from voss_servo.params import BLIND_DWELL_MARGIN_S, GATEWAY_Z_MIN_MM, RETREAT_CLEAR_MM
 
 # --- xy 규칙 이름 (틱 로그 cmd_rule 에도 그대로 쓴다) ---
 FF_P = "FF_P"  # 벨트 속도 + Kp × 오차
@@ -188,8 +188,15 @@ def ff_p(e: Vec, belt_v: Vec, dir_xy: Vec, kp_xy: float, use_p: bool) -> np.ndar
     return v
 
 
-def z_plan(phase: str, top_z: float, cfg: ControlConfig) -> tuple[float | None, float, float]:
-    """phase → (목표 z 또는 None, 내려가는 속도 상한, 올라가는 속도 상한)."""
+def z_plan(
+    phase: str, top_z: float, cfg: ControlConfig, hold_z: bool = False
+) -> tuple[float | None, float, float]:
+    """phase → (목표 z 또는 None, 내려가는 속도 상한, 올라가는 속도 상한).
+
+    hold_z = 개방 응답을 기다리는 동안 높이 유지 (폭 밖 후퇴, U9b-dd 3절).
+    """
+    if hold_z:
+        return None, 0.0, 0.0  # z 속도 0 (GRASP 와 같음)
     if phase in (fsm.PREPARE, fsm.TRACK):
         return top_z + cfg.approach_dz, cfg.descend_speed, cfg.lift_speed  # 접근 높이로
     if phase == fsm.DESCEND:
@@ -255,6 +262,47 @@ def descend_blind_max_s(cutoff_m: float, cfg: ControlConfig) -> float:
     dist = cutoff_m - cfg.grasp_dz  # 사각 진입 높이 → 파지 높이 거리 (grasp_dz 는 음수라 더해진다)
     expect = grip.descend_time_s(dist, cfg.descend_speed, cfg.a_max, cfg.kp_z, cfg.height_tol_m)
     return expect + BLIND_DWELL_MARGIN_S  # 여유를 더한 상한
+
+
+def retry_need_s(cfg: ControlConfig, room_need_s: float) -> float:
+    """GRASP 실패 순간부터 재시도 1회를 끝낼 시간 s = 재상승 예상 + (하강 + 닫힘 상한) (U9b-dd 1절).
+
+    예: 재상승 59 mm → 2.66 s + room_need 4.94 s = 7.60 s.
+    """
+    dist = cfg.approach_dz - cfg.grasp_dz  # 파지 높이 → 접근 높이 (grasp_dz 는 음수)
+    rise = grip.descend_time_s(dist, cfg.lift_speed, cfg.a_max, cfg.kp_z, cfg.height_tol_m)
+    return rise + room_need_s  # 다시 올라가서, 내려가고, 닫는다
+
+
+def lift_max_s(cfg: ControlConfig) -> float:
+    """후퇴 상승 체류 상한 s = 파지 → 들기 높이 예상 + 여유 (U9b-dd 1절). 정상 LIFT 는 경고에만 쓴다.
+
+    예: 69 mm → 2.785 + 1.0 = 3.78 s (실측 정상 LIFT 2.70~2.74 s).
+    """
+    dist = cfg.lift_dz - cfg.grasp_dz  # 파지 높이 → 들기 높이
+    expect = grip.descend_time_s(dist, cfg.lift_speed, cfg.a_max, cfg.kp_z, cfg.height_tol_m)
+    return expect + BLIND_DWELL_MARGIN_S  # U9-a S 와 같은 여유
+
+
+def retry_room_ok(
+    tcp_x: float | None,
+    need_s: float | None,
+    belt_speed: float,
+    cfg: ControlConfig,
+    margin_m: float,
+) -> bool:
+    """지금 TCP x 에서 재시도 1회를 끝낼 x 여유가 있나. 모르면 없음 = 후퇴 (안전 쪽, U9b-dd 3절)."""
+    if tcp_x is None or need_s is None:
+        return False  # TCP·필요 시간을 모른다
+    return grip.grasp_room_ok(tcp_x, cfg.x_max, belt_speed, need_s, margin_m)
+
+
+def retreat_xy(tcp: Vec, top_z: float, cfg: ControlConfig) -> str:
+    """후퇴 중 xy 규칙: 윗면을 넘기 전엔 박스와 같이(FF), 넘었거나 x 끝이면 0 = 수직 (U9b-dd 3절)."""
+    t = vec3(tcp)
+    below = float(t[2]) < top_z + RETREAT_CLEAR_MM / 1000.0  # 핑거 끝이 아직 윗면 + 10 mm 아래
+    inside = float(t[0]) < cfg.x_max  # x 끝 가드 (후퇴는 x 끝 검사로 끊지 않으므로 여기서 막는다)
+    return FF if (below and inside) else ZERO
 
 
 def xy_rule(phase: str, visible: bool) -> str:
@@ -378,16 +426,21 @@ def command(
     prev_v: Vec,
     dt: float,
     cfg: ControlConfig,
+    retreat: bool = False,
+    hold_z: bool = False,
 ) -> Command:
-    """새 phase 기준 속도. stopping·terminal·pose 없음·관측 없음이면 0."""
+    """새 phase 기준 속도. stopping·terminal·pose 없음·관측 없음이면 0.
+
+    retreat = 안전 후퇴 중 (xy 는 retreat_xy), hold_z = 개방 기다리며 높이 유지 (U9b).
+    """
     if stopping or terminal:
         return Command(zero_cmd(), ZERO_STOP, None, None, False)  # 항상 0 (U1 회신 ⑤)
     if geo is None:
         return Command(zero_cmd(), ZERO_NO_POSE, None, None, False)
     if not geo.has_obs or geo.p_pred is None or geo.top_z is None:
         return Command(zero_cmd(), ZERO_NO_OBS, None, None, False)
-    rule = xy_rule(phase, geo.visible)
-    z_t, v_down, v_up = z_plan(phase, geo.top_z, cfg)
+    rule = retreat_xy(geo.tcp, geo.top_z, cfg) if retreat else xy_rule(phase, geo.visible)
+    z_t, v_down, v_up = z_plan(phase, geo.top_z, cfg, hold_z)
     target = tcp_target(geo.p_pred, z_t if z_t is not None else float(geo.tcp[2]))
     e = target - geo.tcp  # z 목표가 없으면 높이 오차 0
     if rule == ZERO:

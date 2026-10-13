@@ -452,6 +452,17 @@ def test_u5_empty_hand_grasp_failed_no_open(env) -> None:
     spin_for(ex, 0.6)
     assert gripper.widths() == [90.0, 39.0]  # grasped=false 여도 자동 개방 없음
     assert node.grip_late_discarded == 0 and last_cmd_zero(client)
+    # U9b: 결과 전에 안전 후퇴 — 끝 틱은 들기 높이(윗면 +50 − tol) 위, 후퇴를 끝까지 했다
+    end = goal_ends(tmp)[-1]
+    assert (end["retreat_reason"], end["retreat_done"], end["phase"]) == (
+        "GRASP_FAILED",
+        True,
+        "LIFT",
+    )
+    assert end["retry_room_ok"] is not None  # GRASP 실패 판단 때 값이 남는다
+    ticks = [t for t in read_jsonl(tmp / "ticks") if t["terminal"] and t["cause"] != "ZERO_HOLD"]
+    above = ticks[-1]["tcp_now_m"][2] - ticks[-1]["position_base_m"][2]
+    assert above >= 0.048  # 핑거 끝이 박스 윗면 + 48 mm 위 (파지 높이 −19 mm 에서 끝나지 않음)
 
 
 RETRY = {

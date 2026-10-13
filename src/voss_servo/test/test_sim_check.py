@@ -79,8 +79,9 @@ def test_phases_exact_and_prefix() -> None:
     assert sc.judge_phases(prefix, ["PREPARE", "TRACK"]).status == "PASS"
     assert sc.judge_phases(prefix, ["PREPARE", "DESCEND"]).status == "FAIL"  # TRACK 건너뜀
     last = sc.EXPECT[("grasp", "empty")]
-    assert sc.judge_phases(last, ["PREPARE", "TRACK", "DESCEND", "GRASP"]).status == "PASS"
-    assert sc.judge_phases(last, ["PREPARE", "TRACK"]).status == "FAIL"  # GRASP 에 못 감
+    # U9b: 빈손은 안전 후퇴(phase LIFT) 뒤에 끝난다
+    assert sc.judge_phases(last, ["PREPARE", "TRACK", "DESCEND", "GRASP", "LIFT"]).status == "PASS"
+    assert sc.judge_phases(last, ["PREPARE", "TRACK", "DESCEND", "GRASP"]).status == "FAIL"
 
 
 def test_last_zero_and_zero_hold() -> None:
@@ -230,6 +231,56 @@ def test_judge_descend_cut_unknown() -> None:
 
 
 def test_grasp_profile_has_u9a_cases() -> None:
-    assert sc.PROFILE_CASES["grasp"][-2:] == ("descend_lost", "vanish")
+    assert {"descend_lost", "vanish"} <= set(sc.PROFILE_CASES["grasp"])  # U9b 가 뒤에 덧붙임
     assert sc.EXPECT[("grasp", "descend_lost")].reason == "OK"
     assert sc.EXPECT[("grasp", "vanish")].cause == "BOX_MISSING"
+
+
+# --- U9b: 재시도·안전 후퇴 case (design/U9b-dd.md 6.3, 7.1 S1) ---
+
+
+def test_u9b_cases_and_expectations() -> None:
+    assert sc.PROFILE_CASES["grasp"][-3:] == ("retry", "fail_retreat", "wide")
+    retry = sc.EXPECT[("grasp", "retry")]
+    assert retry.attempts == 2 and retry.phases_exact == (*sc.PHASES[:4], *sc.PHASES)
+    for name, cause in (("fail_retreat", "NOT_DETECTED"), ("wide", "WIDTH_OUT")):
+        e = sc.EXPECT[("grasp", name)]
+        assert (e.reason, e.cause, e.retreat) == ("GRASP_FAILED", cause, True)
+        assert e.phases_exact == tuple(sc.PHASES[:5])  # …GRASP, LIFT(후퇴)
+    empty = sc.EXPECT[("grasp", "empty")]
+    assert empty.phases_last == "LIFT" and empty.retreat  # 후퇴 뒤에 끝난다
+
+
+def test_u9b_launch_extra() -> None:
+    assert sc.launch_extra(sc.CASES["normal"]) == []  # 기존 case 는 지금과 같은 인자
+    extra = sc.launch_extra(sc.CASES["retry"])
+    assert extra == [
+        "gripper:=fake",
+        "grip_plan:=empty,held",
+        "grip_close_s:=1.2",
+        "max_attempts:=3",
+        "box_start_x_mm:=-250",
+    ]
+    assert sc.CASES["retry"].kp == 3.0 and sc.CASES["retry"].timeout_s == 60.0
+
+
+def test_u9b_judge_result_attempts() -> None:
+    e = sc.EXPECT[("grasp", "retry")]
+    assert sc.judge_result(e, sc.SUCCEEDED, "OK", True, 2).status == "PASS"
+    v = sc.judge_result(e, sc.SUCCEEDED, "OK", True, 1)
+    assert v.status == "FAIL" and "attempts=1" in v.actual
+    plain = sc.EXPECT[("grasp", "normal")]  # attempts 기대 없음 → 보지 않는다
+    assert sc.judge_result(plain, sc.SUCCEEDED, "OK", True, 7).status == "PASS"
+
+
+def test_u9b_judge_retreat() -> None:
+    end = tick(T0, (0.0, 0.0, 0.0), terminal=True, retreat_done=True)
+    end["position_base_m"] = [0.30, -0.27, 0.1008]
+    end["tcp_now_m"] = [0.34, -0.27, 0.1008 + 0.0485]  # 윗면 +48.5 mm
+    assert sc.judge_retreat(end, 0.050, 0.002).status == "PASS"
+    low = dict(end, tcp_now_m=[0.30, -0.27, 0.1008 - 0.019])  # 파지 높이에서 끝남
+    assert sc.judge_retreat(low, 0.050, 0.002).status == "FAIL"
+    undone = dict(end, retreat_done=False)
+    assert sc.judge_retreat(undone, 0.050, 0.002).status == "FAIL"
+    assert sc.judge_retreat(None, 0.050, 0.002).status == "UNKNOWN"
+    assert sc.judge_retreat(dict(end, position_base_m=None), 0.050, 0.002).status == "UNKNOWN"

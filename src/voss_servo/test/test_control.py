@@ -471,3 +471,52 @@ def test_descend_blind_max_s_values() -> None:
     cfg = control.config_from_values(values(**{"control.kp_z_per_s": 1.5}))  # 시연 kp_z
     assert control.descend_blind_max_s(0.030, cfg) == pytest.approx(3.44, abs=0.01)  # 2.44 + 1.0
     assert control.descend_blind_max_s(0.010, cfg) == pytest.approx(2.78, abs=0.01)  # 1.78 + 1.0
+
+
+# --- U9b: 안전 후퇴·재시도 여유 (design/U9b-dd.md 7.1 C1~C5) ---
+
+SHOW = control.config_from_values(  # 시연 설정 (kp_z 1.5, x_max 600)
+    values(**{"control.kp_z_per_s": 1.5, "reach.x_max_mm": 600.0})
+)
+
+
+def test_u9b_c1_z_plan_hold_z_keeps_height() -> None:
+    assert control.z_plan(fsm.LIFT, TOP, CFG, hold_z=True) == (None, 0.0, 0.0)
+    z_t, v_down, v_up = control.z_plan(fsm.LIFT, TOP, CFG)  # 기본은 그대로 들기 높이로
+    assert z_t == pytest.approx(LIFT) and v_down == 0.0 and v_up > 0.0
+
+
+def test_u9b_c2_retreat_xy_rules() -> None:
+    clear = TOP + 0.010  # 윗면 + 10 mm (RETREAT_CLEAR_MM)
+    assert control.retreat_xy((0.30, 0.0, GRASP), TOP, SHOW) == control.FF  # 아직 윗면 아래
+    assert control.retreat_xy((0.30, 0.0, clear - 1e-4), TOP, SHOW) == control.FF
+    assert control.retreat_xy((0.30, 0.0, clear), TOP, SHOW) == control.ZERO  # 넘음 → 수직
+    assert control.retreat_xy((0.60, 0.0, GRASP), TOP, SHOW) == control.ZERO  # x 끝 가드
+
+
+def test_u9b_c3_command_retreat_tick() -> None:
+    g = geo(box=(0.30, 0.0, TOP), tcp=(0.30, 0.0, GRASP), visible=False)
+    prev = np.array([BELT, 0.0, 0.0])
+    cmd = control.command(fsm.LIFT, False, False, g, prev, DT, CFG, retreat=True)
+    assert cmd.rule == control.FF and cmd.vel[0] > 0.0  # 박스와 같이 벨트 방향
+    assert cmd.vel[2] > 0.0  # 위로만
+    stop = control.command(fsm.LIFT, True, False, g, prev, DT, CFG, retreat=True)
+    assert stop.rule == control.ZERO_STOP and not np.any(stop.vel)  # 취소 = 즉시 0
+    hold = control.command(fsm.LIFT, False, False, g, prev, DT, CFG, retreat=True, hold_z=True)
+    assert hold.vel[2] == 0.0 and hold.rule == control.FF  # 개방 기다림: 높이 유지, 박스 따라감
+    normal = control.command(fsm.LIFT, False, False, g, prev, DT, CFG)  # 정상 들기는 그대로 xy 0
+    assert normal.rule == control.ZERO
+
+
+def test_u9b_c4_retry_need_and_lift_max() -> None:
+    room_need = 2.639 + 2.3  # 하강 예상 + 닫힘 상한 (belt_servo._grasp_room_need 와 같은 식)
+    assert control.retry_need_s(SHOW, room_need) == pytest.approx(7.60, abs=0.02)
+    assert control.lift_max_s(SHOW) == pytest.approx(3.785, abs=0.005)  # 2.785 + 1.0
+
+
+def test_u9b_c5_retry_room_ok() -> None:
+    need, margin = 7.60, 0.010  # 필요 x = 0.048 × 7.60 + 0.010 = 0.3748 → 문턱 x 0.2252
+    assert control.retry_room_ok(0.2250, need, BELT, SHOW, margin)
+    assert not control.retry_room_ok(0.2260, need, BELT, SHOW, margin)
+    assert not control.retry_room_ok(None, need, BELT, SHOW, margin)  # TCP 모름 → 후퇴
+    assert not control.retry_room_ok(0.0, None, BELT, SHOW, margin)  # 필요 시간 모름 → 후퇴
