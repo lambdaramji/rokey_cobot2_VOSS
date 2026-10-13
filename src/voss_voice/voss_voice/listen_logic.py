@@ -47,6 +47,9 @@ class WakeGate:
         self.require_wake = require_wake
         self._armed_until = -math.inf
 
+    def cancel(self) -> None:
+        self._armed_until = -math.inf
+
     @property
     def armed(self) -> bool:
         return self._armed_until > -math.inf

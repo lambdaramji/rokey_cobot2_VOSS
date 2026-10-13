@@ -104,6 +104,18 @@ def test_stop_works_even_when_ai_down_and_no_zone_map():
     assert f.handle("정지")[0] == "stop" and published[0]["type"] == "stop"
 
 
+def test_stop_publishes_without_waiting_or_speaking():
+    events = []
+    f = TranscriptFlow(
+        post_intent=lambda *_: pytest.fail("stop must not call LLM"),
+        get_stats=lambda *_: pytest.fail("stop must not query DB"),
+        publish=lambda intent: events.append(("publish", intent["type"])),
+        say=lambda phrase: events.append(("say", phrase)),
+    )
+    assert f.handle("멈춰")[0] == "stop"
+    assert events == [("publish", "stop")]
+
+
 def test_answer_uses_state_at_utterance_time():
     seen = {}
 
