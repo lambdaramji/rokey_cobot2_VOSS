@@ -92,6 +92,7 @@ class Step(NamedTuple):
     target: str  # launch 파일 이름 또는 실행 파일 이름
     args: dict | None = None  # include 인자 또는 노드 파라미터
     name: str = ""
+    namespace: str = ""  # node: "/" 면 루트(-r __ns:=/). realsense 는 비우면 /camera/camera/… 로 나가 비전이 못 받는다
 
 
 def on(value: str, dry_run: bool) -> bool:
@@ -133,7 +134,7 @@ def host_plan(a: dict[str, str]) -> list[Step]:
     if on(a["with_camera"], dry):  # T3
         steps.append(
             Step(
-                "node", "realsense2_camera", "realsense2_camera_node", dict(CAMERA_PARAMS), "camera"
+                "node", "realsense2_camera", "realsense2_camera_node", dict(CAMERA_PARAMS), "camera", "/"
             )
         )
     if on(a["with_logger"], dry):  # T4 — sort_manager 보다 먼저
@@ -166,7 +167,8 @@ def to_action(s: Step):
     if s.kind == "include":
         src = PythonLaunchDescriptionSource([FindPackageShare(s.pkg), "/launch/", s.target])
         return IncludeLaunchDescription(src, launch_arguments=list((s.args or {}).items()))
-    return Node(package=s.pkg, executable=s.target, name=s.name or None, output="screen",
+    return Node(package=s.pkg, executable=s.target, name=s.name or None,
+                namespace=s.namespace or None, output="screen",
                 parameters=[s.args] if s.args else [])  # fmt: skip
 
 

@@ -61,7 +61,7 @@ def test_real_plan_follows_runbook_order_and_args() -> None:
     )
     assert s["T2"].fail == r"robot_gateway started: dry_run"  # 실기를 원했는데 가짜로 뜨면 실패
     t3 = s["T3"].cmd
-    for part in ("-r __node:=camera", "-p enable_depth:=false", "-p rgb_camera.exposure:=60",
+    for part in ("-r __ns:=/ -r __node:=camera", "-p enable_depth:=false", "-p rgb_camera.exposure:=60",
                  "-p rgb_camera.white_balance:=4600.0", "-p rgb_camera.color_profile:=1920x1080x30"):  # fmt: skip
         assert part in t3
     assert s["T5"].cmd.endswith("docker compose -f compose.yml up")

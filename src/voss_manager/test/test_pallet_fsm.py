@@ -554,3 +554,19 @@ def test_drop_calls_use_grid_cells(cfg) -> None:
     ctx, acts = gateway(ctx, acts, ok_all)
     raw = [a.slot for a in of(acts, f.CallMove) if a.zone == "PALLET"]
     assert raw == [pp.grid_cell(s) for s in range(16)]
+
+
+def test_two_layer_tray_from_config_picks_upper_layer_first(cfg) -> None:
+    """voss_config 트레이 grid layers 2(한 층 6칸) → A 칸 6(칸 0 위)을 칸 0 보다 먼저 집는다(10/13 게이트).
+    레포 설정(1층)은 그대로 칸 순서."""
+    with open(REPO_CONFIG, encoding="utf-8") as fh:
+        raw = yaml.safe_load(fh)
+    for z in ("A", "B", "C"):
+        raw["zones"][z]["grid"].update(rows=2, layers=2)
+    two = replace(f.load_config(raw), pallet_ready=True)
+    assert two.layer_cells == {"A": 6, "B": 6, "C": 6} and cfg.layer_cells == {}
+    ctx, acts = started(two, "대치동,역삼동,청담동", S1)
+    ctx, acts = gateway(ctx, acts, ok_all)
+    picks = [(z, s) for z, s, m in moves(acts) if m == "PICK"]
+    assert [s for z, s in picks if z == "A"] == [6, 0, 1, 2, 3, 4, 5]
+    assert [z for z, _ in picks] == ["C"] * 6 + ["A"] * 7 + ["B"] * 3

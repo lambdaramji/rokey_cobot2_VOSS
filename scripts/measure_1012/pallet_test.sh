@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # 팔레타이징 확인: 작업자가 말한 동 순서대로 구역 칸에서 집어(PICK) 팔레트에 적재 순서대로 놓는다(DROP). 16개면 끝.
 # (sort_manager palletize 의 초과 규칙(물량 많은 동부터)은 없다 — 말한 순서대로 16개에서 자른다. 좌표·동작 확인용)
+# ⚠ 경로 뜻이 sort_manager palletize 와 반대다: 여기서는 처음 준 동이 트럭 머리(1열), palletize 는 처음 말한 동 = 첫 배송지 = 문 쪽(4열).
+#   게이트·시연 판정 근거로 쓰지 않는다(10/13 재검증 K15).
 # ⚠ 로봇이 움직인다 — 사람이 비상정지 옆에서 실행(CLAUDE.md 규칙 6). robot_gateway 서비스만 부른다.
 # 사용: bash scripts/measure_1012/pallet_test.sh <2층 구역> <동1> <동2> <동3>
 #   예) bash scripts/measure_1012/pallet_test.sh A 청담동 대치동 역삼동

@@ -337,3 +337,26 @@ def test_default_two_layers_unchanged() -> None:
     a = pp.plan_pallet((D, Y, C), placements({Y: 7, D: 6, C: 6}))
     b = pp.plan_pallet((D, Y, C), placements({Y: 7, D: 6, C: 6}), layers=2)
     assert a == b and [m.pallet_slot for m in a.moves] == list(range(16)) and a.capacity == 16
+
+
+# ---------------------------------------------------------------- 2층 트레이: 위층부터 (10/13 게이트)
+
+
+def test_two_layer_tray_picks_upper_layer_first() -> None:
+    """A 3×2 × 2층(한 층 6칸)에 역삼 7개면 칸 6 이 칸 0 위 — 칸 6 을 먼저 집는다. 팔레트의 동 배치·초과는 그대로."""
+    ps = placements({Y: 7, D: 6, C: 6})
+    plain = pp.plan_pallet((D, Y, C), ps)
+    plan = pp.plan_pallet((D, Y, C), ps, tray_layer_cells={"A": 6, "B": 6, "C": 6})
+    assert [m.slot for m in plan.moves if m.zone == "A"] == [6, 0, 1, 2, 3, 4, 5]
+    assert [(m.dong, m.pallet_slot) for m in plan.moves] == [
+        (m.dong, m.pallet_slot) for m in plain.moves
+    ]
+    assert plan.overflow == plain.overflow == 3
+
+
+def test_two_layer_tray_partial_load_leaves_lower_layer() -> None:
+    """일부만 실으면 위층부터 싣고 아래층 박스가 남는다(위층 박스 밑을 빼지 않는다)."""
+    plan = pp.plan_pallet((Y, D), placements({Y: 8, D: 10}), tray_layer_cells={"a": 6, "B": 6})
+    assert [m.slot for m in plan.moves if m.zone == "A"] == [6, 7, 0, 1, 2, 3]
+    assert [m.slot for m in plan.moves if m.zone == "B"] == [6, 7, 8, 9, 0, 1, 2, 3, 4, 5]
+    assert [(u.zone, u.slot) for u in plan.unloaded] == [("A", 4), ("A", 5)]

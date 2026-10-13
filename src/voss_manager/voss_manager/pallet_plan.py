@@ -8,6 +8,8 @@
 - 수량: 대상이 16개 이하면 모두 싣는다. 넘으면 동을 물량 많은 순으로(동률이면 경로상 먼저 방문하는 동이 후순위)
   min(물량, 남은 칸)만큼 배정하고, 못 실은 박스는 OVERFLOW — 원래 칸에 그대로 둔다(TR-PAL-11).
   한 동의 일부만 실을 때는 (구역, 칸, box_id) 순으로 앞의 박스부터 싣는다(명세 미정 — 어느 박스를 남길지).
+- 2층 트레이(tray_layer_cells)는 구역 안에서 위층 박스부터 집는다 — 2층 박스가 덮은 1층 칸을 먼저 집지 않게
+  (10/13: A 7번째 = 칸 6 이 칸 0 위). 일부만 실으면 아래층이 남는다. 층 = slot // 한 층 칸 수.
 - 위치: 수량과 따로, 마지막 방문 동부터 slot 0 부터 차례로. slot = (열−1)×4 + (층−1)×2 + (줄−1) — 열 단위, 열 안은
   1층 2칸 → 2층 2칸, 같은 층은 1줄 → 2줄(결정 D6 제안). 한 열에 두 동이 섞이면 먼저 내릴 동이 위층에 온다.
   옮기는 순서 = slot 순서(1 → 16).
@@ -17,7 +19,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 
 # sort_fsm.SORT_ZONES 와 같다 (sort_fsm 이 이 모듈을 부르게 되므로 import 하지 않는다)
@@ -174,11 +176,22 @@ def allocate(
 
 
 def plan_pallet(
-    route: Sequence[str], placements: Iterable[Placement], layers: int = LAYERS
+    route: Sequence[str],
+    placements: Iterable[Placement],
+    layers: int = LAYERS,
+    tray_layer_cells: Mapping[str, int] | None = None,
 ) -> Plan:
     """경로 + 적재 기록 → Plan. 대상에 칸 기록이 없거나 옮길 박스가 없으면 PlanError (TR-PAL-03).
-    layers=1 이면 1층 칸만 쓴다(용량 8, slot_order)."""
+    layers=1 이면 1층 칸만 쓴다(용량 8, slot_order). tray_layer_cells = 2층 트레이 구역 → 한 층 칸 수
+    (sort_fsm.Config.layer_cells) — 그 구역은 위층 박스부터 집는다. 없는 구역은 칸 순서 그대로."""
     order = slot_order(layers)
+    cells = {z.upper(): n for z, n in (tray_layer_cells or {}).items() if n > 0}
+
+    def pick_key(b: tuple[str, int, str]) -> tuple:
+        zone, slot, box_id = b
+        n = cells.get(zone)
+        return (zone, -(slot // n) if n else 0, slot, box_id)
+
     route = tuple(route)
     check_route(route)
     in_route = set(route)
@@ -228,14 +241,14 @@ def plan_pallet(
     load = allocate(route, {d: len(b) for d, b in by_dong.items()}, len(order))
     overflow: list[Unloaded] = []
     for i, d in enumerate(route):
-        for zone, slot, box_id in sorted(by_dong[d])[load[d] :]:
+        for zone, slot, box_id in sorted(by_dong[d], key=pick_key)[load[d] :]:
             overflow.append(Unloaded(box_id, d, i, zone, slot, OVERFLOW))
 
     # 4) 위치: 마지막 방문 동부터 slot 0 → (열 단위, 열 안 1층 2칸 → 2층 2칸)
     moves = []
     for i in reversed(range(len(route))):
         d = route[i]
-        for zone, slot, box_id in sorted(by_dong[d])[: load[d]]:
+        for zone, slot, box_id in sorted(by_dong[d], key=pick_key)[: load[d]]:
             moves.append(Move(box_id, d, i, zone, slot, order[len(moves)]))
     unloaded = tuple(sorted(overflow + excluded, key=lambda u: (u.zone, u.slot, u.box_id)))
     empty = tuple(d for d in route if not by_dong[d])
