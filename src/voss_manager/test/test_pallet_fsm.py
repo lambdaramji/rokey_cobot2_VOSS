@@ -232,9 +232,9 @@ def test_grip_fail_retries_twice_then_next_box(cfg) -> None:
     assert [(r.outcome, r.reason, r.attempts, r.pallet_slot) for r in res] == [
         ("FAILED", "GRIP_FAIL", 3, 0),
         ("DONE", "", 2, 1),
-        ("DONE", "", 1, 2),
-    ]  # fmt: skip — 실패한 박스의 칸(0)은 비워 두고 다음 박스는 계획한 칸에 (명세 미정)
-    assert pf.pallet_state(ctx)["slot_state"][:3] == ["FAILED", "DONE", "DONE"]
+        ("DONE", "", 1, 0),
+    ]  # fmt: skip — 칸 2(2층) 박스는 비어 있는 아래 칸 0 에 당겨 놓는다 (pending #37 결정)
+    assert pf.pallet_state(ctx)["slot_state"][:3] == ["DONE", "DONE", "EMPTY"]
     assert "옮기지 못한 박스는 001번" in says(acts)[-1]
 
 
@@ -421,3 +421,62 @@ def test_intent_and_config_hooks(cfg) -> None:
     assert f.load_config(raw).pallet_ready is True
     raw["zones"]["pallet"] = {"pose": None}
     assert f.load_config(raw).pallet_ready is False
+
+
+# ---------------------------------------------------------------- pending #37 결정: FAILED 1층 위 2층 박스는 아래로
+
+
+def test_layer2_box_is_pulled_down_onto_failed_slot(cfg) -> None:
+    ctx, acts = started(cfg, "청담동", {C: 4})  # 1열: 칸 0·1 = 1층, 칸 2·3 = 2층
+
+    def answer(a, i, t):
+        if a.mode == "PICK" and a.slot == 0:
+            return f.MoveDone(False, "GRIP_FAIL", 0, t)  # 칸 0 박스는 3번 다 실패 → FAILED
+        return ok_all(a, i, t)
+
+    ctx, acts = gateway(ctx, acts, answer)
+    drops = [m for m in moves(acts) if m[2] == "DROP"]
+    assert drops == [
+        ("PALLET", 1, "DROP"),
+        ("PALLET", 0, "DROP"),
+        ("PALLET", 3, "DROP"),
+    ]  # 칸 2 박스 → 칸 0
+    res = {
+        r.box_id[-3:]: (r.outcome, r.pallet_slot, r.pallet_layer) for r in of(acts, pf.PalletOut)
+    }
+    assert res == {
+        "001": ("FAILED", 0, 1),
+        "002": ("DONE", 1, 1),
+        "003": ("DONE", 0, 1),
+        "004": ("DONE", 3, 2),
+    }
+    st = pf.pallet_state(ctx)
+    assert (
+        st["slot_state"][:4] == ["DONE", "DONE", "EMPTY", "DONE"]
+        and st["slot_box_id"][0] == f"{SID}-003"
+    )
+    assert "아래 칸이 비어 위층 박스 1개를 아래 칸에 놓았습니다" in says(acts)[-1]
+
+
+def test_pulled_down_target_survives_resume(cfg) -> None:
+    ctx, acts = started(cfg, "청담동", {C: 4})
+    for _ in range(3):  # 칸 0 FAILED
+        ctx = pf.step(ctx, f.MoveDone(False, "GRIP_FAIL", 0, 4000 * MS)).ctx
+    ctx = pf.step(ctx, f.MoveDone(True, "OK", 0, 5000 * MS)).ctx  # 칸 1 집음
+    ctx = pf.step(
+        ctx, f.MoveDone(True, "OK", 6000 * MS, 6000 * MS)
+    ).ctx  # 칸 1 놓음 → 칸 2 박스 집기
+    out = pf.step(ctx, f.MoveDone(True, "OK", 0, 7000 * MS))  # 집음 → 칸 0 에 놓기로 정함
+    assert moves(out.actions) == [("PALLET", 0, "DROP")]
+    ctx = pf.step(out.ctx, cmd("stop")).ctx
+    ctx = pf.step(ctx, f.MoveDone(False, "STOPPED", 0, 8000 * MS)).ctx  # 열기 전에 끊김 → 든 채
+    out = pf.step(ctx, cmd("resume", grip=HOLDING))
+    assert moves(out.actions) == [("PALLET", 0, "DROP")]  # 재개해도 같은 아래 칸
+
+
+def test_no_pull_down_when_lower_slot_is_done(cfg) -> None:
+    ctx, acts = started(cfg, "청담동", {C: 4})
+    ctx, acts = gateway(ctx, acts, ok_all)
+    assert [m[1] for m in moves(acts) if m[2] == "DROP"] == [0, 1, 2, 3] and not pf.run_of(
+        ctx
+    ).moved
