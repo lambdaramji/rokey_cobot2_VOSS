@@ -2,7 +2,8 @@
 
 - host_plan: 기본은 dry_run 에 장비 쪽(camera·logger·voice·hmi) 꺼짐, 실기는 런북 순서(logger 가 sort_manager 보다 먼저)
 - 넘기는 include 인자가 대상 launch 파일에 선언돼 있는지(오타면 그 인자는 조용히 무시된다)
-- voss_dry_run: 도메인 30 거부, 장비 쪽 모두 끔
+- voss_dry_run·voss_host dry_run: 도메인 30 거부, 장비 쪽 모두 끔
+- 실기는 gateway 를 넣지 않는다(with_gateway auto — 런북 T2 를 따로)
 - 노드 실행 파일 이름이 각 패키지 setup.py console_scripts 에 있는지
 """
 
@@ -68,7 +69,7 @@ def test_default_is_dry_run_without_devices() -> None:
 
 
 def test_real_follows_runbook_order() -> None:
-    t = targets(HOST.host_plan(args(dry_run="false")))
+    t = targets(HOST.host_plan(args(dry_run="false", with_gateway="true")))
     assert t == [
         "robot_gateway.launch.py",  # T2
         "realsense2_camera_node",  # T3
@@ -81,6 +82,15 @@ def test_real_follows_runbook_order() -> None:
         "hmi_bridge",
     ]
     assert t.index("sort_logger") < t.index("sort_manager.launch.py")
+
+
+def test_real_leaves_gateway_to_runbook_t2() -> None:
+    # 실기 auto: T2 는 학민이 따로 띄워 No-Go 줄을 본다 — FAULT 때 gateway 만 재기동(6절), 끄는 순서 belt_servo → gateway(7절)
+    t = targets(HOST.host_plan(args(dry_run="false")))
+    assert "robot_gateway.launch.py" not in t and t[0] == "realsense2_camera_node"
+    assert not HOST.gateway_on("false", True) and HOST.gateway_on("auto", True)
+    with pytest.raises(ValueError, match="auto"):
+        HOST.gateway_on("yes", False)
 
 
 def test_explicit_switches_and_text_voice() -> None:
@@ -128,6 +138,15 @@ def test_dry_run_refuses_operating_domain() -> None:
         DRY.refuse_operating_domain({"ROS_DOMAIN_ID": "30"})
     DRY.refuse_operating_domain({"ROS_DOMAIN_ID": "77"})
     DRY.refuse_operating_domain({})
+
+
+def test_host_dry_run_refuses_operating_domain() -> None:
+    # 기본 dry_run 을 공용 PC 셸(30)에서 띄우면 가짜 gateway·belt_servo·sort_manager 가 운용 노드와 섞인다
+    with pytest.raises(RuntimeError, match="30"):
+        HOST.refuse_dry_run_on_operating_domain(True, {"ROS_DOMAIN_ID": "30"})
+    HOST.refuse_dry_run_on_operating_domain(False, {"ROS_DOMAIN_ID": "30"})  # 실기는 30 에서
+    HOST.refuse_dry_run_on_operating_domain(True, {"ROS_DOMAIN_ID": "77"})
+    HOST.refuse_dry_run_on_operating_domain(True, {})
 
 
 def test_host_without_servo() -> None:

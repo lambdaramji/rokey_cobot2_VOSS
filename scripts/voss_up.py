@@ -128,7 +128,9 @@ def load_host_module():
 def real_plan(o: Opts, env: dict[str, str], host=None) -> list[Step]:
     host = host or load_host_module()
     a = {n: d for n, d, _ in host.ARGS}
-    a.update(dry_run="false", with_vision="true" if o.vision == "host" else "false",
+    # with_gateway=true: voss_host 단독 실기는 gateway(T2)를 런북대로 따로 띄우지만(1030f28), 여기서는 T2 가 자기 터미널의
+    # 단계라 No-Go 줄·이동 높이 계산을 기다린 뒤 다음으로 가고, 내릴 때도 belt_servo 다음에 따로 내린다(런북 6·7절과 같다)
+    a.update(dry_run="false", with_gateway="true", with_vision="true" if o.vision == "host" else "false",
              with_voice=_q(o.voice), with_hmi=_q(o.hmi), voice_mode=o.voice_mode,
              config_dir=o.config_dir or env.get("VOSS_CONFIG_DIR") or a["config_dir"],
              servo_overrides=o.servo_overrides, ocr_python=o.ocr_python or a["ocr_python"])  # fmt: skip
