@@ -6,11 +6,11 @@
 - 관련 SR / pending-decisions #: BRD v1.5 10.2 일정(10/15 시연), ADR-0014(Sprint 2 게이트)
 
 ## 배경
-- 레포 소유자 계정(남현지 @lambdaramji)이 10/12 GitHub 자동 탐지로 정지되어 팀 전원이 레포에 접근할 수 없다(404). 어필은 진행 중이나 회신 시점을 알 수 없다.
+- 레포 소유자 계정(남현지 @lambdaramji)이 10/12 정지되어 팀 전원이 레포에 접근할 수 없다(404). 복구를 요청했으나 회신 시점을 알 수 없다.
 - 시연(10/15)까지 이틀이고, 10/13 통합·게이트와 10/14 리허설을 레포 없이 진행할 수 없다. 그동안 남현지 작업은 git bundle 로 공용 PC 에 옮겨 왔다.
 
 ## 결정
-1. **김학민(@rokeyhak) 개인 계정 아래 private 레포 `rokey_cobot2_VOSS`** 로 임시 이전한다. 의석·병후는 Collaborator(쓰기). Organization 전환은 시연 뒤 검토한다.
+1. **김학민(@rokeyhak) 개인 계정 아래 public 레포 `rokey_cobot2_VOSS_2`**(`https://github.com/rokeyhak/rokey_cobot2_VOSS_2`) 로 임시 이전한다(옛 레포도 public 이었다). 클론 폴더는 그대로 `~/voss_ws/src/rokey_cobot2_VOSS`. Free 계정이라 private 이면 브랜치 보호·CODEOWNERS 가 동작하지 않는다. 의석·병후는 Collaborator(쓰기). Organization 전환은 시연 뒤 검토한다. **public 이므로 계정 비밀번호·키·토큰·Drive 링크·폴더 ID 는 넣지 않는다**(10/13 전체 이력 검사에서 키·토큰 없음). 실습실 내부 사설 IP(192.168.1.x)는 옛 public 레포에 이미 약 80곳 있었고 밖에서 닿지 않는 주소라 그대로 둔다 — 시연 전 이력 재작성은 하지 않는다. **새로 넣지 않는다**: 로봇 컨트롤러 주소는 `VOSS_ROBOT_HOST` 환경 변수로만 쓴다. 시연 뒤 옛 레포와 합칠 때 정리를 검토한다.
 2. **이력은 옛 GitHub 상태 그대로 옮긴다**: `main` = 옛 `origin/main`(c90623f), 옛 원격에 있던 브랜치 전부, 그 뒤 각자 push 못 한 브랜치. 옛 주소는 각 클론에 `old-origin` 으로 남긴다(지우지 않는다).
 3. **`@claude` 자동 리뷰 워크플로를 끈다**(`.github/workflows/claude.yml` → `claude.yml.disabled`). 리뷰는 동료 1인. CI(`ci.yml`)는 그대로 — 시크릿이 필요 없다.
 4. **CODEOWNERS 임시 규칙**: 정지된 계정을 빼고 남현지 몫은 김학민(PL 대행)이 받는다. 모든 경로에 2명 이상을 유지한다. 인터페이스·ADR 승인은 김학민.
@@ -22,6 +22,7 @@
 ## 고려한 대안
 - A: 복구 대기 — 회신 시점을 몰라 기각.
 - B: Organization 을 바로 만들어 이전 — 한 계정 정지에 덜 취약하지만 처음 하는 설정이라 시연 전 시간이 모자라 시연 뒤로 미룸.
+- D: private 개인 레포 — Free 계정에서는 브랜치 보호·CODEOWNERS 가 없어 리뷰 규칙을 사람이 지켜야 한다. 옛 레포가 public 이었고 비밀값을 넣지 않는 규칙이 있어 public 으로.
 - C: 번들만으로 계속 — 리뷰·PR·CI 가 없고 공용 PC 반영이 사람 손에 달려 사고 위험이 크다.
 
 ## 결과
