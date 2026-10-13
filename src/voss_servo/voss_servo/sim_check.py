@@ -26,6 +26,9 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from typing import Any
 
+# 착지 = GRASP 중 pose z 최소 (S2-T14, z_compare 와 같은 규칙)
+from voss_servo.z_compare import landing
+
 # ---------------------------------------------------------------- 표·상수 (DD 6.2·6.3·6.4)
 
 SUCCEEDED, CANCELED, ABORTED = 4, 5, 6  # action_msgs/GoalStatus
@@ -48,6 +51,10 @@ class Case:
     kp: float | None = None  # control.kp_per_s (명령 인자 --kp 가 있으면 그것이 먼저)
     timeout_s: float | None = None  # goal 결과 대기 한계 (명령 인자보다 길면 이 값)
 
+
+FAIL_RETREAT_CLOSE_S = (
+    2.2  # fail_retreat 가짜 닫힘 지연 (S2-T14, 아래 CASES 의 fail_retreat 주석·DD 5절)
+)
 
 CASES: dict[str, Case] = {
     "lost": Case("lost", "lost_after_s", 40.5),
@@ -74,12 +81,14 @@ CASES: dict[str, Case] = {
         timeout_s=60.0,
     ),
     # U9b: 현장 타이밍(정렬 x ≈ 72) 빈손 → 재시도 x 여유 없음 → 안전 후퇴 → GRASP_FAILED
+    # S2-T14: 닫힘 1.7 → 2.2 s. 사다리꼴 하강(≈1.77 s)이면 1차 실패 x ≈ 239 vs 재시도 문턱 210.6 → 여유 28 mm
+    # 뿐이라 2.2 s 로 263(여유 52, P 는 307 vs 165.7) — design/S2T14-dd.md 5절 표
     "fail_retreat": Case(
         "fail_retreat",
         "normal",
         40.5,
         grip_plan="empty",
-        grip_close_s=1.7,
+        grip_close_s=FAIL_RETREAT_CLOSE_S,
         max_attempts=3,
         timeout_s=45.0,
     ),
@@ -130,6 +139,9 @@ EXPECT: dict[tuple[str, str], Expect] = {
         ABORTED, "GRASP_FAILED", "WIDTH_OUT", False, (*PHASES[:5],), attempts=1, retreat=True
     ),
 }
+# J13·J14 를 보는 case (정상 OK 경로, S2-T14)
+Z_CASES = ("normal", "descend_lost")
+
 PROFILE_CASES: dict[str, tuple[str, ...]] = {
     "pre_u5": ("lost", "invalid", "cancel", "normal", "two_boxes"),
     "grasp": (
@@ -152,6 +164,9 @@ TRACK_LOCK_TOL_M = 0.005
 FOLLOW_MIN_TICKS = 30
 CUT_GAP_TICKS = 2  # J12: 마지막 수신이 첫 사각 틱보다 이만큼(틱) 앞서야 "사각 전 끊김" (U9a-dd 4절)
 CUT_MIN_MARGIN_S = 0.2  # J12: 지시서 목표 여유 (LOST 시계 vs 사각 진입)
+LAND_BELOW_MM = 1.0  # J13: 착지가 목표보다 이만큼까지 아래 (지나침, 지시서 완료 기준 3)
+LAND_ABOVE_MM = 4.0  # J13: 착지가 목표보다 이만큼까지 위 (멈춤 실패·조기 정지 감시)
+Z_TIME_MARGIN_S = 0.5  # J14: DESCEND·LIFT 실제 시간 ≤ 기동 로그 예상 + 이 값 (S2T14-dd 5절)
 ZERO_EPS = 1e-9
 
 # 대기 상한 (s)
@@ -178,6 +193,10 @@ GW_STATS = re.compile(  # :421, 5 s 마다, 찍을 때마다 0 으로 리셋
 )
 SERVO_READY = re.compile(r"\[belt_servo\]: READY$")
 SERVO_REFUSED = re.compile(r"\[belt_servo\]: READY 거부")
+# belt_servo 기동 로그 첫 줄 (belt_servo._z_profile_line 문구 — 바뀌면 여기도, S2-T14)
+SERVO_PROFILE = re.compile(
+    r"\[belt_servo\]: z 프로파일: (\w+) — .*하강 예상 ([\d.]+) s · 들기 예상 ([\d.]+) s"
+)
 
 
 # ---------------------------------------------------------------- 판정 결과
@@ -386,6 +405,67 @@ def judge_descend_cut(
     return _v("J12", "하강 끊김", margin >= min_margin_s, want, got)
 
 
+def parse_profile(lines: list[str]) -> tuple[str, float, float] | None:
+    """launch.log → (z 프로파일, 하강 예상 s, 들기 예상 s). 노드가 실제로 쓴 값 (재검 m6)."""
+    for line in lines:
+        if m := SERVO_PROFILE.search(line):
+            return m.group(1), float(m.group(2)), float(m.group(3))
+    return None  # 줄이 없다 (READY 거부·옛 노드)
+
+
+def judge_landing(progress: list[dict]) -> Verdict:
+    """J13: 착지 − 목표 ∈ [−1, +4] mm. dry_run 은 가속을 무시해 지나침 입증이 아니라 '법칙이 멈추나' 확인."""
+    want = f"−{LAND_BELOW_MM:g} ≤ 착지 − 목표 ≤ +{LAND_ABOVE_MM:g} mm"
+    got = landing(progress)
+    if got is None:
+        return _unknown("J13", "착지", want, "DESCEND·GRASP 틱 없음")
+    low, target = got
+    diff = low - target  # 음수 = 목표 아래 (지나침)
+    ok = -LAND_BELOW_MM <= diff <= LAND_ABOVE_MM
+    return _v("J13", "착지", ok, want, f"착지 {low:.1f} · 목표 {target:.1f} · {diff:+.2f} mm")
+
+
+def z_times(rows: list[dict]) -> tuple[float | None, float | None]:
+    """마지막 틱의 단계 진입 시각 → (DESCEND 시간, LIFT 시간) s. 모르면 None."""
+    if not rows:
+        return None, None
+    last = rows[-1]
+
+    def span(a: str, b: str) -> float | None:
+        ta, tb = last.get(f"phase_t_{a}_s"), last.get(f"phase_t_{b}_s")
+        return float(tb) - float(ta) if ta is not None and tb is not None else None
+
+    return span("descend", "grasp"), span("lift", "verify")
+
+
+def judge_z_times(
+    rows: list[dict], expect: tuple[str, float, float] | None, margin_s: float = Z_TIME_MARGIN_S
+) -> Verdict:
+    """J14: DESCEND·LIFT 실제 시간 ≤ 기동 로그 예상 + margin. 사다리꼴인데 P 로 돌면 FAIL."""
+    if expect is None:
+        return _unknown("J14", "z 시간", f"예상 + {margin_s:g} s", "기동 로그 프로파일 줄 없음")
+    name, e_desc, e_lift = expect
+    want = f"{name}: DESCEND ≤ {e_desc + margin_s:.2f} · LIFT ≤ {e_lift + margin_s:.2f} s"
+    t_desc, t_lift = z_times(rows)
+    if t_desc is None or t_lift is None:
+        return _unknown("J14", "z 시간", want, "DESCEND·LIFT 진입 시각 없음")
+    ok = t_desc <= e_desc + margin_s and t_lift <= e_lift + margin_s
+    return _v("J14", "z 시간", ok, want, f"DESCEND {t_desc:.2f} · LIFT {t_lift:.2f} s")
+
+
+def z_summary(rows: list[dict], progress: list[dict], profile: tuple | None) -> str:
+    """두 모드를 나란히 붙일 한 줄: 프로파일 · DESCEND · LIFT · 착지 (완료 기준 3 비교용)."""
+    t_desc, t_lift = z_times(rows)
+    land = landing(progress)
+
+    def fmt(t: float | None) -> str:
+        return f"{t:.2f} s" if t is not None else "—"
+
+    diff = f"{land[0] - land[1]:+.2f} mm" if land else "—"
+    name = profile[0] if profile else "?"
+    return f"z.profile {name} · DESCEND {fmt(t_desc)} · LIFT {fmt(t_lift)} · 착지 − 목표 {diff}"
+
+
 def line_distance(p: Any, start: Any, d: Any) -> float:
     """점 p 와 (start 를 지나고 방향 d 인) 직선 사이 거리."""
     w = [float(a) - float(b) for a, b in zip(p, start, strict=False)]
@@ -474,9 +554,11 @@ def judge_stop(facts: GatewayFacts, cancel: bool, win: tuple) -> Verdict:
     return _v("J9", "stop", ok, want, f"stop {n} · 줄 {lines}")
 
 
-def launch_extra(case: Case) -> list[str]:
-    """case 의 U9b 설정 → sim.launch 인자 목록 (값이 없으면 빈 목록 = 지금 동작)."""
+def launch_extra(case: Case, z_profile: str | None = None) -> list[str]:
+    """case 의 U9b 설정 + z 프로파일 → sim.launch 인자 목록 (값이 없으면 빈 목록 = 지금 동작)."""
     extra: list[str] = []
+    if z_profile:
+        extra.append(f"z_profile:={z_profile}")  # S2-T14 (비우면 sim yaml 의 p)
     if case.grip_plan is not None:
         extra += ["gripper:=fake", f"grip_plan:={case.grip_plan}"]
         if case.grip_close_s is not None:
@@ -570,6 +652,9 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     ap.add_argument("--out", default=None, help="run 폴더들의 부모 (기본 /tmp/voss_sim/<시각>)")
     ap.add_argument("--config", default=None, help="voss_config.yaml (기본 <git 최상위>/config)")
     ap.add_argument("--kp", default=None, help="control.kp_per_s 덮어쓰기")
+    ap.add_argument(
+        "--z-profile", default=None, choices=["p", "trapezoid"], help="z.profile 덮어쓰기"
+    )
     ap.add_argument("--goal-timeout-s", type=float, default=30.0)
     ap.add_argument("--cancel-after-s", type=float, default=None, help="cancel case 시각 덮어쓰기")
     return ap.parse_args(argv)
@@ -654,6 +739,7 @@ class SimRunner:
         self.args, self.out_root, self.sim = args, out_root, sim
         self.node = rclpy.create_node("sim_check")
         self.last_box_stamp = 0.0  # 받은 BoxTrack stamp 중 가장 늦은 것 (ROS 초)
+        self.z_lines: list[str] = []  # case 별 z 단계 시간 한 줄 (S2-T14, main 끝에 출력)
         qos = QoSProfile(depth=5, reliability=ReliabilityPolicy.BEST_EFFORT)
         self.node.create_subscription(BoxTrack, "/voss/vision/box", self._on_box, qos)
 
@@ -697,7 +783,7 @@ class SimRunner:
         kp = self.args.kp if self.args.kp is not None else case.kp  # 명령 인자가 먼저
         if kp is not None:
             cmd.append(f"kp:={kp}")
-        cmd += launch_extra(case)  # U9b: 가짜 그리퍼·재시도·박스 시작 x
+        cmd += launch_extra(case, self.args.z_profile)  # U9b 가짜 그리퍼·재시도·시작 x + S2-T14
         env = dict(os.environ, PYTHONUNBUFFERED="1", RCUTILS_COLORIZED_OUTPUT="0")
         # 닫기는 run_case 의 finally
         log = open(os.path.join(run_dir, "launch.log"), "w", encoding="utf-8")
@@ -854,6 +940,11 @@ class SimRunner:
             v.append(judge_retreat(terminal, self.sim["lift_dz_m"], self.sim["height_tol_m"]))
         if case.name == "descend_lost":
             v.append(judge_descend_cut(progress, self.sim["lost_timeout_s"]))
+        if case.name in Z_CASES:  # S2-T14: 정상 파지 경로의 착지·z 시간
+            rows = progress + ([terminal] if terminal else [])
+            profile = parse_profile(read_lines(os.path.join(run_dir, "launch.log")))
+            v += [judge_landing(progress), judge_z_times(rows, profile)]
+            self.z_lines.append(f"{case.name}: {z_summary(rows, progress, profile)}")
         if case.name == "two_boxes":
             belt = next((r.get("belt_vel_mps") for r in ticks if r.get("belt_vel_mps")), None)
             rows = progress + ([terminal] if terminal else [])
@@ -908,6 +999,8 @@ def main(argv: list[str] | None = None) -> None:
     finally:
         runner.close()
         rclpy.try_shutdown()
+    if runner.z_lines:  # S2-T14: 두 모드 결과를 나란히 붙여 "사다리꼴 < P" 확인
+        print("== z 단계 시간 ==\n" + "\n".join(runner.z_lines))
     print("== 요약 ==\n| case | 종료 코드 | run 폴더 |\n|---|---|---|")
     for name, code in codes.items():
         folder = os.path.join(out_root, name) if name in CASES else "-"  # 중단 행은 폴더 없음

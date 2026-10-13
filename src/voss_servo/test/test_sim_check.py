@@ -284,3 +284,94 @@ def test_u9b_judge_retreat() -> None:
     assert sc.judge_retreat(undone, 0.050, 0.002).status == "FAIL"
     assert sc.judge_retreat(None, 0.050, 0.002).status == "UNKNOWN"
     assert sc.judge_retreat(dict(end, position_base_m=None), 0.050, 0.002).status == "UNKNOWN"
+
+
+# ------------------------------------------------------------------ S2-T14 (DD 7절 N17·N19)
+
+
+def zrow(phase: str, z: float, target: float | None = None, **kw) -> dict:
+    """착지·z 시간 판정용 틱 (tcp_pose_m z 와 tcp_target_m z 만 의미 있음)."""
+    row = {"phase": phase, "tcp_pose_m": [0.0, 0.0, z]}
+    if target is not None:
+        row["tcp_target_m"] = [0.0, 0.0, target]
+    row.update(kw)
+    return row
+
+
+@pytest.mark.parametrize(
+    ("low_mm", "status"), [(80.81, "PASS"), (80.79, "FAIL"), (85.79, "PASS"), (85.81, "FAIL")]
+)
+def test_s2t14_judge_landing_both_bounds(low_mm, status) -> None:
+    rows = [zrow("DESCEND", 0.0840, 0.0818), zrow("GRASP", low_mm / 1000.0), zrow("GRASP", 0.087)]
+    assert sc.judge_landing(rows).status == status  # 목표 81.8: [−1, +4] mm
+    assert sc.judge_landing([zrow("GRASP", 0.08)]).status == "UNKNOWN"  # DESCEND 없음
+
+
+def test_s2t14_judge_z_times() -> None:
+    last = {"phase_t_descend_s": 10.0, "phase_t_grasp_s": 11.8, "phase_t_lift_s": 14.0}
+    rows = [{**last, "phase_t_verify_s": 15.7}]
+    trap = ("trapezoid", 1.70, 1.74)
+    assert sc.judge_z_times(rows, trap).status == "PASS"  # 1.8 ≤ 2.2 · 1.7 ≤ 2.24
+    slow = [{**last, "phase_t_grasp_s": 12.6, "phase_t_verify_s": 15.7}]  # P 처럼 2.6 s
+    assert sc.judge_z_times(slow, trap).status == "FAIL"
+    assert sc.judge_z_times(rows, None).status == "UNKNOWN"  # 프로파일 줄 없음
+    assert sc.judge_z_times([last], trap).status == "UNKNOWN"  # VERIFY 진입 없음
+
+
+def test_s2t14_parse_profile_line() -> None:
+    from voss_servo import control
+
+    lines = [
+        "[INFO] [1.0] [belt_servo]: READY",
+        "[INFO] [1.0] [belt_servo]: z 프로파일: trapezoid — DESCEND·LIFT 사다리꼴(감속 0.080 m/s², "
+        f"최소 {control.TRAP_V_FLOOR_MPS * 1000:g} mm/s), PREPARE·TRACK 은 P. "
+        "하강 예상 1.70 s · 들기 예상 1.74 s (되돌림: z.profile: p)",
+    ]
+    assert sc.parse_profile(lines) == ("trapezoid", 1.70, 1.74)
+    p_line = "[INFO] [1.0] [belt_servo]: z 프로파일: p — 모든 phase P(kp_z 1.5). 하강 예상 2.64 s · 들기 예상 2.79 s (켜기: z.profile: trapezoid)"
+    assert sc.parse_profile([p_line]) == ("p", 2.64, 2.79)
+    assert sc.parse_profile(["[belt_servo]: READY"]) is None
+
+
+def test_s2t14_launch_extra_z_profile() -> None:
+    assert sc.launch_extra(sc.CASES["normal"], "trapezoid") == ["z_profile:=trapezoid"]
+    assert sc.launch_extra(sc.CASES["normal"], None) == []  # 기본 = sim yaml
+    assert sc.Z_CASES == ("normal", "descend_lost")
+
+
+def test_s2t14_case_x_geometry_margins() -> None:
+    """DD 5절 표: 두 모드에서 retry 는 재시도, fail_retreat 는 후퇴로 갈 x 여유 (재검 M2)."""
+    belt, align = 48.0, 72.0  # mm/s, sim 정렬 x (kp 1)
+    desc = {"p": 2.7, "trapezoid": 1.77}  # sim DESCEND s (P 실측 체류 + 진입, 사다리꼴 재검 sim)
+    retry_cap = {"p": 165.7, "trapezoid": 210.6}  # 재시도 가능 실패 x 상한 (HLD D4)
+    close = sc.CASES["fail_retreat"].grip_close_s
+    assert close == sc.FAIL_RETREAT_CLOSE_S == 2.2
+    for mode in ("p", "trapezoid"):
+        fail_x = align + belt * (desc[mode] + close)  # fail_retreat 1차 실패 x
+        assert fail_x - retry_cap[mode] >= 50.0  # 후퇴로 간다, 여유 ≥ 50 mm
+        retry_fail = -2.0 + belt * (desc[mode] + sc.CASES["retry"].grip_close_s)  # retry 1차 실패
+        assert retry_cap[mode] - retry_fail >= 10.0  # 재시도로 간다 (P 쪽 14 mm 는 S2-T29 값)
+
+
+def _sim_launch():
+    """launch/sim.launch.py 를 모듈로 읽는다 (설치 없이 소스에서)."""
+    import importlib.util
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parent.parent / "launch" / "sim.launch.py"
+    spec = importlib.util.spec_from_file_location("sim_launch_under_test", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_s2t14_sim_launch_overrides(tmp_path) -> None:
+    """z_profile 만 줘도 덮어쓰기 파일이 생기고 z.profile 이 들어간다 (재검 m5 의 조건 누락 방지)."""
+    import yaml
+
+    mod = _sim_launch()
+    assert mod._wants_overrides("", "", "trapezoid")
+    assert not mod._wants_overrides("", "", "")
+    path = mod._write_overrides(str(tmp_path), "", "", "trapezoid")
+    body = yaml.safe_load(open(path, encoding="utf-8"))
+    assert body == {"belt_servo": {"ros__parameters": {"z": {"profile": "trapezoid"}}}}

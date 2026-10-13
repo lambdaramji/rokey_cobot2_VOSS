@@ -41,6 +41,7 @@ from voss_servo import log_schema as ls
 from voss_servo.params import (
     BLIND_DWELL_MARGIN_S,
     PARAM_SPECS,
+    Z_PROFILE_TRAP,
     check_params,
     params_digest,
     ready_log_line,
@@ -74,6 +75,7 @@ SNAPSHOT_NULL_KEYS = (
     "at_grasp_height",
     "at_lift_height",
     "reach",
+    "z_v_cmd_mps",  # S2-T14
 )
 # 진단 값 키 (U9-c, 로그 전용). 0 유지·예외 경로에서는 null
 DIAG_KEYS = (
@@ -205,6 +207,8 @@ class BeltServoNode(Node):
         # 제어 설정 묶음 (단위 변환 한 곳). READY 일 때만 goal 이 돌아서 그때만 만든다
         self._ctrl = control.config_from_values(self.values) if self.ready else None
         self.grip_late_discarded = 0  # 버린 늦은 그리퍼 응답 수 (U5 DD E8)
+        if self.ready:
+            self.get_logger().info(self._z_profile_line())  # 모드를 READY 줄들 맨 앞에 (S2-T14)
         self._room_need_s = self._grasp_room_need() if self.ready else None  # x 여유 계산용 시간
         self._blind_max_s = self._blind_dwell_max() if self.ready else None  # 사각 체류 상한 (U9a)
         self._retry_need_s = self._retry_need() if self.ready else None  # 재시도 x 여유 시간 (U9b)
@@ -243,17 +247,31 @@ class BeltServoNode(Node):
             self.get_logger().error(ready_log_line(report) + " — 액션 서버 미생성")
         return report.ready
 
+    def _z_profile_line(self) -> str:
+        """기동 로그 첫 줄: z 프로파일과 하강·들기 예상 시간 (S2T14-dd 3.1, sim_check 가 파싱한다)."""
+        cfg = self._ctrl
+        desc = control.z_move_time_s(
+            cfg.approach_dz - cfg.grasp_dz, cfg.descend_speed, cfg, control.z_law(fsm.DESCEND, cfg)
+        )  # 접근 높이 → 파지 높이
+        lift = control.z_move_time_s(
+            cfg.lift_dz - cfg.grasp_dz, cfg.lift_speed, cfg, control.z_law(fsm.LIFT, cfg)
+        )  # 파지 높이 → 들기 높이
+        times = f"하강 예상 {desc:.2f} s · 들기 예상 {lift:.2f} s"
+        if cfg.z_profile == Z_PROFILE_TRAP:
+            return (
+                f"z 프로파일: trapezoid — DESCEND·LIFT 사다리꼴(감속 {cfg.a_dec:.3f} m/s², "
+                f"최소 {control.TRAP_V_FLOOR_MPS * 1000.0:g} mm/s), PREPARE·TRACK 은 P. "
+                f"{times} (되돌림: z.profile: p)"
+            )
+        head = f"z 프로파일: p — 모든 phase P(kp_z {cfg.kp_z:g})."
+        return f"{head} {times} (켜기: z.profile: trapezoid)"
+
     def _grasp_room_need(self) -> float:
         """정렬 뒤 하강 + 닫힘에 걸릴 시간 (s). x 여유 검사(HLD D6)에 쓴다."""
         cfg = self._ctrl
-        t_desc = grip.descend_time_s(
-            cfg.approach_dz - cfg.grasp_dz,  # 접근 높이 → 파지 높이 거리 (grasp_dz 는 음수)
-            cfg.descend_speed,
-            cfg.a_max,
-            cfg.kp_z,
-            cfg.height_tol_m,
-        )
-        need_s = t_desc + float(self._p("grasp.close_time_max_s"))  # 그동안 벨트를 따라간다
+        close_s = float(self._p("grasp.close_time_max_s"))  # 닫힘 최대 시간
+        need_s = control.grasp_room_need_s(cfg, close_s)  # 하강 예상(프로파일별) + 닫힘
+        t_desc = need_s - close_s  # 로그용 하강 예상
         belt = float(np.linalg.norm(cfg.belt_v))  # 벨트 속도 m/s
         need_m = belt * need_s + float(self._p("grasp.room_margin_mm")) / 1000.0
         self.get_logger().info(
@@ -1042,6 +1060,7 @@ class BeltServoNode(Node):
         return {
             "belt_vel_mps": belt_vel,
             "belt_speed_mps": belt_mps,
+            "z_profile": self._ctrl.z_profile if self._ctrl is not None else None,  # S2-T14
             "config_version": self.values.get("config_version"),
             "config_sha256": self.values.get("config_sha256"),
             "params_sha256": self.params_sha256,
@@ -1159,6 +1178,7 @@ class BeltServoNode(Node):
             "at_grasp_height": ev.at_grasp_height,
             "at_lift_height": ev.at_lift_height,
             "reach": ev.reach,
+            "z_v_cmd_mps": _as_float(cmd.z_v_req) if cmd else None,  # clamp 전 z 요구 (S2-T14)
         }
 
     def _snapshot_values(
