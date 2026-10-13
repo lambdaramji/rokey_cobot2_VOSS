@@ -52,9 +52,10 @@ belt_servo:
     retry:
       max_attempts: 1               # 1~3. 1 유지 (U9b-dd 1절: 현장 정렬 x 에서는 재시도 x 여유가 없어 켜도 안전 후퇴)
     stop_timeout_s: 1.0             # stop 응답 기다리는 한계. 제안
-    gripper_timeout_s: 3.0          # 그리퍼 응답 기다리는 한계 (요청 한 건마다). 제안 (10/10 닫힘 최대 2128 ms, close_time_max 2.3 + 여유).
-                                    # 10/13 S2-T29: close_time_max 2.5 로 올려도 3.0 유지(> 2.5 교차 검사 통과, 10/12 최대 2.467 s)
-                                    # 참고: gateway rg2_timeout_s 6.0 — belt_servo 가 3 s 에 포기해도 RG2 는 최대 6 s 까지
+    gripper_timeout_s: 4.0          # 그리퍼 응답 기다리는 한계 (요청 한 건마다).
+                                    # 4.0 — **임시책**(10/13 사용자 결정): 10/12 경주 해결 전 기울어진 박스 실기(26°)에서 닫힘 3.08 s 로 3.0 초과 → DEVICE_ERROR(실제로는 쥠).
+                                    # J6 회전 파지(S2-T18)가 들어오면 3.0 으로 재검토. 교차 검사 > close_time_max 2.5 통과.
+                                    # 참고: gateway rg2_timeout_s 6.0 — belt_servo 가 4 s 에 포기해도 RG2 는 최대 6 s 까지
                                     # 잡혀 있어 다음 요청이 BUSY 가 될 수 있다 (BUSY 는 0.5 s 뒤 한 번 더 요청, 그래도 BUSY 면 DEVICE_ERROR)
     rate_hz: 30.0                   # 서보 루프 (topics.md 계약)
     zero_hold_s: 0.5                # goal 종료 뒤 0 속도 유지. 제안 (watchdog 200 ms + 정지 0.15~0.41 s 보다 길게)
