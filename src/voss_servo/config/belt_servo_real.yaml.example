@@ -45,6 +45,8 @@ belt_servo:
       descend_speed_mps: null       # 하강 속도 상한. 제안 0.05 (상한 약 0.06)
       lift_speed_mps: null          # 들기 속도 상한. 제안 0.08
       height_tol_mm: null           # "높이 도달" 허용치. 제안 2
+      profile: p                    # z 속도 프로파일 (선택 키, 없어도 p). 켤 때 trapezoid(DESCEND·LIFT 사다리꼴, S2-T14),
+                                    # 되돌림 = p 한 줄 + belt_servo 재기동. 절차·되돌림 조건: design/S2T14-run.md
     input:
       stale_timeout_s: null         # position_valid=false·pose 끊김 지속 기준. 제안 0.3
       lost_timeout_s: null          # 내 track_id 미수신 지속 기준. 제안 0.5. DESCEND 경주는 cutoff 30 으로 없앰 (U9a)

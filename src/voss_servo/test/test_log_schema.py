@@ -48,7 +48,8 @@ def test_u9c_keys_present_and_counts() -> None:
     assert U9C_TICK_KEYS <= set(ls.TICK_FIELDS) and len(U9C_TICK_KEYS) == 16
     assert U9C_ATTEMPT_KEYS <= set(ls.ATTEMPT_FIELDS) and len(U9C_ATTEMPT_KEYS) == 12
     assert "obs_age_s" in ls.TICK_FIELDS
-    assert (len(ls.TICK_FIELDS), len(ls.ATTEMPT_FIELDS)) == (74, 34)  # U9b 후퇴 4키 포함
+    # U9b 후퇴 4키 + S2-T14 z_profile·z_v_cmd_mps (시도는 z_profile 만)
+    assert (len(ls.TICK_FIELDS), len(ls.ATTEMPT_FIELDS)) == (76, 35)
     assert len(set(ls.TICK_FIELDS)) == len(ls.TICK_FIELDS)  # 중복 키 없음
     assert list(ls.PHASE_T_KEYS) == ["PREPARE", "TRACK", "DESCEND", "GRASP", "LIFT", "VERIFY"]
 
@@ -88,3 +89,10 @@ def test_u9b_retreat_keys_in_tick_and_attempt() -> None:
     for fields in (ls.TICK_FIELDS, ls.ATTEMPT_FIELDS):
         i = fields.index("grasped")
         assert list(fields[i + 1 : i + 5]) == keys
+
+
+def test_s2t14_z_keys() -> None:
+    """S2-T14: z_profile(틱·시도), z_v_cmd_mps(틱만). 남은 거리는 error_m[2] 로 대신 (DD 3.2)."""
+    assert {"z_profile", "z_v_cmd_mps"} <= set(ls.TICK_FIELDS)
+    assert "z_profile" in ls.ATTEMPT_FIELDS and "z_v_cmd_mps" not in ls.ATTEMPT_FIELDS
+    assert "z_remaining_m" not in ls.TICK_FIELDS and "error_m" in ls.TICK_FIELDS

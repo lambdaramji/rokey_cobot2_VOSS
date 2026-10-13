@@ -18,7 +18,14 @@ from typing import Any
 import numpy as np
 
 from voss_servo import fsm, grip
-from voss_servo.params import BLIND_DWELL_MARGIN_S, GATEWAY_Z_MIN_MM, RETREAT_CLEAR_MM
+from voss_servo.params import (
+    BLIND_DWELL_MARGIN_S,
+    GATEWAY_Z_MIN_MM,
+    NULL_STRINGS,
+    RETREAT_CLEAR_MM,
+    Z_PROFILE_P,
+    Z_PROFILE_TRAP,
+)
 
 # --- xy 규칙 이름 (틱 로그 cmd_rule 에도 그대로 쓴다) ---
 FF_P = "FF_P"  # 벨트 속도 + Kp × 오차
@@ -32,6 +39,17 @@ ZERO_STOP = "ZERO_STOP"  # 멈추는 중(stopping) 또는 goal 끝(terminal)
 Vec = Sequence[float] | np.ndarray  # 길이 3 벡터로 받을 수 있는 것
 # 파지 높이 도달 문턱(목표 + height_tol)이 gateway z 하한보다 이만큼은 위에 있어야 도달할 수 있다
 Z_MIN_MARGIN_M = 0.001
+# --- 사다리꼴 z (S2-T14, z.profile trapezoid). 판단값 — 계산 근거 design/S2T14-hld.md D1·D7, 실측 전 제안값 ---
+# 감속 = 이 값 × max_acc. 로봇 램프(= max_acc)보다 낮게 → 착지가 P 와 0.5 mm 차
+TRAP_DECEL_RATIO = 0.8
+TRAP_V_FLOOR_MPS = 0.005  # 조준점 바로 앞 최소 속도 (√ 꼬리에서 멈춰 버리지 않게)
+# 사다리꼴: 파지 목표 ≥ gateway z 하한 + 이 값 (최악 착지 −2.2 mm, 지연 100 ms)
+Z_MIN_MARGIN_TRAP_M = 0.003
+Z_LAW_P = "P"  # z 속도 법칙: kp_z × 오차
+Z_LAW_TRAP = "TRAP"  # z 속도 법칙: 사다리꼴
+# 사다리꼴을 쓰는 phase. 안전 후퇴 RISING 도 phase 가 LIFT 라 함께 들어간다 (HLD D2 결정).
+# PREPARE·TRACK 은 접근 높이에 "머물러야" 해서 P 를 유지한다 (사다리꼴이면 떨림)
+TRAP_PHASES = (fsm.DESCEND, fsm.LIFT)
 
 
 @dataclass(frozen=True, eq=False)
@@ -60,6 +78,8 @@ class ControlConfig:
     x_max: float  # 추종 가능 구간 TCP x 상한
     dt_nominal: float  # 1 / rate_hz
     z_min: float  # gateway TCP z 하한 (사본, m)
+    z_profile: str  # "p" | "trapezoid" (S2-T14)
+    a_dec: float  # 사다리꼴 감속 m/s² = TRAP_DECEL_RATIO × a_max
     lift_done_below_m: float = 0.0  # LIFT 끝 = 들기 높이 − 허용치 − 이 값 (빨리 넘기기)
 
 
@@ -98,7 +118,16 @@ def config_from_values(values: dict[str, Any]) -> ControlConfig:
         x_max=values["reach.x_max_mm"] / 1000.0,
         dt_nominal=1.0 / values["rate_hz"],
         z_min=GATEWAY_Z_MIN_MM / 1000.0,
+        z_profile=profile_or_p(values.get("z.profile")),  # 선택 키: 없으면 p
+        a_dec=TRAP_DECEL_RATIO * float(values["limits.max_acc_mps2"]),
     )
+
+
+def profile_or_p(raw: Any) -> str:
+    """z.profile 값 → 프로파일 이름. 없음·None·"null" 문자열(--params-file) 이면 p (S2T14-dd 1절)."""
+    if raw is None or (isinstance(raw, str) and raw.strip() in NULL_STRINGS):
+        return Z_PROFILE_P  # 키를 안 넣은 옛 yaml = P = 시연 라인
+    return str(raw)  # 값 검사는 params.check_params 가 이미 했다
 
 
 # ---------------------------------------------------------------------- 기본 함수
@@ -216,6 +245,58 @@ def z_speed(
     return min(max(v, -v_down_max), v_up_max)
 
 
+def z_law(phase: str, cfg: ControlConfig) -> str:
+    """이 phase 의 z 속도 법칙. trapezoid 이고 DESCEND·LIFT 이면 사다리꼴, 아니면 P (HLD D2)."""
+    if cfg.z_profile == Z_PROFILE_TRAP and phase in TRAP_PHASES:
+        return Z_LAW_TRAP
+    return Z_LAW_P
+
+
+def z_speed_trap(
+    z_target: float,
+    tcp_z: float,
+    a_dec: float,
+    tol: float,
+    v_floor: float,
+    v_down_max: float,
+    v_up_max: float,
+) -> float:
+    """사다리꼴 z 속도: "목표 + tol" 에서 멈출 만큼만 남기고 최고 속도로 간다 (HLD D1 (a)).
+
+    크기 = min(방향 상한, max(최소 속도, √(2 × 감속 × 조준 거리))). 가속 쪽은 clamp 가 자른다.
+    감속 a_dec = 0.8 × max_acc 라 30 Hz 꼬리에서도 틱당 감속 요구(2.9~3.2 mm/s)가 clamp 한도 3.33 아래다.
+    """
+    e = z_target - tcp_z  # 남은 높이 (양수 = 올라가야 함)
+    if e == 0.0:
+        return 0.0  # 이미 목표
+    lim = v_up_max if e > 0.0 else v_down_max  # 그 방향 속도 상한
+    if lim <= 0.0:
+        return 0.0  # 그 방향으로는 가지 않는다 (예: DESCEND 중 위로)
+    aim = max(abs(e) - tol, 0.0)  # 조준점(목표 + tol)까지 남은 거리
+    speed = min(lim, max(v_floor, math.sqrt(2.0 * a_dec * aim)))  # 감속 곡선 · 바닥 · 상한
+    return speed if e > 0.0 else -speed  # 부호는 남은 높이 쪽
+
+
+def z_command(
+    z_t: float | None, v_down: float, v_up: float, phase: str, tcp_z: float, cfg: ControlConfig
+) -> float:
+    """z_plan 결과 → 이번 틱 z 속도 (clamp 전). 목표가 없으면 0 (GRASP·VERIFY·hold_z)."""
+    if z_t is None:
+        return 0.0
+    if z_law(phase, cfg) == Z_LAW_TRAP:
+        return z_speed_trap(
+            z_t, tcp_z, cfg.a_dec, cfg.height_tol_m, TRAP_V_FLOOR_MPS, v_down, v_up
+        )  # 사다리꼴 (S2-T14)
+    return z_speed(z_t, tcp_z, cfg.kp_z, v_down, v_up)  # P — f9f1d28 과 같은 식·같은 인자
+
+
+def z_move_time_s(dist_m: float, v: float, cfg: ControlConfig, law: str) -> float:
+    """z 로 dist_m 움직이는 예상 시간 s (정지 출발, 해석식). 법칙에 따라 식을 고른다."""
+    if law == Z_LAW_TRAP:
+        return grip.trap_time_s(dist_m, v, cfg.a_max, cfg.a_dec, cfg.height_tol_m)
+    return grip.descend_time_s(dist_m, v, cfg.a_max, cfg.kp_z, cfg.height_tol_m)
+
+
 def clamp(v: Vec, prev_v: Vec, v_max: float, a_max: float, dt: float) -> tuple[np.ndarray, bool]:
     """속도 크기·가속 크기 상한. (자른 속도, 잘렸나). 0 벡터는 가속 제한 없이 바로 0."""
     v = vec3(v)
@@ -251,6 +332,9 @@ def grasp_floor_blocked(top_z: float, cfg: ControlConfig) -> bool:
     gateway 는 z 가 하한(78 mm)에 닿으면 -z 를 자른다. 문턱이 하한 + 여유보다 낮으면 at_grasp_height 가
     영영 참이 안 되고, DESCEND 는 사각이라 LOST 도 없이 FF 로 x 끝까지 간다 (PR #122 학민 리뷰).
     """
+    if z_law(fsm.DESCEND, cfg) == Z_LAW_TRAP:
+        # 사다리꼴은 끝 속도가 빨라 목표보다 최대 약 2.2 mm 더 내려갈 수 있다 → 목표 자체에 여유 (HLD D7)
+        return top_z + cfg.grasp_dz < cfg.z_min + Z_MIN_MARGIN_TRAP_M
     threshold = top_z + cfg.grasp_dz + cfg.height_tol_m  # at_grasp_height 문턱
     return threshold < cfg.z_min + Z_MIN_MARGIN_M
 
@@ -259,31 +343,43 @@ def descend_blind_max_s(cutoff_m: float, cfg: ControlConfig) -> float:
     """DESCEND 에서 사각에 들어간 뒤 파지 높이까지 걸릴 시간의 상한 s (U9a-dd 2.2).
 
     예상 하강 시간은 정지 출발 가정이라 이미 내려가는 실제보다 길다 = 안전 쪽.
-    예: cutoff 0.030, grasp_dz −0.019 → 2.439 + 1.0 = 3.44 s (실측 체류 2.10~2.16 s).
+    예: cutoff 0.030, grasp_dz −0.019 → P 2.439 + 1.0 = 3.44 s (실측 체류 2.10~2.16 s)
+        / trapezoid 1.502 + 1.0 = 2.50 s (sim 체류 약 1.13 s, S2T14-hld D5).
     """
     dist = cutoff_m - cfg.grasp_dz  # 사각 진입 높이 → 파지 높이 거리 (grasp_dz 는 음수라 더해진다)
-    expect = grip.descend_time_s(dist, cfg.descend_speed, cfg.a_max, cfg.kp_z, cfg.height_tol_m)
+    expect = z_move_time_s(dist, cfg.descend_speed, cfg, z_law(fsm.DESCEND, cfg))
     return expect + BLIND_DWELL_MARGIN_S  # 여유를 더한 상한
 
 
 def retry_need_s(cfg: ControlConfig, room_need_s: float) -> float:
     """GRASP 실패 순간부터 재시도 1회를 끝낼 시간 s = 재상승 예상 + (하강 + 닫힘 상한) (U9b-dd 1절).
 
-    예: 재상승 59 mm → 2.66 s + room_need 4.94 s = 7.60 s.
+    재상승은 PREPARE(항상 P) 법칙이다 (S2T14-hld D2·D6).
+    예: 재상승 59 mm → 2.66 s + room_need 5.14 s = 7.80 s (trapezoid 면 room_need 4.20 → 6.86 s).
     """
     dist = cfg.approach_dz - cfg.grasp_dz  # 파지 높이 → 접근 높이 (grasp_dz 는 음수)
-    rise = grip.descend_time_s(dist, cfg.lift_speed, cfg.a_max, cfg.kp_z, cfg.height_tol_m)
+    rise = z_move_time_s(dist, cfg.lift_speed, cfg, z_law(fsm.PREPARE, cfg))
     return rise + room_need_s  # 다시 올라가서, 내려가고, 닫는다
 
 
 def lift_max_s(cfg: ControlConfig) -> float:
     """후퇴 상승 체류 상한 s = 파지 → 들기 높이 예상 + 여유 (U9b-dd 1절). 정상 LIFT 는 경고에만 쓴다.
 
-    예: 69 mm → 2.785 + 1.0 = 3.78 s (실측 정상 LIFT 2.70~2.74 s).
+    예: 69 mm → P 2.785 + 1.0 = 3.78 s (실측 정상 LIFT 2.70~2.74 s) / trapezoid 1.736 + 1.0 = 2.74 s.
     """
     dist = cfg.lift_dz - cfg.grasp_dz  # 파지 높이 → 들기 높이
-    expect = grip.descend_time_s(dist, cfg.lift_speed, cfg.a_max, cfg.kp_z, cfg.height_tol_m)
+    expect = z_move_time_s(dist, cfg.lift_speed, cfg, z_law(fsm.LIFT, cfg))
     return expect + BLIND_DWELL_MARGIN_S  # U9-a S 와 같은 여유
+
+
+def grasp_room_need_s(cfg: ControlConfig, close_time_max_s: float) -> float:
+    """정렬 뒤 하강 + 닫힘에 걸릴 시간 s (x 여유 검사, HLD D6 · S2T14-dd 2.3).
+
+    예: P 2.639 + 2.5 = 5.14 s / trapezoid 1.702 + 2.5 = 4.20 s.
+    """
+    dist = cfg.approach_dz - cfg.grasp_dz  # 접근 높이 → 파지 높이 (grasp_dz 는 음수)
+    t_desc = z_move_time_s(dist, cfg.descend_speed, cfg, z_law(fsm.DESCEND, cfg))
+    return t_desc + close_time_max_s  # 그동안 벨트를 따라간다
 
 
 def retry_room_ok(
@@ -418,6 +514,7 @@ class Command:
     tcp_target: np.ndarray | None  # 이번 phase 의 TCP 목표
     error: np.ndarray | None  # tcp_target − TCP
     clamped: bool  # 속도·가속 상한으로 잘렸나
+    z_v_req: float | None = None  # clamp 전 z 속도 요구값 (목표 z 가 없으면 None, S2-T14 로그)
 
 
 def command(
@@ -449,9 +546,10 @@ def command(
         v = zero_cmd()
     else:
         v = ff_p(e, cfg.belt_v, cfg.belt_dir_xy, cfg.kp_xy, use_p=(rule == FF_P))
-    v[2] = 0.0 if z_t is None else z_speed(z_t, float(geo.tcp[2]), cfg.kp_z, v_down, v_up)
+    vz = z_command(z_t, v_down, v_up, phase, float(geo.tcp[2]), cfg)  # p 모드는 옛 식과 같은 값
+    v[2] = vz
     v, clamped = clamp(v, prev_v, cfg.v_max, cfg.a_max, dt)
-    return Command(v, rule, target, e, clamped)
+    return Command(v, rule, target, e, clamped, vz if z_t is not None else None)
 
 
 def finite_vec(v: Vec) -> np.ndarray | None:

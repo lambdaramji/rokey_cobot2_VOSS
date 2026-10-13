@@ -419,3 +419,63 @@ def test_shutdown_mid_goal_logs_node_shutdown(ready_node, tmp_path) -> None:
         for line in f.read_text().splitlines()
     ]
     assert [e["cause"] for e in ends if e["event"] == "GOAL_END"] == ["NODE_SHUTDOWN"]
+
+
+# ------------------------------------------------------------------ S2-T14 (DD 7절 N20)
+
+
+def test_s2t14_profile_line_and_goal_end_key(ready_node) -> None:
+    from voss_servo.belt_servo import GoalCtx
+
+    from voss_servo import fsm
+
+    n = ready_node
+    line = n._z_profile_line()
+    assert line.startswith("z 프로파일: p — 모든 phase P(kp_z 2)")  # 키 없음 = p
+    assert "하강 예상 " in line and "(켜기: z.profile: trapezoid)" in line
+    state, _ = fsm.start()
+    ctx = GoalCtx(FakeHandle(), "g1", 7, state, start=n._now(), vision_since=n._now())
+    n._ctx = ctx
+    n._on_box(box(7, 10))
+    n._tick_goal(ctx, n._now())
+    n._finish(ctx, fsm.LOST, "BOX_MISSING", False, n._now())
+    text = n._attempt_log.path.read_text(encoding="utf-8")
+    assert '"z_profile":"p"' in text  # 시도 레코드만으로 켠·끈 시리즈를 가른다
+
+
+@pytest.fixture
+def trap_node(tmp_path):
+    """z.profile trapezoid 로 띄운 READY 노드."""
+    args = ["--ros-args", "-p", f"log.dir:={tmp_path}", "-p", "z.profile:=trapezoid"]
+    for item in READY_ARGS:
+        args += ["-p", item]
+    rclpy.init(args=args, domain_id=TEST_DOMAIN_ID)
+    n = BeltServoNode()
+    yield n
+    n.destroy_node()
+    rclpy.try_shutdown()
+
+
+def test_s2t14_trapezoid_node_ready_values(trap_node) -> None:
+    from voss_servo import control
+
+    n = trap_node
+    assert n.ready and n._ctrl.z_profile == "trapezoid"
+    assert n._z_profile_line().startswith(
+        "z 프로파일: trapezoid — DESCEND·LIFT 사다리꼴(감속 0.080"
+    )
+    cutoff = 0.010  # READY_ARGS 의 vision_cutoff 10 mm
+    assert n._blind_max_s == pytest.approx(control.descend_blind_max_s(cutoff, n._ctrl))
+    assert n._lift_max_s == pytest.approx(2.736, abs=1e-3)  # 사다리꼴 69 mm + 1.0
+    assert n._room_need_s == pytest.approx(1.7025 + 2.1, abs=1e-3)  # close_time_max 2.1
+    from voss_servo.belt_servo import GoalCtx
+
+    from voss_servo import fsm
+
+    state, _ = fsm.start()
+    ctx = GoalCtx(FakeHandle(), "g2", 7, state, start=n._now(), vision_since=n._now())
+    n._ctx = ctx
+    n._on_box(box(7, 10))
+    n._tick_goal(ctx, n._now())
+    n._finish(ctx, fsm.LOST, "BOX_MISSING", False, n._now())
+    assert '"z_profile":"trapezoid"' in n._attempt_log.path.read_text(encoding="utf-8")
