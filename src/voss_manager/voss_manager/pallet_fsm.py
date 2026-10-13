@@ -10,6 +10,8 @@
 - PICK 이 GRIP_FAIL 이면 2회 더(최대 3회) → 그래도 실패면 FAILED·GRIP_FAIL 로 두고 다음 박스(박스는 원래 칸에 남는다).
 - 그 밖의 실패·stop 은 PAUSED. resume 은 남은 박스부터 — 박스를 든 채 멈췄으면 RobotState 보고 폭으로 파지를 확인해
   쥐고 있으면 놓고, 놓쳤으면 FAILED·DROPPED 로 두고 작업자에게 알린다. 계획은 다시 세우지 않는다(칸이 당겨지지 않게).
+- 1층 칸 박스가 FAILED 면 그 바로 위 2층 칸 박스를 빈 1층 칸에 당겨 놓고 위층 칸은 비운다(pending #37 결정) — 빈칸 위에
+  박스를 올리지 않는다(기울거나 떨어짐).
 - 다 옮기면 관측 자세로 → 트레이가 다 빈 구역은 칸 카운터 0 → 구역별 실은 수·초과·경로 제외·실패 안내 → 시작 전 상태로.
 여기서 정한 규칙은 src/voss_manager/CLAUDE.md 에 적는다.
 """
@@ -41,6 +43,9 @@ class Run:
     holding: str = NO
     stage: str = ""  # 멈췄을 때 resume 이 이어 갈 단계: PICK | DROP | NEXT | HOME
     finished: bool = False
+    # (box_id, 실제 놓는 칸) — 바로 아래 1층 칸이 FAILED 로 비어 그 칸에 당겨 놓는 2층 박스 (pending #37 결정 10/13).
+    # DROP 을 보낼 때 한 번 정해 두고, 재개해도 같은 칸에 놓는다
+    moved: tuple[tuple[str, int], ...] = ()
 
 
 # ---------------------------------------------------------------- 이벤트·액션
@@ -142,10 +147,13 @@ def pallet_state(ctx: f.Ctx) -> dict:
               excluded=[r[3] for r in rows], overflow_warning=run.plan.overflow > 0,
               total=len(run.plan.moves))  # fmt: skip
     outcome = dict(run.results)
-    for m in run.plan.moves:
-        st["slot_box_id"][m.pallet_slot] = m.box_id
-        st["slot_dong"][m.pallet_slot] = m.dong
-        st["slot_state"][m.pallet_slot] = outcome.get(m.box_id) or (
+    moved = dict(run.moved)
+    # 당겨 놓은 박스는 실제 칸에 나중에 써서 아래 칸의 FAILED 박스를 덮고, 비운 위층 칸은 EMPTY 로 둔다 (pending #37)
+    for m in sorted(run.plan.moves, key=lambda m: m.box_id in moved):
+        slot = moved.get(m.box_id, m.pallet_slot)
+        st["slot_box_id"][slot] = m.box_id
+        st["slot_dong"][slot] = m.dong
+        st["slot_state"][slot] = outcome.get(m.box_id) or (
             "MOVING" if m.box_id == st["box_id"] else "PLANNED"
         )
     return st
@@ -165,7 +173,7 @@ def start_sentence(plan: pp.Plan) -> str:
     return text
 
 
-def finish_sentence(plan: pp.Plan, results: tuple[tuple[str, str], ...]) -> str:
+def finish_sentence(plan: pp.Plan, results: tuple[tuple[str, str], ...], moved: int = 0) -> str:
     """끝 안내 (TR-PAL-10 ③): 구역별 실은 수, 초과로 못 실은 수, 경로 제외 수, 실패 박스."""
     outcome = dict(results)
     done = {d: 0 for d in plan.route}
@@ -185,6 +193,8 @@ def finish_sentence(plan: pp.Plan, results: tuple[tuple[str, str], ...]) -> str:
     failed = [b for b, o in results if o == "FAILED"]
     if failed:
         text += f" 옮기지 못한 박스는 {', '.join(b[-3:] + '번' for b in failed)}입니다. 원래 칸을 확인해 주세요."
+    if moved:
+        text += f" 아래 칸이 비어 위층 박스 {moved}개를 아래 칸에 놓았습니다."
     return text
 
 
@@ -341,14 +351,38 @@ def _next(ctx: f.Ctx, acts: list) -> f.Out:
     return _pick(replace(ctx, pallet=run), m, acts)
 
 
+def placed_slot(run: Run, m: pp.Move) -> int:
+    """이 박스를 실제로 놓을 칸. 계획 칸이 2층이고 바로 아래 1층 칸 박스가 FAILED(빈칸)면 그 아래 칸 (pending #37)."""
+    moved = dict(run.moved)
+    if m.box_id in moved:
+        return moved[m.box_id]
+    _, layer, _ = m.cell
+    below = m.pallet_slot - pp.LANES  # 같은 열·같은 줄의 1층 = slot − 2
+    if (
+        layer == 2
+        and below not in moved.values()
+        and dict(run.results).get(run.plan.moves[below].box_id) == "FAILED"
+    ):
+        return below
+    return m.pallet_slot
+
+
 def _drop(ctx: f.Ctx, m: pp.Move, acts: list) -> f.Out:
     run = replace(run_of(ctx), holding=YES, stage="DROP")
+    target = placed_slot(run, m)
+    note = ""
+    if target != m.pallet_slot and m.box_id not in dict(run.moved):
+        run = replace(run, moved=(*run.moved, (m.box_id, target)))
+        note = f" — 아래 칸 {target} 이 비어(FAILED) 2층 칸 {m.pallet_slot} 대신 당겨 놓는다"
     return f.Out(
         replace(ctx, phase=PH_DROP, pallet=run),
         (
             *acts,
-            f.CallMove("PALLET", m.pallet_slot, "DROP"),
-            f.Log("info", f"{m.box_id} 팔레트 칸 {m.pallet_slot}(열·층·줄 {m.cell}) 에 놓기"),
+            f.CallMove("PALLET", target, "DROP"),
+            f.Log(
+                "info",
+                f"{m.box_id} 팔레트 칸 {target}(열·층·줄 {pp.slot_cell(target)}) 에 놓기{note}",
+            ),
         ),
     )
 
@@ -358,9 +392,10 @@ def _finish_box(
 ) -> tuple[f.Ctx, list]:
     """박스 하나 끝 — PalletResult 를 내고 실행 기록에 넣는다."""
     run = run_of(ctx)
-    col, layer, lane = m.cell
+    slot = dict(run.moved).get(m.box_id, m.pallet_slot)  # 실제로 놓은(놓으려던) 칸
+    col, layer, lane = pp.slot_cell(slot)
     res = PalletOut(run.run_id, ctx.session_id, m.box_id, m.dong, m.route_index, m.zone, m.slot,
-                    m.pallet_slot, col, lane, layer, outcome, reason, run.attempts, stamp_ns)  # fmt: skip
+                    slot, col, lane, layer, outcome, reason, run.attempts, stamp_ns)  # fmt: skip
     run = replace(run, results=(*run.results, (m.box_id, outcome)), holding=NO, stage="NEXT")
     count = ctx.pallet_count + (1 if outcome == "DONE" else 0)
     level = "info" if outcome == "DONE" else "warn"
@@ -455,7 +490,7 @@ def _complete(ctx: f.Ctx, run: Run, now_ns: int) -> f.Out:
     freed = pp.emptied_zones(run.plan, done)
     slots = {**ctx.slots, **{z: 0 for z in freed}}
     full = "" if ctx.full_zone in freed else ctx.full_zone
-    text = finish_sentence(run.plan, run.results)
+    text = finish_sentence(run.plan, run.results, len(run.moved))
     back = f.PAUSED if ctx.state == f.PAUSED else run.back_to  # 도착 뒤 stop 이 왔으면 멈춘 채로
     nctx = replace(ctx, state=back, phase=f.PH_NONE, slots=slots, full_zone=full,
                    pallet=replace(run, finished=True, stage=""))  # fmt: skip
