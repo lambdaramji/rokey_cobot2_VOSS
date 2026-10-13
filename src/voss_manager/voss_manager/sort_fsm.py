@@ -5,7 +5,7 @@ step(ctx, event) → Out(ctx', actions, reply). ctx 는 바꾸지 않고 새 값
 6상태 (T20, docs/architecture.md):
   IDLE —start→ RUNNING(OBSERVE 이동 → 입구 관측) —stage 1 판독→ PICKING(TrackAndGrasp → MoveToZone PLACE)
   → SortResult → RUNNING. stop/resume/reset_zone, 구역 가득 → PAUSED.
-  불확실(후보는 있는데 LOW_CONF·불일치)하면 PICKING 의 목적지가 재확인 구역 → RECHECK(VIEW → ReadLabel)
+  불확실(후보 없음 UNKNOWN·LOW_CONF·불일치)하면 PICKING 의 목적지가 재확인 구역 → RECHECK(VIEW → ReadLabel)
   → 확정이면 PICK → 목적 구역 PLACE, 아니면 ASKING(질문 30 s) → 답 → PICK → PLACE / 무응답 → HOLD.
   (SRD v1.0 §5.7 질문, voss_msgs.md MoveToZone 재확인 실패 분기·ReadLabel, #51 MC-017)
 Sprint 2 의 7번째 상태 PALLETIZING(팔레타이징)은 pallet_fsm 이 맡고, 노드는 pallet_fsm.step 을 부른다
@@ -581,9 +581,9 @@ def _on_label(ctx: Ctx, ev: LabelSeen) -> Out:
 
     dong, zone, why = resolve_label(ev.code, ev.dong, ev.confidence, ctx.cfg)
     cands = label_candidates(ctx.cfg, ev.dong, ev.dong_alt, codes=(ev.code,))
-    if why == "UNKNOWN":
-        # 후보가 하나도 없으면(글자를 못 읽음) 집지 않고 다음 판독을 기다린다
-        return _note(ctx, ev.track_id, why, f"대기 UNKNOWN raw={ev.raw_text!r}")
+    # 후보가 하나도 없어도(UNKNOWN, 글자를 못 읽음) 집어서 재확인 구역으로 보낸다 (BRD 판독 실패 흐름).
+    # OCR 한 번 ≈ 2 s, 집을 수 있는 구간 ≈ 4 s 라 다음 stage 1 판독을 기다리면 박스가 지나간다(10/12 실기).
+    # 추종 중 stage 2 판독이 확실하면 목적 구역으로 바뀌고, 재확인에서도 모르면 전체 동을 후보로 묻는다.
 
     decided = ctx.decided | {ev.track_id}
     if not why and ctx.priority and dong != ctx.priority:
@@ -596,7 +596,7 @@ def _on_label(ctx: Ctx, ev: LabelSeen) -> Out:
         )
 
     if why:
-        # 후보는 있는데 불확실(LOW_CONF·코드와 동 이름 불일치) → 집어서 재확인 구역으로 (SRD SYS-FR-012)
+        # 불확실(UNKNOWN·LOW_CONF·코드와 동 이름 불일치) → 집어서 재확인 구역으로 (SRD SYS-FR-012)
         zone, slot = "RECHECK", _free_recheck_slot(ctx)
         if slot < 0:
             return _zone_full(ctx, "RECHECK", decided)
