@@ -59,6 +59,12 @@ class Config:
     pallet_ready: bool = (
         False  # zones.pallet.pose 교시됨 (Sprint 2) — 아니면 palletize 를 받지 않는다
     )
+    order: dict[str, tuple[int, ...]] = field(default_factory=dict)  # 구역 → 채우는 칸 순서(grid.order)
+
+    def slot_at(self, zone: str, n: int) -> int:
+        """구역에 n 번째로 놓는 박스의 칸. grid.order 가 있으면 그 순서, 넘어가면 n 그대로(2층 등)."""
+        order = self.order.get(zone, ())
+        return order[n] if n < len(order) else n
 
     def dong_of(self, name: str) -> str:
         """정식 동 이름 또는 별칭 → 정식 이름. 없으면 ""."""
@@ -97,7 +103,7 @@ def load_config(raw: dict) -> Config:
             raise ValueError(f"aliases {dong} 가 zone_map 에 없음")
 
     zones = {str(k).upper(): v for k, v in (raw.get("zones") or {}).items()}
-    capacity = {}
+    capacity, order = {}, {}
     for z in ZONES:
         grid = (zones.get(z) or {}).get("grid") or {}
         cols, rows = grid.get("cols"), grid.get("rows")
@@ -107,6 +113,18 @@ def load_config(raw: dict) -> Config:
         if isinstance(layers, bool) or not isinstance(layers, int) or layers < 1:
             raise ValueError(f"zones.{z.lower()}.grid.layers 는 1 이상 정수: {layers!r}")
         capacity[z] = int(cols) * int(rows) * layers
+        # order(선택): 앞쪽 칸을 채우는 순서 — 먼 칸을 트레이가 빌 때 낮게 지나가 놓으려고(voss_config.md grid)
+        o = grid.get("order")
+        if o is not None:
+            if (
+                not isinstance(o, list)
+                or not o
+                or any(isinstance(k, bool) or not isinstance(k, int) for k in o)
+                or sorted(o) != list(range(len(o)))
+                or len(o) > capacity[z]
+            ):
+                raise ValueError(f"zones.{z.lower()}.grid.order 는 0..n−1 을 한 번씩: {o!r}")
+            order[z] = tuple(o)
 
     version = str(raw.get("version", ""))
     if not version or len(version) > 16:
@@ -115,7 +133,9 @@ def load_config(raw: dict) -> Config:
     pallet_ready = (
         isinstance(pose, list) and len(pose) == 6 and all(isinstance(v, (int, float)) for v in pose)
     )
-    return Config(zone_map, codes, aliases, capacity, float(conf), version, pallet_ready)
+    return Config(
+        zone_map, codes, aliases, capacity, float(conf), version, pallet_ready, order
+    )
 
 
 def zone_map_entries(cfg: Config) -> list[tuple[str, str, str, list[str]]]:
@@ -627,7 +647,7 @@ def _on_label(ctx: Ctx, ev: LabelSeen) -> Out:
     elif ctx.slots[zone] >= ctx.cfg.capacity[zone]:
         return _zone_full(ctx, zone, decided)
     else:
-        slot = ctx.slots[zone]
+        slot = ctx.cfg.slot_at(zone, ctx.slots[zone])
 
     missing = [k for k in ("ROBOT", "SERVO") if k in not_ready_items(ctx, ev.not_ready)]
     if missing:
@@ -669,7 +689,7 @@ def _on_label_tracking(ctx: Ctx, ev: LabelSeen) -> Out:
     nbox = replace(
         box,
         zone=zone,
-        slot=ctx.slots[zone],
+        slot=ctx.cfg.slot_at(zone, ctx.slots[zone]),
         code=ev.code,
         dong=dong,
         confidence=ev.confidence,
@@ -1041,7 +1061,7 @@ def _decide(ctx: Ctx, zone: str, decided_by: str, reason: str, now_ns: int) -> O
         # 박스는 재확인 칸에 둔 채 멈춘다 — reset_zone 뒤 resume 하면 PICK 부터
         out = _zone_full(base, zone, ctx.decided)
         return Out(replace(out.ctx, phase=PH_NONE, resume_to="PICK"), out.actions)
-    nbox = replace(nbox, slot=ctx.slots[zone])
+    nbox = replace(nbox, slot=ctx.cfg.slot_at(zone, ctx.slots[zone]))
     return Out(
         replace(base, box=nbox, state=RECHECK, phase=PH_PICK, resume_to=""),
         (

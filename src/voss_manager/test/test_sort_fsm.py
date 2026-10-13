@@ -122,6 +122,18 @@ def test_layers_multiply_capacity() -> None:
         f.load_config(raw)
 
 
+def test_grid_order_validated() -> None:
+    raw = raw_config()
+    raw["zones"]["C"]["grid"] = {"cols": 3, "rows": 2, "pitch_mm": 50, "layers": 2, "order": [5, 2, 4, 1, 3, 0]}
+    cfg = f.load_config(raw)
+    assert [cfg.slot_at("C", n) for n in range(8)] == [5, 2, 4, 1, 3, 0, 6, 7]
+    assert cfg.slot_at("A", 3) == 3
+    for bad in ([5, 2, 4], [0, 0, 1], [0, 1, True], "012", []):
+        raw["zones"]["C"]["grid"]["order"] = bad
+        with pytest.raises(ValueError, match="order"):
+            f.load_config(raw)
+
+
 def test_ids() -> None:
     sid = f.make_session_id(datetime(2026, 10, 10, 14, 30, 12), "a3f9")
     assert sid == SID and len(sid) == 20
@@ -878,3 +890,15 @@ def test_recheck_rejected_while_box_in_progress_and_reset_blocked(cfg: f.Config)
 
 def test_intent_recheck_maps_to_command() -> None:
     assert f.intent_to_command("recheck", "", "", "") == ("recheck", "")
+
+
+def test_grid_order_fills_far_slot_first_then_second_layer_on_slot_0() -> None:
+    # 10/12 실기: C 칸 5(+X·+Y 끝) 위로 TCP 60 이 안 닿아 트레이가 빌 때 먼저 낮게 지나가 놓는다
+    raw = raw_config()
+    raw["zones"]["C"]["grid"] = {"cols": 3, "rows": 2, "pitch_mm": 50, "layers": 2, "order": [5, 2, 4, 1, 3, 0]}
+    ctx = running(f.load_config(raw))
+    got = []
+    for k in range(7):
+        ctx, acts = placed(ctx, 10 + k, t=(2 + 20 * k) * 1000 * MS, code="", dong="청담동")
+        got += [a.slot for a in of(acts, f.CallMove) if a.zone == "C"]
+    assert got == [5, 2, 4, 1, 3, 0, 6] and ctx.slots["C"] == 7
