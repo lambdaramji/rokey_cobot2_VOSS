@@ -1,4 +1,4 @@
-string state             # IDLE | RUNNING | PICKING | RECHECK | ASKING | PAUSED | PALLETIZING (Sprint 2, 진행은 /voss/pallet/state)
+string state             # IDLE | RUNNING | PICKING | RECHECK | ASKING | PAUSED | PALLETIZING (팔레타이징 BRD 10.4, 진행은 /voss/pallet/state)
 string box_id
 string pending_question
 int32 track_id           # 현재 처리 중인 박스의 BoxTrack.track_id, 없으면 -1

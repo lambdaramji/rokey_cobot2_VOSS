@@ -144,6 +144,9 @@ class LabelReaderNode(Node):
         self.s_max = p("label.s_max", 90).value
         self.close_px = p("label.close_px", 21).value
         self.enough_agree = p("stage1_enough", 2).value
+        # 벨트 위 1단계에서 못 읽으면 180° 다시 읽기(≈ 2 s 더). 끄면 바로 판독 실패를 내 재확인으로 보내고,
+        # 거꾸로 올린 박스는 재확인 칸 3단계에서 읽는다 (10/12 로컬 시험 브랜치)
+        self.stage1_flip = p("stage1_flip_retry", False).value
         self.forget_s = p("track_forget_s", 30.0).value
         self.save_dir = p("debug_save_dir", "").value
         stats_period_s = p("stats_period_s", 5.0).value
@@ -423,7 +426,8 @@ class LabelReaderNode(Node):
             m = Match("", "", 0.0, reason="NO_LABEL")
         else:
             up = crop_upright(img, rect, scale=self.scale)
-            m, ocr_ms, flipped = read_label(eng, up, cands)
+            flip = msg.stage != 1 or self.stage1_flip
+            m, ocr_ms, flipped = read_label(eng, up, cands, flip_retry=flip)
             if self.save_dir:
                 cv2.imwrite(
                     os.path.join(self.save_dir, f"t{track_id:05d}_s{msg.stage}_{stamp}.png"), up

@@ -27,12 +27,33 @@ ROS_TYPES = (
     "resume",
     "priority",
     "answer",
+    "recheck",
     "update_zone_map",
     "palletize",
 )  # Intent 로 보내는 것
 QUERY_KINDS = ("count_by_dong", "held_count", "remaining_count")
 HOLD = "HOLD"
 DESTINATION_ANSWER_RE = re.compile(r"(.+?)(?:으로|로)보내(?:줘|주세요|줘요|요)?")
+# 질문 중 "읽을 수 없다" 답 → 보류. 공백·문장부호를 지운 뒤 전체 일치(10/12 시연 문형, LLM 없이)
+HOLD_ANSWER_RE = re.compile(
+    r"(?:송장)?(?:확인|판독|인식)(?:이)?(?:불가|안돼|안됨|안됩니다|못해|못함)(?:입니다|이에요|예요|요)?"
+    r"|보류(?:해|해줘|해주세요|로보내|로보내줘|로보내주세요|입니다|요)?"
+)
+# "재확인 시작" → 보관 중인 재확인 칸 박스 처리(type recheck, 10/12 시연, LLM 없이). 전체 일치
+RECHECK_START_RE = re.compile(
+    r"재확인(?:을)?(?:시작|진행|처리)?(?:해|해줘|해주세요|하자|합니다|할게|해요)?"
+)
+
+# "대치, 역삼, 청담 순서로 실어줘"·"… 순으로 트럭에 실어" → palletize(BRD TR-PAL-01, LLM 없이).
+# 트럭·팔레트 + 싣는 말, 또는 "순(서)…싣는 말"이 있으면. 말한 순서 = 배송 순서(첫 배송지부터, BRD v1.5 — 10/13 PL)
+PALLETIZE_RE = re.compile(
+    r"(?:트럭|팔레트).*(?:실어|싣|적재|태워|올려|옮겨)"
+    r"|(?:실어|싣|적재|태워|올려|옮겨).*(?:트럭|팔레트)"
+    r"|순(?:서)?(?:대로|으로|로)?(?:실어|싣|적재)"
+)
+SAY_PALLET_ORDER = (
+    "싣는 순서를 동 이름으로 말씀해 주세요. 예를 들어 대치, 역삼, 청담 순서로 실어줘."
+)
 
 # 정지 키워드: 공백·문장부호를 지운 뒤 포함 여부로 본다. 오인식으로 멈추는 쪽은 허용한다.
 STOP_KEYWORDS = ("멈춰", "멈추", "정지", "스톱", "스탑", "그만", "stop")
@@ -189,6 +210,50 @@ def decide_bare_dong(
             box_id=sort_box_id,
         ),
     )
+
+
+def decide_hold_answer(
+    raw_text: str,
+    sort_state: str,
+    sort_box_id: str,
+) -> Decision | None:
+    """'송장 확인 불가'·'보류' 같은 답을 보류(HOLD) 답으로 처리한다. 해당 표현이 아니면 None."""
+    if HOLD_ANSWER_RE.fullmatch(_squash(raw_text)) is None:
+        return None
+    # 질문 중이 아니면 보류 답으로 로봇을 움직이지 않는다.
+    if sort_state != "ASKING" or not sort_box_id:
+        return Decision("say", say=SAY_NO_QUESTION)
+    return Decision(
+        "publish", intent=_intent("answer", zone=HOLD, raw_text=raw_text, box_id=sort_box_id)
+    )
+
+
+def decide_recheck_start(raw_text: str) -> Decision | None:
+    """'재확인 시작'·'재확인 진행해 줘' → recheck. 받을 수 있는 상태인지는 sort_manager 가 판단한다."""
+    if RECHECK_START_RE.fullmatch(_squash(raw_text)) is None:
+        return None
+    return Decision("publish", intent=_intent("recheck", raw_text=raw_text))
+
+
+def decide_palletize(raw_text: str, view: ZoneMapView | None) -> Decision | None:
+    """'대치, 역삼, 청담 순서로 실어줘' → palletize, route = 말한 순서 [대치동, 역삼동, 청담동](배송 순서, BRD TR-PAL-01).
+    동을 하나도 말하지 않거나 4곳 이상이면 되묻는다. 받을 수 있는 상태인지는 sort_manager 가 판단한다."""
+    s = _squash(raw_text)
+    if PALLETIZE_RE.search(s) is None:
+        return None
+    if view is None:
+        return Decision("say", say=SAY_NOT_READY)
+    found: dict[str, int] = {}  # 정식 동 → 처음 나온 위치
+    for alias, dong in view.alias_to_dong.items():
+        i = s.find(alias)
+        if alias and i >= 0 and (dong not in found or i < found[dong]):
+            found[dong] = i
+    if not found:
+        return Decision("say", say=SAY_PALLET_ORDER)
+    order = sorted(found, key=found.get)
+    if len(order) > MAX_ROUTE:
+        return Decision("say", say=SAY_ROUTE_COUNT)
+    return Decision("publish", intent=_intent("palletize", raw_text=raw_text, route=order))
 
 
 def decide_destination_answer(

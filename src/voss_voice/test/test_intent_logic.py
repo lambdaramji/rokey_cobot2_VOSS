@@ -291,3 +291,25 @@ def test_palletize_route_checks():
 def test_route_is_empty_for_other_intents():
     assert decide({"type": "start"}, "작업 시작", VIEW).intent["route"] == []
     assert decide(None, "멈춰", VIEW).intent["route"] == []  # 로컬 stop 도
+
+
+def test_palletize_keeps_spoken_order() -> None:
+    """로컬 매칭(LLM 없이, 10/12 학민): 말한 순서 = 배송 순서 → route (v1.5 계약, 10/13 PL)."""
+    from voss_voice.intent_logic import SAY_PALLET_ORDER, decide_palletize
+
+    d = decide_palletize("헬로 로키, 대치, 역삼, 청담 순서로 실어줘", VIEW)  # BRD 10.8 단계 9 문형
+    assert d.kind == "publish" and d.intent["type"] == "palletize"
+    assert d.intent["route"] == ["대치동", "역삼동", "청담동"] and d.intent["dong"] == ""
+    assert decide_palletize("청담동, 대치동, 역삼동 순으로 트럭에 실어 줘", VIEW).intent["route"] == [
+        "청담동",
+        "대치동",
+        "역삼동",
+    ]
+    assert decide_palletize("역삼 청담 순서대로 팔레트에 적재해", VIEW).intent["route"] == [
+        "역삼동",
+        "청담동",
+    ]
+    assert decide_palletize("트럭에 실어", VIEW).say == SAY_PALLET_ORDER  # 순서 없음 → 되묻기
+    assert decide_palletize("트럭에 실어", None).say == SAY_NOT_READY
+    assert decide_palletize("역삼동으로 보내", VIEW) is None
+    assert decide_palletize("대치동부터 분류해", VIEW) is None

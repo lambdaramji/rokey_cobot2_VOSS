@@ -9,6 +9,7 @@
 /voss/robot/move_to_zone (PLACE·OBSERVE·VIEW·PICK — PICK 은 재확인 칸에서 집어 이동 높이로, #45).
 """
 
+import math
 import threading
 import time
 
@@ -44,6 +45,7 @@ from voss_robot.zone_motion import (
     pick_grip_ok,
     pick_pose,
     plan_move,
+    row_stage_slot,
     search_travel_z,
     slot_pose,
 )
@@ -188,12 +190,23 @@ class RobotGatewayNode(Node):
             pose = list(self.declare_parameter(f"zones.{z}.pose", [0.0]).value)
             grid = list(self.declare_parameter(f"zones.{z}.grid", [0.0]).value)
             view = list(self.declare_parameter(f"zones.{z}.view_pose", [0.0]).value)
+            # 구역별 트레이 안 이동 최저 TCP z(voss_config zones.<z>.in_tray_tcp_z_mm). 0 = 공통 값
+            in_tray = float(self.declare_parameter(f"zones.{z}.in_tray_tcp_z_mm", 0.0).value)
             self.zones[z] = {
                 "pose": pose if len(pose) == 6 else None,
-                "grid": grid if len(grid) in (3, 4) else None,
+                "grid": grid
+                if len(grid) in (3, 4, 6, 7) or len(grid) == 7 + int(grid[0])
+                else None,
                 "view": view if len(view) == 6 else None,
+                "in_tray": in_tray if in_tray > 0 else None,
             }
         self.pre_open = float(self.declare_parameter("gripper.pre_open_mm", 90.0).value)
+        # 트레이 안에서 여는 폭(PLACE 개방·PICK 확인 실패 후퇴). 없으면 pre_open (voss_config.md gripper)
+        self.place_open = float(
+            self.declare_parameter("gripper.place_open_mm", self.pre_open).value
+        )
+        # 트레이에서 집기(PICK) 전 여는 폭(보고값). 옆 줄 박스까지 44.5 mm — 90 이면 핑거가 닿는다. 없으면 pre_open
+        self.pick_open = float(self.declare_parameter("gripper.pick_open_mm", self.pre_open).value)
         self.grip_force = float(self.declare_parameter("gripper.force_n", 14.0).value)
         self.grasp_width = float(self.declare_parameter("gripper.grasp_width_mm", 39.0).value)
         # PICK(재확인 칸에서 집기): 놓기 칸 자세 + dz. 놓기 자세는 쥔 박스 밑면 +5 라 핑거 끝은 바닥 약 +13.
@@ -215,7 +228,7 @@ class RobotGatewayNode(Node):
         self.min_travel_tcp_z = float(
             self.declare_parameter("zone_min_travel_tcp_z_mm", 120.0).value
         )
-        # 트레이 안 이동: 먼 칸 위로 TCP 120 이 안 나오면 같은 구역 칸 0(−X 끝) 위까지 높게 와서 내려간 뒤
+        # 트레이 안 이동: 먼 칸 위로 TCP 120 이 안 나오면 같은 줄 −X 끝 칸(칸 0·3) 위까지 높게 와서 내려간 뒤
         # 트레이 안에서만 낮게 옆으로 간다(수직 자세 그대로). 이 높이 = 들고 가는 박스 밑면(TCP − 8)이 이미
         # 놓인 박스 윗면(≈ z 28)보다 약 24 mm 위 — 10/08 ikin: C 칸 2(+20) 61, 보류 +30 은 70
         self.min_in_tray_tcp_z = float(
@@ -233,6 +246,8 @@ class RobotGatewayNode(Node):
         self.tcp_check_tol = float(self.declare_parameter("zone_tcp_check_tol_mm", 3.0).value)
         # move_line 은 TCP 직선 이동 — 출발–목표 선분에서 이만큼 벗어나면 move_stop 하고 LIMIT
         self.path_tol = float(self.declare_parameter("zone_path_tol_mm", 15.0).value)
+        # 위쪽 모서리 블렌딩 거리(mm). 0 = 모서리마다 멈춤(예전). 상승→수평→하강을 멈추지 않고 잇는다(로컬 10/12)
+        self.blend_mm = float(self.declare_parameter("zone_blend_mm", 0.0).value)
         self._cmd_off = list(self.tcp)  # _run_path 가 매번 잰 컨트롤러 TCP 오프셋으로 바꾼다
         # 이동 높이(_travel_z) 결과를 칸별로 다시 쓴다 — 닿지 않는 높이의 ikin 이 큐를 ~100 ms 씩 잡아 경로 계산
         # 2.5 s 동안 pose 가 10 Hz 로 떨어졌다(10/10 C2, #147). 기동 때 관측 자세에 있으면 구역 칸을 미리 계산
@@ -256,7 +271,7 @@ class RobotGatewayNode(Node):
         )
         ready = [z for z, c in self.zones.items() if c["pose"] and c["grid"]]
         self.get_logger().info(
-            f"MoveToZone 구역 {ready}, safe z {self.safe_z} mm(플랜지), vel {self.zone_vel}, acc {self.zone_acc}"
+            f"MoveToZone 구역 {ready}, safe z {self.safe_z} mm(플랜지), vel {self.zone_vel}, acc {self.zone_acc}, blend {self.blend_mm} mm"
         )
 
         # ---- /voss/robot/state: reliable·transient_local·depth 1, 바뀔 때 + 2 Hz (#55 MC-019) ----
@@ -652,18 +667,25 @@ class RobotGatewayNode(Node):
             self.get_logger().warn(f"move_to_zone {zone} 칸 {req.slot} {kind} → {msg}")
             return res
 
-        if mode not in ("", "PLACE", "VIEW", "PICK"):
+        if mode not in ("", "PLACE", "VIEW", "PICK", "DROP"):
             return fail(f"INVALID: mode {req.mode}")
         if zone == "OBSERVE" and mode:
             return fail('INVALID: OBSERVE 는 mode "" 만 (이동만, #96)')
-        place = mode in ("", "PLACE") and zone != "OBSERVE"
+        place = mode in ("", "PLACE", "DROP") and zone != "OBSERVE"
+        # DROP = 놓고 OBSERVE 로 돌아가지 않고 칸 위로 올라가 멈춘다 — 팔레트에 놓은 뒤 바로 다음 박스 집기(BRD TR-PAL-06)
+        drop = mode == "DROP"
         pick = mode == "PICK"
-        if (
-            pick and zone != "RECHECK"
-        ):  # C·HOLD 처럼 safe_z 에서 안 닿는 칸이면 쥔 채 트레이 안에 멈춘다
-            return fail("INVALID: PICK 은 RECHECK 만 (재확인 칸에서 집기, MC-017)")
-        stage = None
-        label = "PLACE" if place else (mode or "MOVE")
+        if pick and zone not in (
+            "A",
+            "B",
+            "C",
+            "RECHECK",
+            "HOLD",
+        ):  # 재확인 칸(MC-017) + 팔레타이징: 구역 트레이에서 집어 팔레트로(BRD TR-PAL-05)
+            return fail("INVALID: PICK 은 A·B·C·RECHECK·HOLD 만 (팔레트·OBSERVE 에서는 집지 않음)")
+        stage, via = None, None
+        in_tray_z = None  # 이 구역의 트레이 안 최저 높이(없으면 공통 zone_min_in_tray_tcp_z_mm)
+        label = ("DROP" if drop else "PLACE") if place else (mode or "MOVE")
         if zone == "OBSERVE":
             if len(self.observe) != 6:
                 return fail("NOT_CONFIGURED: observe_pose 없음")
@@ -680,7 +702,10 @@ class RobotGatewayNode(Node):
                 return fail(f"NOT_CONFIGURED: zones.{zone}.pose·grid")
             try:
                 target = slot_pose(zc["pose"], zc["grid"], int(req.slot))
-                stage = slot_pose(zc["pose"], zc["grid"], 0)  # 트레이 안 이동의 출입구(−X 끝 칸)
+                # 트레이 안 이동의 출입구 = 같은 Y 줄의 −X 끝 칸(C 칸 2 → 칸 0, 칸 5 → 칸 3)
+                via = row_stage_slot(zc["grid"], int(req.slot))
+                stage = slot_pose(zc["pose"], zc["grid"], via)
+                in_tray_z = zc["in_tray"]
                 if pick:
                     target = pick_pose(target, self.pick_dz)
             except ValueError as e:
@@ -710,12 +735,16 @@ class RobotGatewayNode(Node):
             self.stopped = False
             self._zone_action = f"MOVE_TO_ZONE:{zone}"
             self._update_state()
-            self.get_logger().info(f"move_to_zone {zone} 칸 {req.slot} {label} 시작")
+            gate = f" (출입구 칸 {via})" if via is not None else ""
+            self.get_logger().info(f"move_to_zone {zone} 칸 {req.slot} {label} 시작{gate}")
             placed = None
             try:
+                rise = (
+                    self._pick_lift(target, stage) if drop else None
+                )  # 놓은 뒤 올라갈 곳(움직이기 전에)
                 if pick:
                     # 상승 높이를 쥐기 전에 구한다 — 안 풀리면 쥔 채 멈추는 대신 움직이기 전에 거부(#148 리뷰 박병후)
-                    lift = self._lift_pose(target)
+                    lift = self._pick_lift(target, stage)
                     # 내려가기 전에 연다(VIEW·OBSERVE 높이 — 아래에 아무것도 없다)
                     try:
                         w, _busy, grip, _safety = self.rg2.status()
@@ -723,10 +752,11 @@ class RobotGatewayNode(Node):
                         return fail(f"GRIP_FAIL: RG2 상태 읽기 {e}")
                     if grip:  # 무언가를 쥔 채면 사전 개방에서 떨어뜨린다(자동 개방 금지, MC-014)
                         return fail(f"GRIP_FAIL: 이미 쥐고 있다(폭 {w:.1f} mm) — 열지 않고 거부")
-                    g = self.rg2.command_held(self.pre_open, self.grip_force)
+                    # 트레이 안 집기 개방 = pick_open (3×2 에서 90 이면 옆 줄 박스에 핑거가 닿는다, 10/12 실기 50)
+                    g = self.rg2.command_held(self.pick_open, self.grip_force)
                     if not g.ok:
                         return fail(f"GRIP_FAIL: 사전 개방 {g.message}")
-                self._run_path(target, stage)
+                self._run_path(target, stage, in_tray_z)
                 if pick:
                     g = self.rg2.command_held(self.grasp_width, self.grip_force)
                     why = pick_grip_ok(
@@ -737,23 +767,24 @@ class RobotGatewayNode(Node):
                         self.pick_width[1],
                     )
                     if why:
-                        return fail(f"GRIP_FAIL: 집기 확인 실패 — {why}{self._pick_retreat(lift)}")
+                        back = self._pick_retreat(lift, stage, in_tray_z)
+                        return fail(f"GRIP_FAIL: 집기 확인 실패 — {why}{back}")
                     self.get_logger().info(
                         f"move_to_zone {zone} 칸 {req.slot} PICK 집음: 폭 {g.width_actual:.1f} mm, grip True"
                     )
                     # 든 채 수직 상승. 실패하면 박스를 든 채 멈춘다(자동 개방 금지, MC-014)
                     try:
-                        self._run_path(lift)
+                        self._run_path(lift, stage, in_tray_z)
                     except _ZoneError as e:
                         return fail(f"{e} (박스를 쥔 채 멈춤)")
                 if place:
-                    g = self.rg2.command_held(self.pre_open, self.grip_force)
+                    g = self.rg2.command_held(self.place_open, self.grip_force)
                     if not g.ok:
                         return fail(f"GRIP_FAIL: 개방 {g.message}")
                     placed = self.get_clock().now()
                     res.placed_stamp = placed.to_msg()
                     try:
-                        self._run_path(list(self.observe), stage)
+                        self._run_path(rise if drop else list(self.observe), stage, in_tray_z)
                     except _ZoneError as e:
                         return fail(f"RETURN_FAILED: {e}")
             except _ZoneError as e:
@@ -789,14 +820,26 @@ class RobotGatewayNode(Node):
             )
         return [flange[0], flange[1], z, *flange[3:]]
 
-    def _pick_retreat(self, lift) -> str:
+    def _pick_lift(self, target, stage):
+        """PICK 뒤 올라갈 자세: 칸 바로 위(TCP ≥ 120)가 안 되면 출입구 칸 위(트레이 안으로 나와 올라감 — C 칸 2·5).
+        움직이기 전에 구한다."""
+        try:
+            return self._lift_pose(target)
+        except _ZoneError:
+            if stage is None or all(
+                abs(a - b) < 0.5 for a, b in zip(target[:2], stage[:2], strict=True)
+            ):
+                raise
+            return self._lift_pose(stage)
+
+    def _pick_retreat(self, lift, stage=None, in_tray_z=None) -> str:
         """PICK 확인 실패: 파지 높이(박스 밑면 = 바닥)에서 열어 박스를 칸에 그대로 두고 lift 까지 올라간다.
         문제가 생기면 그 자리에 멈추고 설명을 돌려준다(GRIP_FAIL 메시지 뒤에 붙임)."""
-        g = self.rg2.command_held(self.pre_open, self.grip_force)
+        g = self.rg2.command_held(self.place_open, self.grip_force)
         if not g.ok:
             return f" / 개방 실패 {g.message} — 칸 위 파지 높이에 멈춤"
         try:
-            self._run_path(lift)
+            self._run_path(lift, stage, in_tray_z)
         except _ZoneError as e:
             return f" / 열었으나 상승 실패 {e}"
         return " / 열고 상승함(박스는 칸에 그대로)"
@@ -838,15 +881,33 @@ class RobotGatewayNode(Node):
             return None
         return j is not None and abs(j[2]) >= self.min_j3_deg
 
-    def _in_tray(self, slot_flange, stage, sol: int):
-        """slot 위로 TCP ≥ 최저 이동 높이가 안 나올 때: (트레이 안 높이 플랜지 z, 칸 0 위 이동 높이) 또는 None."""
+    def _in_tray(self, slot_flange, stage, sol: int, floor: float | None = None):
+        """slot 위로 TCP ≥ 최저 이동 높이가 안 나올 때: (slot 위 트레이 안 높이 플랜지 z, 칸 0 위 이동 높이,
+        칸 0 위 트레이 안 높이) 또는 None. floor = 트레이 안 최저 TCP z(없으면 zone_min_in_tray_tcp_z_mm).
+
+        slot 위 높이가 공통 트레이 안 높이(60)보다 낮으면(구역 floor, C 칸 5 = TCP 40) 출입구 칸(C 칸 5 → 칸 3)
+        위에서는 공통 높이까지만 내려가 slot 위로 비스듬히 내려간다 — 트레이 깊이 들어가지 않게(10/12 실기 요청).
+        사선 위 점이 안 풀리면 예전처럼 같은 높이로 옆으로."""
         if stage is None or all(
             abs(a - b) < 0.5 for a, b in zip(slot_flange[:2], stage[:2], strict=True)
         ):
             return None
-        zi = self._travel_z(slot_flange, sol, self.min_in_tray_tcp_z)
+        zi = self._travel_z(slot_flange, sol, self.min_in_tray_tcp_z if floor is None else floor)
         zs = self._travel_z(stage, sol)
-        return None if zi is None or zs is None else (zi, zs)
+        if zi is None or zs is None:
+            return None
+        low = [slot_flange[0], slot_flange[1], zi, *slot_flange[3:]]
+        ze = zi + max(0.0, self.min_in_tray_tcp_z - flange_to_tcp(low, self.tcp)[2])
+        if ze > zi + 0.5 and not all(
+            self._ik_ok(
+                [s + k / 10 * (g - s) for s, g in zip([*stage[:2], ze], low[:3], strict=True)]
+                + low[3:],
+                sol,
+            )
+            for k in range(11)
+        ):
+            ze = zi
+        return zi, zs, ze
 
     def _tray_stage(self, flange):
         """flange x·y 가 들어 있는 구역 트레이(안쪽 215 × 145 mm, measurements #6)의 칸 0, 없으면 None."""
@@ -857,10 +918,10 @@ class RobotGatewayNode(Node):
                     return slot_pose(p, zc["grid"], 0)
         return None
 
-    def _run_path(self, target_flange, stage=None) -> None:
+    def _run_path(self, target_flange, stage=None, in_tray_z: float | None = None) -> None:
         """현재 플랜지 → 목표: 수직 상승 → 수평 → 수직 하강, 단계마다 도착을 pose 로 확인.
         수평 이동 높이 = safe_z 와, 출발·도착 x·y 에서 닿는 최고 높이 중 낮은 것. 목표 자세 자체도 풀리는지
-        움직이기 전에 확인한다. 먼 칸(출발·도착) 위로 최저 이동 높이가 안 나오면 stage(같은 구역 칸 0) 를
+        움직이기 전에 확인한다. 먼 칸(출발·도착) 위로 최저 이동 높이가 안 나오면 stage(같은 줄 −X 끝 칸) 를
         거쳐 트레이 안에서만 낮게 옆으로 간다. 자세는 늘 수직(구역 자세 그대로)."""
         t_plan, n_plan = time.monotonic(), self._tz_ik
         try:
@@ -883,20 +944,30 @@ class RobotGatewayNode(Node):
                 raise _ZoneError("LIMIT: 목표 자세에 팔이 닿지 않음 (구역·칸 위치 확인)")
             z0, z1 = self._travel_z(cur, sol), self._travel_z(target_flange, sol)
             pre, post = [], []
+            tray = None  # 로그용 (칸 위 트레이 안 높이, 칸 0 위 높이)
             start, end = cur, target_flange
             if z0 is None and stage is None:
                 stage = self._tray_stage(cur)  # 트레이 안에 멈춘 뒤 OBSERVE 복귀 등
-            if z0 is None and (t := self._in_tray(cur, stage, sol)) is not None:
-                zi, z0 = t  # 놓은 칸에서 트레이 안 높이로 올라가 칸 0 위로 옮긴 뒤 거기서 출발
+            if z0 is None and (t := self._in_tray(cur, stage, sol, in_tray_z)) is not None:
+                zi, z0, ze = (
+                    t  # 놓은 칸에서 트레이 안 높이로 올라가 출입구 칸 위로(비스듬히) 옮긴 뒤 거기서 출발
+                )
                 low = [cur[0], cur[1], zi, *cur[3:]]
-                start = [stage[0], stage[1], zi, *cur[3:]]
+                start = [stage[0], stage[1], ze, *cur[3:]]
                 pre = [("rise_in_tray", low)] if cur[2] < zi - 0.5 else []
                 pre.append(("to_stage", start))
-            if z1 is None and (t := self._in_tray(target_flange, stage, sol)) is not None:
-                zi, z1 = t  # 칸 0 위로 내려와 트레이 안 높이로 목표 칸 위까지 옮긴 뒤 하강
-                end = [stage[0], stage[1], zi, *target_flange[3:]]
+                tray = (zi, ze)
+            if (
+                z1 is None
+                and (t := self._in_tray(target_flange, stage, sol, in_tray_z)) is not None
+            ):
+                zi, z1, ze = (
+                    t  # 출입구 칸 위로 내려와 트레이 안 높이로 목표 칸 위까지(비스듬히) 옮긴 뒤 하강
+                )
+                end = [stage[0], stage[1], ze, *target_flange[3:]]
                 post = [("in_tray", [target_flange[0], target_flange[1], zi, *target_flange[3:]])]
                 post.append(("descend", list(target_flange)))
+                tray = (zi, ze)
         except _ZoneError:
             raise
         except Exception as e:  # 큐 응답 없음
@@ -905,7 +976,7 @@ class RobotGatewayNode(Node):
             where = "출발" if z0 is None else "도착"
             raise _ZoneError(
                 f"LIMIT: {where} 위에서 TCP z ≥ {self.min_travel_tcp_z:.0f} mm 로 수평 이동할 수 없다"
-                f" (트레이 안 TCP ≥ {self.min_in_tray_tcp_z:.0f} 도 안 됨 — 팔이 닿지 않음)"
+                f" (트레이 안 TCP ≥ {in_tray_z or self.min_in_tray_tcp_z:.0f} 도 안 됨 — 팔이 닿지 않음)"
             )
         hz = min(z0, z1)
         self.get_logger().info(
@@ -915,27 +986,88 @@ class RobotGatewayNode(Node):
             self.get_logger().info(
                 f"수평 이동 높이 플랜지 z {hz:.1f} (TCP {hz - self.safe_z + 200:.0f}) — safe_z 에서 안 닿음"
             )
-        if pre or post:
-            zi = (post or pre)[0][1][2]
-            self.get_logger().info(
-                f"트레이 안 이동: 칸 0 위 거쳐 TCP {zi - self.safe_z + 200:.0f} 높이로 옆으로"
+        if tray is not None:
+            zi, ze = (z - self.safe_z + 200 for z in tray)
+            how = (
+                f"TCP {zi:.0f} 높이로 옆으로"
+                if abs(ze - zi) < 0.5
+                else f"TCP {ze:.0f} → {zi:.0f} 비스듬히"
             )
+            self.get_logger().info(f"트레이 안 이동: 출입구 칸 위 거쳐 {how}")
         steps = pre + plan_move(start, end, hz) + post
-        for name, step in steps:
-            cmd = flange_to_tcp(step, self._cmd_off)  # 컨트롤러 등록 TCP 기준 목표
-            tcp = flange_to_tcp(
-                step, self.tcp
-            )  # 핑거 끝(/voss/robot/pose 와 같은 기준) — 도착 판정
-            seq0 = self.dsr.alarm_seq
+        arcs = [p for n, p in steps if n.startswith("arc")]
+        if arcs:
             try:
-                self._send_move(name, cmd)
-                self._wait_arrive(name, tcp[:3], seq0)
+                reach = all(self._ik_ok(p, sol) for p in arcs)
+            except Exception as e:  # 큐 응답 없음
+                raise _ZoneError(f"TIMEOUT: 경유점 계산 {e}") from e
+            if not reach:
+                raise _ZoneError("LIMIT: 베이스 앞쪽으로 도는 경유점에 팔이 닿지 않음")
+            self.get_logger().info(
+                f"수평 이동이 베이스 뒤를 지나 앞쪽으로 돈다 (경유점 {len(arcs)}개, 스플라인 한 번)"
+            )
+            # 원호 경유점 + 다음 목표(over)를 move_spline 한 번으로 — 경유점마다 멈추지 않게(10/12 실기 요청)
+            merged, i = [], 0
+            while i < len(steps):
+                if steps[i][0].startswith("arc"):
+                    j = i
+                    while steps[j][0].startswith("arc"):
+                        j += 1
+                    merged.append(("arc", [p for _, p in steps[i : j + 1]]))
+                    i = j + 1
+                else:
+                    merged.append(steps[i])
+                    i += 1
+            steps = merged
+        carry = 0.0  # 앞 구간에서 블렌딩으로 남긴 거리 — 이번 구간 경로 이탈 허용에 더한다
+        for i, (name, step) in enumerate(steps):
+            pts = step if name == "arc" else [step]  # arc = 경유점들 + 끝점 (스플라인)
+            cmds = [flange_to_tcp(q, self._cmd_off) for q in pts]  # 컨트롤러 등록 TCP 기준 목표
+            # 핑거 끝(/voss/robot/pose 와 같은 기준) — 도착 판정
+            tcps = [flange_to_tcp(q, self.tcp)[:3] for q in pts]
+            seq0 = self.dsr.alarm_seq
+            # 블렌딩(zone_blend_mm): 위쪽 모서리(이동 높이에서 끝나는 구간 → 다음 직선 구간)만 — 남은 거리가
+            # 이만큼일 때 다음 move_line 을 보내 멈추지 않고 꺾는다(두산 DUPLICATE). 트레이 안 낮은 모서리는 그대로
+            # 두산은 스플라인(move_spline_task) 앞뒤로 다른 이동이 겹치면 거부한다(10/12 실기 450 mm/s: 1203
+            # rejected eMoveL·1903 rejected eMoveSX) → 스플라인 구간은 블렌딩하지 않고, 보내기 전·직후 정지 확인
+            nxt = steps[i + 1][0] if i + 1 < len(steps) else ""
+            blend = (
+                self.blend_mm
+                if self.blend_mm > 0
+                and name != "arc"
+                and nxt
+                and nxt != "arc"
+                and pts[-1][2] >= hz - 0.5
+                else 0.0
+            )
+            try:
+                if name == "arc" or (i > 0 and steps[i - 1][0] == "arc"):
+                    self._wait_idle(name)
+                self._send_move(name, cmds)
+                self._wait_arrive(name, tcps[-1], seq0, tcps[:-1], early=blend, carry=carry)
+                carry = blend
             except _ZoneError as e:
                 if not str(e).startswith("STOPPED"):  # stop 은 이미 move_stop 을 보냈다
                     self._zone_halt(f"{name}: {e}")
                 raise
 
-    def _send_move(self, name: str, cmd) -> None:
+    def _wait_idle(self, name: str, timeout_s: float = 3.0) -> None:
+        """컨트롤러 이동 명령이 끝날 때까지(check_motion = IDLE 0, 스플라인 앞뒤). 도착 판정(3 mm·0.3 s) 뒤에도,
+        robot_state 가 STANDBY 여도 이동 명령이 남아 스플라인이 거부됐다(10/12 실기 450 mm/s, 1903)."""
+        deadline = time.monotonic() + timeout_s
+        while time.monotonic() < deadline:
+            if self._abort.is_set():
+                raise _ZoneError(f"STOPPED: {name} 전 stop")
+            try:
+                st = self.queue.submit(self.dsr.check_motion).result(timeout=1.0)
+            except Exception as e:  # 큐 응답 없음
+                raise _ZoneError(f"TIMEOUT: {name} 전 컨트롤러 상태 {e}") from e
+            if st == 0:
+                return
+            time.sleep(0.03)
+        raise _ZoneError(f"TIMEOUT: {name} 전 컨트롤러가 {timeout_s:.0f} s 동안 이동 중 상태")
+
+    def _send_move(self, name: str, cmds) -> None:
         """move_line(ASYNC) 한 구간을 큐로 보낸다. stop 이 먼저 왔으면 보내지 않고 STOPPED.
 
         stop 의 move_stop 은 그 순간 움직이는 것만 멈춘다. 그리퍼 동작(닫기 약 1.7 s) 중에 온 stop 뒤에 다음 구간을
@@ -945,7 +1077,10 @@ class RobotGatewayNode(Node):
         def send():
             if self._abort.is_set():
                 raise _ZoneError(f"STOPPED: {name} 전 stop")
-            self.dsr.move_line_async(cmd, self.zone_vel, self.zone_acc)
+            if len(cmds) == 1:
+                self.dsr.move_line_async(cmds[0], self.zone_vel, self.zone_acc)
+            else:
+                self.dsr.move_spline_async(cmds, self.zone_vel, self.zone_acc)
 
         try:
             self.queue.submit(send).result(timeout=2.0)
@@ -964,11 +1099,18 @@ class RobotGatewayNode(Node):
 
         self.dsr.move_stop_async(done)
 
-    def _wait_arrive(self, name: str, tcp_xyz, seq0: int) -> None:
+    def _wait_arrive(
+        self, name: str, tcp_xyz, seq0: int, via=(), early: float = 0.0, carry: float = 0.0
+    ) -> None:
+        """도착 확인. via = 스플라인 경유점(핑거 끝 xyz) — 경로 이탈은 경유점을 잇는 꺾은선 기준, 스플라인이 현을
+        벗어나는 만큼(40° 원호 r 300 이면 약 18 mm) 허용을 넓힌다. early > 0 = 남은 거리가 이만큼이면 바로 돌려준다
+        (다음 구간과 블렌딩). carry = 앞 구간이 블렌딩으로 남긴 거리 — 그만큼 경로 이탈 허용을 넓힌다."""
         with self._glock:
             p = self.guard._pose
         start = p[1:] if p else tcp_xyz
-        dist = sum((a - b) ** 2 for a, b in zip(start, tcp_xyz, strict=True)) ** 0.5
+        line = [list(start), *[list(v) for v in via], list(tcp_xyz)]
+        dist = sum(math.dist(a, b) for a, b in zip(line, line[1:], strict=False))
+        tol = self.path_tol + (25.0 if via else 0.0) + carry
         # pose 는 config 오프셋으로 바꾼 TCP 라 등록 TCP 가 달라도(검사를 지나친 경우) 여기서 잡힌다
         seg_a = p[1:] if p else None
         deadline = time.monotonic() + dist / max(self.zone_vel[0], 1.0) + 8.0
@@ -983,12 +1125,24 @@ class RobotGatewayNode(Node):
             fresh = p is not None and self._now() - p[0] < 0.3
             if fresh and seg_a is None:
                 seg_a = p[1:]  # 시작 때 pose 가 없었으면 처음 받은 pose 부터
+                line[0] = list(seg_a)
             # 전제: 구역 자세는 모두 툴 수직·yaw 거의 같음(rx−rz ≈ 90° ±1.3°) → 단계 중 회전이 없어 컨트롤러가
             # 직선으로 보내는 점(TCP 든 플랜지 모드의 플랜지든)과 핑거 끝이 함께 직선으로 간다(#121 리뷰 남현지)
-            if fresh and (off := segment_distance_mm(seg_a, tcp_xyz, p[1:])) > self.path_tol:
+            if (
+                fresh
+                and (
+                    off := min(
+                        segment_distance_mm(a, b, p[1:])
+                        for a, b in zip(line, line[1:], strict=False)
+                    )
+                )
+                > tol
+            ):
                 raise _ZoneError(
                     f"LIMIT: {name} 중 경로 이탈 {off:.0f} mm (직선 이동이어야 함 — TCP 등록·충돌 확인)"
                 )
+            if early > 0.0 and fresh and math.dist(p[1:], tcp_xyz) <= early:
+                return  # 블렌딩: 다음 구간을 바로 보낸다
             # 3 mm: 팔을 거의 다 뻗은 자세(J3 ≈ 18°)에서 move_line 이 1.1 mm 덜 가고 멈췄다(10/08 HOLD 칸 1)
             if fresh and sum((a - b) ** 2 for a, b in zip(p[1:], tcp_xyz, strict=True)) < 9.0:
                 still = still or time.monotonic()

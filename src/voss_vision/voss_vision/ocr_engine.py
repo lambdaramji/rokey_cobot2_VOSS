@@ -36,15 +36,18 @@ class PaddleEngine:
         return list(zip(r["rec_texts"], map(float, r["rec_scores"]), strict=True))
 
 
-def read_label(engine, upright: np.ndarray, cands: list[Candidate]) -> tuple[Match, float, bool]:
+def read_label(
+    engine, upright: np.ndarray, cands: list[Candidate], flip_retry: bool = True
+) -> tuple[Match, float, bool]:
     """펴진 송장 → (판정, OCR ms 합, 180° 돌렸는지).
 
     crop_upright 는 기본 방향에서 ±90° 안만 바로 세운다. 박스를 벨트에 거꾸로(180°) 올리면 글자가 뒤집혀
     아무것도 안 읽히므로(10/06 A_MIX 10개 중 1개), **판정이 없을 때만** 180° 돌려 한 번 더 읽는다.
+    flip_retry=False 면 다시 읽지 않는다 — 못 읽는 송장은 OCR 이 두 배(≈ 2 → 4 s)라 결과가 파지 구간을 놓친다(10/12).
     """
     t0 = time.perf_counter()
     m = match_label(engine.read(upright), cands)
-    if m.dong:
+    if m.dong or not flip_retry:
         return m, (time.perf_counter() - t0) * 1000, False
     m2 = match_label(engine.read(cv2.rotate(upright, cv2.ROTATE_180)), cands)
     ms = (time.perf_counter() - t0) * 1000

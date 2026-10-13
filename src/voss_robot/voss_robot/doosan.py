@@ -49,6 +49,7 @@ class DryRunDoosan:
         self._vel = [0.0, 0.0, 0.0]  # mm/s
         self._tcp = [float(v) for v in tcp_offset_mm]
         self._target: list[float] | None = None  # move_line 목표 (플랜지)
+        self._next: list[list[float]] = []  # move_spline 남은 경유점 (플랜지)
         self._line_v = 0.0
         self._t = time.monotonic()
         self._lock = threading.Lock()
@@ -65,7 +66,7 @@ class DryRunDoosan:
             step = self._line_v * dt
             if n <= step:
                 self._pose = list(self._target)
-                self._target = None
+                self._target = self._next.pop(0) if self._next else None
             else:
                 for i in range(3):
                     self._pose[i] += d[i] / n * step
@@ -92,6 +93,7 @@ class DryRunDoosan:
             self._advance()
             self._vel = [0.0, 0.0, 0.0]
             self._target = None
+            self._next = []
             self.stops += 1
         done(True, "OK")
 
@@ -108,6 +110,22 @@ class DryRunDoosan:
             tgt = tcp_to_flange(tcp_posx, off)
             self._pose[3:] = tgt[3:]
             self._target = list(tgt)
+            self._next = []
+            self._line_v = float(vel[0])
+
+    def move_spline_async(
+        self, tcp_points: Sequence[Sequence[float]], vel: Sequence[float], acc: Sequence[float]
+    ) -> None:
+        """두산 move_spline_task ASYNC 대신: 경유점을 차례로 직선 등속(멈추지 않음)."""
+        from voss_robot.geometry import tcp_to_flange
+
+        with self._lock:
+            self._advance()
+            self._vel = [0.0, 0.0, 0.0]
+            off = self._tcp if self.tcp_registered else [0.0, 0.0, 0.0]
+            pts = [list(tcp_to_flange(q, off)) for q in tcp_points]
+            self._pose[3:] = pts[-1][3:]
+            self._target, self._next = pts[0], pts[1:]
             self._line_v = float(vel[0])
 
     def current_solution_space(self) -> int:
@@ -146,9 +164,16 @@ class DryRunDoosan:
     alarm_seq = 0
 
     def get_robot_state(self) -> int:
-        """두산 ROBOT_STATE: 움직이면 MOVING(2), 아니면 STANDBY(1)."""
+        """두산 ROBOT_STATE: 움직이면(speedl·move_line·move_spline) MOVING(2), 아니면 STANDBY(1)."""
         with self._lock:
-            return 2 if any(abs(v) > 0 for v in self._vel) else 1
+            self._advance()
+            return 2 if self._target is not None or any(abs(v) > 0 for v in self._vel) else 1
+
+    def check_motion(self) -> int:
+        """두산 check_motion 대신: move_line·move_spline 진행 중이면 BUSY(2), 아니면 IDLE(0)."""
+        with self._lock:
+            self._advance()
+            return 2 if self._target is not None else 0
 
 
 class GuardedCaller:
@@ -251,7 +276,7 @@ class RosDoosan:
         self.last_alarm = ""
         self.alarm_seq = 0  # WARN·ERROR 알람 수 (MoveToZone 이 이동 중 새 알람을 본다)
         self.disconnected = False
-        from dsr_msgs2.srv import Fkin, GetCurrentPosx, Ikin, MoveLine
+        from dsr_msgs2.srv import CheckMotion, Fkin, GetCurrentPosx, Ikin, MoveLine, MoveSplineTask
 
         self._ik_srv, self._fk_srv, self._posx_srv = Ikin, Fkin, GetCurrentPosx
         self._ik = node.create_client(Ikin, prefix + "motion/ikin", callback_group=self._group)
@@ -262,6 +287,14 @@ class RosDoosan:
         self._line_srv = MoveLine
         self._line = node.create_client(
             MoveLine, prefix + "motion/move_line", callback_group=self._group
+        )
+        self._check_srv = CheckMotion
+        self._check = node.create_client(
+            CheckMotion, prefix + "motion/check_motion", callback_group=self._group
+        )
+        self._spline_srv = MoveSplineTask
+        self._spline = node.create_client(
+            MoveSplineTask, prefix + "motion/move_spline_task", callback_group=self._group
         )
         node.create_subscription(RobotError, ns + "error", self._on_error, 100)
         node.create_subscription(
@@ -337,6 +370,21 @@ class RosDoosan:
         r.ref, r.mode, r.sync_type = 0, 0, 1
         self.caller.call(self._line, r)
 
+    def move_spline_async(
+        self, tcp_points: Sequence[Sequence[float]], vel: Sequence[float], acc: Sequence[float]
+    ) -> None:
+        """move_spline_task(movesx) ASYNC — 경유점을 멈추지 않고 지나 마지막 점에 선다(BASE, 절대, 등속 옵션
+        기본). 베이스 앞쪽 원호(10/12 실기: move_line 경유점마다 멈춤). 큐 작업 스레드에서만."""
+        from std_msgs.msg import Float64MultiArray
+
+        r = self._spline_srv.Request()
+        r.pos = [Float64MultiArray(data=[float(v) for v in q]) for q in tcp_points]
+        r.pos_cnt = len(tcp_points)
+        r.vel = [float(v) for v in vel]
+        r.acc = [float(v) for v in acc]
+        r.ref, r.mode, r.opt, r.sync_type = 0, 0, 0, 1
+        self.caller.call(self._spline, r)
+
     def current_solution_space(self) -> int:
         """현재 관절 배치(solution space 0~7). 큐 작업 스레드에서만."""
         return self.current_posx()[1]
@@ -372,6 +420,11 @@ class RosDoosan:
             (a - float(b)) ** 2 for a, b in zip(tcp_posx[:3], back.conv_posx[:3], strict=True)
         )
         return j if back.success and err <= 1.0 else None
+
+    def check_motion(self) -> int:
+        """두산 check_motion: IDLE(0) 이동 없음 / INIT(1) 계산 중 / BUSY(2) 동작 중. 큐 작업 스레드에서만.
+        robot_state 가 STANDBY 여도 이동 명령이 끝나지 않았을 수 있다(10/12 실기 1903 rejected eMoveSX)."""
+        return int(self.caller.call(self._check, self._check_srv.Request()).status)
 
     def get_robot_state(self) -> int:
         """두산 ROBOT_STATE (DRFC.h). 큐 작업 스레드에서만."""
