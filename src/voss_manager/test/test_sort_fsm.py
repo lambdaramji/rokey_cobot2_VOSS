@@ -113,6 +113,15 @@ def test_load_config_rejects(patch: dict, msg: str) -> None:
         f.load_config(raw)
 
 
+def test_layers_multiply_capacity() -> None:
+    raw = raw_config()
+    raw["zones"]["A"]["grid"] = {"cols": 3, "rows": 2, "pitch_mm": 60, "layers": 2}
+    assert f.load_config(raw).capacity["A"] == 12
+    raw["zones"]["A"]["grid"]["layers"] = 0
+    with pytest.raises(ValueError, match="layers"):
+        f.load_config(raw)
+
+
 def test_ids() -> None:
     sid = f.make_session_id(datetime(2026, 10, 10, 14, 30, 12), "a3f9")
     assert sid == SID and len(sid) == 20

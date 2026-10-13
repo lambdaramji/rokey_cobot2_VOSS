@@ -53,7 +53,7 @@ class Config:
     zone_map: dict[str, str]  # 동 → 구역(A/B/C)
     codes: dict[str, str]  # 분류코드 → 동
     aliases: dict[str, list[str]]  # 동 → 별칭
-    capacity: dict[str, int]  # 구역(대문자) → 칸 수 = grid cols × rows
+    capacity: dict[str, int]  # 구역(대문자) → 칸 수 = grid cols × rows × layers
     confidence_min: float
     version: str  # ZoneMap.version = SortResult.rule_version (≤ 16자)
     pallet_ready: bool = (
@@ -103,7 +103,10 @@ def load_config(raw: dict) -> Config:
         cols, rows = grid.get("cols"), grid.get("rows")
         if not cols or not rows or int(cols) < 1 or int(rows) < 1:
             raise ValueError(f"zones.{z.lower()}.grid 의 cols·rows 가 없음")
-        capacity[z] = int(cols) * int(rows)
+        layers = grid.get("layers", 1)  # 쌓는 층 수(선택, voss_config.md grid)
+        if isinstance(layers, bool) or not isinstance(layers, int) or layers < 1:
+            raise ValueError(f"zones.{z.lower()}.grid.layers 는 1 이상 정수: {layers!r}")
+        capacity[z] = int(cols) * int(rows) * layers
 
     version = str(raw.get("version", ""))
     if not version or len(version) > 16:
