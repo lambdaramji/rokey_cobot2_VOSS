@@ -1,7 +1,7 @@
 // Sprint 2 S2-T08 팔레타이징 패널: 경로 입력, 3D 팔레트(4×2×2), 위에서 본 칸 표, 실을 수·초과·경로 제외, 경고, 진행률.
 // 입력: SSE pallet_state(PalletState), zone_map 정식 동. 출력: POST /api/commands palletize·reset_zone PALLET.
 // 근거: BRD v1.5 10.4·TR-PAL-01·10, docs/interfaces/web_api.md (S2-T08), voss_msgs.md PalletState.
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CommandArgs } from './api';
 import type { CommandType, PalletState } from './types';
 import {
@@ -16,13 +16,37 @@ type Props = {
   stale:boolean;
   dongs:string[];
   controlEnabled:boolean;
+  preview?:boolean;
   onCommand:(type:CommandType,args?:CommandArgs)=>void;
 };
 
 const STATE_TEXT:Record<string,string> = { EMPTY:'빈 칸', PLANNED:'계획', MOVING:'옮기는 중', DONE:'적재', FAILED:'실패' };
 
-export default function PalletPanel({pallet,sortState,stale,dongs,controlEnabled,onCommand}:Props) {
+export default function PalletPanel({pallet,sortState,stale,dongs,controlEnabled,preview=false,onCommand}:Props) {
   const [picks,setPicks] = useState<string[]>(Array(MAX_ROUTE).fill(''));
+  const [loadedSlots,setLoadedSlots] = useState<Set<number>>(() => new Set());
+  const previousPallet = useRef<PalletState | null>(null);
+  const animationTimers = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  useEffect(() => {
+    const previous = previousPallet.current;
+    previousPallet.current = pallet;
+    if (!previous || !pallet.run_id || previous.run_id !== pallet.run_id) {
+      animationTimers.current.forEach(clearTimeout);
+      animationTimers.current.clear();
+      setLoadedSlots(new Set());
+      return;
+    }
+    pallet.slot_state.forEach((state,slot) => {
+      if (state !== 'DONE' || previous.slot_state[slot] === 'DONE') return;
+      setLoadedSlots(current => new Set(current).add(slot));
+      const timer = setTimeout(() => {
+        setLoadedSlots(current => { const next = new Set(current); next.delete(slot); return next; });
+        animationTimers.current.delete(timer);
+      }, 750);
+      animationTimers.current.add(timer);
+    });
+  }, [pallet]);
+  useEffect(() => () => { animationTimers.current.forEach(clearTimeout); }, []);
   const check = routeFromPicks(picks,dongs);
   const prog = progress(pallet);
   const warning = overflowWarning(pallet);
@@ -33,7 +57,7 @@ export default function PalletPanel({pallet,sortState,stale,dongs,controlEnabled
 
   return <section className="panel pallet-panel" data-testid="pallet-panel" data-pallet-key={palletKey(pallet)}>
     <div className="section-heading"><div><span className="eyebrow">04 / PALLETIZING</span><h2>팔레트 적재 (트럭 짐칸)</h2></div>
-      <span className={`chip ${stale||pallet.state==='PAUSED'?'warning':''}`}>{stale?'갱신 안 됨 · 마지막 배치도':RUN_STATE_TEXT[pallet.state] ?? pallet.state}</span></div>
+      <span className={`chip ${stale||pallet.state==='PAUSED'?'warning':''}`}>{preview?'시험 재생 · ':''}{stale?'갱신 안 됨 · 마지막 배치도':RUN_STATE_TEXT[pallet.state] ?? pallet.state}</span></div>
 
     <div className="route-picker">
       {picks.map((pick,i)=><div className="field" key={i}><label htmlFor={`route-${i}`}>{i+1}번째 배송지{i===0?' (문 쪽)':''}</label>
@@ -54,7 +78,7 @@ export default function PalletPanel({pallet,sortState,stale,dongs,controlEnabled
 
     <svg className="pallet-3d" viewBox={VIEW_BOX} role="img" aria-label={`팔레트 3D 배치도 — ${prog.text}`}>
       <Deck/>
-      {drawOrder().map(slot=><Box key={slot} slot={slot} state={pallet.slot_state[slot]} dong={pallet.slot_dong[slot]} boxId={pallet.slot_box_id[slot]} color={color(pallet.slot_dong[slot])}/>)}
+      {drawOrder().map(slot=><Box key={slot} slot={slot} state={pallet.slot_state[slot]} dong={pallet.slot_dong[slot]} boxId={pallet.slot_box_id[slot]} color={color(pallet.slot_dong[slot])} justLoaded={loadedSlots.has(slot)}/>)}
       {Array.from({length:COLS},(_,i)=>{const [x,y]=columnLabel(i+1);return <text key={i} x={x} y={y} className="axis-label" textAnchor="middle">{i+1}열</text>;})}
       <text x={-22} y={-28} className="axis-label" textAnchor="end">◀ 트럭 머리</text>
       <text x={-22} y={-20} className="axis-note" textAnchor="end">(안쪽)</text>
@@ -90,13 +114,13 @@ function Deck() {
 }
 
 /** 칸 하나: 빈 칸은 점선 윤곽, 계획은 옅은 동 색, 옮기는 중은 깜빡임, 적재는 진한 동 색, 실패는 붉은색. */
-function Box({slot,state,dong,boxId,color}:{slot:number;state:string;dong:string;boxId:string;color:string}) {
+function Box({slot,state,dong,boxId,color,justLoaded}:{slot:number;state:string;dong:string;boxId:string;color:string;justLoaded:boolean}) {
   const shape = boxShape(slot);
   const c = slotCell(slot);
   const base = state === 'FAILED' ? '#c2525c' : color;
   const fills = { front: base, top: shade(base,1.25), right: shade(base,0.72) };
   const title = `칸 ${slot+1} · ${c.col}열 ${c.layer}층 ${c.lane}줄 · ${dong||'계획 없음'} · ${STATE_TEXT[state]??state}${boxId?` · ${boxId}`:''}`;
-  return <g className={`box box-${state.toLowerCase()}`} data-slot={slot}>
+  return <g className={`box box-${state.toLowerCase()}${justLoaded?' box-just-loaded':''}`} data-slot={slot}>
     <title>{title}</title>
     <polygon points={shape.front} fill={fills.front}/><polygon points={shape.top} fill={fills.top}/><polygon points={shape.right} fill={fills.right}/>
     {state==='FAILED'&&<text x={shape.label[0]} y={shape.label[1]+3} className="box-mark" textAnchor="middle">✕</text>}

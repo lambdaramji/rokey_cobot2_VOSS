@@ -50,6 +50,6 @@ export function GripperCameraPanel() {
       {!live && <span>{enabled ? '영상 연결 대기 · 자동 재시도 중' : '그리퍼 카메라 영상 대기'}</span>}
     </div>
     <button type="button" className="action camera-connect" onClick={() => { setLive(false); setEnabled(value => !value); }}>{enabled ? '연결 종료' : '영상 연결'}</button>
-    <p className="inline-notice" role="status">{live ? '초록색 바운딩 박스와 BOX 번호는 해당 영상 프레임의 검출 결과입니다.' : enabled ? 'Nodes PC의 카메라 송출 노드와 Web PC 연결 경로를 확인해 주세요.' : 'Nodes PC의 그리퍼 카메라와 박스 검출 결과를 표시합니다.'}</p>
+    <p className="inline-notice" role="status">{live ? '초록색 바운딩 박스의 T 번호는 비전 트랙 번호입니다. 분류 이력의 BOX 번호와 다릅니다.' : enabled ? 'Nodes PC의 카메라 송출 노드와 Web PC 연결 경로를 확인해 주세요.' : 'Nodes PC의 그리퍼 카메라와 박스 검출 결과를 표시합니다.'}</p>
   </section>;
 }

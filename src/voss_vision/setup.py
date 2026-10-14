@@ -25,6 +25,7 @@ setup(
     entry_points={
         "console_scripts": [
             "box_tracker = voss_vision.box_tracker:main",
+            "camera_preview = voss_vision.camera_preview:main",
             "label_reader = voss_vision.label_reader:main",
         ],
     },
