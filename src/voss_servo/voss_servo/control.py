@@ -47,8 +47,8 @@ TRAP_V_FLOOR_MPS = 0.005  # 조준점 바로 앞 최소 속도 (√ 꼬리에서
 Z_MIN_MARGIN_TRAP_M = 0.003
 Z_LAW_P = "P"  # z 속도 법칙: kp_z × 오차
 Z_LAW_TRAP = "TRAP"  # z 속도 법칙: 사다리꼴
-# 사다리꼴을 쓰는 phase. 안전 후퇴 RISING 도 phase 가 LIFT 라 함께 들어간다 (HLD D2 결정).
-# PREPARE·TRACK 은 접근 높이에 "머물러야" 해서 P 를 유지한다 (사다리꼴이면 떨림)
+# 사다리꼴을 쓰는 phase. 안전 후퇴 RISING 도 phase 가 LIFT 지만 z_law 의 retreat 로 뺀다
+# (10/12 실기로 확인된 P 그대로 — HLD 12.1 (나)). PREPARE·TRACK 은 접근 높이에 "머물러야" 해서 P (떨림 방지)
 TRAP_PHASES = (fsm.DESCEND, fsm.LIFT)
 
 
@@ -245,9 +245,15 @@ def z_speed(
     return min(max(v, -v_down_max), v_up_max)
 
 
-def z_law(phase: str, cfg: ControlConfig) -> str:
-    """이 phase 의 z 속도 법칙. trapezoid 이고 DESCEND·LIFT 이면 사다리꼴, 아니면 P (HLD D2)."""
-    if cfg.z_profile == Z_PROFILE_TRAP and phase in TRAP_PHASES:
+def z_law(phase: str, cfg: ControlConfig, retreat: bool = False) -> str:
+    """이 phase 의 z 속도 법칙. trapezoid 이고 DESCEND·LIFT 이고 후퇴가 아니면 사다리꼴, 아니면 P.
+
+    retreat 이면 phase 와 무관하게 P (fsm 에서 후퇴는 LIFT 뿐).
+
+    후퇴 RISING 은 xy 감속(윗면 +10 에서 48 → 0)과 가속 예산을 나눠 써서 사다리꼴 꼬리가 30 mm/s 로
+    남는다 → P 유지 (HLD 12.1 (나), 10/13 학민 리뷰).
+    """
+    if cfg.z_profile == Z_PROFILE_TRAP and phase in TRAP_PHASES and not retreat:
         return Z_LAW_TRAP
     return Z_LAW_P
 
@@ -278,12 +284,18 @@ def z_speed_trap(
 
 
 def z_command(
-    z_t: float | None, v_down: float, v_up: float, phase: str, tcp_z: float, cfg: ControlConfig
+    z_t: float | None,
+    v_down: float,
+    v_up: float,
+    phase: str,
+    tcp_z: float,
+    cfg: ControlConfig,
+    retreat: bool = False,
 ) -> float:
     """z_plan 결과 → 이번 틱 z 속도 (clamp 전). 목표가 없으면 0 (GRASP·VERIFY·hold_z)."""
     if z_t is None:
         return 0.0
-    if z_law(phase, cfg) == Z_LAW_TRAP:
+    if z_law(phase, cfg, retreat) == Z_LAW_TRAP:
         return z_speed_trap(
             z_t, tcp_z, cfg.a_dec, cfg.height_tol_m, TRAP_V_FLOOR_MPS, v_down, v_up
         )  # 사다리꼴 (S2-T14)
@@ -365,10 +377,11 @@ def retry_need_s(cfg: ControlConfig, room_need_s: float) -> float:
 def lift_max_s(cfg: ControlConfig) -> float:
     """후퇴 상승 체류 상한 s = 파지 → 들기 높이 예상 + 여유 (U9b-dd 1절). 정상 LIFT 는 경고에만 쓴다.
 
-    예: 69 mm → P 2.785 + 1.0 = 3.78 s (실측 정상 LIFT 2.70~2.74 s) / trapezoid 1.736 + 1.0 = 2.74 s.
+    후퇴는 두 모드 모두 P 라 상한도 P 식 (HLD 12.1 (나)). 예: 69 mm → 2.785 + 1.0 = 3.78 s
+    (실측 후퇴 RISING 2.27~2.30 s). 사다리꼴 정상 LIFT(≈1.6 s)에는 경고 문턱으로만 쓰여 느슨하다.
     """
     dist = cfg.lift_dz - cfg.grasp_dz  # 파지 높이 → 들기 높이
-    expect = z_move_time_s(dist, cfg.lift_speed, cfg, z_law(fsm.LIFT, cfg))
+    expect = z_move_time_s(dist, cfg.lift_speed, cfg, z_law(fsm.LIFT, cfg, retreat=True))
     return expect + BLIND_DWELL_MARGIN_S  # U9-a S 와 같은 여유
 
 
@@ -546,7 +559,7 @@ def command(
         v = zero_cmd()
     else:
         v = ff_p(e, cfg.belt_v, cfg.belt_dir_xy, cfg.kp_xy, use_p=(rule == FF_P))
-    vz = z_command(z_t, v_down, v_up, phase, float(geo.tcp[2]), cfg)  # p 모드는 옛 식과 같은 값
+    vz = z_command(z_t, v_down, v_up, phase, float(geo.tcp[2]), cfg, retreat)  # 후퇴는 P
     v[2] = vz
     v, clamped = clamp(v, prev_v, cfg.v_max, cfg.a_max, dt)
     return Command(v, rule, target, e, clamped, vz if z_t is not None else None)

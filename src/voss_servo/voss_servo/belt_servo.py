@@ -260,7 +260,7 @@ class BeltServoNode(Node):
         if cfg.z_profile == Z_PROFILE_TRAP:
             return (
                 f"z 프로파일: trapezoid — DESCEND·LIFT 사다리꼴(감속 {cfg.a_dec:.3f} m/s², "
-                f"최소 {control.TRAP_V_FLOOR_MPS * 1000.0:g} mm/s), PREPARE·TRACK 은 P. "
+                f"최소 {control.TRAP_V_FLOOR_MPS * 1000.0:g} mm/s), PREPARE·TRACK·후퇴는 P. "
                 f"{times} (되돌림: z.profile: p)"
             )
         head = f"z 프로파일: p — 모든 phase P(kp_z {cfg.kp_z:g})."

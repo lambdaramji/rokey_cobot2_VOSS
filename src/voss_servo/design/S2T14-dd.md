@@ -34,7 +34,7 @@ params.py 의 상수와 검사 함수:
 | `TRAP_V_FLOOR_MPS` | 0.005 | 조준점 직전 최소 속도 (멈춰 버리지 않게) |
 | `Z_MIN_MARGIN_TRAP_M` | 0.003 | 사다리꼴 모드 파지 목표 ≥ z_min + 이 값 (최악 착지 −2.2 mm, τ100) |
 | `Z_LAW_P`·`Z_LAW_TRAP` | "P"·"TRAP" | z_law 반환값(내부용) |
-| `TRAP_PHASES` | (DESCEND, LIFT) | 사다리꼴을 쓰는 phase. 후퇴 RISING 도 phase 가 LIFT 라 자동 포함(HLD D2 결정의 코드 자취) |
+| `TRAP_PHASES` | (DESCEND, LIFT) | 사다리꼴을 쓰는 phase. ~~후퇴 RISING 도 phase 가 LIFT 라 자동 포함(HLD D2 결정의 코드 자취)~~ — **10/13 후속: 후퇴는 z_law 의 retreat 로 뺌(10절)** |
 
 ### 2.2 ControlConfig 필드 추가
 - `z_profile: str` — `values.get("z.profile") or "p"`
@@ -73,9 +73,9 @@ z 프로파일: trapezoid — DESCEND·LIFT 사다리꼴(감속 0.080 m/s², 최
 x 여유: 하강 예상 1.70 s + 닫힘 2.50 s → 정렬 때 x_max 까지 212 mm 이상 남아야 DESCEND
 사각 체류 상한: DESCEND 사각이 2.50 s 넘으면 DEVICE_ERROR (하강 예상 1.50 + 여유 1)
 재시도 x 여유: 실패 때 x_max 까지 339 mm 이상 남아야 재시도 (실패 TCP x ≤ 211 mm, 아니면 안전 후퇴)   ← 로그는 정수 반올림, 문서 계산값 210.6
-후퇴 체류 상한: 후퇴 상승이 2.74 s 넘으면 DEVICE_ERROR (정상 들기는 경고만)
+후퇴 체류 상한: 후퇴 상승이 2.74 s 넘으면 DEVICE_ERROR (정상 들기는 경고만)   ← 10/13 후속(10절): 두 모드 3.78 s
 ```
-P 모드 첫 줄: `z 프로파일: p — 모든 phase P(kp_z 1.5). 하강 예상 2.64 s · 들기 예상 2.79 s (켜기: z.profile: trapezoid)`. 나머지 4줄은 지금과 글자까지 같다.
+P 모드 첫 줄: `z 프로파일: p — 모든 phase P(kp_z 1.5). 하강 예상 2.64 s · 들기 예상 2.78 s (켜기: z.profile: trapezoid)`. 나머지 4줄은 지금과 글자까지 같다.
 - 함수: `_z_profile_line() -> str` (로그 문구만, 값은 control 함수에서). sim_check 가 이 줄의 "하강 예상 x.xx s · 들기 예상 y.yy s" 를 파싱하므로 형식을 바꾸면 N19 가 깨진다.
 
 ### 3.2 틱·시도 로그 키 (주관 요청 2, 재검 m3 로 4키 → 2키)
@@ -126,7 +126,7 @@ P 모드 첫 줄: `z 프로파일: p — 모든 phase P(kp_z 1.5). 하강 예상
 | `z.profile` 오타·숫자 | READY 거부, 로그 `invalid=[z.profile: p 또는 trapezoid 이어야 함]`, 액션 서버 미생성 |
 | 사다리꼴인데 파지 목표 < z_min + 3 mm | OUT_OF_REACH / REACH_Z_MIN (P 는 지금 문턱) |
 | 로봇이 느림(r < 약 0.48) | 지금처럼 DEVICE_ERROR / DESCEND_BLIND_TIMEOUT (상한 2.50 s) |
-| 들기 2.74 s 초과 | 정상 LIFT 는 경고만, 후퇴면 DEVICE_ERROR / RETREAT_TIMEOUT (지금 규칙) |
+| 들기 2.74 s 초과 (10/13 후속: 3.78 s) | 정상 LIFT 는 경고만, 후퇴면 DEVICE_ERROR / RETREAT_TIMEOUT (지금 규칙) |
 
 ## 7. 시험 목록 (새 ≥ 8, 기존 371 전부 유지)
 | # | 파일 | 시험 | 확인 |
@@ -140,7 +140,7 @@ P 모드 첫 줄: `z 프로파일: p — 모든 phase P(kp_z 1.5). 하강 예상
 | N7 | test_control | 같은 폐루프 LIFT·후퇴 RISING(xy FF): 시간 < P, 위로 지나침 무해(≤ tol) | LIFT |
 | N8 | test_grip | `trap_time_s` 세 예(1.702·1.736·1.502), S ≤ 0 → 0, 입력 ≤ 0 → ValueError | 해석식 |
 | N9 | test_control | 해석식 ≥ 폐루프 시간(안전 쪽), 차 ≤ 0.15 s | 해석 vs sim |
-| N10 | test_control | trapezoid: descend_blind_max_s 2.50 · lift_max_s 2.736 · retry_need_s(room 4.202) 6.862 · grasp_room_need_s 4.202 / p: 기존 값 그대로 | 종속 수치 D4 |
+| N10 | test_control | trapezoid: descend_blind_max_s 2.50 · lift_max_s 2.736(10/13 후속: 3.785) · retry_need_s(room 4.202) 6.862 · grasp_room_need_s 4.202 / p: 기존 값 그대로 | 종속 수치 D4 |
 | N11 | test_control | grasp_floor_blocked: TRAP 목표 z_min+2.9 막힘·+3.1 통과, P 는 기존 경계 | D7 |
 | N12 | test_params | z.profile 없음·p·trapezoid → READY / "trap"·1·"" → invalid | 검사 |
 | N13 | test_params | digest: 없음 == p ≠ trapezoid | sha 규칙 |
@@ -162,3 +162,35 @@ control.py(docstring 예시 값 갱신 포함) · grip.py · params.py(BLIND_DWE
 - PREPARE·TRACK 사다리꼴/고 kp 혼합(HLD D2, (b) k 3 은 교차 검사 완화 필요) — 별도 과제.
 - gate_summary 에 z_profile 열 — 지금은 params_sha 로 구별되므로 z_compare 로 충분. 필요하면 후속.
 - DESIGN r8.1 변경점(DEC-04 z 법칙·DEC-17 실패 자세 시간): 최종 회신에 목록으로.
+
+## 10. 후속 (10/13, HLD 12절 — 사용자 선택 (나) 후퇴만 P)
+
+### 10.1 바뀌는 것
+| 위치 | 지금 (#30) | 후속 |
+|---|---|---|
+| `control.z_law(phase, cfg)` | trapezoid 이고 phase ∈ (DESCEND, LIFT) 이면 TRAP | **`z_law(phase, cfg, retreat=False)`**: 위 조건 **이고 retreat 가 아닐 때만** TRAP. 후퇴(phase LIFT + retreat)는 P |
+| `control.z_command(z_t, v_down, v_up, phase, tcp_z, cfg)` | z_law(phase, cfg) | 인자 `retreat: bool = False` 를 끝에 추가해 z_law 에 넘긴다 |
+| `control.command(..., retreat, hold_z)` | z_command 에 retreat 를 안 넘김 | `z_command(..., cfg, retreat)` — 이미 받는 retreat 를 그대로 전달 (belt_servo 는 고칠 것 없음: belt_servo.py:521 이 `fsm.is_retreat(state)` 를 넘기고 있다) |
+| `control.lift_max_s(cfg)` | 예상 = z_move_time_s(…, z_law(LIFT)) → trap 1.736 + 1.0 = 2.736 s | **예상 = z_move_time_s(…, z_law(LIFT, cfg, retreat=True))** = 항상 P 식 → 2.785 + 1.0 = **3.785 s**(두 모드 같음). 이 값은 후퇴 RISING 상한이고, 정상 LIFT 에는 경고에만 쓴다(belt_servo.py:547) → 사다리꼴 정상 LIFT(≈1.6 s)의 경고 문턱이 2.74 → 3.78 s 로 느슨해진다(경고만이라 동작 영향 없음, 지금 P 와 같은 값) |
+| `TRAP_PHASES` 주석 | "후퇴 RISING 도 phase 가 LIFT 라 함께 들어간다" | "후퇴는 z_law 의 retreat 인자로 뺀다(HLD 12.1 (나))" |
+| belt_servo `_z_profile_line` (trapezoid) | "…, PREPARE·TRACK 은 P." | "…, PREPARE·TRACK·후퇴는 P." (sim_check SERVO_PROFILE 정규식은 `— .*하강 예상` 이라 그대로 맞음) |
+| READY "후퇴 체류 상한" 줄 | trap 2.74 s | 두 모드 **3.78 s** |
+- 바뀌지 않는 것: p 모드 전부(틱 동일 유지), 사다리꼴 DESCEND·정상 LIFT, x 여유·사각 상한·재시도 상한, 로그 키, params, yaml.
+
+### 10.2 시험 (새·수정)
+| # | 파일 | 내용 |
+|---|---|---|
+| F1 | test_z_profile | `z_law(LIFT, TRAP, retreat=True) == P`, `z_law(LIFT, TRAP) == TRAP`, `z_law(DESCEND, TRAP) == TRAP`. 정의상 retreat 이면 phase 와 무관하게 P(fsm 에서 후퇴는 LIFT 뿐이라 DESCEND·retreat 조합은 단언하지 않음 — 재검 MINOR 로 pseudo 와 맞춤) |
+| F2 | test_z_profile | **사다리꼴 후퇴 = P 후퇴 틱 단위 동일**: run_z(TRAP, LIFT, xy_ff=True) 와 run_z(P, …) 의 명령 벡터 전부 `np.array_equal` |
+| F3 | test_z_profile (N7 교체) | 도달 직전 틱 z 명령: 정상 LIFT 사다리꼴 ≤ 6 mm/s, 후퇴(두 모드) ≤ 6 mm/s, 정상 LIFT 사다리꼴이 P 보다 0.5 s 넘게 짧음. **+ 진짜 지나침(재검 MINOR)**: run_z 가 LIFT 도달 뒤에도 0 명령으로 20틱 더 돌려(관성) 최고 z 를 잰다 — 지연+램프 τ24 에서 정상 LIFT·후퇴 모두 최고 z ≤ 들기 목표 + 2 mm. 기존 `top <= LIFT_Z + 0.002`(항상 통과) 삭제 |
+| F4 | test_z_profile (N10 수정) | `lift_max_s(TRAP) == 3.785`(= P) |
+| F5 | test_node (수정) | trap_node `_lift_max_s` = P 식 고정값(READY_ARGS kp_z 2.0 → **3.260**, 현장 kp_z 1.5 면 3.785; 재검 m2 — 같은 함수 재호출 비교 금지), 프로파일 줄에 "후퇴는 P" |
+| F6 | test_z_profile (N6′ 추가) | 로봇 도우미에 pose 지연(실제 L, 설정 L_cfg) 추가 — **기록은 서브스텝마다**(틱마다면 실효 지연이 66.7 ms 가 되어 −3.34), **L = 0 이면 현재 z 를 바로 돌려준다**(시각 비교 부동소수 때문에 기존 시험이 바뀌지 않게, 재검 MINOR). 실제 60·설정 0·τ60 → 착지 − 목표 ∈ [−3.5, −2.5] mm(78.8 재현), 실제 60·설정 60·τ60 → ≥ −1.0 mm, **현장형 실제 20·설정 0·τ24 → ≥ 0.0 mm(+0.5)** |
+| F7 | test_node (학민 4번) | `sc.parse_profile([f"[belt_servo]: {n._z_profile_line()}"])` **튜플 전체**: p 노드 ("p", 하강 예상, 들기 예상), trap 노드 ("trapezoid", 1.70, 1.74) — 예상값은 control.z_move_time_s 로 계산해 비교(재검 MINOR) |
+- 기존 470 은 F3·F4·F5 가 바꾸는 단언 3곳 외 그대로 통과해야 한다(p 모드·사다리꼴 DESCEND 불변).
+
+### 10.3 문서
+- test_sim_check.py 의 trapezoid 프로파일 줄 사본(:326 근처)을 새 문구("PREPARE·TRACK·후퇴는 P")로 맞춘다.
+- 경고 문턱 완화(사다리꼴 정상 LIFT 2.74 → 3.78 s)는 진단 감도가 떨어진다는 점을 HLD 12.1 에 한 줄.
+- run.md: **필수 행 추가 (HLD 12.2·12.5)** — ① trapezoid 면 `z.lift_done_below_mm` 없음/0 ② s4b 체크아웃 해시에 이 후속 커밋 포함 ③ 회차마다 gateway 로그에 `pose_source joint_states → service` · `pose_source joint_states 거부` 없음. 0절 C 행 "HLD D2 실기 확인" → "후퇴는 P(12.1 (나)) — 10/12 와 같은 동작 확인", 5절 "3.78 → 2.74" 정정. 그리고 2절 고정 조건 표에 **필수** 행 "pose 지연 보정: `input.pose_lag_ms 0` + gateway `pose_source:=joint_states` 확인 — 아니면 trapezoid 금지(HLD 12.2: 보정 안 된 60 ms 면 τ100 착지 76.8 < 78)", s4b 다섯 줄의 후퇴 상한 2.74 → 3.78, C(선택)의 RISING 기대 시간 사다리꼴 1.4 s → P 와 같음, 되돌림 조건의 "RETREAT_TIMEOUT" 이유 문구 정리.
+- HLD: D2 표의 "안전 후퇴 RISING 적용" 행에 "→ 12.1 (나)로 변경(10/13)" 표시, D4 표 후퇴 상한 행 갱신 표시.

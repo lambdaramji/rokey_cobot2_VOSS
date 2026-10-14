@@ -1,7 +1,7 @@
 # S2-T14 실기 절차서 — 사다리꼴 z 프로파일 켜기 전 5회 / 켠 뒤 5회 (T29 리허설 안)
 
 - 작업 S2-T14 · 작성 2026-10-13 · 실행 10/14 T29 리허설과 같은 날(로봇 시간은 09:30 스탠드업에서 남현지와 조정).
-- 대상 코드: `feat/S2-T14-voss_servo-z-trapezoid` 끝 커밋(U9 스택 c113534 → S2-T29 f9f1d28 위). 시연 라인(U9 + T29)은 `z.profile: p` 와 같다.
+- 대상 코드: main 의 #30(d55a250) + **후속 `fix/S2-T14-voss_servo-trapezoid-followup`(후퇴 P, 10/13)**. 리허설 integ 브랜치에 후속이 들어 있는지 2절 필수 ③ 으로 확인. 시연 라인(U9 + T29)은 `z.profile: p` 와 같다.
 - 근거: [S2T14-hld.md](S2T14-hld.md) D1~D7·10.1 · [S2T14-dd.md](S2T14-dd.md) · [U9-run.md](U9-run.md)(공통 안전·기록 방식).
 - **모든 명령은 사람이(박병후) 공용 PC 에서 비상정지 옆에서 실행한다.** Claude 는 실행하지 않는다(CLAUDE.md 규칙 6).
 - 이 문서는 계획이다. 측정값은 measurements 에만 적는다. 아래 belt_servo 값(감속 0.08·바닥 5 mm/s·하한 +3 mm)은 **실측 전 제안값**이다.
@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | A | 기준: `z.profile: p` (시연 라인 그대로) | 5 | **s4a** | 5/5 OK (T29 s4 회귀의 일부) |
 | B | 사다리꼴: `z.profile: trapezoid` | 5 (**1회 → 확인 → 4회**) | **s4b** | 5/5 OK · 착지 z ≥ 80 mm · DESCEND·LIFT 가 A 보다 짧음 · err_along 이 A 와 비슷(\|값\| < 3 mm) |
-| (선택) C | 사다리꼴 + 폭 밖(90° 박스) 1회 | 1 | 분모 밖 | 후퇴 RISING 이 끝 +48 mm 이상, 핑거가 박스·벨트에 안 닿음 (HLD D2 실기 확인) |
+| (선택) C | 사다리꼴 + 폭 밖(90° 박스) 1회 | 1 | 분모 밖 | 후퇴 RISING 이 끝 +48 mm 이상, 핑거가 박스·벨트에 안 닿음. 후퇴는 두 모드 모두 P(HLD 12.1 (나)) — 10/12 와 같은 동작인지 확인. **후속 커밋이 체크아웃에 없으면 하지 않는다** |
 
 - 기대값(계산·sim, 확정 아님): DESCEND 2.60 → 약 1.6~1.7 s, LIFT 2.73 → 약 1.5~1.7 s, 총 11.4 → 약 9.3 s, 착지(목표 81.8 기준) P +1.8 → 사다리꼴 약 +0.8~+1.4 mm(pytest 지연 16~24 ms +1.2~1.4, 에뮬레이터 +0.83).
 - **재시도는 이번 시험에서 일어나지 않는다**: max_attempts 1. 참고로 사다리꼴에서는 재시도 가능한 1차 실패 x 상한이 165.7 → **210.6 mm** 로 커진다. 10/12 현장 1차 실패 x 는 293~328 이라 여전히 밖이다. **T29 에서 max_attempts 를 2 이상으로 켜고 사다리꼴도 켜면, 실패 x ≤ 211 인 경우(정렬이 지금보다 약 80 mm 이른 박스)에 현장 첫 재시도가 실행된다** — 그 조합은 이 절차서 범위 밖이고 따로 sim·절차를 거친다.
@@ -34,8 +34,11 @@
 | 항목 | 값 · 확인 |
 |---|---|
 | 코드 | `git rev-parse --short HEAD` |
-| 실기 yaml | T29 s4 값(close 2.5·x_max 550, FF 는 PL 결정 값) + 이 단위의 `z.profile` 한 줄. `input.pose_lag_ms` 0(gateway `pose_source:=joint_states`) — HLD 계산의 전제 |
-| belt_servo 기동 로그 다섯 줄 | 사진/복사로 남긴다. **s4a**: `z 프로파일: p — … 하강 예상 2.64 s · 들기 예상 2.79 s` / x 여유 257 mm / 사각 3.44 s / 재시도 실패 x ≤ 166 mm / 후퇴 3.79 s. **s4b**: `z 프로파일: trapezoid — DESCEND·LIFT 사다리꼴(감속 0.080 m/s², 최소 5 mm/s) … 하강 예상 1.70 s · 들기 예상 1.74 s` / 212 mm / **2.50 s** / ≤ 211 mm / **2.74 s** (벨트 4.8 기준 — FF 4.68 이면 x 값이 조금 바뀐다) |
+| 실기 yaml | T29 s4 값(close 2.5·x_max 550, FF 는 PL 결정 값) + 이 단위의 `z.profile` 한 줄 |
+| **필수 ① pose 지연 보정** | `input.pose_lag_ms` 0 + gateway `pose_source:=joint_states`(기동 줄 `pose_source joint_states 확인: … → 사용`). **회차마다** gateway 로그에 `pose_source joint_states → service` · `pose_source joint_states 거부` 가 없어야 한다(실행 중 되돌아감 — robot_gateway `_js_fallback`). 하나라도 있으면 trapezoid 금지 → p. 근거 HLD 12.2: 보정 안 된 60 ms 면 지연 100 ms 에서 착지 76.8 < 78. 확인 명령: `grep -E "pose_source joint_states (→ service|거부)" <gateway 로그>` → 출력 없어야 함. belt_servo 쪽 증거 줄: `pose_lag_ms=0.0 — joint_states 운용 시험값(0)` |
+| **필수 ② lift_done_below** | trapezoid(s4b) 회차는 `z.lift_done_below_mm` **없음 또는 0**(integ/1014-s4 에 학민 키가 들어 있음, 공용 PC 30). 함께 쓰면 LIFT 가 71 mm/s 로 끝나 27~31 mm 더 올라간다(HLD 12.3·12.5). s4a(p)는 지금 값 그대로 |
+| **필수 ③ 후속 커밋 포함** | s4b 기동 로그로 확인(런타임 증거): 첫 줄에 `PREPARE·TRACK·후퇴는 P`, 후퇴 줄에 `후퇴 체류 상한: 후퇴 상승이 3.78 s` (후속이 없으면 `2.74 s`). 보조: `git merge-base --is-ancestor <후속 커밋> HEAD && echo 포함`. 없으면 후퇴가 사다리꼴로 돈다 → 0절 C 는 하지 않는다 |
+| belt_servo 기동 로그 다섯 줄 | 사진/복사로 남긴다. **s4a**: `z 프로파일: p — … 하강 예상 2.64 s · 들기 예상 2.78 s` / x 여유 257 mm / 사각 3.44 s / 재시도 실패 x ≤ 166 mm / 후퇴 3.78 s. **s4b**: `z 프로파일: trapezoid — DESCEND·LIFT 사다리꼴(감속 0.080 m/s², 최소 5 mm/s) … 하강 예상 1.70 s · 들기 예상 1.74 s` / 212 mm / **2.50 s** / ≤ 211 mm / **3.78 s**(후퇴는 P — 후속) (벨트 4.8 기준 — FF 4.68 이면 x 값이 조금 바뀐다) |
 | params_sha256 | s4a·s4b 두 값을 기록. **s4a 의 sha 는 z.profile 키를 넣기 전과 같다**(p = 키 없음, DD 1절) |
 | 박스 | h250 정상 박스, 송장 정방향(FIELD-1012 ④) |
 
@@ -60,7 +63,7 @@ ros2 launch voss_servo belt_servo.launch.py params:=~/voss_ws/config/belt_servo_
 3. 괜찮으면 나머지 4회. 회차마다 같은 항목을 `z_compare` 로 본다(4절).
 
 ### (선택) C. 폭 밖 1회 (s4b 통과 뒤)
-- U9-run C-1 과 같다(박스 90°). 확인: WIDTH_OUT → OPENING → RISING, 끝 TCP z ≥ 윗면 +48, RISING 시간 기록(P 2.27 s → 사다리꼴 sim 약 1.4 s), RETREAT_TIMEOUT 없음.
+- U9-run C-1 과 같다(박스 90°). 확인: WIDTH_OUT → OPENING → RISING, 끝 TCP z ≥ 윗면 +48, RISING 시간 기록(후퇴는 두 모드 모두 P — 10/12 의 2.27~2.30 s 와 같아야 한다), RETREAT_TIMEOUT 없음.
 
 ## 4. 판정 · 기록
 
@@ -78,7 +81,8 @@ ros2 run voss_servo z_compare <log.dir>/attempts --ticks <log.dir>/ticks
 |---|---|
 | s4b 실패 1회 (어떤 reason 이든) | 완료 기준 "G1 수준 성공률 유지" |
 | 착지 z < 80 mm | 하한 78 여유 2 mm 미만 (HLD D1·D7) |
-| DESCEND_BLIND_TIMEOUT 또는 RETREAT_TIMEOUT 1회 | 상한이 짧아졌으므로(3.44 → 2.50, 3.78 → 2.74) 새로 생길 수 있는 오판 신호. 펜던트 속도(실현 속도 48 % 아래)부터 확인 |
+| DESCEND_BLIND_TIMEOUT 또는 RETREAT_TIMEOUT 1회 | 사각 상한이 짧아졌으므로(3.44 → 2.50) 새로 생길 수 있는 오판 신호. 펜던트 속도(실현 속도 48 % 아래)부터 확인. 후퇴 상한은 두 모드 3.78 s(후속) |
+| 필수 ①②③ 중 하나라도 어긋남 | 전제가 깨진 상태 — trapezoid 결과를 판정에 쓰지 않는다 |
 | goal 결과 OUT_OF_REACH / cause REACH_Z_MIN | 사다리꼴은 파지 목표 ≥ 하한 + 3 mm(81.0) 를 요구 — 목표 81.8 이 바뀐 것(박스·캘리브레이션) |
 | 핑거가 벨트에 닿음(영상) · err_along \|값\| ≥ 3 mm 반복 | 착지·정렬 품질 저하 |
 - 되돌리면 sha 가 s4a 값으로 돌아오는지 확인. 코드는 그대로 둔다(p 는 f9f1d28 과 틱 단위로 같다 — 시험 N5).
@@ -88,6 +92,8 @@ ros2 run voss_servo z_compare <log.dir>/attempts --ticks <log.dir>/ticks
 | 확인 | 결과 |
 |---|---|
 | pytest (지연 + 램프 로봇 모델 N6′) | 사다리꼴 착지 − 목표: 지연 16 ms +1.42 · 24 ms +1.16 · 60 ms −0.08 · 100 ms −2.01 mm / P +1.83 · +1.84 · +1.72 · +1.61 mm (*계산*) |
+| pytest pose 지연 (F6, 후속) | 사다리꼴 착지 − 목표: 실제 pose 지연 60 ms·설정 0·τ60 **−3.00 mm(78.8)** · τ100 **−5.01(76.8 < 78)** / 설정 60 이면 −0.51 / 현장형 실제 20 ms·설정 0·τ24 **+0.48** (*계산*, 2축 분석과 같은 값) |
+| sim_check grasp 후속(후퇴 P, 10/13 저녁) | p 8/8 · trapezoid 8/8 종료 코드 0. normal: p DESCEND 2.70·LIFT 2.87 / trapezoid 1.73·1.80 s. **fail_retreat RISING 두 모드 같음(z 가 움직인 시간 2.57 s, 끝 0 유지 포함 3.1 s, 꼬리 3.1 mm/s — 재검에서 RISING z 요구가 P 식과 0.0 mm/s 차이)** — 후퇴가 두 모드에서 같다 |
 | sim_check grasp, p (10/13, 도메인 76) | **8/8** 종료 코드 0. normal: DESCEND 2.70 · LIFT 2.87 s · 착지 − 목표 +2.13 mm. fail_retreat 실패 x 314 → 후퇴 |
 | sim_check grasp, trapezoid | **8/8** 종료 코드 0. normal: DESCEND **1.73** · LIFT **1.80** s · 착지 +2.08 mm. fail_retreat 실패 x 267(재시도 문턱 210.6, 여유 56) → 후퇴. ⚠ dry_run 은 가속을 무시해 착지가 늘 목표 위 — 지나침 근거 아님 |
 | 에뮬레이터(두산 가상 모드, gateway real + rg2_dry_run, pose_source joint_states, pose_lag 0) | 두 모드 모두 OK(U-E 판정 8/8, 두산 알람 0, 거부·자름 0). **p: DESCEND 2.73 · LIFT 2.90 s · 착지 83.6 mm(목표 +1.84 — 10/12 실측 +1.75~1.89 와 같음)** / **trapezoid: DESCEND 1.67 · LIFT 1.80 s · 착지 82.6 mm(목표 +0.83, 하한 78 까지 4.6)**. TRACK·총 시간 차이는 goal 시점의 박스 위치 차(우연)라 비교하지 않는다. 이 PC 의 에뮬레이터 주기·지연은 의미 없음 — 움직임·착지만 본다. **10/13 15:23 각 1회 실행값**, 같은 날 16:0x 독립 재현(Opus 서브에이전트, 도메인 78, 에뮬레이터 재기동 뒤 깨끗한 쌍): p DESCEND 2.73 · LIFT 2.87 s · 착지 +1.84 mm / trapezoid 1.73 · 1.77 s · **+0.88 mm(82.7 mm)** — 두 실행 일치, z_compare 값과 직접 추출값 일치. 재현 중 호스트 과부하(load 20+)로 gateway watchdog 이 goal 도중 로봇을 세운 오염 실행 4회는 제외(이 PC 의 에뮬레이터 특성, U-E-run §4 ①). 재현: `ROS_DOMAIN_ID=<대역> voss-dsr-virtual-up` → U-E 의 `emu_case.sh normal`(도메인·워크트리·`pose_source:=joint_states`·`PARAMS=<pose_lag 0 + z.profile 사본 yaml>` 로 고친 사본) → `voss-dsr-virtual-down` |

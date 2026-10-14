@@ -3,9 +3,10 @@
 실로봇을 움직이는 것은 모두 사람이 비상정지 옆에서 실행한다.
 
 ## 시나리오
-1. 벨트 20개: A·B·C 6개씩(칸 순서 2→5→1→4→0→3) + 흐린 송장 2개는 재확인 칸 0·1 에 보관하고 분류를 계속한다.
-2. 작업자가 `재확인 시작`이라고 하면 보관 박스를 칸 순서대로 다시 읽고 묻는다.
+1. 벨트 20개: A·B·C 6개씩(칸 순서 2→5→1→4→0→3) + 흐린 송장 2개.
+2. 재확인은 v1.5 즉시 흐름이다(`sort_manager.yaml` `defer_recheck: false`, 10/13 PL Q20): 흐린 송장 박스를 재확인 칸에 놓고 바로 다시 읽고, 못 읽으면 바로 묻는다(1·2위 + 보류, 후보 없으면 전체). 30초 답이 없으면 HOLD.
    첫 박스: 작업자가 동을 답함 → 그 구역 칸 6(칸 0 위 2층). 두 번째: `송장 확인 불가` → HOLD.
+   - 폴백: 10/14 리허설 1회차에서 즉시 흐름이 실패하면 `defer_recheck: true` 로 되돌린다 — 10/12·10/13 게이트 방식(재확인 칸 0·1 에 보관하고 분류 계속, 작업자가 `재확인 시작`이라고 하면 칸 순서대로 다시 읽고 묻기).
 3. 벨트를 끄고 `대치, 역삼, 청담 순서로 실어줘` → 팔레타이징(BRD v1.5 10.4, `pallet_fsm`). **말한 순서 = 배송 순서**(첫 배송지부터, 10/13 PL — `docs/interfaces/voss_msgs.md`). 첫 배송지(대치)가 문 쪽 4열, 마지막 배송지(청담)가 트럭 머리 1열.
    - 16칸을 넘으면 물량 많은 동부터 싣는다(같으면 먼저 배송하는 동이 후순위). 예: 역삼 7·대치 6·청담 6 → 청담 6(1~6), 역삼 7(7~13), 대치 3(14~16), **대치 3개 초과**(10/13 게이트 실기와 같음).
    - 구역 안은 2층 박스부터(10/13 cc1d0fe), 같은 층은 칸 번호 순. HOLD·재확인 칸 박스는 싣지 않는다.
@@ -18,7 +19,7 @@
 ## 시험 스크립트 (T2 브링업 + T3 robot_gateway 만 띄우고, sort_manager·belt_servo 는 끈 상태)
 - `empty_test.sh ZONE 칸...` — 빈손으로 칸마다 MoveToZone PLACE (예: `PALLET 0 4 8 12 3 7 11 15`)
 - `place_test.sh [구역...|fill <2층 구역>|PALLET]` — 사람이 그리퍼에 박스를 넣고 칸에 놓기. `fill A` = 시연 상태 19개, `PALLET` = 적재 순서대로 16칸
-- `pallet_test.sh <2층 구역> 동1 동2 동3` — 구역 칸 PICK → 팔레트 DROP(적재 순서). 준 동 순서대로 **트럭 머리(1열)부터** 놓고 16개에서 자른다(초과 규칙 없음, 좌표·동작 확인용). **sort_manager `palletize` 와 경로 뜻이 반대**(그쪽은 첫 동 = 첫 배송지 = 문 쪽)라 게이트·시연 근거로 쓰지 않는다. `AUTO=1` 이면 Enter 없이
+- 팔레타이징은 시험 스크립트 없이 sort_manager `palletize` 로만 한다(경로 뜻이 반대이던 `pallet_test.sh` 는 10/13 Q19 로 삭제).
 
 ## 전체 실행 (터미널마다 `source ~/voss_g0_env.sh` 먼저)
 | T | 명령 |
@@ -31,7 +32,7 @@
 | 6 | `ros2 launch voss_vision box_tracker.launch.py` |
 | 7 | `ros2 launch voss_vision label_reader.launch.py python:=$HOME/.venvs/voss_ocr/bin/python` |
 | 8 | `ros2 launch voss_servo belt_servo.launch.py params:=~/voss_ws/config/belt_servo_real.yaml log_dir:=$HOME/voss_ws/src/rokey_cobot2_VOSS/data/servo` |
-| 9 | `ros2 launch voss_manager sort_manager.launch.py` (시작 줄: `defer_recheck True`, `팔레트 16칸`) |
+| 9 | `ros2 launch voss_manager sort_manager.launch.py` (시작 줄: `defer_recheck False`(폴백 때 True), `팔레트 16칸`) |
 | 10 | `ros2 run voss_voice intent_parser` |
 | 11 | `ros2 run voss_voice voice_listener --ros-args -p mode:=text` (OpenAI 키 장애로 텍스트 입력) |
 | 13 | `ros2 service call /voss/sort/command voss_msgs/srv/Command "{command: start}"` |

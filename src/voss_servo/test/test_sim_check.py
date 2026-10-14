@@ -324,7 +324,7 @@ def test_s2t14_parse_profile_line() -> None:
     lines = [
         "[INFO] [1.0] [belt_servo]: READY",
         "[INFO] [1.0] [belt_servo]: z 프로파일: trapezoid — DESCEND·LIFT 사다리꼴(감속 0.080 m/s², "
-        f"최소 {control.TRAP_V_FLOOR_MPS * 1000:g} mm/s), PREPARE·TRACK 은 P. "
+        f"최소 {control.TRAP_V_FLOOR_MPS * 1000:g} mm/s), PREPARE·TRACK·후퇴는 P. "
         "하강 예상 1.70 s · 들기 예상 1.74 s (되돌림: z.profile: p)",
     ]
     assert sc.parse_profile(lines) == ("trapezoid", 1.70, 1.74)
