@@ -1,0 +1,16 @@
+# VOSS MQTT 브로커 — 공용 PC(공식) 또는 두 PC 시험의 Web PC
+# 인터페이스: docs/interfaces/deployment_two_pc_trial.md
+name: voss_mqtt
+services:
+  broker:
+    image: eclipse-mosquitto:2
+    container_name: voss_mosquitto
+    network_mode: host
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./secrets/acl:/mosquitto/config/acl:ro
+      - ./secrets/passwd:/mosquitto/config/passwd:ro
+      - mqtt-data:/mosquitto/data
+    restart: unless-stopped
+volumes:
+  mqtt-data:
