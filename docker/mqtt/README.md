@@ -1,17 +1,19 @@
-# VOSS 전용 MQTT 브로커 (Web PC)
+# VOSS 전용 MQTT 브로커 (공용 PC)
 
 관련: docs/interfaces/deployment_two_pc_trial.md (시험 제안), mqtt.md (#20).
 
-Web PC의 localhost:1883만 열며 Nodes PC는 SSH 터널을 사용한다.
-기존 7개 토픽·QoS는 유지한다. 추적·관절·음성 표시 토픽은 `interface` PR 승인 대상이다.
-음성 표시등의 `voss/voice_status`는 승인 전 추가 제안이며, 격리 시험 계정
-`voice_preview`는 이 토픽의 write만 허용한다. 추적 중인 ACL 템플릿에는
-운영 bridge의 음성 토픽 write도 들어 있으므로 승인 전에는 운영 ACL에 복사하지 않는다.
+공식 배치(mqtt.md #20, ADR-0006)는 **공용 PC** 한 대에서 `127.0.0.1:1883` 만 연다. 두 PC 시험
+([deployment_two_pc_trial.md](../../docs/interfaces/deployment_two_pc_trial.md), 제안)에서는 같은 설정을 Web PC 에
+띄우고 Nodes PC 가 SSH 터널을 쓴다. 공용 PC 에는 시스템 mosquitto 패키지가 없으므로 이 compose 가 브로커다.
+#20 확정 7개 토픽·QoS는 그대로다.
+추적·관절·음성 표시 토픽(`voss/box_track`·`robot_pose`·`robot_joints`·`voice_status`)은 10/14 PL 리뷰로
+표시 전용 승인, `voss/box_motion` 은 메시지가 생길 때까지 제안이다(ACL 에 미리 있어도 발행자가 없다).
+격리 시험 계정 `voice_preview` 는 `voss/voice_status` write 만 허용한다.
 
-## 최초 설정 (Web PC)
+## 최초 설정 (공용 PC — 두 PC 시험이면 Web PC)
 
 ```bash
-cd ~/collaboration/rokey_cobot2_VOSS_2
+cd <레포 루트>   # 공용 PC: ~/voss_ws/src/rokey_cobot2_VOSS
 mkdir -p docker/mqtt/secrets
 chmod 700 docker/mqtt/secrets
 ```
@@ -52,11 +54,11 @@ docker compose -f docker/mqtt/compose.yml up -d
 docker compose -f docker/mqtt/compose.yml logs --tail=30 broker
 ```
 
-`docker/web/.env`에는 `VOSS_MQTT_WEB_PASSWORD`와 `VOSS_MQTT_ENABLED=true`를 적용한다. 안전상 `VOSS_NONSTOP_COMMANDS_ENABLED=false`를 유지한다. Nodes PC에는 `VOSS_MQTT_BRIDGE_PASSWORD`를 별도로 설정한다.
+`docker/web/.env`에는 `VOSS_MQTT_WEB_PASSWORD`와 `VOSS_MQTT_ENABLED=true`를 적용한다. 비-stop 웹 명령은 Spring Boot 가 공용 PC 로컬(Nginx X-Real-IP 127.0.0.1/::1)에서만 받는다(web_api.md). hmi_bridge 를 띄우는 터미널에는 `VOSS_MQTT_BRIDGE_PASSWORD`를 export 한다.
 
 **보안:** 실제 비밀번호, `.env`, `secrets/` 파일은 Git 또는 채팅에 올리지 않는다. 시연 전 Nginx·Spring Boot의 비-stop 운전 명령 권한을 현장 안전 담당자가 검토해야 한다.
 
-## 임시 연결
+## 두 PC 시험 연결 (제안)
 
 Nodes PC: `127.0.0.1:1883` → Web PC SSH → `127.0.0.1:1883`.
 MQTT의 `voss/command`로 비-stop 동작 명령을 송신하지 않는다.

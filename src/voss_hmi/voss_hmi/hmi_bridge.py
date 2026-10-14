@@ -1,9 +1,10 @@
 """hmi_bridge: ROS 상태를 MQTT로 내보내고 웹 명령을 ROS 서비스로 전달한다.
 
 입력: /voss/sort/state·result·zone_map, /voss/robot/state, /voss/log/status,
-      MQTT voss/command.
+      표시 전용 /voss/vision/box·/voss/robot/pose·/dsr01/joint_states·/voss/voice/status
+      (·/voss/box_motion — BoxMotion 메시지가 생긴 뒤), MQTT voss/command.
 출력: MQTT voss/state·result·zone_map·robot·log_status·command/ack,
-      /voss/sort/command 호출.
+      voss/box_track·robot_pose·robot_joints·voice_status(·box_motion), /voss/sort/command 호출.
 계약: docs/interfaces/mqtt.md, docs/interfaces/voss_msgs.md.
 """
 
@@ -530,7 +531,10 @@ class HmiBridgeNode(Node):
         body = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
         info = self._mqtt.publish(topic, body, qos=qos, retain=retain)
         if info.rc != mqtt.MQTT_ERR_SUCCESS:
-            self.get_logger().warning(f"MQTT publish failed topic={topic} rc={info.rc}")
+            # 브로커가 꺼져 있으면 위치·관절(20 Hz)·트랙(10 Hz) 때문에 초당 수십 줄이 된다 → 5 s 에 한 줄
+            self.get_logger().warning(
+                f"MQTT publish failed topic={topic} rc={info.rc}", throttle_duration_sec=5.0
+            )
 
     def _prune_command_cache(self) -> None:
         """10분이 지난 command_id 기록을 제거한다."""

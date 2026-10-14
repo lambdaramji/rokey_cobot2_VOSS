@@ -66,3 +66,13 @@ def test_robot_joints_are_ordered_by_name_and_invalid_samples_are_dropped():
     joints.name[0] = "other"
     HmiBridgeNode._on_robot_joints(bridge, joints)
     assert bridge._publish_json.call_count == 1
+
+
+def test_publish_failure_warning_is_throttled():
+    from voss_hmi.hmi_bridge import mqtt as bridge_mqtt
+
+    bridge = Mock()
+    bridge._mqtt.publish.return_value.rc = bridge_mqtt.MQTT_ERR_NO_CONN
+    HmiBridgeNode._publish_json(bridge, "voss/robot_pose", {}, qos=0, retain=False)
+    kwargs = bridge.get_logger.return_value.warning.call_args.kwargs
+    assert kwargs["throttle_duration_sec"] == 5.0

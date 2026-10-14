@@ -1,4 +1,4 @@
-# Web PC 전용 VOSS MQTT 브로커 (통합 시험 제안)
+# VOSS MQTT 브로커 — 공용 PC(공식) 또는 두 PC 시험의 Web PC
 # 인터페이스: docs/interfaces/deployment_two_pc_trial.md
 name: voss_mqtt
 services:
