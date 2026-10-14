@@ -16,6 +16,7 @@ topic write voss/robot_joints
 topic write voss/voice_status
 topic write voss/command/ack
 topic write voss/log_status
+topic write voss/pallet/state
 
 user debug
 topic read voss/#

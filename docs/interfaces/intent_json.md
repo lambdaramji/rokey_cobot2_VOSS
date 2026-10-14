@@ -4,11 +4,12 @@ LLM(FastAPI `/intent`, OpenAI structured output — ADR-0006)의 출력은 반�
 
 ```json
 {
-  "type": "start | stop | resume | priority | answer | query_history | update_zone_map",
+  "type": "start | stop | resume | priority | answer | recheck | palletize | query_history | update_zone_map",
   "dong": "<zone_map 의 정식 동 이름> | null",
   "zone": "A | B | C | HOLD | null",
   "count": 0,
   "query_kind": "count_by_dong | held_count | remaining_count | null",
+  "route": ["<정식 동 이름>", "..."] | null,
   "raw_text": "사용자 발화 원문"
 }
 ```
@@ -16,7 +17,8 @@ LLM(FastAPI `/intent`, OpenAI structured output — ADR-0006)의 출력은 반�
 ## 값 규칙
 - **stop 예외 (안전, #67 김학민 리뷰):** "멈춰 / 정지 / 스톱 / 그만" 같은 정지 키워드는 **LLM 호출 전에 로컬 매칭**으로 판정해 `type=stop` 을 바로 발행한다. zone_map 수신 여부·FastAPI·OpenAI 상태와 무관하며 되묻지 않는다. 오인식으로 멈추는 쪽은 허용한다(resume 으로 복구). 키워드 목록과 지연(발화 끝 → Intent 발행)은 #18 구현 PR 에서 측정해 정지 경로 전체 지연(#53 `/voss/robot/stop`)과 함께 보고한다.
 - **`type` 은 소문자**, 값 enum(`zone`, `query_kind`)은 대문자·소문자를 위 표기 그대로 쓴다(SRD 상호확인 #52 MC-023).
-- LLM JSON 의 `null` 은 ROS `voss_msgs/Intent` 로 옮길 때 `""`(문자열) / `0`(count) 으로 바꾼다.
+- LLM JSON 의 `null` 은 ROS `voss_msgs/Intent` 로 옮길 때 `""`(문자열) / `0`(count) / `[]`(route) 으로 바꾼다.
+- **`route`(palletize, Sprint 2 TR-PAL-01):** 말한 배송 순서 그대로(첫 배송지부터) 정식 동 이름 배열. 별칭은 정식 이름으로 바꾼다(`dong` 과 같은 규칙). **1~3개, 중복·미등록이 하나라도 있으면 발행하지 않고 되묻는다**(예 "배송 순서를 다시 말씀해 주세요"). palletize 가 아니면 `null`. 시작 조건(분류 중 박스 없음, 팔레트 비어 있음)은 sort_manager 가 보고 거부 이유를 말한다(TR-PAL-02).
 - **허용 동·구역·별칭은 `/voss/sort/zone_map`(transient_local) 에서 받는다.** YAML 을 직접 읽지 않는다.
   - 발화의 별칭("역삼")은 intent_parser 가 정식 이름(`ZoneMapEntry.dong`, "역삼동")으로 바꿔 `dong` 에 넣는다. **별칭은 출력에 나가지 않는다.**
   - `dong`(정식 이름)은 `aliases` 가 비어 있어도 항상 허용한다.
@@ -32,8 +34,10 @@ LLM(FastAPI `/intent`, OpenAI structured output — ADR-0006)의 출력은 반�
 | resume | — | `/voss/voice/intent` | PAUSED 에서만 유효(manager 판단) |
 | priority | `dong` | `/voss/voice/intent` | dong 없으면 되묻기 |
 | answer | `dong` 또는 `zone=HOLD`, `box_id` | `/voss/voice/intent` | `box_id` = 발화 시작 시점의 최신 `/voss/sort/state` 가 ASKING 일 때의 `box_id`. ASKING 이 아니면 발행하지 않고 "지금은 답할 질문이 없습니다". 다른 type 은 `box_id = ""` |
+| recheck | — | `/voss/voice/intent` | 보관 중인 재확인 칸 박스 처리 시작(Command `recheck`). "재확인 시작/진행/해 줘" 는 LLM 전에 로컬 매칭(10/12 로컬 시험 브랜치). 보관 박스가 없거나 RUNNING 이 아니면 manager 가 거부 |
 | query_history | `query_kind` (+ `dong` 은 count_by_dong 에서 필수) | **REST `GET /api/stats`** (Spring Boot, `web_api.md`) | **sort_manager 로 보내지 않는다.** 결과를 intent_parser 가 `/voss/voice/say` 로 읽는다. DB 장애면 "기록을 조회할 수 없습니다" |
 | update_zone_map | `dong`, `zone`(A/B/C) | `/voss/voice/intent` | **C 선택 범위** — G0 이후 채택 여부 결정(MC-033). 채택 전에는 "지금은 지원하지 않습니다" |
+| palletize | `route`(1~3개) | `/voss/voice/intent` | **Sprint 2**. `dong`·`zone` 비움. sort_manager 가 순서를 되읽는다("역삼동, 대치동, 청담동 순서로 싣겠습니다. 첫 배송지 역삼동은 오른쪽 열입니다") "대치, 역삼, 청담 순서로 실어줘" 같은 문형은 LLM 전에 로컬 매칭(10/12 김학민) — 말한 순서 = 배송 순서(첫 배송지부터, 10/13 PL). |
 
 ## 발화 예
 | 발화 예 | type | dong | zone | query_kind | box_id |
@@ -49,6 +53,9 @@ LLM(FastAPI `/intent`, OpenAI structured output — ADR-0006)의 출력은 반�
 | "보류 몇 개야" | query_history | null | null | held_count | — (REST) |
 | "몇 개 남았어" | query_history | null | null | remaining_count | — (REST) |
 | "대치동을 C 구역으로 바꿔" | update_zone_map | 대치동 | C | null | "" (C 범위) |
+| "역삼, 대치, 청담 순서로 실어줘" | palletize (route `[역삼동, 대치동, 청담동]`) | null | null | null | "" |
+| "청담 먼저, 그다음 역삼으로 실어" | palletize (route `[청담동, 역삼동]`) | null | null | null | "" |
+| "역삼, 역삼 순서로 실어줘" | (거부 — 중복) | | | | 되묻기 |
 | "아무거나 해" | (거부) | | | | 되묻기 |
 
 ## 발화·중복
@@ -83,6 +90,7 @@ manager는 작업별 최종 안내를 최대 한 번만 발행하고 늦은 응�
 ## 시험 (VC-EUS-INTENT-01, #54 MC-031)
 - 정답 세트 20문장(필수 지시 4유형 × 5)은 시험 전에 `src/voss_voice/test/fixtures/` 에 커밋한다.
 - 판정: **전체 20건 중 정답 ≥ 19**. API 오류·timeout 도 분모에 넣고 따로 보고하며, API 성공 건만의 조건부 정확도는 참고로 적는다. 허용 외 입력은 100% 거부.
+- **palletize(Sprint 2, S2-T06)** 는 이 20건에 넣지 않고 `src/voss_voice/test/fixtures/palletize_cases.json` 에 따로 둔다(받기 5 + 거부 3 — 중복·미등록·4개). 판정: 8건 전부(받기 5/5, 거부 100%). NFR-03 판정 세트를 바꾸지 않기 위해서다.
 
 ## 변경 이력
 - 2026-10-08: #124 로컬 단독 동·목적지 답변의 문장부호·띄어쓰기·`보내요` 처리와 ASKING 외 발행 차단을 명시. 토픽·Intent JSON 필드·메시지 스키마 변경 없음.
@@ -95,5 +103,6 @@ manager는 작업별 최종 안내를 최대 한 번만 발행하고 늦은 응�
   - `update_zone_map` 은 C 선택 범위로 표시.
   - 리뷰 반영(#67): stop 은 로컬 키워드로 즉시 발행(LLM·zone_map 대기 없음), box_id 회차 없음(PL 결정), `count` 현재 미사용.
 - 2026-10-07: "같은 박스의 늦은 답은 해가 없다" 문장 철회 — #54 최종 정정대로 pause/resume 뒤 같은 박스 재질문에는 섞일 수 있음, 회차·수락 창은 sort_manager B 상세(SRD v0.4 F-09·TBD-009).
+- 2026-10-12: **Sprint 2**(BRD v1.4 10.7·TR-PAL-01, S2-T01 — 제안). `type` 에 `palletize`, `route` 필드(정식 동 이름 배열, 1~3개·중복·미등록 거부, null → `[]`), 발화 예 3개. FastAPI 프롬프트·structured output 스키마는 S2-T06.
 - 2026-10-13: (T13 #37) 음성 stop 최종 안내 제안(sort_manager 단일 발행, 새 토픽 없음) — 제안.
 - 2026-10-14: #37 리뷰 — 현재 동작과 제안을 구분, 실패 코드 매핑(`NO_SERVICE`·`TIMEOUT`·`DEVICE_ERROR`)·`stop_timeout_s` 명시. voice_listener TIMED_OUT 안내 줄 추가.

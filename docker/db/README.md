@@ -7,8 +7,9 @@ ADR-0006 · 계약: `docs/interfaces/voss_msgs.md` "DB sort_log 대응", `web_ap
 |---|---|
 | 포트 | `127.0.0.1:5432` 만 (Wi-Fi 쪽으로 열지 않음, web_api.md 포트 표) |
 | 데이터 | 호스트 `/var/lib/voss/pgdata` — 10/16 발표까지 지우지 않는다(SRD) |
-| 스키마 | `init/01_schema.sql` — `sort_log`(PK box_id), `session_plan`(Spring Boot) |
-| 계정 | `init/02_roles.sh` — `voss_logger`(sort_log INSERT·SELECT), `voss_web`(sort_log SELECT, session_plan 읽기·쓰기). 비밀번호는 `.env` |
+| 스키마 | `init/01_schema.sql` — `sort_log`(PK box_id, Sprint 2 `slot`), `pallet_log`(PK run_id + box_id, Sprint 2), `session_plan`(Spring Boot) |
+| 계정 | `init/02_roles.sh` — `voss_logger`(sort_log·pallet_log INSERT·SELECT), `voss_web`(sort_log·pallet_log SELECT, session_plan 읽기·쓰기). 비밀번호는 `.env` |
+| 마이그레이션 | `migrations/` — 이미 있는 DB 에 스키마 변경을 적용(아래). `20261012_sprint2_pallet.sql` = Sprint 2 `sort_log.slot`·`pallet_log` |
 
 `init/` 은 **데이터 폴더가 비어 있을 때 처음 한 번만** 실행된다. 스키마를 바꾸면 마이그레이션 SQL 을 따로 만든다(데이터를 지우지 않는다).
 
@@ -25,6 +26,23 @@ docker compose ps                 # STATUS 가 healthy 인지
 `voss_logger`, `voss_web` 역할 생성용 비밀번호를 둔다. Spring Boot 접속 변수는
 `docker/web/.env`에 별도로 두며, 거기의 `VOSS_DB_READ_PASSWORD`·`VOSS_DB_PLAN_PASSWORD`(둘 다
 `voss_web` 계정)는 여기의 `VOSS_DB_WEB_PASSWORD`와 같은 값이어야 한다.
+
+## 마이그레이션 (공용 PC, 사람이 실행)
+데이터 폴더가 이미 있으면 `init/` 이 다시 돌지 않는다. sort_logger 를 끈 뒤 한 번 실행한다(여러 번 실행해도 결과가 같다).
+```bash
+cd ~/voss_ws/src/rokey_cobot2_VOSS/docker/db
+docker compose exec -T db psql -U voss_admin -d voss -v ON_ERROR_STOP=1 < migrations/20261012_sprint2_pallet.sql
+docker compose exec db psql -U voss_admin -d voss -c '\d pallet_log'   # 표·PK·CHECK 확인
+```
+- 마이그레이션 끝의 검증 블록이 `pallet_log` 의 컬럼 16개(이름·타입·NULL 허용), PK `(run_id, box_id)`, `result` CHECK(`OVERFLOW`·`EXCLUDED` 포함), `sort_log.slot` 을 확인한다. 통과하면 `NOTICE: pallet_log 구조 확인: … OK` 한 줄이 나온다.
+- `CREATE TABLE IF NOT EXISTS` 는 구버전 `pallet_log`(BRD v1.4 의 `pallet_row` 등)가 있으면 건너뛰므로, 이 검증이 없으면 구조가 달라도 조용히 지나간다.
+
+### 마이그레이션 검증 실패
+`ERROR: pallet_log 구조가 Sprint 2(BRD v1.5) 와 다름 — 변경 없이 롤백: …` 이 나오면 **트랜잭션 전체가 롤백돼 아무것도 바뀌지 않는다**(`sort_log.slot` 도 추가되지 않음). 메시지에 다른 항목이 모두 나온다.
+1. sort_logger 를 끈 상태를 유지한다.
+2. 기존 행을 보관한다: `docker compose exec db pg_dump -U voss_admin -d voss -t pallet_log > ~/voss_data/pallet_log_backup_$(date +%m%d_%H%M).sql`
+3. 남길 값이 있는지 PL·DB 담당(정의석)이 보고 정한다. 옛 표는 **지우지 말고** 이름만 바꾼다: `ALTER TABLE pallet_log RENAME TO pallet_log_v14;` — 그 뒤 마이그레이션을 다시 실행하면 새 표가 만들어진다.
+4. 마이그레이션 없이 확인만 하려면 SQL 파일의 `DO $$ … END $$;` 블록만 실행한다(읽기 전용).
 
 ## sort_logger 연결 (호스트)
 ```bash

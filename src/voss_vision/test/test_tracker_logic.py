@@ -10,6 +10,7 @@ from voss_vision.tracker_logic import (
     SRC_NONE,
     CropGate,
     LoopStats,
+    PlaybackClock,
     choose_position,
     crop_window,
     hold_track_id,
@@ -151,3 +152,24 @@ def test_choose_position_table(case: str, kw: dict, want: tuple) -> None:
     assert (src, valid) == want, case
     if src == SRC_HAND_EYE:
         assert xyz == E
+
+
+def test_playback_clock_anchors_first_message_and_keeps_spacing() -> None:
+    c = PlaybackClock(1.0)
+    t_rec = 1_791_277_123.0  # 10/06 녹화 시각
+    now = 1_791_703_700.0  # 10/11 지금
+    assert c(t_rec, now) == pytest.approx(now)  # 첫 메시지 = 지금
+    assert c(t_rec + 0.5, now + 99.0) == pytest.approx(
+        now + 0.5
+    )  # 이후는 녹화 간격 그대로(나중 now 와 무관)
+    assert c(t_rec - 0.02, now) == pytest.approx(
+        now - 0.02
+    )  # pose 가 영상보다 조금 앞서도 같은 기준
+
+
+def test_playback_clock_scales_by_rate() -> None:
+    c = PlaybackClock(2.0)
+    assert c(100.0, 5000.0) == pytest.approx(5000.0)
+    assert c(101.0, 0.0) == pytest.approx(5000.5)  # 2배속이면 녹화 1 s 가 지금 0.5 s
+    with pytest.raises(ValueError):
+        PlaybackClock(0.0)

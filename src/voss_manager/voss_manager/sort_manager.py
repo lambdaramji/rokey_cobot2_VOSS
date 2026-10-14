@@ -1,9 +1,9 @@
 """sort_manager — 분류 작업 관리자. 인터페이스는 docs/interfaces/topics.md·voss_msgs.md.
 
-전이 규칙은 `sort_fsm`(순수 함수), 준비 판단은 `readiness`. 이 노드는 입출력과 장비 호출 시간 초과만 맡는다.
+전이 규칙은 `sort_fsm`(순수 함수, 팔레타이징은 `pallet_fsm` 이 감싼다), 준비 판단은 `readiness`. 이 노드는 입출력과 장비 호출 시간 초과만 맡는다.
 콜백은 단일 스레드 executor 에서 차례로 돈다 → FSM 에 잠금이 필요 없다.
 
-실행은 사람이 비상정지 옆에서 한다(TrackAndGrasp·MoveToZone·stop 을 부른다):
+실행은 사람이 비상정지 옆에서 한다(TrackAndGrasp·MoveToZone·stop 을 부른다, palletize 는 트레이 박스를 옮긴다):
   ros2 launch voss_manager sort_manager.launch.py
 """
 
@@ -28,6 +28,7 @@ from rclpy.signals import SignalHandlerOptions
 from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
+from voss_manager import pallet_fsm, pallet_plan
 from voss_manager import sort_fsm as fsm
 from voss_manager.readiness import ITEMS, ReadyInputs, ReadyLimits, log_warning, not_ready
 from voss_msgs.action import TrackAndGrasp
@@ -35,13 +36,15 @@ from voss_msgs.msg import (
     BoxTrack,
     Intent,
     LabelRead,
+    PalletResult,
+    PalletState,
     RobotState,
     SortResult,
     SortState,
     ZoneMap,
     ZoneMapEntry,
 )
-from voss_msgs.srv import Command, MoveToZone, ReadLabel
+from voss_msgs.srv import Command, ListPlacements, MoveToZone, ReadLabel
 
 DEFAULT_CONFIG_PATH = os.path.join(
     os.environ.get("VOSS_CONFIG_DIR", os.path.expanduser("~/voss_ws/src/rokey_cobot2_VOSS/config")),
@@ -78,6 +81,11 @@ class SortManagerNode(Node):
         self.goal_result_timeout_s = p("goal_result_timeout_s", 120.0).value
         # ReadLabel 응답: label_reader 프레임 모으기 2 s + OCR 대기 상한 10 s(view.ocr_wait_s) + 여유
         self.read_timeout_s = p("read_timeout_s", 15.0).value
+        self.list_timeout_s = p("list_timeout_s", 3.0).value  # ListPlacements (sort_logger DB 조회)
+        # 팔레타이징 재개 때 파지 확인 — RG2 보고 폭 범위 (gateway zone_pick_width_mm·belt_servo hold_width 와 같은 근거)
+        hold_width_mm = list(p("pallet_hold_width_mm", [39.5, 44.0]).value)
+        # 2 = 16칸(기본), 1 = 1층 8칸만 — 게이트에서 2층 놓기를 시연에서 뺐을 때(ADR-0014 B)
+        pallet_layers = int(p("pallet_layers", 2).value)
         ask_timeout_s = p("ask_timeout_s", 30.0).value  # 질문 발화부터 무응답 보류까지 (SRD §5.7)
         self.state_period_s = p("state_period_s", 0.4).value
         # 우리 goal·MoveToZone 이 끝난 뒤에도 gateway 가 BUSY 인 시간 — belt_servo 0 유지 0.5 s + watchdog 0.2 s,
@@ -89,14 +97,26 @@ class SortManagerNode(Node):
             log_max_age_s=p("log_max_age_s", 3.0).value,
         )
         home_first = p("home_first", True).value
+        # 재확인 칸에 놓기만 하고 분류를 이어 간 뒤 recheck 명령에 몰아서 처리(10/12 시연)
+        defer_recheck = p("defer_recheck", False).value
 
         with open(self.config_path, "rb") as f:
             raw = f.read()
         cfg = fsm.load_config(yaml.safe_load(raw))  # 어긋나면 ValueError → 기동 거부
-        self.ctx = fsm.new_ctx(cfg, home_first=home_first, ask_timeout_s=ask_timeout_s)
+        self.ctx = fsm.new_ctx(
+            cfg,
+            home_first=home_first,
+            ask_timeout_s=ask_timeout_s,
+            hold_width_mm=hold_width_mm,
+            pallet_layers=pallet_layers,
+            defer_recheck=defer_recheck,
+        )
         self.get_logger().info(
             f"voss_config {self.config_path} version {cfg.version} sha256 {hashlib.sha256(raw).hexdigest()[:12]}, "
-            f"구역 칸 {cfg.capacity}, confidence_min {cfg.confidence_min}, home_first {home_first}"
+            f"구역 칸 {cfg.capacity}, confidence_min {cfg.confidence_min}, home_first {home_first}, "
+            f"팔레트 교시 {'됨' if cfg.pallet_ready else '안 됨(palletize 거부)'}, "
+            f"팔레트 {'16칸(2층)' if pallet_layers == 2 else '1층 8칸만'}"
+            f", defer_recheck {defer_recheck}"
         )
 
         # 발행
@@ -106,6 +126,12 @@ class SortManagerNode(Node):
             ZoneMap, "/voss/sort/zone_map", _qos(1, latched=True)
         )
         self.say_pub = self.create_publisher(String, "/voss/voice/say", _qos(10))
+        self.pallet_state_pub = self.create_publisher(
+            PalletState, "/voss/pallet/state", _qos(1, latched=True)
+        )
+        self.pallet_result_pub = self.create_publisher(
+            PalletResult, "/voss/pallet/result", _qos(10)
+        )
 
         # 구독
         self.create_subscription(
@@ -127,6 +153,7 @@ class SortManagerNode(Node):
         self.move_cli = self.create_client(MoveToZone, "/voss/robot/move_to_zone")
         self.stop_cli = self.create_client(Trigger, "/voss/robot/stop")
         self.read_cli = self.create_client(ReadLabel, "/voss/vision/read_label")
+        self.list_cli = self.create_client(ListPlacements, "/voss/log/list_placements")
 
         # 입력 기록
         self.tracks: dict[
@@ -151,6 +178,7 @@ class SortManagerNode(Node):
         self.pumping = False
         self.last_phase = ""
         self.last_pub_key: tuple = ()
+        self.last_pallet_key: tuple | None = None
 
         self._publish_zone_map()
         self.create_timer(0.1, self._tick)
@@ -217,7 +245,7 @@ class SortManagerNode(Node):
         )
 
     def _on_intent(self, msg: Intent) -> None:
-        cmd = fsm.intent_to_command(msg.type, msg.dong, msg.zone, msg.box_id)
+        cmd = fsm.intent_to_command(msg.type, msg.dong, msg.zone, msg.box_id, tuple(msg.route))
         if cmd is None:
             self.get_logger().warn(f"intent {msg.type!r} 는 지원하지 않음 (raw: {msg.raw_text!r})")
             return
@@ -231,9 +259,16 @@ class SortManagerNode(Node):
     def _command(self, command: str, arg: str) -> tuple[bool, str]:
         self._update_ready()
         new_sid = ""
-        if command.strip().lower() == "start":
+        if command.strip().lower() in ("start", "palletize"):  # palletize 는 실행 ID
             new_sid = fsm.make_session_id(datetime.now(), secrets.token_hex(2))
-        reply = self._post(fsm.Command(command, arg, self._now_ns(), tuple(self.nr), new_sid))
+        rs, fresh = (
+            self.robot_state,
+            time.monotonic() - self.robot_state_rx <= self.limits.robot_state_max_age_s,
+        )
+        grip = float(rs.gripper_width_mm) if rs is not None and fresh else -1.0
+        reply = self._post(
+            fsm.Command(command, arg, self._now_ns(), tuple(self.nr), new_sid, grip_mm=grip)
+        )
         return reply or (False, "처리 안 됨")
 
     def _on_log_status(self, msg: String) -> None:
@@ -256,7 +291,7 @@ class SortManagerNode(Node):
         reply, first = None, True
         try:
             while self.queue:
-                out = fsm.step(self.ctx, self.queue.popleft())
+                out = pallet_fsm.step(self.ctx, self.queue.popleft())
                 self.ctx = out.ctx
                 if first:
                     reply, first = out.reply, False
@@ -265,6 +300,7 @@ class SortManagerNode(Node):
         finally:
             self.pumping = False
         self._publish_state()
+        self._publish_pallet_state()
         return reply
 
     def _run(self, a) -> None:
@@ -279,6 +315,12 @@ class SortManagerNode(Node):
                 log.info(a.text)
         elif isinstance(a, fsm.Result):
             self._publish_result(a)
+        elif isinstance(a, pallet_fsm.PublishPalletState):
+            self._publish_pallet_state()  # 계획 직후·첫 PICK 전 (TR-PAL-10 ①) — 끝의 발행은 같은 값이라 건너뛴다
+        elif isinstance(a, pallet_fsm.PalletOut):
+            self._publish_pallet_result(a)
+        elif isinstance(a, pallet_fsm.CallList):
+            self._call_list(a.session_id)
         elif isinstance(a, fsm.Say):
             self.say_pub.publish(String(data=a.text))
         elif isinstance(a, fsm.SendGoal):
@@ -418,6 +460,31 @@ class SortManagerNode(Node):
             )
         )
 
+    # /voss/log/list_placements (팔레타이징 대상 조회, sort_logger)
+    def _call_list(self, session_id: str) -> None:
+        if not self.list_cli.service_is_ready():
+            self._post(pallet_fsm.ListDone(False, "NO_SERVICE", (), self._now_ns()))
+            return
+        op = self.dev = self._new_op("list", self.list_timeout_s)
+        fut = self.list_cli.call_async(ListPlacements.Request(session_id=session_id))
+        fut.add_done_callback(lambda f, t=op["token"]: self._on_list_response(f, t))
+
+    def _on_list_response(self, fut, token: int) -> None:
+        r = fut.result()
+        if not self._live(self.dev, token):
+            self.get_logger().warn(
+                f"시간 초과 뒤 늦은 ListPlacements 응답 무시: {r.ok} {r.message}"
+            )
+            return
+        self.dev = None
+        places = tuple(
+            pallet_plan.Placement(
+                p.box_id, p.dong, p.zone, p.slot, "PLACED", _ns(p.stamp), p.palletized
+            )
+            for p in r.placements
+        )  # sort_logger 는 PLACED·A/B/C 행만 준다 (voss_msgs.md Placement)
+        self._post(pallet_fsm.ListDone(r.ok, r.message, places, self._now_ns()))
+
     def _call_stop(self) -> None:
         if not self.stop_cli.service_is_ready():
             self._post(fsm.StopDone(False, "NO_SERVICE", self._now_ns()))
@@ -444,7 +511,10 @@ class SortManagerNode(Node):
 
         if self.dev is not None and mono > self.dev["deadline"]:
             op, self.dev = self.dev, None
-            if op["kind"] == "read":
+            if op["kind"] == "list":
+                self.get_logger().error("ListPlacements 응답 시간 초과")
+                self._post(pallet_fsm.ListDone(False, "TIMEOUT", (), now))
+            elif op["kind"] == "read":
                 self.get_logger().error("ReadLabel 응답 시간 초과")
                 self._post(fsm.ReadDone(False, "", "", 0.0, "", "", "TIMEOUT", now))
             elif op["kind"] == "goal":
@@ -475,7 +545,7 @@ class SortManagerNode(Node):
     def _publish_state(self, force: bool = False) -> None:
         c = self.ctx
         nr = fsm.not_ready_items(c, self.nr)
-        box_id = c.box.box_id if c.box else ""
+        box_id = c.box.box_id if c.box else pallet_fsm.current_box_id(c)
         track_id = c.box.track_id if c.box else -1
         key = (c.state, box_id, track_id, c.session_id, tuple(nr))
         if not force and key == self.last_pub_key:
@@ -512,10 +582,43 @@ class SortManagerNode(Node):
                 rule_version=r.rule_version,
                 reason=r.reason,
                 attempts=r.attempts,
+                slot=r.slot,
             )
         )
         self.get_logger().info(
-            f"SortResult {r.box_id} {r.outcome} {r.zone or '-'} reason={r.reason or '-'} attempts={r.attempts}"
+            f"SortResult {r.box_id} {r.outcome} {r.zone or '-'} 칸 {r.slot} reason={r.reason or '-'} attempts={r.attempts}"
+        )
+
+    def _publish_pallet_state(self) -> None:
+        st = pallet_fsm.pallet_state(self.ctx)
+        key = tuple(tuple(v) if isinstance(v, list) else v for v in st.values())
+        if key == self.last_pallet_key:
+            return  # transient_local 1 — 바뀔 때만
+        self.last_pallet_key = key
+        self.pallet_state_pub.publish(PalletState(**st))
+
+    def _publish_pallet_result(self, r: pallet_fsm.PalletOut) -> None:
+        self.pallet_result_pub.publish(
+            PalletResult(
+                run_id=r.run_id,
+                session_id=r.session_id,
+                box_id=r.box_id,
+                dong=r.dong,
+                route_index=r.route_index,
+                zone=r.zone,
+                slot=r.slot,
+                pallet_slot=r.pallet_slot,
+                pallet_col=r.pallet_col,
+                pallet_lane=r.pallet_lane,
+                pallet_layer=r.pallet_layer,
+                outcome=r.outcome,
+                reason=r.reason,
+                attempts=r.attempts,
+                stamp=_time(r.stamp_ns),
+            )
+        )
+        self.get_logger().info(
+            f"PalletResult {r.box_id} {r.outcome} {r.zone} 칸 {r.slot} → 팔레트 칸 {r.pallet_slot} (열 {r.pallet_col}·층 {r.pallet_layer}·줄 {r.pallet_lane}) reason={r.reason or '-'}"
         )
 
     def _publish_zone_map(self) -> None:

@@ -36,6 +36,77 @@ def test_null_values_are_left_out():
     assert p["zones.A.grid"] == [3.0, 1.0, 60.0, 0.0]
 
 
+def test_layers_append_to_grid():
+    z = {"grid": {"cols": 3, "rows": 2, "pitch_mm": 60, "layers": 2}}
+    p = gateway_params({"zones": {"A": z, "B": {**z, "grid": {**z["grid"], "layer_mm": 30}}}}, "x")
+    assert p["zones.A.grid"] == [3.0, 2.0, 60.0, 0.0, 2.0, 27.0]  # layer_mm 기본 27 = 박스 높이
+    assert p["zones.B.grid"][4:] == [2.0, 30.0]
+    q = gateway_params(
+        {"zones": {"C": {"grid": {"cols": 3, "rows": 2, "pitch_mm": 50, "pitch_y_mm": 44}}}}, "x"
+    )
+    assert q["zones.C.grid"] == [3.0, 2.0, 50.0, 0.0, 1.0, 27.0, 44.0]
+
+
+def test_in_tray_height_per_zone_and_order_ignored():
+    z = {
+        "grid": {"cols": 3, "rows": 2, "pitch_mm": 50, "order": [5, 2, 4, 1, 3, 0]},
+        "in_tray_tcp_z_mm": 40,
+    }
+    p = gateway_params({"zones": {"C": z, "A": {"in_tray_tcp_z_mm": None}}}, "x")
+    assert p["zones.C.in_tray_tcp_z_mm"] == 40.0 and "zones.A.in_tray_tcp_z_mm" not in p
+    assert p["zones.C.grid"] == [3.0, 2.0, 50.0, 0.0]  # order 는 sort_manager 가 쓴다
+
+
+def test_pallet_zone_4x2_two_layers():
+    z = {
+        "pose": [-250, 160, 258, 35.36, -180, -54.64],
+        "grid": {"cols": 4, "rows": 2, "pitch_mm": 50, "pitch_y_mm": 60, "layers": 2},
+    }
+    p = gateway_params({"zones": {"pallet": z}}, "x")
+    assert p["zones.PALLET.grid"] == [4.0, 2.0, 50.0, 0.0, 2.0, 27.0, 60.0]
+
+
+def test_col_dy_appends_after_pitch_y():
+    g = {
+        "cols": 4,
+        "rows": 2,
+        "pitch_mm": 50,
+        "pitch_y_mm": 60,
+        "layers": 2,
+        "col_dy_mm": [0, 0, 0, 10],
+    }
+    assert gateway_params({"zones": {"pallet": {"grid": g}}}, "x")["zones.PALLET.grid"][7:] == [
+        0.0,
+        0.0,
+        0.0,
+        10.0,
+    ]
+    g2 = {
+        "cols": 4,
+        "rows": 2,
+        "pitch_mm": 50,
+        "col_dy_mm": [0, 0, 0, 10],
+    }  # pitch_y 없으면 pitch 로 채움
+    assert gateway_params({"zones": {"pallet": {"grid": g2}}}, "x")["zones.PALLET.grid"][4:] == [
+        1.0,
+        27.0,
+        50.0,
+        0.0,
+        0.0,
+        0.0,
+        10.0,
+    ]
+    g3 = {**g, "col_dy_mm": [0, 10]}  # 열 수가 다르면 뺀다
+    assert len(gateway_params({"zones": {"pallet": {"grid": g3}}}, "x")["zones.PALLET.grid"]) == 7
+
+
+def test_place_open_passes_when_set():
+    p = gateway_params({"gripper": {"pre_open_mm": 90, "place_open_mm": 50}}, "x")
+    assert (p["gripper.pre_open_mm"], p["gripper.place_open_mm"]) == (90.0, 50.0)
+    assert "gripper.place_open_mm" not in gateway_params({"gripper": {"pre_open_mm": 90}}, "x")
+    assert gateway_params({"gripper": {"pick_open_mm": 55}}, "x")["gripper.pick_open_mm"] == 55.0
+
+
 def test_wrong_length_is_left_out():
     p = gateway_params({"robot": {"tcp_offset_mm": [1, 2]}, "observe_pose": [0, 0, 0]}, "x")
     assert "tcp_offset_mm" not in p and "observe_pose" not in p

@@ -13,7 +13,15 @@ from typing import Any
 
 import yaml
 
-ZONES = ("A", "B", "C", "RECHECK", "HOLD")  # MoveToZone zone 값(대문자). config 키는 대소문자 무시
+ZONES = (
+    "A",
+    "B",
+    "C",
+    "RECHECK",
+    "HOLD",
+    "PALLET",
+)  # MoveToZone zone 값(대문자). config 키는 대소문자 무시. PALLET = 팔레타이징 트레이(BRD 10.7)
+LAYER_MM = 27.0  # grid.layer_mm 기본 = 박스 높이 (voss_config.md grid layers)
 
 
 def load_config(path: str | Path) -> tuple[dict[str, Any], str]:
@@ -58,11 +66,42 @@ def gateway_params(cfg: dict[str, Any], sha: str) -> dict[str, Any]:
                 float(grid["pitch_mm"]),
                 float(off) if isinstance(off, int | float) and not isinstance(off, bool) else 0.0,
             ]
+            # 선택 키(voss_config.md grid): 층, Y 줄 간격. 둘 다 없으면 예전 4개 그대로
+            layers = grid.get("layers", 1)
+            layers = layers if isinstance(layers, int) and not isinstance(layers, bool) else 1
+            lmm = grid.get("layer_mm", LAYER_MM)
+            lmm = (
+                float(lmm)
+                if isinstance(lmm, int | float) and not isinstance(lmm, bool)
+                else LAYER_MM
+            )
+            py = grid.get("pitch_y_mm")
+            py = float(py) if isinstance(py, int | float) and not isinstance(py, bool) else None
+            cdy = grid.get("col_dy_mm")  # 열마다 Y 보정, cols 개(선택)
+            cdy = (
+                [float(v) for v in cdy]
+                if isinstance(cdy, list)
+                and len(cdy) == int(grid["cols"])
+                and all(isinstance(v, int | float) and not isinstance(v, bool) for v in cdy)
+                else None
+            )
+            if cdy is not None and py is None:
+                py = float(grid["pitch_mm"])
+            if layers > 1 or py is not None:
+                out[f"zones.{z}.grid"] += [float(layers), lmm]
+            if py is not None:
+                out[f"zones.{z}.grid"].append(py)
+            if cdy is not None:
+                out[f"zones.{z}.grid"] += cdy
+        # 선택: 트레이 안 이동 최저 TCP z — 먼 칸 위로 공통 값(60)이 안 닿는 구역만 (voss_config.md zones)
+        itz = zc.get("in_tray_tcp_z_mm")
+        if isinstance(itz, int | float) and not isinstance(itz, bool) and itz > 0:
+            out[f"zones.{z}.in_tray_tcp_z_mm"] = float(itz)
         view = _floats(zc.get("view_pose"), 6)
         if view is not None:
             out[f"zones.{z}.view_pose"] = view
     g = cfg.get("gripper") or {}
-    for k in ("pre_open_mm", "grasp_width_mm", "force_n"):
+    for k in ("pre_open_mm", "place_open_mm", "pick_open_mm", "grasp_width_mm", "force_n"):
         if isinstance(g.get(k), int | float) and not isinstance(g.get(k), bool):
             out[f"gripper.{k}"] = float(g[k])
     return out

@@ -11,18 +11,49 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-INTENT_TYPES = ("start", "stop", "resume", "priority", "answer", "query_history", "update_zone_map")
+INTENT_TYPES = (
+    "start",
+    "stop",
+    "resume",
+    "priority",
+    "answer",
+    "query_history",
+    "update_zone_map",
+    "palletize",  # Sprint 2 (TR-PAL-01)
+)
 ROS_TYPES = (
     "start",
     "stop",
     "resume",
     "priority",
     "answer",
+    "recheck",
     "update_zone_map",
+    "palletize",
 )  # Intent 로 보내는 것
 QUERY_KINDS = ("count_by_dong", "held_count", "remaining_count")
 HOLD = "HOLD"
 DESTINATION_ANSWER_RE = re.compile(r"(.+?)(?:으로|로)보내(?:줘|주세요|줘요|요)?")
+# 질문 중 "읽을 수 없다" 답 → 보류. 공백·문장부호를 지운 뒤 전체 일치(10/12 시연 문형, LLM 없이)
+HOLD_ANSWER_RE = re.compile(
+    r"(?:송장)?(?:확인|판독|인식)(?:이)?(?:불가|안돼|안됨|안됩니다|못해|못함)(?:입니다|이에요|예요|요)?"
+    r"|보류(?:해|해줘|해주세요|로보내|로보내줘|로보내주세요|입니다|요)?"
+)
+# "재확인 시작" → 보관 중인 재확인 칸 박스 처리(type recheck, 10/12 시연, LLM 없이). 전체 일치
+RECHECK_START_RE = re.compile(
+    r"재확인(?:을)?(?:시작|진행|처리)?(?:해|해줘|해주세요|하자|합니다|할게|해요)?"
+)
+
+# "대치, 역삼, 청담 순서로 실어줘"·"… 순으로 트럭에 실어" → palletize(BRD TR-PAL-01, LLM 없이).
+# 트럭·팔레트 + 싣는 말, 또는 "순(서)…싣는 말"이 있으면. 말한 순서 = 배송 순서(첫 배송지부터, BRD v1.5 — 10/13 PL)
+PALLETIZE_RE = re.compile(
+    r"(?:트럭|팔레트).*(?:실어|싣|적재|태워|올려|옮겨)"
+    r"|(?:실어|싣|적재|태워|올려|옮겨).*(?:트럭|팔레트)"
+    r"|순(?:서)?(?:대로|으로|로)?(?:실어|싣|적재)"
+)
+SAY_PALLET_ORDER = (
+    "싣는 순서를 동 이름으로 말씀해 주세요. 예를 들어 대치, 역삼, 청담 순서로 실어줘."
+)
 
 # 정지 키워드: 공백·문장부호를 지운 뒤 포함 여부로 본다. 오인식으로 멈추는 쪽은 허용한다.
 STOP_KEYWORDS = ("멈춰", "멈추", "정지", "스톱", "스탑", "그만", "stop")
@@ -35,6 +66,12 @@ SAY_UNSUPPORTED = "지금은 지원하지 않는 명령입니다."
 SAY_RETRY = "잘 못 알아들었습니다. 다시 말씀해 주세요."
 SAY_WHICH_DONG = "어느 동인지 말씀해 주세요."
 SAY_UNKNOWN_DONG = "등록되지 않은 동입니다. 다시 말씀해 주세요."
+# palletize 경로 (TR-PAL-01: 미등록·중복·0개·4개 이상이면 실행하지 않고 되묻는다)
+MAX_ROUTE = 3
+SAY_ROUTE_RETRY = "배송 순서를 다시 말씀해 주세요."
+SAY_ROUTE_COUNT = "배송지는 한 곳에서 세 곳까지 말씀해 주세요."
+SAY_ROUTE_DUP = "같은 동이 두 번 들어 있습니다. 배송 순서를 다시 말씀해 주세요."
+SAY_ROUTE_UNKNOWN = "등록되지 않은 동이 있습니다. 배송 순서를 다시 말씀해 주세요."
 
 
 def _squash(text: str) -> str:
@@ -101,7 +138,7 @@ class Decision:
     """
 
     kind: str
-    intent: dict | None = None  # publish: Intent 필드 (type,dong,zone,count,raw_text,box_id)
+    intent: dict | None = None  # publish: Intent 필드 (type,dong,zone,count,raw_text,box_id,route)
     query: dict | None = None  # query: {query_kind, dong}
     say: str = ""
 
@@ -110,7 +147,14 @@ def stop_decision(raw_text: str) -> Decision:
     return Decision("publish", intent=_intent("stop", raw_text=raw_text))
 
 
-def _intent(t: str, dong: str = "", zone: str = "", raw_text: str = "", box_id: str = "") -> dict:
+def _intent(
+    t: str,
+    dong: str = "",
+    zone: str = "",
+    raw_text: str = "",
+    box_id: str = "",
+    route: list[str] | None = None,
+) -> dict:
     return {
         "type": t,
         "dong": dong,
@@ -118,7 +162,23 @@ def _intent(t: str, dong: str = "", zone: str = "", raw_text: str = "", box_id: 
         "count": 0,
         "raw_text": raw_text,
         "box_id": box_id,
+        "route": list(route or []),  # palletize 만, 그 밖은 []
     }
+
+
+def check_route(raw, view: ZoneMapView) -> tuple[list[str], str]:
+    """LLM 의 route → (정식 동 이름 경로, "") 또는 ([], 되묻기 문장). 말한 순서(첫 배송지부터)를 지킨다."""
+    if not isinstance(raw, list) or not all(isinstance(x, str) for x in raw):
+        return [], SAY_ROUTE_RETRY
+    names = [x for x in raw if x.strip()]
+    if not 1 <= len(names) <= MAX_ROUTE:
+        return [], SAY_ROUTE_COUNT if names else SAY_ROUTE_RETRY
+    route = [view.canonical_dong(x) for x in names]
+    if any(d is None for d in route):
+        return [], SAY_ROUTE_UNKNOWN
+    if len(set(route)) != len(route):
+        return [], SAY_ROUTE_DUP
+    return route, ""
 
 
 def decide_bare_dong(
@@ -150,6 +210,50 @@ def decide_bare_dong(
             box_id=sort_box_id,
         ),
     )
+
+
+def decide_hold_answer(
+    raw_text: str,
+    sort_state: str,
+    sort_box_id: str,
+) -> Decision | None:
+    """'송장 확인 불가'·'보류' 같은 답을 보류(HOLD) 답으로 처리한다. 해당 표현이 아니면 None."""
+    if HOLD_ANSWER_RE.fullmatch(_squash(raw_text)) is None:
+        return None
+    # 질문 중이 아니면 보류 답으로 로봇을 움직이지 않는다.
+    if sort_state != "ASKING" or not sort_box_id:
+        return Decision("say", say=SAY_NO_QUESTION)
+    return Decision(
+        "publish", intent=_intent("answer", zone=HOLD, raw_text=raw_text, box_id=sort_box_id)
+    )
+
+
+def decide_recheck_start(raw_text: str) -> Decision | None:
+    """'재확인 시작'·'재확인 진행해 줘' → recheck. 받을 수 있는 상태인지는 sort_manager 가 판단한다."""
+    if RECHECK_START_RE.fullmatch(_squash(raw_text)) is None:
+        return None
+    return Decision("publish", intent=_intent("recheck", raw_text=raw_text))
+
+
+def decide_palletize(raw_text: str, view: ZoneMapView | None) -> Decision | None:
+    """'대치, 역삼, 청담 순서로 실어줘' → palletize, route = 말한 순서 [대치동, 역삼동, 청담동](배송 순서, BRD TR-PAL-01).
+    동을 하나도 말하지 않거나 4곳 이상이면 되묻는다. 받을 수 있는 상태인지는 sort_manager 가 판단한다."""
+    s = _squash(raw_text)
+    if PALLETIZE_RE.search(s) is None:
+        return None
+    if view is None:
+        return Decision("say", say=SAY_NOT_READY)
+    found: dict[str, int] = {}  # 정식 동 → 처음 나온 위치
+    for alias, dong in view.alias_to_dong.items():
+        i = s.find(alias)
+        if alias and i >= 0 and (dong not in found or i < found[dong]):
+            found[dong] = i
+    if not found:
+        return Decision("say", say=SAY_PALLET_ORDER)
+    order = sorted(found, key=found.get)
+    if len(order) > MAX_ROUTE:
+        return Decision("say", say=SAY_ROUTE_COUNT)
+    return Decision("publish", intent=_intent("palletize", raw_text=raw_text, route=order))
 
 
 def decide_destination_answer(
@@ -249,6 +353,13 @@ def decide(
                 return Decision("say", say=SAY_UNKNOWN_DONG)
             dong = d
         return Decision("query", query={"query_kind": kind, "dong": dong})
+
+    if t == "palletize":
+        # 시작 조건(분류 중 박스 없음·팔레트 비어 있음)은 sort_manager 가 보고 거부 이유를 말한다(TR-PAL-02)
+        route, why = check_route(llm.get("route"), view)
+        if why:
+            return Decision("say", say=why)
+        return Decision("publish", intent=_intent(t, raw_text=raw_text, route=route))
 
     # update_zone_map: C 선택 범위 (MC-033). 채택 전에는 실행하지 않는다.
     if not allow_update_zone_map:

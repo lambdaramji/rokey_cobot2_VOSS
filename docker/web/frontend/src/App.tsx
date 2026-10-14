@@ -1,11 +1,14 @@
 // T13 #22 React 웹 HMI의 관제 화면과 HMI 명령 입력.
 // 입력: Spring Boot SSE 상태 및 REST 이력/명령.
 // 출력: 실시간 상태·분류·로봇·보류·이력·현장 제어 화면.
-// 근거: docs/interfaces/web_api.md, mqtt.md, ADR-0006.
+// 근거: docs/interfaces/web_api.md, mqtt.md, ADR-0006. Sprint 2 S2-T08 팔레트 패널은 PalletPanel.tsx.
 import { flushSync } from 'react-dom';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getResults, getSummary, issueCommand, putPlan, RequestFailure } from './api';
-import type { CommandType, LinkStatus, RobotState, SortResult, SortState, Summary, ZoneMap } from './types';
+import type { CommandArgs } from './api';
+import PalletPanel from './PalletPanel';
+import { emptyPallet, GENERAL_RESET_ZONES, parsePalletState } from './pallet';
+import type { CommandType, LinkStatus, PalletState, RobotState, SortResult, SortState, Summary, ZoneMap } from './types';
 import { VossSortingWorkspace } from './components/VossSortingWorkspace';
 import { parseBoxMotion, parseBoxTrack, parseRobotJoints, parseRobotPose, JOINT_STALE_MS, POSE_STALE_MS, TRACK_STALE_MS } from './lib/workspacePosition';
 import type { BoxMotionSample, BoxTrackSample, RobotJointSample, RobotPoseSample } from './lib/workspacePosition';
@@ -14,6 +17,7 @@ import { parseVoiceSignal } from './lib/voiceIndicator';
 import type { VoiceSignal } from './lib/voiceIndicator';
 type DisplayState = 'UNKNOWN'|string;
 const ZONES = ['A','B','C','RECHECK','HOLD'];
+const RESET_ZONES = GENERAL_RESET_ZONES;  // PALLET 은 팔레트 패널의 '트럭 짐칸 비움 확인'으로만
 const LOCAL_HOSTS = new Set(['localhost','127.0.0.1','::1']);
 const INITIAL_ERROR = '서버에서 데이터를 기다리는 중입니다.';
 const TIMEOUT_MS = 3000;
@@ -40,6 +44,7 @@ export default function App() {
   const [boxMotion,setBoxMotion] = useState<BoxMotionSample|null>(null);
   const completedTracks = useRef<Map<number,number>>(new Map());
   const [latestResult,setLatestResult] = useState<SortResult|null>(null);
+  const [pallet,setPallet] = useState<PalletState>(emptyPallet);
   const [logStatus,setLogStatus] = useState('UNKNOWN');
   const [mqtt,setMqtt] = useState<LinkStatus>('DOWN');
   const [sseConnected,setSseConnected] = useState(false);
@@ -185,6 +190,11 @@ export default function App() {
       }
       void refresh();
     });
+    stream.addEventListener('pallet_state',(event)=>{
+      // 계약에 어긋나면 이전 배치도를 유지한다 (web_api.md pallet_state).
+      const parsed = parsePalletState(JSON.parse((event as MessageEvent).data));
+      if (parsed) setPallet(parsed);
+    });
     stream.addEventListener('log_status',(event)=>setLogStatus(JSON.parse((event as MessageEvent).data).status ?? 'UNKNOWN'));
     stream.addEventListener('link',(event)=>{
       mqttUp = JSON.parse((event as MessageEvent).data).mqtt === 'UP';
@@ -215,7 +225,7 @@ export default function App() {
     return ()=>{window.clearInterval(polling);window.clearInterval(ticking);};
   },[refresh]);
   /** 안전 제한을 서버에서도 검사하며 202를 작업 완료로 표시하지 않는다. */
-  async function command(type:CommandType,args:Record<string,string>={}) {
+  async function command(type:CommandType,args:CommandArgs={}) {
     setBusy(true);setNotice('명령 전달을 요청하는 중입니다.');
     try {
       const accepted=await issueCommand(type,args);
@@ -277,7 +287,7 @@ export default function App() {
           <section className="panel"><div className="section-heading"><div><span className="eyebrow">01 / CONTROL</span><h2>운전 및 분류 제어</h2></div><span className="micro-note">시작·이동 명령은 공용 PC 로컬에서만</span></div>
             <div className="button-cluster"><button className="action primary" disabled={!controlEnabled} onClick={()=>void command('start')}>▶   시작</button><button className="action danger" onClick={()=>void command('stop')}>■   정지</button><button className="action subdued" disabled={!controlEnabled} onClick={()=>void command('resume')}>↻   재개</button></div>
             <div className="form-grid"><div className="field"><label htmlFor="planned">투입 예정 수량</label><div className="inline-input"><div className="plan-stepper"><button type="button" aria-label="투입 예정 수량 1개 줄이기" disabled={busy||Number(plannedText)<=1} onClick={()=>stepPlan(-1)}>−</button><input id="planned" type="number" min="1" max="100" step="1" value={plannedText} onChange={event=>{setPlannedText(event.target.value);editingPlan.current=true;}}/><button type="button" aria-label="투입 예정 수량 1개 늘리기" disabled={busy||Number(plannedText)>=100} onClick={()=>stepPlan(1)}>+</button></div><button disabled={busy} onClick={()=>void savePlan()}>저장</button></div></div><div className="field"><label htmlFor="priority">동별 우선 분류</label><div className="inline-input"><select id="priority" value={selectedDong} onChange={event=>setSelectedDong(event.target.value)}><option value="">동 선택</option>{dongs.map(dong=><option key={dong} value={dong}>{dong}</option>)}</select><button disabled={!controlEnabled||!selectedDong} onClick={()=>void command('priority',{dong:selectedDong})}>적용</button></div></div></div>
-            <div className="form-grid"><div className="field"><label htmlFor="answer">작업자 답변 · 질문 박스 {state?.box_id||'없음'}</label><div className="inline-input"><select id="answer" value={answerDong} disabled={answerHold} onChange={event=>setAnswerDong(event.target.value)}><option value="">동 선택</option>{dongs.map(dong=><option key={dong} value={dong}>{dong}</option>)}</select><button disabled={!controlEnabled||displayState!=='ASKING'||!state?.box_id||(!answerHold&&!answerDong)} onClick={()=>void command('answer',answerHold?{box_id:state?.box_id??'',zone:'HOLD'}:{box_id:state?.box_id??'',dong:answerDong})}>답변</button></div><label className="checkbox"><input type="checkbox" checked={answerHold} onChange={event=>setAnswerHold(event.target.checked)}/> HOLD로 보류</label></div><div className="field"><label htmlFor="zone">구역 초기화</label><div className="inline-input"><select id="zone" value={selectedZone} onChange={event=>setSelectedZone(event.target.value)}>{ZONES.map(zone=><option key={zone}>{zone}</option>)}</select><button disabled={!controlEnabled} onClick={()=>void command('reset_zone',{zone:selectedZone})}>초기화</button></div></div></div>
+            <div className="form-grid"><div className="field"><label htmlFor="answer">작업자 답변 · 질문 박스 {state?.box_id||'없음'}</label><div className="inline-input"><select id="answer" value={answerDong} disabled={answerHold} onChange={event=>setAnswerDong(event.target.value)}><option value="">동 선택</option>{dongs.map(dong=><option key={dong} value={dong}>{dong}</option>)}</select><button disabled={!controlEnabled||displayState!=='ASKING'||!state?.box_id||(!answerHold&&!answerDong)} onClick={()=>void command('answer',answerHold?{box_id:state?.box_id??'',zone:'HOLD'}:{box_id:state?.box_id??'',dong:answerDong})}>답변</button></div><label className="checkbox"><input type="checkbox" checked={answerHold} onChange={event=>setAnswerHold(event.target.checked)}/> HOLD로 보류</label></div><div className="field"><label htmlFor="zone">구역 초기화</label><div className="inline-input"><select id="zone" value={selectedZone} onChange={event=>setSelectedZone(event.target.value)}>{RESET_ZONES.map(zone=><option key={zone}>{zone}</option>)}</select><button disabled={!controlEnabled} onClick={()=>void command('reset_zone',{zone:selectedZone})}>초기화</button></div></div></div>
             <p className="inline-notice" role="status">{notice}</p>
             {state?.pending_question&&<p className="question">질문 대기 · {state.pending_question}</p>}
           </section>
@@ -289,6 +299,7 @@ export default function App() {
           <section className="panel"><div className="section-heading"><div><span className="eyebrow">EXCEPTIONS / HOLD</span><h2>보류 목록</h2></div><span className="count-badge">{held.length}건 표시</span></div><div className="hold-list">{held.length?held.map((item,index)=><div className="hold-item" key={`${item.box_id??'held'}-${index}`}><div><strong>{item.box_id??'—'}</strong><small>{item.dong??item.reason??'동 판독 대기'}</small></div><span>{item.zone??'HOLD'}</span></div>):<p className="empty">{error ? "보류 목록 조회 실패 — 서버 연결 확인 필요" : "보류 중인 기록이 없습니다."}</p>}</div></section>
         </div>
       </div>
+      <PalletPanel pallet={pallet} sortState={displayState} stale={!sseConnected||displayMqtt!=='UP'} dongs={dongs} controlEnabled={controlEnabled} onCommand={(type,args)=>void command(type,args)}/>
       {error&&<p className="error-banner" role="alert">DB / API 조회 실패: {error} — 정확하지 않은 합계는 표시하지 않습니다.</p>}
       </>}
       <footer className="footer"><span>VOSS C-3 · WEB HMI</span><span>세션: {sessionId||'NO_SESSION'}</span><span>조회 시각: {displayTime(summary?.as_of)}</span><span>{!isLocal?'원격 조회 모드 · STOP만 허용':'공용 PC 로컬 제어'}</span></footer>

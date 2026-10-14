@@ -8,7 +8,7 @@
 - **하강 중 끊김**: 카메라가 공구축에서 약 8 cm 옆이라 TCP 가 박스 위로 내려가면 송장이 화면 아래 끝으로 빠지고, 가장자리에 걸린 송장은 내지 않으므로(`border_px`) 그 높이부터 BoxTrack 이 끊긴다. 10/10 g1_s1 녹화 재생(`tools/vision/box_overlay.py`, 10/11 김학민): 실제 마지막 BoxTrack 은 OK·LOST 모두 DESCEND 뒤 0.26~0.47 s, **윗면 +31~37 mm** — 핸드아이 모델(`tools/calib/descend_visibility.py`, TCP 가 박스 중심 위) 0° +37.4 와 맞는다. belt_servo 사각은 윗면 + 10 부터라 그 사이를 `lost_timeout_s` 0.5 s 안에 지나야 하는데, OK 20회의 사각 진입 때 관측 나이는 0.40~0.48 s(여유 0.02~0.10 s), 기울인 박스 3회는 0.56~0.59 s 로 LOST(measurements-1010 의도 시험). 틱의 `visible` 은 마지막 메시지를 lost_timeout 까지 유지하므로 실제 관측 시각으로 쓰지 않는다. 대응(사각 높이·lost 판정)은 servo(박병후) 판단.
 - 추론 지연 예산: 검출 ≤ 20 ms, 루프 ≤ 100 ms. 지연 측정 로그를 남긴다.
 - OCR: 분류코드(5.5 mm, 약 30 px)·동 이름(4.5 mm) 만 읽는다. 받는 사람은 무시. 편집거리 퍼지 매칭은 순수 함수로 두고 pytest.
-- 녹화 영상 재생 모드(`playback:=<file>`)를 둬서 로봇 없이 개발.
+- 녹화 영상 재생 모드(`playback:=<file>`)를 둬서 로봇 없이 개발. 기본은 녹화 시각을 그대로 낸다(분석용). 재생으로 sort_manager·belt_servo 를 돌릴 때는 `playback_restamp:=true`(첫 메시지를 지금에 맞추고 영상·pose 를 같이 옮김, `tracker_logic.PlaybackClock`) — 녹화 시각이면 sort_manager 가 "관측 시작 전 촬영"으로 버린다(10/11 voss_dry_run).
 - 완료 기준: 검출률 ≥ 99%, 정지 송장 50장 ≥ 95%, 추종 중 50장 ≥ 90%.
 - 모델 가중치는 커밋 금지. 경로·다운로드 방법만 README.
 
@@ -16,7 +16,7 @@
 - stage 1(입구 관측)만 읽는다: LabelCrop → `find_label_in_crop`(크롭 중심 송장) → `crop_upright` → PaddleOCR(`ocr_engine.read_label`, 글자가 없으면 180° 돌려 한 번 더) → `match_label` → 트랙별 다수결(`label_vote`, NONE 은 분모 제외) → `/voss/vision/label`.
 - 후보는 `/voss/sort/zone_map` 에서만. 발행자는 엔진 예열 + zone_map 수신 뒤에 만든다(sort_manager 의 OCR 준비 = 발행자 존재).
 - OCR 은 작업 스레드 하나, 트랙마다 최신 크롭 1장만 대기, 같은 동 2장 + confidence_min 이상이면 그 트랙은 더 안 읽는다.
-- 호스트 G0 는 PaddleOCR venv(`--system-site-packages`)로: `ros2 launch voss_vision label_reader.launch.py python:=<venv>/bin/python`. GPU·컨테이너는 T22.
+- 호스트 G0 는 PaddleOCR venv(`--system-site-packages`)로: `ros2 launch voss_vision label_reader.launch.py python:=<venv>/bin/python`. 컨테이너(T22 #31)는 `docker/vision/` — 같은 venv 방식(`/opt/voss_ocr`, `VOSS_OCR_PYTHON`), config 는 `VOSS_CONFIG_DIR=/opt/voss/config` 읽기 전용, GPU 는 `compose.gpu.yml`(`ocr_device:=gpu:0`).
 - 아직 없음: stage 2(추종 중, 선명도 가중) — T19 2차.
 
 ## label_reader 재판독 (stage 3, T23 #32)

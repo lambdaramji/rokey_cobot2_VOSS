@@ -1,6 +1,6 @@
 """RobotState 판정 — voss_msgs.md RobotState (connected·state·action·error_code)."""
 
-from voss_robot.state_logic import Inputs, decide
+from voss_robot.state_logic import Inputs, decide, with_joints
 
 
 def ok(**kw) -> Inputs:
@@ -68,3 +68,21 @@ def test_rg2_fake_note_in_detail():
     """두산 real + 가짜 RG2(rg2_dry_run)는 상태가 READY 여도 detail 에 보인다(#139)."""
     st = decide(ok(rg2_note="RG2 FAKE(rg2_dry_run)"))
     assert "RG2 FAKE" in st.detail and st.state == "READY"
+
+
+def test_singularity_notice_gets_joints():
+    """3205·3206 안내에는 그 순간 관절각(deg)과 joint_states stamp 를 붙인다(#26)."""
+    js = ([-93.89, -13.54, 97.73, -0.01, 94.88, -185.08], 1_791_798_106_238_000_000)
+    text = "1/4/3205 Singularity (Outside -> Inside)"
+    assert with_joints(text, 3205, js) == (
+        text + " | 관절 deg [-93.9, -13.5, 97.7, -0.0, 94.9, -185.1] @ 1791798106.238"
+    )
+    assert with_joints(text, 3206, None) == text + " | 관절 없음(joint_states 미수신)"
+
+
+def test_other_notices_unchanged():
+    js = ([0.0] * 6, 0)
+    assert (
+        with_joints("1/2/1216 [SpeedL] Time adjusted", 1216, js)
+        == "1/2/1216 [SpeedL] Time adjusted"
+    )

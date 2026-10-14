@@ -1,0 +1,8 @@
+# 빌드 context 는 레포 루트 — 이미지에 필요한 것만 보낸다(data/·녹화·모델이 섞이지 않게, CLAUDE.md 규칙 8)
+**
+!src/voss_msgs/**
+!src/voss_vision/**
+!docker/vision/entrypoint.sh
+**/__pycache__
+**/*.pyc
+**/.pytest_cache

@@ -8,20 +8,30 @@ from __future__ import annotations
 
 import json
 
-TYPES = ["start", "stop", "resume", "priority", "answer", "query_history", "update_zone_map"]
+TYPES = [
+    "start",
+    "stop",
+    "resume",
+    "priority",
+    "answer",
+    "query_history",
+    "update_zone_map",
+    "palletize",  # Sprint 2 (TR-PAL-01)
+]
 QUERY_KINDS = ["count_by_dong", "held_count", "remaining_count"]
 
 # OpenAI structured output (strict) 스키마 — 모든 필드 필수, 없으면 null
 INTENT_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["type", "dong", "zone", "count", "query_kind", "raw_text"],
+    "required": ["type", "dong", "zone", "count", "query_kind", "route", "raw_text"],
     "properties": {
         "type": {"type": "string", "enum": TYPES + ["unknown"]},
         "dong": {"type": ["string", "null"]},
         "zone": {"type": ["string", "null"]},
         "count": {"type": "integer"},
         "query_kind": {"type": ["string", "null"], "enum": QUERY_KINDS + [None]},
+        "route": {"type": ["array", "null"], "items": {"type": "string"}},  # palletize 만
         "raw_text": {"type": "string"},
     },
 }
@@ -34,9 +44,10 @@ type:
 - answer: 로봇이 물은 박스가 어느 동인지 답함. 동 이름이면 dong, "보류"면 zone="HOLD"
 - query_history: 기록 질문. 동별 처리 수=count_by_dong(dong 필수), 보류 수=held_count, 남은 수=remaining_count
 - update_zone_map: 동의 구역을 바꿈 (dong, zone 필수)
+- palletize: 분류가 끝난 박스를 배송 순서대로 팔레트에 실음("역삼, 대치, 청담 순서로 실어줘"). route = 말한 순서 그대로 동 이름 배열(첫 배송지부터, dong=null). 허용 목록의 동은 정식 이름으로 바꾸고, 목록에 없는 동이나 같은 동을 두 번 말했으면 빼거나 합치지 말고 들은 그대로 적는다(검증은 로봇 쪽이 한다)
 - unknown: 위에 해당하지 않음
 dong 은 반드시 허용 목록의 정식 이름으로 적는다(별칭이면 정식 이름으로 바꾼다). 목록에 없으면 null.
-zone 은 허용 구역 또는 "HOLD" 만. count 는 항상 0. raw_text 는 입력 원문 그대로."""
+zone 은 허용 구역 또는 "HOLD" 만. count 는 항상 0. route 는 palletize 가 아니면 null. raw_text 는 입력 원문 그대로."""
 
 
 def build_messages(text: str, allowed: dict) -> list[dict]:
@@ -60,11 +71,15 @@ def normalize(raw: str | dict, text: str) -> dict | None:
     if t not in TYPES:
         return None
     zone = d.get("zone")
+    route = d.get("route")  # 문자열 배열일 때만 넘긴다(허용 동·개수·중복 검증은 intent_parser)
+    if not (isinstance(route, list) and all(isinstance(x, str) for x in route)):
+        route = None
     return {
         "type": t,
         "dong": d.get("dong") or None,
         "zone": zone.upper() if isinstance(zone, str) and zone else None,
         "count": 0,
         "query_kind": d.get("query_kind") if d.get("query_kind") in QUERY_KINDS else None,
+        "route": route,
         "raw_text": text,
     }

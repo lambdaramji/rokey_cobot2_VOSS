@@ -2,6 +2,7 @@
 sort_manager:
   ros__parameters:
     home_first: true              # start·resume 때 MoveToZone(OBSERVE) 를 먼저 부르고, 도착 뒤부터 판독을 받는다
+    defer_recheck: false          # false = v1.5 즉시 재판독 → 즉시 질문 → 30초 보류(10/13 PL 결정 Q20 원복). true = 재확인 칸 보관 후 recheck 로 몰아 처리 — 10/14 리허설 1회차에서 즉시 흐름이 실패하면 이것으로 되돌린다(폴백)
     check_label_stamp: true       # LabelRead.stamp ≥ 관측 시작(OBSERVE 도착) 인 결과만 채택. 녹화 재생 시험에서만 false
     track_fresh_s: 0.5            # 이 시간 안에 BoxTrack 이 온 트랙만 "시야에 있음"
     pose_max_age_s: 0.5           # ROBOT 과도 규칙 (voss_msgs.md SortState)
@@ -15,3 +16,6 @@ sort_manager:
     ask_timeout_s: 30.0           # 질문 발화부터 무응답 보류까지 (SRD §5.7)
     robot_busy_grace_s: 1.5       # 우리 goal·MoveToZone 이 끝난 뒤 이 시간 안의 RobotState BUSY 는 준비로 본다(서보 스트림 꼬리)
     state_period_s: 0.4           # /voss/sort/state 주기 발행 2.5 Hz (계약 ≥ 2 Hz, MC-026 — 여유를 둔다)
+    list_timeout_s: 3.0           # /voss/log/list_placements(팔레타이징 대상 조회) 응답. 없거나 시간 초과면 팔레타이징을 시작하지 않는다
+    pallet_layers: 2              # 2 = 16칸(2층), 1 = 1층 8칸만 — 게이트에서 2층 놓기를 시연에서 뺐을 때(ADR-0014 B). 칸 번호·메시지는 그대로
+    pallet_hold_width_mm: [39.5, 44.0]  # 팔레타이징 재개 때 파지 확인 — RG2 보고 폭이 이 안이면 쥐고 있음(빈손 닫힘 보고 39, gateway zone_pick_width_mm 와 같은 근거)

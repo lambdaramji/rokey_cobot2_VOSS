@@ -56,6 +56,12 @@ def _gateway(context):
     zone_vel = LaunchConfiguration("zone_vel_mm_s").perform(context)
     if zone_vel:  # MoveToZone 선속도. 첫 실기는 낮게. 비우면 노드 기본값(100 mm/s, 45 deg/s)
         params["zone_vel"] = [float(zone_vel), 45.0]
+    blend = LaunchConfiguration("zone_blend_mm").perform(context)
+    if blend:  # 위쪽 모서리 블렌딩 거리 mm. 비우면 0(모서리마다 멈춤)
+        params["zone_blend_mm"] = float(blend)
+    zone_acc = LaunchConfiguration("zone_acc_mm_s2").perform(context)
+    if zone_acc:  # MoveToZone 선가속도. 비우면 노드 기본값(200 mm/s², 90 deg/s²)
+        params["zone_acc"] = [float(zone_acc), 90.0]
     return [
         Node(
             package="voss_robot",
@@ -73,6 +79,8 @@ def generate_launch_description() -> LaunchDescription:
             DeclareLaunchArgument("dry_run", default_value="true"),
             DeclareLaunchArgument("servo_z_min_mm", default_value=""),
             DeclareLaunchArgument("zone_vel_mm_s", default_value=""),
+            DeclareLaunchArgument("zone_acc_mm_s2", default_value=""),
+            DeclareLaunchArgument("zone_blend_mm", default_value=""),
             DeclareLaunchArgument("pose_source", default_value=""),
             DeclareLaunchArgument("dry_run_object_mm", default_value=""),
             DeclareLaunchArgument("rg2_dry_run", default_value="false"),

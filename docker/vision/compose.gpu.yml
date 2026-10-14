@@ -1,0 +1,24 @@
+# GPU 덧붙임 (공용 PC RTX 4060 8 GB) — compose.yml 위에 얹는다. OCR(label_reader)만 GPU 를 쓴다.
+#   docker compose -f compose.yml -f compose.gpu.yml up -d --build
+# VRAM 은 AI 컨테이너 Whisper 와 나눠 쓴다 — 두 컨테이너를 같이 띄운 상태로 nvidia-smi 를 measurements 에 남긴다(T22 22-4).
+services:
+  box_tracker:
+    image: voss-vision:gpu
+    build:
+      args:
+        OCR_DEVICE: gpu
+
+  label_reader:
+    image: voss-vision:gpu
+    build:
+      args:
+        OCR_DEVICE: gpu
+    environment:
+      OCR_DEVICE: gpu:0   # .env 의 OCR_DEVICE(cpu) 와 상관없이 GPU
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

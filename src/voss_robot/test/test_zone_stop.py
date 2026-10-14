@@ -15,6 +15,9 @@ class _FakeDsr:
     def move_line_async(self, cmd, vel, acc):
         self.sent.append(cmd)
 
+    def move_spline_async(self, cmds, vel, acc):
+        self.sent.append(("spline", cmds))
+
 
 def _gw(abort: bool):
     ev = threading.Event()
@@ -33,7 +36,7 @@ def test_send_move_after_stop_sends_nothing():
     gw = _gw(abort=True)
     try:
         with pytest.raises(_ZoneError, match="^STOPPED"):
-            RobotGatewayNode._send_move(gw, "rise", [1.0] * 6)
+            RobotGatewayNode._send_move(gw, "rise", [[1.0] * 6])
         assert gw.dsr.sent == []
     finally:
         gw.queue.close()
@@ -42,7 +45,16 @@ def test_send_move_after_stop_sends_nothing():
 def test_send_move_without_stop_sends_once():
     gw = _gw(abort=False)
     try:
-        RobotGatewayNode._send_move(gw, "rise", [1.0] * 6)
+        RobotGatewayNode._send_move(gw, "rise", [[1.0] * 6])
         assert gw.dsr.sent == [[1.0] * 6]
+    finally:
+        gw.queue.close()
+
+
+def test_send_move_arc_is_one_spline():
+    gw = _gw(abort=False)
+    try:
+        RobotGatewayNode._send_move(gw, "arc", [[1.0] * 6, [2.0] * 6, [3.0] * 6])
+        assert gw.dsr.sent == [("spline", [[1.0] * 6, [2.0] * 6, [3.0] * 6])]
     finally:
         gw.queue.close()

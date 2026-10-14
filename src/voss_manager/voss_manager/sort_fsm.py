@@ -5,9 +5,11 @@ step(ctx, event) → Out(ctx', actions, reply). ctx 는 바꾸지 않고 새 값
 6상태 (T20, docs/architecture.md):
   IDLE —start→ RUNNING(OBSERVE 이동 → 입구 관측) —stage 1 판독→ PICKING(TrackAndGrasp → MoveToZone PLACE)
   → SortResult → RUNNING. stop/resume/reset_zone, 구역 가득 → PAUSED.
-  불확실(후보는 있는데 LOW_CONF·불일치)하면 PICKING 의 목적지가 재확인 구역 → RECHECK(VIEW → ReadLabel)
+  불확실(후보 없음 UNKNOWN·LOW_CONF·불일치)하면 PICKING 의 목적지가 재확인 구역 → RECHECK(VIEW → ReadLabel)
   → 확정이면 PICK → 목적 구역 PLACE, 아니면 ASKING(질문 30 s) → 답 → PICK → PLACE / 무응답 → HOLD.
   (SRD v1.0 §5.7 질문, voss_msgs.md MoveToZone 재확인 실패 분기·ReadLabel, #51 MC-017)
+Sprint 2 의 7번째 상태 PALLETIZING(팔레타이징)은 pallet_fsm 이 맡고, 노드는 pallet_fsm.step 을 부른다
+(팔레타이징이 아닌 이벤트는 그대로 이 모듈의 step 으로 간다).
 여기서 정한 규칙은 src/voss_manager/CLAUDE.md "운용 규칙" 에 적는다.
 """
 
@@ -24,6 +26,7 @@ IDLE, RUNNING, PICKING, RECHECK, ASKING, PAUSED = (
     "ASKING",
     "PAUSED",
 )
+PALLETIZING = "PALLETIZING"  # Sprint 2 (pallet_fsm)
 ACTIVE = (RUNNING, PICKING, RECHECK, ASKING)  # start(ALL)·priority 를 받는 운전 상태
 ZONES = ("A", "B", "C", "RECHECK", "HOLD")
 SORT_ZONES = ("A", "B", "C")
@@ -37,6 +40,7 @@ PH_VIEW, PH_READ, PH_PICK = (
 )  # 재확인: 구역 보기 → 다시 읽기 → 재확인 칸에서 집기
 HOLD_WORDS = ("HOLD", "보류")
 ASK_TIMEOUT_NS = 30_000_000_000  # 질문 발화부터 30 s (SRD §5.7)
+START_SAY = "작업을 시작합니다."  # start 접수 응답 (BRD 8.1 1단계)
 
 
 # ---------------------------------------------------------------- 설정
@@ -49,9 +53,23 @@ class Config:
     zone_map: dict[str, str]  # 동 → 구역(A/B/C)
     codes: dict[str, str]  # 분류코드 → 동
     aliases: dict[str, list[str]]  # 동 → 별칭
-    capacity: dict[str, int]  # 구역(대문자) → 칸 수 = grid cols × rows
+    capacity: dict[str, int]  # 구역(대문자) → 칸 수 = grid cols × rows × layers
     confidence_min: float
     version: str  # ZoneMap.version = SortResult.rule_version (≤ 16자)
+    pallet_ready: bool = (
+        False  # zones.pallet.pose 교시됨 (Sprint 2) — 아니면 palletize 를 받지 않는다
+    )
+    order: dict[str, tuple[int, ...]] = field(
+        default_factory=dict
+    )  # 구역 → 채우는 칸 순서(grid.order)
+    layer_cells: dict[str, int] = field(
+        default_factory=dict
+    )  # 2층 이상 구역 → 한 층 칸 수(cols × rows). 칸의 층 = slot // 이 값 — 팔레타이징이 위층부터 집는다
+
+    def slot_at(self, zone: str, n: int) -> int:
+        """구역에 n 번째로 놓는 박스의 칸. grid.order 가 있으면 그 순서, 넘어가면 n 그대로(2층 등)."""
+        order = self.order.get(zone, ())
+        return order[n] if n < len(order) else n
 
     def dong_of(self, name: str) -> str:
         """정식 동 이름 또는 별칭 → 정식 이름. 없으면 ""."""
@@ -90,18 +108,41 @@ def load_config(raw: dict) -> Config:
             raise ValueError(f"aliases {dong} 가 zone_map 에 없음")
 
     zones = {str(k).upper(): v for k, v in (raw.get("zones") or {}).items()}
-    capacity = {}
+    capacity, order, layer_cells = {}, {}, {}
     for z in ZONES:
         grid = (zones.get(z) or {}).get("grid") or {}
         cols, rows = grid.get("cols"), grid.get("rows")
         if not cols or not rows or int(cols) < 1 or int(rows) < 1:
             raise ValueError(f"zones.{z.lower()}.grid 의 cols·rows 가 없음")
-        capacity[z] = int(cols) * int(rows)
+        layers = grid.get("layers", 1)  # 쌓는 층 수(선택, voss_config.md grid)
+        if isinstance(layers, bool) or not isinstance(layers, int) or layers < 1:
+            raise ValueError(f"zones.{z.lower()}.grid.layers 는 1 이상 정수: {layers!r}")
+        capacity[z] = int(cols) * int(rows) * layers
+        if layers > 1:
+            layer_cells[z] = int(cols) * int(rows)
+        # order(선택): 앞쪽 칸을 채우는 순서 — 먼 칸을 트레이가 빌 때 낮게 지나가 놓으려고(voss_config.md grid)
+        o = grid.get("order")
+        if o is not None:
+            if (
+                not isinstance(o, list)
+                or not o
+                or any(isinstance(k, bool) or not isinstance(k, int) for k in o)
+                or sorted(o) != list(range(len(o)))
+                or len(o) > capacity[z]
+            ):
+                raise ValueError(f"zones.{z.lower()}.grid.order 는 0..n−1 을 한 번씩: {o!r}")
+            order[z] = tuple(o)
 
     version = str(raw.get("version", ""))
     if not version or len(version) > 16:
         raise ValueError(f"version 이 비었거나 16자 초과: {version!r}")
-    return Config(zone_map, codes, aliases, capacity, float(conf), version)
+    pose = (zones.get("PALLET") or {}).get("pose")
+    pallet_ready = (
+        isinstance(pose, list) and len(pose) == 6 and all(isinstance(v, (int, float)) for v in pose)
+    )
+    return Config(
+        zone_map, codes, aliases, capacity, float(conf), version, pallet_ready, order, layer_cells
+    )
 
 
 def zone_map_entries(cfg: Config) -> list[tuple[str, str, str, list[str]]]:
@@ -117,7 +158,9 @@ def make_session_id(now: datetime, rand4: str) -> str:
     return f"{now:%Y%m%dT%H%M%S}-{rand4}"
 
 
-def intent_to_command(kind: str, dong: str, zone: str, box_id: str) -> tuple[str, str] | None:
+def intent_to_command(
+    kind: str, dong: str, zone: str, box_id: str, route: tuple[str, ...] = ()
+) -> tuple[str, str] | None:
     """Intent → (command, arg) (intent_json.md). update_zone_map 은 C 범위라 None."""
     k = kind.strip().lower()
     if k in ("start", "stop", "resume"):
@@ -126,6 +169,10 @@ def intent_to_command(kind: str, dong: str, zone: str, box_id: str) -> tuple[str
         return "priority", dong
     if k == "answer":
         return "answer", f"{box_id}|{dong or zone}"
+    if k == "recheck":
+        return "recheck", ""
+    if k == "palletize":
+        return "palletize", ",".join(route)  # Command arg = 정식 동 이름 쉼표 (Sprint 2)
     return None
 
 
@@ -218,14 +265,42 @@ class Ctx:
     resume_to: str = (
         ""  # PAUSED 에서 resume 할 때 이어 갈 재확인 단계: RECHECK | ASKING | PICK | PLACE
     )
+    # ---- Sprint 2 팔레타이징 (pallet_fsm)
+    pallet: object | None = (
+        None  # pallet_fsm.Run — 실행 중·멈춤·끝난 팔레타이징, reset_zone PALLET 까지 유지
+    )
+    pallet_count: int = (
+        0  # 팔레트에 놓은 박스 수 (≠ 0 이면 palletize 거부, reset_zone PALLET 으로 0)
+    )
+    hold_width_mm: tuple[float, float] = (39.5, 44.0)  # 재개 때 파지 확인 — RG2 보고 폭 범위
+    pallet_layers: int = 2  # 2 = 16칸, 1 = 1층 8칸만 (ADR-0014 B — 게이트에서 2층 놓기를 뺄 때)
+
+    # 재확인 미루기(10/12 시연): 재확인 칸에 놓기만 하고 분류를 이어 간다. `recheck` 명령에 칸 순서대로 처리
+    defer_recheck: bool = False
+    recheck_queue: tuple[
+        Box, ...
+    ] = ()  # 재확인 칸에 보관 중인(아직 다시 읽지 않은) 박스, 놓은 순서
+    draining: bool = False  # recheck 명령으로 보관 박스를 처리하는 중 — 한 개 끝나면 다음 것
 
 
-def new_ctx(cfg: Config, home_first: bool = True, ask_timeout_s: float = 30.0) -> Ctx:
+def new_ctx(
+    cfg: Config,
+    home_first: bool = True,
+    ask_timeout_s: float = 30.0,
+    hold_width_mm: tuple[float, float] = (39.5, 44.0),
+    pallet_layers: int = 2,
+    defer_recheck: bool = False,
+) -> Ctx:
+    if pallet_layers not in (1, 2):
+        raise ValueError(f"pallet_layers={pallet_layers} — 1 | 2")
     return Ctx(
         cfg=cfg,
         slots={z: 0 for z in ZONES},
         home_first=home_first,
         ask_timeout_ns=int(ask_timeout_s * 1e9),
+        hold_width_mm=(float(hold_width_mm[0]), float(hold_width_mm[1])),
+        pallet_layers=int(pallet_layers),
+        defer_recheck=defer_recheck,
     )
 
 
@@ -240,7 +315,12 @@ class Command:
     arg: str
     now_ns: int
     not_ready: tuple[str, ...] = ()  # 노드가 계산한 준비 안 된 항목
-    new_session_id: str = ""  # start 로 새 세션을 열 때 쓸 값(노드가 시계·난수로 만든다)
+    new_session_id: str = (
+        ""  # start 로 새 세션을 열 때 쓸 값(노드가 시계·난수로 만든다). palletize 는 실행 ID
+    )
+    grip_mm: float = (
+        -1.0
+    )  # 지금 RG2 보고 폭(RobotState, 오래됐거나 없으면 -1) — 팔레타이징 재개 때 파지 확인
 
 
 @dataclass(frozen=True)
@@ -363,6 +443,7 @@ class Result:
     rule_version: str
     reason: str
     attempts: int
+    slot: int = -1  # 놓은 칸 (PLACED·HELD), 없으면 -1 (Sprint 2)
 
 
 @dataclass(frozen=True)
@@ -463,7 +544,7 @@ def _on_command(ctx: Ctx, ev: Command) -> Out:
             stop_requested=False,
         )
         log = Log("info", f"세션 {ev.new_session_id} 시작, 우선 {ctx.priority or '전체'}")
-        return Out(nxt, (*acts, log), (True, "start 접수"))
+        return Out(nxt, (Say(START_SAY), *acts, log), (True, "start 접수"))
 
     if cmd == "priority":
         dong = ctx.cfg.dong_of(arg)
@@ -491,7 +572,8 @@ def _on_command(ctx: Ctx, ev: Command) -> Out:
             return _reject(ctx, "준비 안 됨: " + ", ".join(nr))
         if ctx.box is not None and ctx.resume_to:
             return _resume_recheck(ctx, ev.now_ns)
-        nxt, acts = _enter_running(ctx, ev.now_ns, stop_requested=False)
+        # 보관 박스 처리 중 멈췄으면 분류로 돌아간다 — 남은 보관 박스는 recheck 를 다시 보내 이어 간다
+        nxt, acts = _enter_running(ctx, ev.now_ns, stop_requested=False, draining=False)
         return Out(nxt, (*acts, Log("info", "resume")), (True, "resume 접수"))
 
     if cmd == "reset_zone":
@@ -504,6 +586,11 @@ def _on_command(ctx: Ctx, ev: Command) -> Out:
             return _reject(
                 ctx, f"{ctx.box.box_id} 가 재확인 구역에서 처리 중 — resume 으로 끝낸 뒤 비운다"
             )
+        if zone == "RECHECK" and ctx.recheck_queue:
+            ids = ", ".join(b.box_id for b in ctx.recheck_queue)
+            return _reject(
+                ctx, f"재확인 칸에 보관 중인 박스가 있다({ids}) — recheck 로 처리한 뒤 비운다"
+            )
         slots = {**ctx.slots, zone: 0}
         full = "" if ctx.full_zone == zone else ctx.full_zone
         busy = frozenset() if zone == "RECHECK" else ctx.recheck_busy
@@ -515,6 +602,14 @@ def _on_command(ctx: Ctx, ev: Command) -> Out:
 
     if cmd == "answer":
         return _on_answer(ctx, arg, ev.now_ns)
+
+    if cmd == "recheck":
+        if not ctx.recheck_queue:
+            return _reject(ctx, "재확인 칸에 보관 중인 박스가 없음")
+        if ctx.state != RUNNING or ctx.phase != PH_NONE or ctx.box is not None:
+            return _reject(ctx, f"{ctx.state} 에서는 recheck 불가 (분류 중 박스가 끝난 뒤)")
+        out = _next_recheck(replace(ctx, draining=True), ev.now_ns)
+        return Out(out.ctx, out.actions, (True, f"재확인 시작 ({len(ctx.recheck_queue)}개)"))
 
     return _reject(ctx, f"모르는 명령: {ev.command}")
 
@@ -541,9 +636,9 @@ def _on_label(ctx: Ctx, ev: LabelSeen) -> Out:
 
     dong, zone, why = resolve_label(ev.code, ev.dong, ev.confidence, ctx.cfg)
     cands = label_candidates(ctx.cfg, ev.dong, ev.dong_alt, codes=(ev.code,))
-    if why == "UNKNOWN":
-        # 후보가 하나도 없으면(글자를 못 읽음) 집지 않고 다음 판독을 기다린다
-        return _note(ctx, ev.track_id, why, f"대기 UNKNOWN raw={ev.raw_text!r}")
+    # 후보가 하나도 없어도(UNKNOWN, 글자를 못 읽음) 집어서 재확인 구역으로 보낸다 (BRD 판독 실패 흐름).
+    # OCR 한 번 ≈ 2 s, 집을 수 있는 구간 ≈ 4 s 라 다음 stage 1 판독을 기다리면 박스가 지나간다(10/12 실기).
+    # 추종 중 stage 2 판독이 확실하면 목적 구역으로 바뀌고, 재확인에서도 모르면 전체 동을 후보로 묻는다.
 
     decided = ctx.decided | {ev.track_id}
     if not why and ctx.priority and dong != ctx.priority:
@@ -556,14 +651,14 @@ def _on_label(ctx: Ctx, ev: LabelSeen) -> Out:
         )
 
     if why:
-        # 후보는 있는데 불확실(LOW_CONF·코드와 동 이름 불일치) → 집어서 재확인 구역으로 (SRD SYS-FR-012)
+        # 불확실(UNKNOWN·LOW_CONF·코드와 동 이름 불일치) → 집어서 재확인 구역으로 (SRD SYS-FR-012)
         zone, slot = "RECHECK", _free_recheck_slot(ctx)
         if slot < 0:
             return _zone_full(ctx, "RECHECK", decided)
     elif ctx.slots[zone] >= ctx.cfg.capacity[zone]:
         return _zone_full(ctx, zone, decided)
     else:
-        slot = ctx.slots[zone]
+        slot = ctx.cfg.slot_at(zone, ctx.slots[zone])
 
     missing = [k for k in ("ROBOT", "SERVO") if k in not_ready_items(ctx, ev.not_ready)]
     if missing:
@@ -605,7 +700,7 @@ def _on_label_tracking(ctx: Ctx, ev: LabelSeen) -> Out:
     nbox = replace(
         box,
         zone=zone,
-        slot=ctx.slots[zone],
+        slot=ctx.cfg.slot_at(zone, ctx.slots[zone]),
         code=ev.code,
         dong=dong,
         confidence=ev.confidence,
@@ -667,7 +762,14 @@ def _box(ctx: Ctx, ev: LabelSeen, seq: int, dong: str, zone: str, slot: int) -> 
 
 
 def _result(
-    ctx: Ctx, box: Box, outcome: str, zone: str, reason: str, stamp_ns: int, attempts: int
+    ctx: Ctx,
+    box: Box,
+    outcome: str,
+    zone: str,
+    reason: str,
+    stamp_ns: int,
+    attempts: int,
+    slot: int = -1,
 ) -> Result:
     return Result(
         box_id=box.box_id,
@@ -686,6 +788,7 @@ def _result(
         rule_version=ctx.cfg.version,
         reason=reason,
         attempts=attempts,
+        slot=slot,
     )
 
 
@@ -790,18 +893,22 @@ def _on_place(ctx: Ctx, ev: MoveDone) -> Out:
         # 그 칸에서 개방했으면(RETURN_FAILED 포함) 칸을 쓴 것 (MC-018)
         slots[box.zone] += 1
         outcome = "HELD" if box.zone == "HOLD" else "PLACED"
-        res = _result(ctx, box, outcome, box.zone, reason, ev.placed_stamp_ns, box.attempts)
+        res = _result(
+            ctx, box, outcome, box.zone, reason, ev.placed_stamp_ns, box.attempts, box.slot
+        )
     else:
         res = _result(ctx, box, "FAILED", "", reason, ev.now_ns, box.attempts)
 
     if ev.ok and ctx.state in (PICKING, RECHECK):
-        return Out(
-            _done(ctx, state=RUNNING, slots=slots, stage_start_ns=ev.now_ns),
-            (
-                res,
-                Log("info", f"{box.box_id} {box.zone} 칸 {box.slot} 적재 완료 ({box.decided_by})"),
-            ),
-        )
+        done = Log("info", f"{box.box_id} {box.zone} 칸 {box.slot} 적재 완료 ({box.decided_by})")
+        nxt = _done(ctx, state=RUNNING, slots=slots, stage_start_ns=ev.now_ns)
+        if ctx.state == RECHECK and ctx.draining:
+            if nxt.recheck_queue:
+                out = _next_recheck(nxt, ev.now_ns)
+                return Out(out.ctx, (res, done, *out.actions))
+            nxt = replace(nxt, draining=False)
+            return Out(nxt, (res, done, Log("info", "보관 박스 재확인 끝, 분류 계속")))
+        return Out(nxt, (res, done))
     acts: list = [
         res,
         Log(
@@ -824,6 +931,18 @@ def _on_place_recheck(ctx: Ctx, ev: MoveDone) -> Out:
     slots = {**ctx.slots, "RECHECK": ctx.slots["RECHECK"] + 1}
     nbox = replace(box, recheck_slot=box.slot)
     nxt = replace(ctx, box=nbox, slots=slots, recheck_busy=ctx.recheck_busy | {box.slot})
+    if ev.ok and ctx.state == PICKING and ctx.defer_recheck:
+        # 보관만 하고 분류를 이어 간다. PLACE 응답 = OBSERVE 복귀 뒤라 이 시각부터 다시 관측
+        queue = (*ctx.recheck_queue, nbox)
+        return Out(
+            _done(nxt, state=RUNNING, stage_start_ns=ev.now_ns, recheck_queue=queue),
+            (
+                Log(
+                    "info",
+                    f"{box.box_id} 재확인 칸 {box.slot} 에 보관 (보관 {len(queue)}개, recheck 명령 대기)",
+                ),
+            ),
+        )
     if ev.ok and ctx.state == PICKING:
         return Out(
             replace(nxt, state=RECHECK, phase=PH_VIEW),
@@ -953,7 +1072,7 @@ def _decide(ctx: Ctx, zone: str, decided_by: str, reason: str, now_ns: int) -> O
         # 박스는 재확인 칸에 둔 채 멈춘다 — reset_zone 뒤 resume 하면 PICK 부터
         out = _zone_full(base, zone, ctx.decided)
         return Out(replace(out.ctx, phase=PH_NONE, resume_to="PICK"), out.actions)
-    nbox = replace(nbox, slot=ctx.slots[zone])
+    nbox = replace(nbox, slot=ctx.cfg.slot_at(zone, ctx.slots[zone]))
     return Out(
         replace(base, box=nbox, state=RECHECK, phase=PH_PICK, resume_to=""),
         (
@@ -984,7 +1103,7 @@ def _on_pick(ctx: Ctx, ev: MoveDone) -> Out:
     # PICK 실패 → 박스는 재확인 칸에 둔 채 보류(HELD), 사람 확인 (#51 MC-017)
     reason = _fail_reason(ctx, ev)
     res = replace(
-        _result(ctx, box, "HELD", "RECHECK", reason, ev.now_ns, box.attempts),
+        _result(ctx, box, "HELD", "RECHECK", reason, ev.now_ns, box.attempts, box.recheck_slot),
         decided_by=box.decided_by,
     )
     acts: list = [
@@ -994,6 +1113,21 @@ def _on_pick(ctx: Ctx, ev: MoveDone) -> Out:
     if ctx.state != PAUSED:
         acts.append(Say("재확인 구역의 박스를 집지 못해 일시정지했습니다."))
     return Out(_done(ctx, state=PAUSED, question=""), tuple(acts))
+
+
+def _next_recheck(ctx: Ctx, now_ns: int) -> Out:
+    """보관 박스 하나를 꺼내 재확인(VIEW → 다시 읽기 → 확정 또는 질문)을 시작한다."""
+    box, rest = ctx.recheck_queue[0], ctx.recheck_queue[1:]
+    return Out(
+        replace(ctx, box=box, recheck_queue=rest, state=RECHECK, phase=PH_VIEW),
+        (
+            CallMove("RECHECK", 0, "VIEW"),
+            Log(
+                "info",
+                f"{box.box_id} 보관 박스 재확인 시작 — 재확인 칸 {box.recheck_slot} 다시 읽기 (남은 보관 {len(rest)}개)",
+            ),
+        ),
+    )
 
 
 def _resume_recheck(ctx: Ctx, now_ns: int) -> Out:

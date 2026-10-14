@@ -4,6 +4,7 @@
 - 보류 트랙: PICKING 중 현재 트랙은 15 프레임 규칙으로 버리지 않는다(BoxTrack 규칙)
 - 관측 자세 판정: TCP 가 관측 자세에서 1 mm·0.5°(공구축) 안이면 호모그래피, 아니면 핸드아이(calibration.md)
 - 크롭 창·선명도·전송 간격, 지연 통계
+- 녹화 재생 시각 옮기기(`PlaybackClock`, playback_restamp)
 """
 
 from __future__ import annotations
@@ -207,3 +208,23 @@ class LoopStats:
             f"루프 p95 {p95(self.loop_ms):.1f} ms{age}, box {self.boxes}(무효 {self.invalid}; {src}), "
             f"crop {self.crops}{diff}"
         )
+
+
+class PlaybackClock:
+    """녹화 재생 시각 → 지금 시계 (playback_restamp). 첫 메시지(영상·pose 어느 쪽이든)를 그때의 지금에 맞추고
+    이후 간격은 재생 배속으로 나눈다. 영상과 pose 를 같은 기준으로 옮겨야 pose 보간이 맞는다.
+
+    녹화 stamp 를 그대로 내면 sort_manager 의 "관측 시작 전 촬영"·belt_servo 의 입력 나이 검사에 모두 걸린다
+    (10/11 voss_dry_run). 운용·분석 재생은 기본(false)대로 녹화 시각을 보존한다."""
+
+    def __init__(self, rate: float = 1.0) -> None:
+        if rate <= 0:
+            raise ValueError(f"재생 배속은 0 보다 커야 한다: {rate}")
+        self.rate = rate
+        self.t0: float | None = None  # 첫 메시지의 녹화 시각(s)
+        self.w0: float | None = None  # 그때의 지금(s)
+
+    def __call__(self, t_src: float, now: float) -> float:
+        if self.t0 is None:
+            self.t0, self.w0 = t_src, now
+        return self.w0 + (t_src - self.t0) / self.rate

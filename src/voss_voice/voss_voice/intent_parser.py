@@ -79,6 +79,7 @@ class IntentParserNode(Node):
         m = Intent()
         m.type, m.dong, m.zone = fields["type"], fields["dong"], fields["zone"]
         m.count, m.raw_text, m.box_id = fields["count"], fields["raw_text"], fields["box_id"]
+        m.route = list(fields.get("route", []))  # palletize 경로 (Sprint 2), 그 밖은 []
         self._pub_intent.publish(m)
 
 

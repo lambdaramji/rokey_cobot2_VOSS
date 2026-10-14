@@ -9,6 +9,7 @@ topic read voss/zone_map
 topic read voss/robot
 topic read voss/command/ack
 topic read voss/log_status
+topic read voss/pallet/state
 
 user bridge
 topic read voss/command
@@ -18,6 +19,7 @@ topic write voss/zone_map
 topic write voss/robot
 topic write voss/command/ack
 topic write voss/log_status
+topic write voss/pallet/state
 
 user debug
 topic read voss/#

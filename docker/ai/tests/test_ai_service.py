@@ -71,6 +71,20 @@ def test_normalize_rejects(raw):
     assert normalize(raw, "x") is None
 
 
+def test_normalize_palletize_route():
+    """S2-T06: route 는 문자열 배열일 때만 넘기고, 동 검증은 intent_parser 가 한다(들은 그대로)."""
+    raw = '{"type":"palletize","dong":null,"zone":null,"count":0,"query_kind":null,"route":["대치동","신사"],"raw_text":"x"}'
+    out = normalize(raw, "원문")
+    assert out["type"] == "palletize" and out["route"] == ["대치동", "신사"]
+    assert normalize('{"type":"palletize","route":"대치동"}', "x")["route"] is None
+    assert normalize('{"type":"start","route":null}', "x")["route"] is None
+    assert INTENT_SCHEMA["properties"]["route"] == {
+        "type": ["array", "null"],
+        "items": {"type": "string"},
+    }
+    assert "palletize" in INTENT_SCHEMA["properties"]["type"]["enum"]
+
+
 # --- HTTP (가짜 모델) ---
 @pytest.fixture
 def client(monkeypatch):

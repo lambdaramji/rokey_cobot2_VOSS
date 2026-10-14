@@ -32,6 +32,22 @@
 문서의 **manager 상태 변경 로그→DOM** 전체 기준은 실제 manager가 동작하는
 현장 안전 검증에서 추가 실측해야 한다. `UNKNOWN`은 3초 상태 미수신 시 정상이다.
 
+## S2-T08 — 팔레트 3D 화면 재생 · 반영 ≤ 1초 (공용 PC 한 대)
+
+**전제:** main 에는 아직 없음 — Sprint 2 `voss_msgs`(PalletState)와 `/voss/pallet/state` 를 `voss/pallet/state` 로 넘기는 Sprint 2 `hmi_bridge` 가 빌드된 워크스페이스(현재 `integ/1014-s4`), `hmi_bridge`·Mosquitto·웹(Spring Boot·Nginx)이 떠 있고 **`sort_manager` 는 꺼져 있다**(재생기가 확인하고 거부한다). 재생 데이터는 `docker/web/frontend/test/fixtures/pallet_s1.json`(실제 pallet_fsm 의 S1 + slot 4 실패·pending #37 당겨 놓기, 화면 칸 번호 = slot + 1).
+
+1. 공용 PC 브라우저 `http://127.0.0.1/` → F12 Console 에 `s2_pallet_dom_observer.js` 내용을 붙여 넣는다 → `S2-T08 관측 준비 완료`.
+2. 공용 PC 터미널(레포 루트):
+   ```bash
+   source /opt/ros/jazzy/setup.bash && source ~/voss_ws/install/setup.bash
+   python3 scripts/integration/s2_pallet_replay.py              # 1초 간격 20개, 끝나면 빈 상태로 되돌림
+   ```
+3. 화면 확인(재생 확인): 계획 직후 16칸 배정·"대치동 3개" 경고 → 칸 1부터 차례로 채워짐 → 칸 5(2열 1층 1줄) 청담 박스 실패 뒤 칸 7 역삼 박스가 칸 5 로 내려옴 → "16개 중 15개 적재 · 실패 1".
+4. 터미널 끝의 `SENT_JSON=` 뒤 배열을 복사해 Console 에서 `vossPalletReport(<배열>)` → 20행 표와 `p95`·`최대`·`판정`. 최대 > 1000 ms 이거나 미수신이 있으면 FAIL.
+
+**안전:** `/voss/pallet/state` 화면용 상태만 발행한다. 로봇·벨트·그리퍼 명령, `/voss/sort/command`, MQTT `voss/command` 는 발행하지 않는다. 같은 PC 시계라 시계 보정은 없다(T13 과 다름).
+**판정 범위:** ROS 발행 → hmi_bridge → MQTT → SSE → React DOM. 실제 sort_manager 발행 → DOM 은 팔레타이징 실기(S2-T02·T03·T21 뒤)에서 다시 잰다.
+
 ## T14 — 지시 4종 각 1회 (#23)
 
 `src/voss_voice/test/fixtures/intent_cases.json` 기준으로
