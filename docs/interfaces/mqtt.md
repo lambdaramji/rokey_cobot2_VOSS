@@ -27,7 +27,7 @@
 | `voss/zone_map` | ROS → 웹 | 1 | **true** | `{"version", "entries": [{"dong", "zone", "code", "aliases"}]}` |
 | `voss/robot` | ROS → 웹 | 0 | false | `{"connected", "state", "action", "gripper_width_mm", "error_code", "detail", "stamp"}` — RobotState(voss_msgs.md), `stamp` = header.stamp |
 | `voss/box_track` | ROS → 웹 | 0 | false | `{"track_id", "stamp", "position_valid", "position_base":{"x","y","z"}, "position_source", "calib_version"}` — BoxTrack. 좌표는 `base_link`의 m, 유효하지 않으면 `position_base:null`. 트랙당 최대 10 Hz, SSE `box_track` |
-| `voss/robot_pose` | ROS → 웹 | 0 | false | `{"stamp", "frame_id":"base_link", "position":{"x","y","z"}}` — TCP PoseStamped, m. 최대 20 Hz, SSE `robot_pose` |
+| `voss/robot_pose` | ROS → 웹 | 0 | false | `{"stamp", "frame_id":"base_link", "position":{"x","y","z"}, "orientation":{"x","y","z","w"}}` — TCP PoseStamped, m. frame_id 가 `base_link` 가 아니거나 비유한값이면 버린다. 최대 20 Hz, SSE `robot_pose` |
 | `voss/robot_joints` (제안) | ROS → 웹 | 0 | false | `{"stamp","frame_id":"base_link","name":["joint_1"…"joint_6"],"position":[rad 6개]}` — 기존 `/dsr01/joint_states`를 이름순으로 최대 20 Hz 전달, SSE `robot_joints` |
 | `voss/command` | 웹 → ROS | 1 | false | `{"command_id", "type", "args", "raw_text", "sent_at"}` — Spring Boot 가 `command_id`(UUID)·`sent_at` 을 붙인다(web_api.md `POST /api/commands`) |
 | `voss/command/ack` | ROS → 웹 | 1 | false | `{"command_id", "ok", "message", "acked_at"}` — `/voss/sort/command` 응답(= manager **접수**, 완료 아님) |
@@ -49,7 +49,7 @@
   전달할지 별도 결정하기 전에는 TCP 끝점만 실제 좌표로 표시하고 팔 모형은
   근사 시각화로 명시한다. 검증된 픽셀 `u/v`→작업공간 변환은 현재 웹 계약에 없다.
 - 승인: 남현지(BoxTrack), 김학민(TCP 상태), 정의석(웹·MQTT). 관절 데이터 전송은
-  이 변경에 포함하지 않는다.
+  이 절에 포함하지 않는다 — `voss/robot_joints` 는 위 표의 (제안) 행과 [robot_joints_fk_proposal.md](robot_joints_fk_proposal.md).
 
 - 시각은 모두 ISO-8601 `+09:00` 문자열(공용 PC 시스템 시계). ROS Time 은 hmi_bridge 가 바꾼다.
 - `type` 은 Command canonical 명령(voss_msgs.md): `start`·`stop`·`resume`·`priority`·`answer`·`reset_zone`. 다른 문자열은 실행하지 않는다.

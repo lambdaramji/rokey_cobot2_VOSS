@@ -7,12 +7,12 @@
 
 | 항목 | 기존 계약 | 현재 시험 배치 제안 | 영향받는 상대·승인 필요 |
 |---|---|---|---|
-| Nodes PC | 공용 PC에 모든 서비스 | `172.24.3.240`: ROS/비전, 마이크·voice_listener·intent_parser·speech_out, hmi_bridge·sort_logger | 남현지 PL, 김학민 |
-| Web PC | 별도 서버 위치 미적용 | `172.24.0.51`: docker/ai (Whisper·LLM·TTS), docker/web (React·Spring Boot), docker/db, Mosquitto | 남현지 PL, 김학민, 정의석 |
+| Nodes PC | 공용 PC에 모든 서비스 | 공용 PC: ROS/비전, 마이크·voice_listener·intent_parser·speech_out, hmi_bridge·sort_logger | 남현지 PL, 김학민 |
+| Web PC | 별도 서버 위치 미적용 | 별도 PC: docker/ai (Whisper·LLM·TTS), docker/web (React·Spring Boot), docker/db, Mosquitto | 남현지 PL, 김학민, 정의석 |
 | MQTT 브로커 (#20) | 공용 PC 127.0.0.1:1883 | Web PC **127.0.0.1:1883**; Nodes PC는 SSH 로컬 포워드 `127.0.0.1:1883 → Web PC:1883` | 정의석·김학민 |
 | HTTP API (#68) | Nodes PC localhost 8000·8080 | Web PC 127.0.0.1:8000·8080, Nodes PC는 SSH 로컬 포워드로 동일 포트 접속 | 정의석·남현지 |
 | DB (#21) | Nodes PC localhost 5432 | Web PC 127.0.0.1:5432, Nodes PC 127.0.0.1:**5432** → Web PC:5432 (Nodes PC의 기존 PostgreSQL 서비스 정지 및 Docker 정리 후 포트 일치) | 정의석·김학민 |
-| 웹 운전 명령 (#68) | **공용 PC 로컬만** start/resume/priority/answer/reset_zone, stop은 어디서든 | Web PC의 로컬 브라우저를 공용 PC로 간주하면 안 됨. **비구동 통합 시험에서는 비-stop 명령 기본 차단**. 현장 승인 후 Nodes PC 브라우저 원격 IP `172.24.3.240`만 추가 확인하는 방식은 **제안**이며 IP만으로 사용자를 인증할 수 없어 추가 보안 검토 필요 | 남현지 PL·김학민 안전 승인 필수 |
+| 웹 운전 명령 (#68) | **공용 PC 로컬만** start/resume/priority/answer/reset_zone, stop은 어디서든 | Web PC의 로컬 브라우저를 공용 PC로 간주하면 안 됨. **비구동 통합 시험에서는 비-stop 명령 기본 차단**. 현장 승인 후 Nodes PC 브라우저의 원격 IP 하나만 추가 확인하는 방식은 **제안**이며 IP만으로 사용자를 인증할 수 없어 추가 보안 검토 필요 | 남현지 PL·김학민 안전 승인 필수 |
 
 ## 유지할 계약 (변경하지 않음)
 

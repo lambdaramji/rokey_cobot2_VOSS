@@ -1,6 +1,6 @@
 # Sorting Workspace 파지·운반 표시 계약 제안 (승인 대기)
 
-상태: **남현지·김학민·정의석 승인으로 이벤트 전달 코드 반영; 실측 오프셋 미확인으로 LIVE 운반 박스 위치 표시 보류.** 기존 `BoxTrack`, `/voss/robot/pose`, `SortState`, `SortResult`, DB 집계의 의미는 유지한다. 로봇 제어에는 사용하지 않는다.
+상태: **제안 — 2026-10-13 남현지·김학민·정의석 구두 승인 전달. `BoxMotion` IDL·manager GRASPED·gateway RELEASED 는 아직 구현 전이며, hmi_bridge 는 메시지가 생기면 전달만 한다(없으면 구독하지 않음). 실측 오프셋 미확인으로 LIVE 운반 박스 위치 표시 보류.** 기존 `BoxTrack`, `/voss/robot/pose`, `SortState`, `SortResult`, DB 집계의 의미는 유지한다. 로봇 제어에는 사용하지 않는다.
 
 ## 기존 신호의 한계
 
@@ -9,7 +9,7 @@
 - `RobotState.action`·그리퍼 폭이나 TCP와 박스의 거리, BoxTrack 중단은 파지·개방 성공 신호가 아니다.
 - 현재 `MoveToZone`의 RECHECK `PICK` 모드는 gateway에서 `NOT_CONFIGURED`로 거부된다. 재확인 구역 재파지 표시는 그 동작이 구현·검증된 뒤 별도로 다룬다.
 
-## 승인된 최소 추가 계약
+## 최소 추가 계약 (제안)
 
 1. 새 `BoxMotion` 이벤트를 같은 ROS 토픽 `/voss/box_motion`에 발행한다. 필드: `session_id`, `box_id`, `track_id`, `phase` (`GRASPED` 또는 `RELEASED`), `stamp`, `zone`. `GRASPED`는 manager가 해당 goal의 `reason=OK && grasped=true`를 확인한 뒤 한 번만 발행한다. `RELEASED`는 gateway가 해당 PLACE의 RG2 개방 성공 직후 `placed_stamp`로 한 번만 발행한다. `zone`은 RELEASED에서 실제 요청 구역, GRASPED에서 빈 문자열이다. 재시도·중복 이벤트는 `(session_id, box_id, phase, stamp)`로 식별한다.
 2. gateway가 RELEASED에 원래 박스 ID를 실을 수 있도록 `MoveToZone.Request` 끝에 `session_id`, `box_id`, `track_id`를 추가한다. manager가 PLACE 요청에만 현재 값을 채운다. ID 없는 외부 요청은 RELEASED 시각화 이벤트를 발행하지 않는다. 기존 구역·슬롯·모드·응답 의미는 유지한다. 이 IDL 변경은 사용 노드의 재빌드가 필요하다.

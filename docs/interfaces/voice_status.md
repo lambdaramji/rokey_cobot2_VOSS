@@ -3,10 +3,10 @@
 상태: **로컬 구현·시험용 제안, 운영 계약 승인 전**. 관련 PR에는 `interface` 라벨을 붙인다.
 기존 mqtt.md의 확정 7개 토픽과 ADR-0006/0007을 대체하지 않는다.
 
-## 확인한 기존 계약
+## ROS 쪽 (voss_voice 변경 PR 이 새로 추가)
 
-- `voice_listener`의 `/voss/voice/status`: `std_msgs/String` JSON. ROS reliable/volatile, depth 10.
-- 소스에 있는 phase는 `WAKE_DETECTED`, `COMMAND_ACCEPTED`, `RECOGNITION_FAILED`, `TIMED_OUT` 네 가지다.
+- `voice_listener`의 `/voss/voice/status`: `std_msgs/String` JSON. ROS reliable/volatile, depth 10 (topics.md `/voss/voice/*` 행). main 에는 없던 토픽이며 `voice_feedback.py` 와 함께 들어온다.
+- phase는 `WAKE_DETECTED`, `COMMAND_ACCEPTED`, `RECOGNITION_FAILED`, `TIMED_OUT` 네 가지다.
 - 필드는 `phase`, `event_id`, `utterance_id`뿐이다. timestamp는 없다. UUID를 시각순으로 비교하지 않는다.
 - `COMMAND_ACCEPTED`는 WakeGate를 통과한 **전사 텍스트 수락**이다. intent_parser의 허용 목록 검증, manager 접수, 로봇 동작 완료가 아니다.
 - ADR-0007의 호출어 창은 5초다. 웹의 8초 상수는 ROS 시간 초과 이벤트가 오지 않을 때의 별도 UI 대기 한도다. 정상 경로에서는 ROS의 5초 이벤트가 먼저 올 수 있다.
