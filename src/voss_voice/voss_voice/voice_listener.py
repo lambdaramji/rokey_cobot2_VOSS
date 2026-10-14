@@ -21,8 +21,8 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy
 from std_msgs.msg import String
 
 from voss_voice import http_client
-from voss_voice.voice_feedback import TIMEOUT_SAY, VoiceFeedback
 from voss_voice.listen_logic import Segmenter, VadConfig, WakeGate, put_drop_oldest, to_wav
+from voss_voice.voice_feedback import TIMEOUT_SAY, VoiceFeedback
 
 QOS_EVENTS = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
 

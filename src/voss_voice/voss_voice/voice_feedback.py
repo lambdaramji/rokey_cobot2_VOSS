@@ -1,4 +1,5 @@
 """기존 전사 처리에 표시 이벤트만 추가한다. 초록은 전사 수락이며 로봇 완료가 아니다."""
+
 import re
 import threading
 import uuid
@@ -18,23 +19,25 @@ class VoiceFeedback:
         self.gate = gate
         self.publish = publish
         self.lock = threading.RLock()
-        self.active_id = ''
+        self.active_id = ""
         self.deadline = 0.0
 
     def _send(self, phase):
-        self.publish({'phase': phase, 'event_id': str(uuid.uuid4()), 'utterance_id': self.active_id})
+        self.publish(
+            {"phase": phase, "event_id": str(uuid.uuid4()), "utterance_id": self.active_id}
+        )
 
     def _begin(self, now):
         self.active_id = str(uuid.uuid4())
         self.deadline = now + self.gate.window_s
-        self._send('WAKE_DETECTED')
+        self._send("WAKE_DETECTED")
 
     def expire(self, now):
         """추가 음성이 없어도 호출 대기 종료를 한 번 발행한다."""
         with self.lock:
             if self.active_id and now > self.deadline:
-                self._send('TIMED_OUT')
-                self.active_id = ''
+                self._send("TIMED_OUT")
+                self.active_id = ""
                 self.gate.cancel()
 
     def fail(self, now):
@@ -42,8 +45,8 @@ class VoiceFeedback:
         with self.lock:
             self.expire(now)
             if self.active_id:
-                self._send('RECOGNITION_FAILED')
-                self.active_id = ''
+                self._send("RECOGNITION_FAILED")
+                self.active_id = ""
                 self.gate.cancel()
 
     def on_text(self, text, now):
@@ -57,8 +60,8 @@ class VoiceFeedback:
             if woke:
                 self._begin(now)
             if output and self.active_id:
-                self._send('COMMAND_ACCEPTED')
-                self.active_id = ''
+                self._send("COMMAND_ACCEPTED")
+                self.active_id = ""
             elif not text.strip():
                 self.fail(now)
             return output

@@ -3,6 +3,8 @@
 작성: 2026-10-13. 범위: 현재 Web PC의 로컬 소스. Nodes PC SSH·실제 로봇·벨트·그리퍼 실행 없음.
 계약 변경은 [음성 상태 제안](../interfaces/voice_status.md)이며 운영 확정 전이다. 관련 PR 라벨: `interface`.
 
+> **레포 반영 범위(10/14 리뷰):** 아래 파일 중 `scripts/integration/voice_logo_local.py`, `scripts/integration/test_voice_web_e2e.py`, `docs/testing/voice_web_link_results.txt`, `docs/testing/voice_web_link_e2e.txt` 는 Web PC 로컬에만 있고 이 레포(PR #37~#42)에는 없다. 격리 E2E·실마이크 실행기 절차는 그 파일이 올라온 뒤에 재현할 수 있다. 브리지·웹 쪽 파일은 PR #38(voss_hmi·docker/mqtt)·#39(docker/web)에 있다.
+
 ## 구현 결과
 
 기존 `voice_listener` → `/voss/voice/status` → **기존 hmi_bridge** → Mosquitto → **기존 Spring MQTT 구독자** → **기존 `/api/stream` SSE** → App → VossSortingWorkspace → voiceIndicator 경로를 사용한다.
@@ -85,7 +87,7 @@
 저장소 루트에서:
 
 ```bash
-cd /home/runo/collaboration/rokey_cobot2_VOSS_2
+cd <레포 루트>
 source /opt/ros/jazzy/setup.bash
 colcon build --symlink-install --packages-up-to voss_voice voss_hmi
 source install/setup.bash
@@ -97,14 +99,14 @@ npm run build --prefix docker/web/frontend
 Node 24 기준 reducer 시험이다. Java 빌드·시험:
 
 ```bash
-cd /home/runo/collaboration/rokey_cobot2_VOSS_2/docker/web/backend
+cd <레포 루트>/docker/web/backend
 ./gradlew test bootJar --no-daemon
 ```
 
 격리 E2E(기존 운영 서비스 변경 없음, `mosquitto`, `mosquitto_passwd`, Java 21, Chrome 필요):
 
 ```bash
-cd /home/runo/collaboration/rokey_cobot2_VOSS_2
+cd <레포 루트>
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 python3 scripts/integration/test_voice_web_e2e.py
@@ -130,7 +132,7 @@ docker compose -f docker/web/compose.yaml up -d --no-deps backend frontend
 암호를 커맨드 인수나 채팅에 넣지 않는다.
 
 ```bash
-cd /home/runo/collaboration/rokey_cobot2_VOSS_2
+cd <레포 루트>
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 export ROS_DOMAIN_ID=179
