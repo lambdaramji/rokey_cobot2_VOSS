@@ -150,6 +150,19 @@ class MqttRouterSseIntegrationTest {
         assertTrue(stream.getResponse().getContentAsString().contains("PALLETIZING"));
     }
 
+    /** 위치 이벤트는 실시간 전용이라 늦게 연결한 브라우저에 재생하지 않는다. */
+    @Test
+    void positionEventsAreNotReplayedToLateSubscribers() throws Exception {
+        router.receive("voss/box_track", "{\"track_id\":7,\"position_valid\":true}");
+        router.receive("voss/robot_pose", "{\"frame_id\":\"base_link\"}");
+        router.receive("voss/robot_joints", "{\"name\":[],\"position\":[]}");
+        router.receive("voss/box_motion", "{\"phase\":\"GRASPED\"}");
+        String body = openSseStream().getResponse().getContentAsString();
+        for (String name : new String[]{"box_track", "robot_pose", "robot_joints", "box_motion"}) {
+            assertFalse(body.contains("event:" + name), name);
+        }
+    }
+
     /** 음성 이벤트는 기존 SSE로 전달하지만 새 연결에 과거 호출어를 재생하지 않는다. */
     @Test
     void voiceStatusIsLiveOnlyAndDeduplicated() throws Exception {
