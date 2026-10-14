@@ -1,0 +1,115 @@
+# S2-T18 실기 절차서 (초안) — J6 회전 파지: 에뮬레이터 → 실측 → 실기 1단계(15·30·45°) → 5단계(60~90°)
+
+- 작업 S2-T18 · 작성 2026-10-14 · **초안 — 1절 실행 조건이 모두 ✅ 가 되기 전에는 실행하지 않는다.**
+- 대상 코드: 이 단위 PR(`feat/S2-T18-voss_servo-j6-rotate`, 30b4ac6 + 주관 검수 수정 커밋) + S2-T16(BoxTrack yaw) + D0 interface PR #48 이 main 에 머지된 체크아웃. 기능 플래그 `rotate.enable` 기본 off — 끄면 시연 라인과 params_sha 까지 같다.
+- 근거: [S2T18-hld.md](S2T18-hld.md)(D7 적용 단계·r3 주석) · [S2T18-dd.md](S2T18-dd.md)(12·13절) · [S2T18-pseudo.md](S2T18-pseudo.md)(r2) · [U9-run.md](U9-run.md)(공통 안전·기록 방식).
+- **실기·공용 PC 명령은 모두 사람이(박병후) 비상정지 옆에서 실행한다.** Claude 는 실행하지 않는다(CLAUDE.md 규칙 6). 2절 에뮬레이터 단계만 개인 PC 에서 Claude 가 직접 돌린다.
+- 이 문서는 계획이다. 값은 전부 **제안값**(T17 전)이고, 측정값은 measurements 에만 적는다.
+
+## 0. 단계와 확인할 것
+
+| 단계 | 어디서 | 누가 | 확인할 것 | 통과 기준(제안) |
+|---|---|---|---|---|
+| 2 | 개인 PC 두산 에뮬레이터 | Claude(래퍼) + 학민 T17 코드 | 회전이 실제로 돈다·부호·회전 중심·모든 정지 경로 각속도 0·되돌리기 | 2절 표 전부 |
+| 3 | 공용 PC·실기 (로봇 정지·펜던트) | 학민·현지(담당 밖) | 측정 ① 돌린 그리퍼 간섭, 측정 ② 돌린 자세 위치·yaw 오차, yaw 관측 실험 | 결과로 max_deg·데드밴드 확정 |
+| 4 | 실기 | 박병후(+동행 2) | 1단계: 0° 대조 3 + 15·30·45° 각 3 (min 10·max 45) | 4절 |
+| 5 | 실기 | 박병후(+동행 2) | 60·75·90° 각 3, min_deg = 데드밴드, max 90 | 5절, pending #27 범위 확정 |
+
+## 1. 실행 조건 (하나라도 ❌ 면 4·5단계를 시작하지 않는다)
+
+| # | 조건 | 확인 방법 |
+|---|---|---|
+| ① | **T17(학민) 머지**: gateway 가 servo_cmd `angular.z` 를 **베이스 Z 각속도**로 speedl 에 넘김(지금은 `servo_guard.py:82` 에서 0 으로 자름) | gateway 통계 줄 `자름 {'angular': N}` 이 회전 goal 에서 0 |
+| ② | gateway `servo_acc[1]` ≥ belt_servo `rotate.alpha_dps2`(제안 90). **지금 기본 10 이면 J6 를 켜지 않는다**(HLD D5·9절: 90° 가 x 문턱 초과, 관성 180°) | gateway 기동 로그 `acc [100.0, ≥90]` |
+| ③ | gateway 각속도 상한 ≥ `rotate.omega_max_dps`(제안 60) | T17 문서·기동 로그 |
+| ④ | **회전 중심**: 에뮬레이터(2절)로 TCP 기준인지 확인, 플랜지 기준이면 gateway 가 보정(계약상 gateway 몫 — belt_servo 는 보정하지 않는다) | 2절 E3 |
+| ⑤ | 만료·stop·자름 재전송 등 gateway 의 **모든 0 경로에 각속도 0**, 각속도 0 뒤 감속 거리 측정값 | 2절 E4·E5 |
+| ⑥ | **T16 머지 + v15 이상 빌드**(호스트·비전 컨테이너 동시): BoxTrack 에 yaw 필드 | `ros2 interface show voss_msgs/msg/BoxTrack \| grep yaw` → 2줄. belt_servo 틱 `yaw_valid` 가 true/false |
+| ⑦ | D0 interface PR #48 머지(topics.md 각속도 문구: PREPARE·TRACK·LIFT·VERIFY) | main 의 topics.md |
+| ⑧ | gateway `pose_source:=joint_states` + belt_servo `input.pose_lag_ms: 0`(rotate 가 켜지면 교차 검사가 60 을 거부) | gateway 기동 줄 `pose_source joint_states 확인: … → 사용`, 회차마다 `→ service`·`거부` 없음 |
+| ⑨ | 3단계 결과: 데드밴드·r_min·n_min(yaw 관측 실험), max_deg(측정 ②·간섭 ①) 를 measurements 에 기록하고 실기 yaml 에 반영 | measurements 문서 |
+| ⑩ | 손목 카메라 USB 케이블: 펜던트로 J6 를 관측 자세에서 ±45°(5단계면 ±90°) 천천히 돌려 당김·걸림 없음 | 사진 |
+| ⑪ | `/voss/robot/pose` 주기 ≤ 25 ms(≥ 40 Hz) — 회전 "정지" 판정은 pose 수신이 `rotate.pose_fresh_s`(0.05) 안일 때만 믿는다. 느리면 STOPPING 이 정지를 못 봐 TRACK 에 묶인다 → pose_fresh_s 를 측정 주기의 2배로 | `ros2 topic hz /voss/robot/pose` (joint_states 운용이면 약 50 Hz) |
+
+## 2. 단계 2 — 에뮬레이터 (개인 PC, Claude 실행, T17 코드 브랜치 필요)
+에뮬레이터는 주기·지연 값은 믿지 않고 **동작 여부·방향·착지**만 본다(10/07 합의). 띄우기·정리는 `voss-dsr-virtual-up/down`, 그 밖 명령은 `voss-ros`(도메인 79).
+
+| # | 시험 | 방법 | 통과 |
+|---|---|---|---|
+| E1 | 회전이 실제로 돈다 | rotate on + fake_box `yaw_deg 30`, goal 1개 | 틱 `rot_state` ROTATING → SETTLING → DONE, `tool_yaw_deg` 가 30° 바뀜, STALL 없음 |
+| E2 | 부호 | 같은 회차 | `wz_cmd_dps` > 0 일 때 `tool_yaw_deg` 증가(베이스 Z +). 관측 자세에서 J6 관절은 − 방향(HLD D10) |
+| E3 | 회전 중심 | 회전 구간 TCP xy(`tcp_pose_m`) 변화 | TCP 기준이면 < 1 mm. 45° 에서 ≈ 4.7 mm 면 플랜지 기준 → gateway 보정 요청(①④) |
+| E4 | 정지 경로 각속도 0 | ROTATING 중 cancel / belt_servo 강제 종료(watchdog) | 다음 speedl 의 회전 성분 0, 관성 회전량 기록 |
+| E5 | 감속 거리 | ω 60°/s 에서 0 지령 → 멈출 때까지 각 | 기록(α ≥ 90 이면 ≈ 20° 이하가 기대 — 계산 ω²/2α) |
+| E6 | 되돌리기 | 같은 goal 의 LIFT·VERIFY | `rot_state` RETURNING → RETURNED, MoveToZone PLACE 경로 검사 통과(학민 ⑤ 질문) |
+| E7 | 회전 off 회귀 | rotate off 로 같은 시나리오 | 각속도 0, 결과·착지 z 가 off 기준과 같음 |
+
+## 3. 안전·동행 (4·5단계, 하나라도 ❌ 면 시작하지 않는다)
+
+| 항목 | 기준 |
+|---|---|
+| 동행자 | 2명 이상. 비상정지 대기자는 실행자와 다른 사람(학민 또는 남현지), 손이 비상정지 위에 |
+| 펜던트 | 속도 100 %(사다리꼴 쓰면 S2T14-run 기준), 영역 리밋·공간 제한 켜짐, `reach.x_max_mm` 550 |
+| J6 범위 | 관측 자세 기준 ±45°(4단계) / ±90°(5단계) 밖으로 돌 일이 없음 — `rotate.max_deg` 로 보장 |
+| 처음 회전 | 4단계 첫 3회는 **`rotate.omega_max_dps: 30`**(제안값의 절반)으로 돌려 움직임을 눈으로 확인한 뒤 60 으로 |
+| 벨트 | 시연 속도(h250). 증속 금지 |
+| 즉시 정지(소프트웨어 "멈춰" 또는 비상정지) | PREPARE·TRACK·LIFT·VERIFY 밖에서 손목이 돈다 / 핑거·카메라가 벨트 프레임·박스에 닿을 것 같다 / ACC_MISMATCH 경고 / 회전 중 박스가 화면에서 사라져 LOST |
+| "멈춰" | 소프트웨어 정지(SR-NF-09). 위험하면 비상정지가 먼저 |
+
+## 4. 단계 4 — 실기 1단계 (min 10 · max 45)
+
+### 4.1 고정 조건 (기록한 뒤 시작)
+| 항목 | 값 · 확인 |
+|---|---|
+| 코드 | `git rev-parse --short HEAD` (1절 ①⑥⑦ 포함) |
+| 실기 yaml | 시연 라인 값 + `rotate:` 블록 — `enable: true`, 3단계 확정값(데드밴드·r_min·n_min·max_deg), `pose_fresh_s`(⑪ 측정 주기의 2배, 기본 0.05), 나머지는 sim yaml 제안값. `input.pose_lag_ms: 0` |
+| belt_servo 기동 로그 | `rotate on · deadband … · min 10 · max 45 · ω 30(→60) · α 90 · home goal` 한 줄, READY. `READY 거부: … input.pose_lag_ms …` 면 ⑧ 위반 |
+| 첫 goal 로그 | `회전 기준 공구 yaw = -88.7x° (노드 기동 뒤 첫 goal)` — **첫 goal 은 반드시 관측 자세에서 시작**(sort_manager 가 OBSERVE 로 보낸 직후). 다른 값이면 belt_servo 재기동 |
+| params_sha256 | 기록(rotate on 이라 시연 라인과 다르다 — 정상) |
+
+켜기·끄기 = 실기 yaml 의 `rotate.enable` 한 줄 + belt_servo 재기동(파라미터는 기동 때만 읽는다):
+```bash
+ros2 launch voss_servo belt_servo.launch.py params:=~/voss_ws/config/belt_servo_real.yaml log_dir:=<레포>/data/servo
+```
+
+### 4.2 회차
+| 순서 | 박스 각(벨트 기준) | 횟수 | ω_max | 기대 rot_state | 기대 결과 |
+|---|---|---|---|---|---|
+| 1 | 0° (대조) | 3 | 30 | SKIP · SMALL | 지금과 같은 OK |
+| 2 | 30° | **1 → 로그 확인** → 2 | 30 | ROTATING→SETTLING→DONE→RETURNING→RETURNED | OK |
+| 3 | 15° | 3 | 60 | 위와 같음 | OK |
+| 4 | 30° | 3 | 60 | 위와 같음 | OK |
+| 5 | 45° | 3 | 60 | 위와 같음 | OK, 보고 폭 ≤ 44.0(WIDTH_OUT 없음) |
+
+**2번 첫 회 뒤 틱 로그 확인(5회를 한꺼번에 돌리지 않는다)**:
+- 첫 DESCEND 틱 `|rot_err_deg|` ≤ 1.5(tol), `rot_delta_deg` ≈ 사진 각(± 데드밴드)
+- `wz_cmd_dps` ≠ 0 인 틱의 phase 가 PREPARE·TRACK·LIFT·VERIFY 뿐
+- ROTATING 동안 `tcp_pose_m` z ≥ 윗면 + 50 mm(시야 보험), `visible` 이 끊기지 않음
+- `rot_err_deg`·`tool_yaw_est_deg` 는 **지령 각속도로 외삽한 값**이다 — T17 전·STALL 구간처럼 로봇이 안 돌면 실제 자세와 어긋난다. 실제 자세 판단은 `tool_yaw_deg`(pose 원값)로 한다
+- `rot_time_s` ≈ 1.2~1.6 s(ω 30 이면 더 김), GOAL_END `rot_cause` 가 비어 있거나 RETURN_INCOMPLETE 면 원인 기록
+- gateway 통계 `자름` 에 angular 없음, `servo_cmd 거부` 없음
+
+### 4.3 회차마다 기록
+| 회차 | 사진 각 | rot_delta | rot_state 끝 | rot_cause | rot_time_s | DESCEND rot_err | 결과 reason | 보고 폭 | 닫힘 s | 비고 |
+|---|---|---|---|---|---|---|---|---|---|---|
+
+### 4.4 판정(제안)
+- 0° 대조 3/3 OK(회귀).
+- 15·30·45° 9회에서 **DESCEND LOST·WIDTH_OUT 0**, 닫힘 ≤ 2.5 s(10/12 J6 없음: 19~37° LOST 4/4, 26° 닫힘 3.08 s).
+- 회전 관련 폴백(STALL·TIMEOUT·ACC_MISMATCH) 0. 하나라도 나면 원인 확인 전 5단계로 가지 않는다.
+
+## 5. 단계 5 — 넓히기 (4단계 통과 뒤)
+- yaml: `rotate.max_deg: 90`, `rotate.min_deg` = 데드밴드 값. 1절 ⑩ 을 ±90° 로 다시 확인.
+- 회차: 60·75·90° 각 3 + 0° 대조 1. 90° 는 ±90° 접기 경계라 회전 방향이 + 쪽(fold 규칙) — 케이블 쪽 확인.
+- 판정: WIDTH_OUT(46 mm 폭 파지(짧은 옆면)) 0 이면 pending #27 "허용 범위 = 모든 각도" 로 확정, 남으면 그 각 이상을 max_deg 로.
+
+## 6. 되돌림
+- `rotate.enable: false`(한 줄) → belt_servo 재기동 → 기동 줄 `rotate off`, **params_sha256 이 rotate 키를 넣기 전 값과 같은지** 확인(rotate.* 는 off 면 지문에서 빠진다).
+- 이상이 있으면 그 자리에서 되돌리고 회차를 멈춘다. 재개는 원인을 measurements 에 적은 뒤.
+
+## 7. 데이터
+- 틱·시도 jsonl(회전 12키·시도 4키 포함), 회차별 위 사진(송장 변 + 벨트 변), gateway 로그(통계 줄), 가능하면 회전 구간 bag(`/camera/color/image_raw/compressed`·`/voss/robot/pose`·`/voss/vision/box`).
+- 커밋하지 않는다(규칙 8). 측정값은 measurements, 결정은 DESIGN·ADR(회전 파지 DEC 후보).
+
+## 8. 하지 않는 것
+- gateway·box_tracker 수정, 벨트 증속, 재시도(max_attempts) 변경과 회전을 한 시리즈에 섞기, 시연 라인에서 rotate 켜기(리허설 결과로 따로 결정).
