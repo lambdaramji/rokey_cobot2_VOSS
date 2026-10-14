@@ -6,7 +6,8 @@
 
 - `voice_listener`의 `/voss/voice/status`: `std_msgs/String` JSON. ROS reliable/volatile, depth 10 (topics.md `/voss/voice/*` 행). main 에는 없던 토픽이며 `voice_feedback.py` 와 함께 들어온다.
 - phase는 `WAKE_DETECTED`, `COMMAND_ACCEPTED`, `RECOGNITION_FAILED`, `TIMED_OUT` 네 가지다. `RECOGNITION_FAILED` 는 호출어 뒤 STT **호출 실패**일 때만 낸다 — 잡음 구간의 빈 전사는 기존 WakeGate 처럼 무시하고 호출 대기를 유지한다(10/14 #40 리뷰).
-- `TIMED_OUT` 때 voice_listener 는 `/voss/voice/say` 로 안내 한 줄("시간이 지났어요. 다시 '헬로 로키'라고 말해 주세요.")을 낸다. `publish_transcript:=false`(표시등만 시험)에서도 상태 이벤트는 나간다.
+- `TIMED_OUT` 때 voice_listener 는 `/voss/voice/say` 로 안내 한 줄("시간이 지났어요. 다시 '헬로 로키'라고 말해 주세요.")을 낸다. 단 SortState 가 `PICKING`·`RECHECK`·`PALLETIZING`(로봇 동작 중)이면 말하지 않고(작업자의 "정지"와 겹치거나 manager 안내를 speech_out FIFO 뒤로 밀지 않게), 그 밖에도 `timeout_say_min_interval_s`(기본 30 s)에 한 번만 말한다. 표시 이벤트 `TIMED_OUT` 은 항상 보낸다(10/14 #40 리뷰, 박병후).
+- `publish_transcript:=false`(표시등만 시험)에서도 상태 이벤트는 나간다 — 이때는 transcript 가 안 나가 음성 명령·정지가 무효이므로 기동 때 WARN 을 남기고, **ROS_DOMAIN_ID 30(운용 도메인)에서는 기동을 거부한다**.
 - 필드는 `phase`, `event_id`, `utterance_id`뿐이다. timestamp는 없다. UUID를 시각순으로 비교하지 않는다.
 - `COMMAND_ACCEPTED`는 WakeGate를 통과한 **전사 텍스트 수락**이다. intent_parser의 허용 목록 검증, manager 접수, 로봇 동작 완료가 아니다.
 - ADR-0007의 호출어 창은 5초다. 웹의 8초 상수는 ROS 시간 초과 이벤트가 오지 않을 때의 별도 UI 대기 한도다. 정상 경로에서는 ROS의 5초 이벤트가 먼저 올 수 있다.
@@ -63,3 +64,4 @@ ID는 공백만인 값·앞뒤 공백·128자 초과를 거부한다. 추가 필
 ## 변경 이력
 - 2026-10-13: 초안 (T13 #37, 정의석).
 - 2026-10-14: #37 PL 리뷰 — 승인(표시 전용). ROS 토픽은 #40 이 새로 만든다고 정정, 운영 bridge ACL, 빈 STT 는 실패가 아님(#40 리뷰), TIMED_OUT 음성 안내 명시.
+- 2026-10-14: #40 리뷰(박병후) — TIMED_OUT 음성 안내는 로봇 동작 중 생략·30 s 간격, `publish_transcript:=false` 는 도메인 30 에서 거부.

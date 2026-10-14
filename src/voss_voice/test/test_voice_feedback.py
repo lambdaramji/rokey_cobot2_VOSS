@@ -1,7 +1,14 @@
+import json
 from types import SimpleNamespace
 
 from voss_voice.listen_logic import WakeGate
-from voss_voice.voice_feedback import TIMEOUT_SAY, VoiceFeedback, is_timeout_prompt_echo
+from voss_voice.voice_feedback import (
+    TIMEOUT_SAY,
+    VoiceFeedback,
+    is_timeout_prompt_echo,
+    should_say_timeout,
+    transcript_off_refused,
+)
 
 
 def feedback():
@@ -45,14 +52,22 @@ def test_timeout_prompt_echo_does_not_rearm_wake():
     assert not flow.gate.armed
 
 
-def test_listener_says_once_for_timeout_event():
-    from voss_voice.voice_listener import VoiceListenerNode
-
+def listener_node(sort_state=""):
     statuses, spoken = [], []
     node = SimpleNamespace(
         _status_pub=SimpleNamespace(publish=statuses.append),
         _say_pub=SimpleNamespace(publish=spoken.append),
+        _sort_state=sort_state,
+        _last_timeout_say=None,
+        get_parameter=lambda name: SimpleNamespace(value=30.0),
     )
+    return node, statuses, spoken
+
+
+def test_listener_says_once_for_timeout_event():
+    from voss_voice.voice_listener import VoiceListenerNode
+
+    node, statuses, spoken = listener_node()
     flow = VoiceFeedback(
         WakeGate(), lambda payload: VoiceListenerNode._publish_status(node, payload)
     )
@@ -61,6 +76,35 @@ def test_listener_says_once_for_timeout_event():
     flow.expire(6)
     assert len(statuses) == 2
     assert [message.data for message in spoken] == [TIMEOUT_SAY]
+
+
+def test_listener_skips_timeout_speech_while_robot_moves():
+    from voss_voice.voice_listener import VoiceListenerNode
+
+    node, statuses, spoken = listener_node("PICKING")
+    flow = VoiceFeedback(
+        WakeGate(), lambda payload: VoiceListenerNode._publish_status(node, payload)
+    )
+    flow.on_text("헬로 로키", 0)
+    flow.expire(5.1)
+    assert [json.loads(m.data)["phase"] for m in statuses] == ["WAKE_DETECTED", "TIMED_OUT"]
+    assert spoken == []
+
+
+def test_timeout_speech_gate():
+    assert should_say_timeout("RUNNING", 100.0, None)
+    assert not should_say_timeout("RECHECK", 100.0, None)
+    assert not should_say_timeout("PALLETIZING", 100.0, None)
+    assert not should_say_timeout("IDLE", 100.0, 80.0)
+    assert should_say_timeout("IDLE", 110.0, 80.0)
+
+
+def test_transcript_off_refused_only_on_operating_domain():
+    assert transcript_off_refused(False, "30")
+    assert transcript_off_refused(False, " 30 ")
+    assert not transcript_off_refused(False, "179")
+    assert not transcript_off_refused(False, None)
+    assert not transcript_off_refused(True, "30")
 
 
 def test_empty_stt_keeps_waiting_like_wake_gate():

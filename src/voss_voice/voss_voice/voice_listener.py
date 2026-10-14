@@ -9,6 +9,7 @@ mic 을 열 수 없으면(sounddevice 없음·장치 없음) text 로 자동 전
 from __future__ import annotations
 
 import json
+import os
 import queue
 import sys
 import threading
@@ -20,9 +21,15 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 from std_msgs.msg import String
 
+from voss_msgs.msg import SortState
 from voss_voice import http_client
 from voss_voice.listen_logic import Segmenter, VadConfig, WakeGate, put_drop_oldest, to_wav
-from voss_voice.voice_feedback import TIMEOUT_SAY, VoiceFeedback
+from voss_voice.voice_feedback import (
+    TIMEOUT_SAY,
+    VoiceFeedback,
+    should_say_timeout,
+    transcript_off_refused,
+)
 
 QOS_EVENTS = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
 
@@ -40,6 +47,21 @@ class VoiceListenerNode(Node):
         p("device", "")  # sounddevice 장치 이름·번호, "" = 기본
         p("vad_threshold_db", -40.0)
         p("end_silence_ms", 700)
+        p("timeout_say_min_interval_s", 30.0)  # TIMED_OUT 음성 안내 최소 간격
+
+        publish_transcript = bool(self.get_parameter("publish_transcript").value)
+        if transcript_off_refused(publish_transcript, os.environ.get("ROS_DOMAIN_ID")):
+            raise SystemExit(
+                "voice_listener 거부: publish_transcript=false 는 ROS_DOMAIN_ID 30(운용 도메인)에서 "
+                "쓸 수 없다 — 음성 명령·정지가 아무 데도 가지 않는다. 격리 시험은 다른 도메인에서."
+            )
+        if not publish_transcript:
+            self.get_logger().warn(
+                "publish_transcript=false — transcript 발행 안 함: 음성 명령·정지 무효(표시등 시험 전용)"
+            )
+        self._sort_state = ""
+        self._last_timeout_say: float | None = None
+        self.create_subscription(SortState, "/voss/sort/state", self._on_sort_state, QOS_EVENTS)
 
         self._pub = self.create_publisher(String, "/voss/voice/transcript", QOS_EVENTS)
         self._status_pub = self.create_publisher(String, "/voss/voice/status", QOS_EVENTS)
@@ -131,9 +153,17 @@ class VoiceListenerNode(Node):
                 continue
             self._emit(resp["text"], time.monotonic(), source=f"mic stt={stt_ms:.0f}ms")
 
+    def _on_sort_state(self, msg: SortState) -> None:
+        self._sort_state = msg.state
+
     def _publish_status(self, payload: dict) -> None:
         self._status_pub.publish(String(data=json.dumps(payload)))
-        if payload["phase"] == "TIMED_OUT":
+        if payload["phase"] != "TIMED_OUT":
+            return
+        now = time.monotonic()
+        interval = float(self.get_parameter("timeout_say_min_interval_s").value)
+        if should_say_timeout(self._sort_state, now, self._last_timeout_say, interval):
+            self._last_timeout_say = now
             self._say_pub.publish(String(data=TIMEOUT_SAY))
 
     def _emit(self, text: str, now: float, source: str) -> None:

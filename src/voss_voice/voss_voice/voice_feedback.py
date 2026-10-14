@@ -7,6 +7,23 @@ import uuid
 from voss_voice.listen_logic import split_wake
 
 TIMEOUT_SAY = "시간이 지났어요. 다시 '헬로 로키'라고 말해 주세요."
+# 로봇이 움직이는 동안에는 안내를 말하지 않는다 — TTS 가 작업자의 "정지"와 겹치거나
+# manager 안내를 speech_out FIFO 뒤로 미는 것을 막는다(박병후 #40 리뷰). 표시 이벤트는 그대로 보낸다.
+ROBOT_BUSY_STATES = frozenset({"PICKING", "RECHECK", "PALLETIZING"})
+TIMEOUT_SAY_MIN_INTERVAL_S = 30.0
+OPERATING_DOMAIN_ID = "30"
+
+
+def should_say_timeout(sort_state, now, last_said, min_interval_s=TIMEOUT_SAY_MIN_INTERVAL_S):
+    """TIMED_OUT 안내를 스피커로 낼지. 로봇 동작 중이면 생략, 그 밖에도 min_interval_s 에 한 번."""
+    if sort_state in ROBOT_BUSY_STATES:
+        return False
+    return last_said is None or now - last_said >= min_interval_s
+
+
+def transcript_off_refused(publish_transcript, domain_id):
+    """publish_transcript=false 는 표시등 격리 시험 전용. 운용 도메인에서는 음성 정지가 무효가 되므로 거부."""
+    return not publish_transcript and (domain_id or "0").strip() == OPERATING_DOMAIN_ID
 
 
 def is_timeout_prompt_echo(text):
