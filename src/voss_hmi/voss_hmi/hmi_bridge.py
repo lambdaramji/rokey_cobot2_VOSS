@@ -2,7 +2,7 @@
 
 입력: /voss/sort/state·result·zone_map, /voss/robot/state, /voss/log/status,
       표시 전용 /voss/vision/box·/voss/robot/pose·/dsr01/joint_states·/voss/voice/status
-      (·/voss/box_motion — BoxMotion 메시지가 생긴 뒤), MQTT voss/command.
+      (·/voss/hmi/box_motion — BoxMotion 메시지가 생긴 뒤), MQTT voss/command.
 출력: MQTT voss/state·result·zone_map·robot·log_status·command/ack,
       voss/box_track·robot_pose·robot_joints·voice_status(·box_motion), /voss/sort/command 호출.
 계약: docs/interfaces/mqtt.md, docs/interfaces/voss_msgs.md.
@@ -120,7 +120,7 @@ class HmiBridgeNode(Node):
         self.create_subscription(BoxTrack, "/voss/vision/box", self._on_box_track, QOS_BOX)
         if BoxMotion is not None:
             self.create_subscription(
-                BoxMotion, "/voss/box_motion", self._on_box_motion, QOS_RELIABLE_10
+                BoxMotion, "/voss/hmi/box_motion", self._on_box_motion, QOS_RELIABLE_10
             )
         self.create_subscription(PoseStamped, "/voss/robot/pose", self._on_robot_pose, QOS_POSE)
         self.create_subscription(JointState, "/dsr01/joint_states", self._on_robot_joints, QOS_POSE)
