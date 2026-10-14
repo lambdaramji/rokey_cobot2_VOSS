@@ -2,7 +2,7 @@
 
 2026-10-14 확장(T13 #37, PL 리뷰): hmi_bridge 가 표시 전용으로 `/voss/vision/box`·`/voss/robot/pose`·`/dsr01/joint_states`·`/voss/voice/status` 를 구독한다(**승인**, 로봇 제어 경로 변경 없음). `/voss/hmi/box_motion`(`voss_msgs/BoxMotion` — manager 의 `GRASPED`, robot_gateway 의 `RELEASED`)은 IDL·발행 구현 전 **제안**이다([box_carry_proposal.md](box_carry_proposal.md)). 관절 상세는 [robot_joints_fk_proposal.md](robot_joints_fk_proposal.md).
 
-**ROS BoxMotion 토픽명은 김학민 PL 대행 최종 확정 필요** (`/voss/hmi/box_motion` 현재 제안; MQTT `voss/box_motion`은 유지).
+**ROS BoxMotion 토픽명 확정(10/14 김학민 PL 대행):** `/voss/hmi/box_motion`. 이벤트·IDL 은 아직 제안이다. MQTT `voss/box_motion` 은 유지.
 
 규칙: 토픽 `/voss/<영역>/<이름>`, 서비스·액션 `/voss/<영역>/<동사>`. 커스텀 타입은 `voss_msgs`.
 
@@ -55,3 +55,4 @@
 - 2026-10-10: `/voss/robot/servo_cmd` `header.stamp` = belt_servo 발행 시각(호스트 시계)·gateway 의 old 거부 기준·같은 PC 시계 전제를 명시 (#41 박병후 요청, #104 리뷰 후속). 타입·QoS 변경 없음.
 - 2026-10-13: (T13 #37) hmi_bridge 가 `/voss/vision/box`·`/voss/robot/pose` 구독(MQTT 위치 전달). 제안: `/voss/voice/status`(voice_listener)·TIMED_OUT `/voss/voice/say`, `/voss/hmi/box_motion`(BoxMotion), hmi_bridge 의 `/dsr01/joint_states` 구독.
 - 2026-10-14: #37 PL 리뷰 — `/dsr01/joint_states`·`/voss/voice/status` 표시 전용 승인, `/voss/hmi/box_motion` 제안 유지. QoS 표에 새 행, 끊겨 렌더되던 표의 설명 문단을 표 아래로, hmi_bridge 발행에 `voss/log_status`(빠져 있던 것).
+- 2026-10-14: BoxMotion ROS 토픽명 `/voss/hmi/box_motion` 확정(박병후 리뷰 제안, 김학민 PL 대행). 이벤트·IDL 은 제안 유지.
