@@ -1,8 +1,8 @@
 # voss_msgs 필드 정의 (src/voss_msgs 와 1:1 — 둘 다 같이 고친다)
 
-## BoxMotion 확장 제안 (2026-10-13, 담당 3인 승인 전달)
+## BoxMotion 확장 제안 (2026-10-13, 구두 승인 전달 · IDL 미반영)
 
-새 main의 `src/voss_msgs` IDL에는 아직 반영되지 않았다. 메시지·서비스 타입 해시가
+현재 main 의 `src/voss_msgs` IDL에는 아직 반영되지 않았다. 메시지·서비스 타입 해시가
 바뀌므로 관련 노드 담당자 승인과 일괄 재빌드 전에는 운영 계약으로 사용하지 않는다.
 
 `BoxMotion.msg`: `string session_id`, `string box_id`, `int32 track_id`, `string phase` (`GRASPED`/`RELEASED`), `builtin_interfaces/Time stamp`, `string zone`. `GRASPED`는 manager의 `TrackAndGrasp.Result(reason=OK, grasped=true)` 확인 시각, `RELEASED`는 gateway의 PLACE RG2 개방 성공 `placed_stamp`이다. 이벤트는 실제 로봇 제어에 사용하지 않는다. `MoveToZone.Request` 끝에는 시각화 상관관계용 `session_id`, `box_id`, `track_id`를 추가한다. 자세한 발행·보정 제한은 [box_carry_proposal.md](box_carry_proposal.md)에 기록한다.
@@ -92,3 +92,4 @@
 - 2026-10-13: pending #37 결정(PL) — 1층 칸 박스가 FAILED 면 그 위 2층 박스를 아래 칸에 당겨 놓는다. PalletResult.pallet_* 와 PalletState 칸 배열은 실제 놓은 칸 기준. 필드(IDL) 변경 없음.
 - 2026-10-13 낮: **김학민 로컬 시험 브랜치(10/12 실기) 통합**(PL 남현지 결정 — 관리자는 v1.5 `pallet_fsm`, 로봇 쪽은 김학민 구현). MoveToZone PALLET 의 `slot` 을 **격자 칸 번호**로(다른 구역과 같은 규칙, 실기 16칸 자세 그대로) — sort_manager 가 적재 순서 slot(D2)을 바꿔 부른다. PICK 은 A·B·C·RECHECK·HOLD, DROP 은 칸 위에서 멈춤, Command `recheck` 추가. 필드(IDL) 변경 없음(`SortState`·`MoveToZone` 주석만). 말한 순서 = **배송 순서**(BRD v1.5, 10/13 PL) — 김학민 브랜치의 "싣는 순서" 해석은 쓰지 않는다.
 - 2026-10-13 저녁: **이름 정리(10/13 PL 결정 Q11)** — "slot" 을 단독으로 쓰지 않는다. **적재 순서(pallet_slot)** = 0~15, 실은 순서 − 1, PalletResult·PalletState·pallet_log·HMI 가 쓰는 값. **격자 칸(cell)** = (층−1)×8 + (줄−1)×4 + (열−1), MoveToZone(PALLET) 요청에만 쓰고 `pallet_plan.grid_cell()` 이 바꾼다. HMI 표시는 "적재 n / 격자 c"(n = pallet_slot + 1, 정의석 10/14). 필드(IDL) 변경 없음.
+- 2026-10-13: (T13 #37) `BoxMotion`·`MoveToZone.Request` ID 추가 제안 — IDL 미반영, 타입 해시 변경 예정.
