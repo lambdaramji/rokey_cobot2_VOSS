@@ -8,6 +8,8 @@ mic 을 열 수 없으면(sounddevice 없음·장치 없음) text 로 자동 전
 
 from __future__ import annotations
 
+import json
+import os
 import queue
 import sys
 import threading
@@ -19,8 +21,15 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 from std_msgs.msg import String
 
+from voss_msgs.msg import SortState
 from voss_voice import http_client
 from voss_voice.listen_logic import Segmenter, VadConfig, WakeGate, put_drop_oldest, to_wav
+from voss_voice.voice_feedback import (
+    TIMEOUT_SAY,
+    VoiceFeedback,
+    should_say_timeout,
+    transcript_off_refused,
+)
 
 QOS_EVENTS = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
 
@@ -29,6 +38,7 @@ class VoiceListenerNode(Node):
     def __init__(self) -> None:
         super().__init__("voice_listener")
         p = self.declare_parameter
+        p("publish_transcript", True)  # false: local indicator-only test
         p("mode", "mic")  # mic | text
         p("require_wake", True)  # mic 모드에서 호출어 요구 (false = 모든 구간 통과, 시험용)
         p("wake_window_s", 5.0)
@@ -37,19 +47,39 @@ class VoiceListenerNode(Node):
         p("device", "")  # sounddevice 장치 이름·번호, "" = 기본
         p("vad_threshold_db", -40.0)
         p("end_silence_ms", 700)
+        p("timeout_say_min_interval_s", 30.0)  # TIMED_OUT 음성 안내 최소 간격
+
+        publish_transcript = bool(self.get_parameter("publish_transcript").value)
+        if transcript_off_refused(publish_transcript, os.environ.get("ROS_DOMAIN_ID")):
+            raise SystemExit(
+                "voice_listener 거부: publish_transcript=false 는 ROS_DOMAIN_ID 30(운용 도메인)에서 "
+                "쓸 수 없다 — 음성 명령·정지가 아무 데도 가지 않는다. 격리 시험은 다른 도메인에서."
+            )
+        if not publish_transcript:
+            self.get_logger().warn(
+                "publish_transcript=false — transcript 발행 안 함: 음성 명령·정지 무효(표시등 시험 전용)"
+            )
+        self._sort_state = ""
+        self._last_timeout_say: float | None = None
+        self.create_subscription(SortState, "/voss/sort/state", self._on_sort_state, QOS_EVENTS)
 
         self._pub = self.create_publisher(String, "/voss/voice/transcript", QOS_EVENTS)
+        self._status_pub = self.create_publisher(String, "/voss/voice/status", QOS_EVENTS)
+        self._say_pub = self.create_publisher(String, "/voss/voice/say", QOS_EVENTS)
         self._stop = threading.Event()
         mode = self.get_parameter("mode").value
         require_wake = bool(self.get_parameter("require_wake").value)
 
         # 마이크 스레드가 시작되기 전에 게이트를 먼저 만든다
         self._gate = WakeGate(float(self.get_parameter("wake_window_s").value), require_wake)
+        self._feedback = VoiceFeedback(self._gate, self._publish_status)
+        self.create_timer(0.1, lambda: self._feedback.expire(time.monotonic()))
         if mode == "mic" and self._start_mic():
             self.get_logger().info("voice_listener: mic 모드 — '헬로, 로키' 뒤에 말하세요")
         else:
             # 텍스트 폴백은 호출어 없이 받는다(사람이 직접 친 입력)
             self._gate = WakeGate(require_wake=False)
+            self._feedback = VoiceFeedback(self._gate, self._publish_status)
             threading.Thread(target=self._text_loop, daemon=True).start()
             self.get_logger().info("voice_listener: text 모드 — 한 줄 입력 = 발화 한 번")
 
@@ -118,17 +148,32 @@ class VoiceListenerNode(Node):
                 self.get_logger().warn(f"처리 지연으로 오래된 프레임 {self._dropped}개 버림")
                 self._dropped = 0
             if resp is None:
+                self._feedback.fail(time.monotonic())
                 self.get_logger().warn(f"STT 실패 ({stt_ms:.0f} ms)")
                 continue
             self._emit(resp["text"], time.monotonic(), source=f"mic stt={stt_ms:.0f}ms")
 
+    def _on_sort_state(self, msg: SortState) -> None:
+        self._sort_state = msg.state
+
+    def _publish_status(self, payload: dict) -> None:
+        self._status_pub.publish(String(data=json.dumps(payload)))
+        if payload["phase"] != "TIMED_OUT":
+            return
+        now = time.monotonic()
+        interval = float(self.get_parameter("timeout_say_min_interval_s").value)
+        if should_say_timeout(self._sort_state, now, self._last_timeout_say, interval):
+            self._last_timeout_say = now
+            self._say_pub.publish(String(data=TIMEOUT_SAY))
+
     def _emit(self, text: str, now: float, source: str) -> None:
-        out = self._gate.on_text(text, now)
+        out = self._feedback.on_text(text, now)
         if out is None:
             if self._gate.armed:
                 self.get_logger().info("호출어 감지 — 명령을 기다립니다")
             return
-        self._pub.publish(String(data=out))
+        if self.get_parameter("publish_transcript").value:
+            self._pub.publish(String(data=out))
         self.get_logger().info(f"transcript [{source}]: {out}")
 
     def destroy_node(self) -> None:
