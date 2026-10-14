@@ -3,7 +3,6 @@
 from unittest.mock import Mock, patch
 
 import pytest
-
 from voss_hmi.hmi_bridge import HmiBridgeNode
 
 
@@ -14,8 +13,9 @@ from voss_hmi.hmi_bridge import HmiBridgeNode
         (True, "voice_preview", "preview-test-value", "voss-hmi-voice-preview"),
     ],
 )
-def test_mqtt_credentials_are_selected_by_mode(monkeypatch, preview, expected_user,
-                                               expected_password, expected_client_id):
+def test_mqtt_credentials_are_selected_by_mode(
+    monkeypatch, preview, expected_user, expected_password, expected_client_id
+):
     monkeypatch.setenv("VOSS_MQTT_BRIDGE_PASSWORD", "bridge-test-value")
     monkeypatch.setenv("VOSS_MQTT_PREVIEW_USERNAME", "voice_preview")
     monkeypatch.setenv("VOSS_MQTT_PREVIEW_PASSWORD", "preview-test-value")
@@ -23,7 +23,8 @@ def test_mqtt_credentials_are_selected_by_mode(monkeypatch, preview, expected_us
         HmiBridgeNode._create_mqtt_client(Mock(_voice_status_only=preview))
     assert client_type.call_args.kwargs["client_id"] == expected_client_id
     client_type.return_value.username_pw_set.assert_called_once_with(
-        expected_user, expected_password)
+        expected_user, expected_password
+    )
 
 
 @pytest.mark.parametrize("missing", ["VOSS_MQTT_PREVIEW_USERNAME", "VOSS_MQTT_PREVIEW_PASSWORD"])
