@@ -1,10 +1,10 @@
 # S2-T18 HLD — J6 회전 파지 (yaw 관측으로 기울어진 박스도 31 mm 폭 파지(46 mm 긴 옆면)로 잡기) · r2
 
-- 작업 ID S2-T18 (Sprint 2, 추종·파지), 브랜치 `feat/S2-T18-voss_servo-j6-rotate`, 베이스 main e8547a7 + S2-T16 yaw 머지(68cc35f).
+- 작업 ID S2-T18 (Sprint 2, 추종·파지), 브랜치 `feat/S2-T18-voss_servo-j6-rotate`, 베이스 main e8547a7 + S2-T16 yaw 머지(68cc35f) → **10/14 #48·#51 머지 뒤 main 945c67d 위로 다시 쌓음**(T16 은 #51 로 main 에 있음).
 - 범위: **sim 까지, 기능 플래그 기본 off.** 에뮬레이터·실기는 S2-T17(gateway 각속도) 뒤.
 - 작성 방식: **nobase** — 팀원 인수인계 문서의 제안 코드·추측은 설계 입력으로 쓰지 않았다. 입력은 코드·설정·현장 틱 로그·계약 문구뿐이다. 외부 제안과의 대조는 맨 끝 11절에서만 한다.
 - 수치 표기: *(실측)* = 10/10~10/12 틱 로그 16파일(goal 125, 정상 DESCEND 진입 103), *(계산)* = 식·스크립트, *(추정)* = 근거가 간접적.
-- **r3 주석(10/14)**: 세부 규칙은 [S2T18-dd.md](S2T18-dd.md)(12절 r1 변경 포함)가 기준이다. HLD 와 다른 곳 — D3 STALL 은 "stall_s 뒤 1° 미만" 단순식 + 별도 α 감시, D2-5 되돌리기는 **LIFT 에서만**(VERIFY 는 각속도 0, D0 문안과 일치), STOPPING·대기의 0 은 즉시.
+- **r3 주석(10/14)**: 세부 규칙은 [S2T18-dd.md](S2T18-dd.md)(12절 r1 변경 포함)가 기준이다. HLD 와 다른 곳 — D3 STALL 은 "stall_s 뒤 1° 미만" 단순식 + 별도 α 감시, D2-5 되돌리기는 바로 아래 r3 추가 ②(**LIFT·VERIFY**, DD 13절 r2 — DD 12절 r1 의 "LIFT 에서만" 을 대체), STOPPING·대기의 0 은 즉시.
 - **r3 추가(10/14, Fable 재검)**: ① 회전 시간은 pseudo 법칙(√ 감속 0.8α·tol·정착 0.3 s) 기준으로 **SETTLING 진입 15/30/45/60/90° = 0.83/1.20/1.47/1.73/2.23 s, DONE = +0.33 s** *(계산)* — D2-1·D4 표의 1.30/2.07 은 연속식 근사였다. D5 결론은 그대로(최악 α45·90° x ≈ 200 < 293). ② 되돌리기는 **LIFT·VERIFY**. ③ home 기준은 고정값 또는 노드 기동 뒤 첫 goal 의 공구 yaw, 매 goal 시작 자세 검사(START_ROTATED). ④ `pose_lag_ms == 0` 은 yaml 짝 검사이지 gateway pose_source 강제가 아니다. ⑤ 지시서와 다른 점: (i) 플랜지 보정식은 계약상 gateway 몫이라 belt_servo 설계에서 뺐다(D9), (k) cutoff 표는 자체 모델로 계산했고 T16 `tools/calib/descend_visibility.py` 와 교차 일치(0° +37.4 vs 37.0, 회전 안 한 30°/45° +45.8/+44.7 vs 45.5/44.5).
 - 검증 이력: r1 정량 분석 = Fable 5.1 서브에이전트(q1~q6, 스크래치 `u14_hld/`), 세션이 핵심 값 재계산. **r2 = Opus 독립 반박 재검(스크래치 `u14_review/` r1~r4) 반영** — 필수 5·권장 9 중 세션이 근거를 다시 확인하고 전부 채택(10절).
 - 현장값 출처(레포 yaml 은 null): 10/12 `belt_servo_real.yaml` — approach +40 · lift +50 · cutoff 30 · descend 0.05 · kp 1.0 · kp_z 1.5 · align 3/5 · height_tol 2 · max_acc 0.1 · pose_lag 0(joint_states). gateway 기동 로그 `servo_acc [100.0, 10.0]`.
@@ -107,7 +107,7 @@
 ## 3. 결정 표 (HLD 승인 항목)
 
 ### D0 interface 선행 (r2 신규, 필수)
-topics.md belt_servo 행은 지금 "G0 추종은 고정 파지 자세·각속도 0(#53 MC-010)" 이다 *(확인)*. 플래그를 켜면 0 이 아닌 angular.z 를 내므로 **계약 의미가 바뀐다** → CLAUDE.md 규칙 2 에 따라 **코드보다 먼저 docs/interfaces/topics.md 를 고치는 interface PR** 이 필요하다. 바꿀 문구(안): "angular.z = 베이스 Z 둘레 각속도 rad/s(+ = 위에서 보아 반시계), belt_servo `rotate.enable` 일 때만 0 이 아니고 PREPARE·TRACK·LIFT 에서만 낸다. 회전 중심 보정은 gateway(기존 문구 유지). 각속도 0 = 회전 정지." RULES §2 상 이 세션은 docs/interfaces 를 고치지 않는다 → 문구 초안을 주관·담당자(남현지·학민)에게 넘기고, 코드 PR 은 그 PR 뒤.
+topics.md belt_servo 행은 지금 "G0 추종은 고정 파지 자세·각속도 0(#53 MC-010)" 이다 *(확인)*. 플래그를 켜면 0 이 아닌 angular.z 를 내므로 **계약 의미가 바뀐다** → CLAUDE.md 규칙 2 에 따라 **코드보다 먼저 docs/interfaces/topics.md 를 고치는 interface PR** 이 필요하다. 바꿀 문구(안): "angular.z = 베이스 Z 둘레 각속도 rad/s(+ = 위에서 보아 반시계), belt_servo `rotate.enable` 일 때만 0 이 아니고 PREPARE·TRACK·LIFT 에서만 낸다. 회전 중심 보정은 gateway(기존 문구 유지). 각속도 0 = 회전 정지." *(r1 초안. 확정 문구는 #48 머지 dd55e56 — PREPARE·TRACK·LIFT·VERIFY·안전 후퇴)* RULES §2 상 이 세션은 docs/interfaces 를 고치지 않는다 → 문구 초안을 주관·담당자(남현지·학민)에게 넘기고, 코드 PR 은 그 PR 뒤.
 
 ### D1 목표 각 — 언제·무엇으로 정하나 (지시서 (a))
 

@@ -147,6 +147,9 @@ def test_aggregate_survives_fold_and_outlier() -> None:
     spread = rt.aggregate([D(0), D(45), D(-45), D(90), D(30)])
     assert spread.rbar < 0.97
     assert rt.aggregate([]) is None
+    # 짝수 개 ±89° 반반: 각 그대로의 중앙값이면 0° 가 되지만 2θ 공간이면 90° (최종 재검 M10)
+    even = rt.aggregate([D(89), D(89), D(-89), D(-89)])
+    assert abs(math.degrees(even.target)) == pytest.approx(90, abs=0.01)
 
 
 def test_law_rate_limit_expected_time() -> None:
@@ -314,10 +317,13 @@ def test_matched_alpha_45_settles_on_time_without_overshoot() -> None:
     assert out.state.cause == "" and not out.state.acc_warned
 
 
-@pytest.mark.parametrize("lag", [0.024, 0.045])
+@pytest.mark.parametrize("lag", [0.024, 0.045, 0.10, 0.12])
 @pytest.mark.parametrize("delta", [10.5, 12, 15, 20, 30, 45, 90])
 def test_matched_alpha_never_warns(delta: float, lag: float) -> None:
-    """#9b α 일치면 지연 24·45 ms, 1단계 아래쪽 각에서도 ACC_MISMATCH 없음 (r2-1 오경보 회귀)."""
+    """#9b α 일치면 지연 24~120 ms, 1단계 아래쪽 각에서도 ACC_MISMATCH 없음 (r2-1 오경보 회귀).
+
+    지연 100 ms 이상은 출발 지연·지나친 뒤 되돌아옴을 α 로 재지 않는지 (최종 재검 권장 3).
+    """
     hist, _, out = run(delta, lag=lag)
     assert not any(w for _, _, w in hist)
     assert out.state.state == rt.DONE and out.state.alpha_eff == pytest.approx(cfg().alpha)
@@ -380,6 +386,16 @@ def test_settling_drift_and_cap() -> None:
     assert rt.end_cause(out.state, HOME, c.tol) == rt.SETTLE_DRIFT  # 되돌아왔으면 정착 밀림만
     moving = rt.rot_step(rs, inputs(now=1.0, w_meas=D(5)), c)
     assert (moving.state.state, moving.state.cause) == (rt.DONE, rt.SETTLE_TIMEOUT)
+
+
+@pytest.mark.parametrize("state", [rt.ROTATING, rt.SETTLING])
+def test_end_cause_cancel_mid_rotation(state: str) -> None:
+    """돌다가(ROTATING·SETTLING) 취소로 끝나도 손목이 기준에서 벗어났으면 RETURN_INCOMPLETE (최종 재검)."""
+    rs = rt.RotState(state, home=HOME)
+    assert rt.end_cause(rs, HOME + D(9.6), cfg().tol) == rt.RETURN_INCOMPLETE
+    assert rt.end_cause(rs, HOME, cfg().tol) == ""  # 아직 거의 안 돌았으면 원인 없음
+    skip = rt.RotState(rt.SKIP, home=HOME, cause=rt.START_ROTATED)
+    assert rt.end_cause(skip, HOME + D(9.6), cfg().tol) == rt.START_ROTATED  # 안 돈 goal 그대로
 
 
 def test_timeout_uses_cfg_alpha_not_alpha_eff() -> None:

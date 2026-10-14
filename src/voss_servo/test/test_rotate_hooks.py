@@ -1,11 +1,13 @@
 """S2-T18 회전 연결부 시험 (ROS 없이): params·fsm·control. DD 9절 #16~#20, pseudo r2 5·6절."""
 
 import math
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
 from test_control import CFG, DT, TOP, geo
 from test_params import valid_values
+from voss_servo.belt_servo import BeltServoNode
 from voss_servo.fsm import FsmState, TickEvent
 from voss_servo.params import (
     ROTATE_REQUIRED,
@@ -16,6 +18,7 @@ from voss_servo.params import (
     rotate_on,
 )
 
+from voss_msgs.msg import BoxTrack
 from voss_servo import control, fsm
 
 # sim yaml 과 같은 회전 제안값 (config/belt_servo_sim.yaml rotate 블록)
@@ -168,3 +171,84 @@ def test_z_floor_none_is_unchanged_and_floor_lifts_target() -> None:
     assert up.vel[2] > base.vel[2]  # 위로 (또는 덜 내려감)
     low = control.command(fsm.TRACK, False, False, g, prev, DT, CFG, z_floor=TOP)
     assert low.tcp_target[2] == pytest.approx(base.tcp_target[2])  # 하한이 낮으면 영향 없음
+
+
+# ---------------------------------------------------------------- belt_servo 회전 보조 메서드 (최종 재검 M4·M5·M12)
+
+
+class _Log:
+    def info(self, *_a, **_k) -> None:
+        pass
+
+
+class _Node:
+    """BeltServoNode 의 회전 보조 메서드만 빌려 쓰는 가짜 (ROS 없이)."""
+
+    _pose_ok = BeltServoNode._pose_ok
+    _try_home_ref = BeltServoNode._try_home_ref
+    _push_yaw = BeltServoNode._push_yaw
+    _rot_dead_tick = BeltServoNode._rot_dead_tick
+
+    def __init__(self) -> None:
+        self._rot_cfg = rot_cfg_from_values(on_values(), (0.0, 1.0, 0.0))
+        self._yaw_hist: dict = {}
+        self._yaw_value, self._yaw_prev, self._tilt = None, None, None
+        self._pose = None  # (msg, 수신 시각)
+        self._home_ref, self._rot_ever = None, False
+
+    def get_logger(self) -> _Log:
+        return _Log()
+
+
+def _box(yaw_deg: float, t: float, yaw_valid: bool = True) -> BoxTrack:
+    m = BoxTrack()
+    m.track_id = 3
+    m.stamp.sec, m.stamp.nanosec = int(t), int(round((t - int(t)) * 1e9))
+    m.yaw_base, m.yaw_valid = math.radians(yaw_deg), yaw_valid
+    return m
+
+
+def test_push_yaw_keeps_only_valid_frames_in_time_order() -> None:
+    """yaw_valid=false·position 무효·NaN·시각 역행 프레임은 버퍼에 들어가지 않는다 (M4)."""
+    n = _Node()
+    n._push_yaw(_box(30, 1.0, yaw_valid=False), True)
+    n._push_yaw(_box(30, 1.1), False)  # position 무효
+    n._push_yaw(_box(float("nan"), 1.2), True)
+    assert n._yaw_hist == {}
+    n._push_yaw(_box(30, 1.3), True)
+    n._push_yaw(_box(31, 1.3), True)  # 같은 stamp 반복
+    n._push_yaw(_box(32, 1.2), True)  # 시각이 뒤로
+    assert [round(math.degrees(y), 3) for _, y in n._yaw_hist[3]] == [30.0]
+
+
+def test_home_ref_only_from_valid_fresh_pose_and_once() -> None:
+    """기준 공구 yaw 는 기울기 ≤ 5°·pose 신선할 때만, 이미 있으면 안 바꾼다 (주관 검수 a, M5)."""
+    n = _Node()
+    n._yaw_value, n._pose = (math.radians(-88.7), 9.9), (None, 10.0)
+    n._tilt = math.radians(6.0)  # 기울어짐
+    n._try_home_ref(10.05)
+    assert n._home_ref is None
+    n._tilt = math.radians(1.0)
+    n._try_home_ref(10.0 + n._rot_cfg.extrap_max_s + 0.01)  # pose 가 끊김
+    assert n._home_ref is None
+    n._try_home_ref(10.05)  # 유효
+    assert math.degrees(n._home_ref) == pytest.approx(-88.7)
+    n._yaw_value = (math.radians(-60.0), 10.1)
+    n._try_home_ref(10.15)  # 한 번 정하면 그대로
+    assert math.degrees(n._home_ref) == pytest.approx(-88.7)
+
+
+def test_rot_dead_tick_needs_two_still_ticks() -> None:
+    """예외로 끈 goal: 각속도 0, 측정 정지가 2틱 이어져야 진행 · 움직이면 다시 센다 (M12, 권장 2)."""
+    n = _Node()
+    ctx = SimpleNamespace(wz=0.3, rot_still_n=0, rot_io=None)
+    n._yaw_prev, n._yaw_value = (0.00, 1.00), (0.02, 1.02)  # 1 rad/s 로 도는 중
+    n._pose = (None, 1.02)
+    assert n._rot_dead_tick(ctx, 1.03) is False and ctx.wz == 0.0
+    assert ctx.rot_io[2] == pytest.approx(1.0)
+    n._pose = (None, 1.30)  # 값은 그대로, pose 는 계속 온다 → 정지
+    assert n._rot_dead_tick(ctx, 1.31) is False  # 1틱
+    assert n._rot_dead_tick(ctx, 1.34) is True  # 2틱
+    n._yaw_prev, n._yaw_value = (0.02, 1.02), (0.05, 1.36)  # 다시 움직임 (0.34 s 뒤 첫 변화 = 모름)
+    n._pose = (None, 1.36)
+    assert n._rot_dead_tick(ctx, 1.37) is False and ctx.rot_still_n == 0

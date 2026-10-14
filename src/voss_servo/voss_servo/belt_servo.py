@@ -768,16 +768,13 @@ class BeltServoNode(Node):
         ctx.rot_floor, ctx.rot_warn = None, None
         if not self._rot_on or ctx.rot is None:
             return True  # 회전 off — 지금과 같다
+        if ctx.rot_dead:  # 예외로 끈 goal: _rot_inputs 를 거치지 않는다 (예외 반복에도 진행)
+            return self._rot_dead_tick(ctx, now)
         try:
             if ctx.rot.state == rotate.COLLECT:
                 self._try_home_ref(now)  # goal 수락 때 pose 가 없었으면 첫 틱들에서 (돌기 전에만)
             inp = self._rot_inputs(ctx, geo, now)
             ctx.rot_io = (inp.psi_raw, inp.psi_est, inp.w_meas)
-            if ctx.rot_dead:  # 예외로 끈 goal: 0 을 내고 실제로 멈춘 것이 2틱 이어지면 진행
-                ctx.wz = 0.0
-                still = inp.w_meas is not None and abs(inp.w_meas) < self._rot_cfg.still
-                ctx.rot_still_n = ctx.rot_still_n + 1 if still else 0
-                return ctx.rot_still_n >= rotate.STILL_TICKS
             out = rotate.rot_step(ctx.rot, inp, self._rot_cfg)
         except Exception as exc:  # 회전 계산이 goal 을 끊지 않게 (DD 12절)
             if not ctx.rot_dead:
@@ -797,6 +794,17 @@ class BeltServoNode(Node):
                 "(gateway servo_acc[1] ≥ rotate.alpha_dps2 확인)"
             )
         return out.ready
+
+    def _rot_dead_tick(self, ctx: GoalCtx, now: float) -> bool:
+        """예외로 끈 goal 의 한 틱: 각속도 0, 측정 각속도로 정지가 2틱 이어지면 정렬 허용."""
+        ctx.wz = 0.0
+        cur = self._yaw_value
+        rx_age = now - self._pose[1] if self._pose else math.inf  # 마지막 pose 수신 나이
+        w = rotate.omega_meas(self._yaw_prev, cur, now, rx_age, self._rot_cfg.pose_fresh_s)
+        ctx.rot_io = (cur[0] if cur else None, None, w)
+        still = w is not None and abs(w) < self._rot_cfg.still
+        ctx.rot_still_n = ctx.rot_still_n + 1 if still else 0
+        return ctx.rot_still_n >= rotate.STILL_TICKS
 
     def _rot_inputs(
         self, ctx: GoalCtx, geo: control.Geometry | None, now: float

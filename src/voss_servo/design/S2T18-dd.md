@@ -191,9 +191,9 @@ Opus 독립 재검(필수 10·권장 12)을 세션이 코드로 확인한 뒤 �
 - **로그 스냅샷**: 회전 로그 키 12개를 `ROT_KEYS` 로 묶고 `_snapshot_values`(0 유지 틱·예외 GOAL_END)에도 넣는다 — 빠지면 `make_tick` 이 예외를 내 off 에서도 행이 사라진다.
 - **파라미터 종류**: `bool` kind 를 새로 둔다(rotate.enable). `home_tool_yaw_deg` 는 `float` 선택 키이고 yaml 에는 적지 않는다(없으면 goal 수락 때 공구 yaw). rotate_on = 값이 bool True 일 때만. config/belt_servo.yaml·real.example 에도 rotate 키(enable false, 나머지 null)를 넣어 세 yaml 키 집합을 맞춘다(T-L12).
 - **sim**: rotate 케이스 덮어쓰기에 `input.pose_lag_ms: 0`(교차 검사 전제), `_wants_overrides` 에 rotate 추가. gateway '자름' 판정은 5 s 통계 줄의 angular 수로.
-- **각속도 출력**: law 출력만 `rate_limit(cfg.alpha)` 를 거친다. STOPPING·대기·PHASE 이탈·종료의 0 은 **즉시 0**(VERIFY 각속도 0). α_eff 는 law·TIMEOUT 에만.
+- **각속도 출력**: law 출력만 `rate_limit(cfg.alpha)` 를 거친다. STOPPING·대기·PHASE 이탈·종료의 0 은 **즉시 0**(VERIFY 각속도 0 — 13절 r2 에서 되돌리기는 VERIFY 에서도 낸다). α_eff 는 law·TIMEOUT 에만.
 - **α 감시**: 지령이 rate_limit 에 막혀 오르는 틱이 2틱 이어질 때만 잰다(√ 감속 구간 제외 — 일치일 때 Δ 10~20° 오경보 제거).
-- **되돌리기**: 전용 필드(ret_*), 1회만, SKIP 은 되돌리지 않음, **LIFT 에서만**(VERIFY 는 0). 4절 "VERIFY 중에도" 는 없앤다.
+- **되돌리기**: 전용 필드(ret_*), 1회만, SKIP 은 되돌리지 않음, **LIFT 에서만**(VERIFY 는 0). 4절 "VERIFY 중에도" 는 없앤다. → **13절 r2 에서 LIFT·VERIFY 로 바뀜**(코드 기준).
 - **예외**: rot_step 예외면 그 goal 의 회전을 끄고(wz 0) 노드가 측정 각속도 정지 2틱을 확인한 뒤 진행. geo None 방어.
 - **입력**: pose_ok 나이 ≤ pose_extrap_max(0.2 s), omega_meas 는 pose 메시지가 0.05 s 안에 왔을 때만 "정지 = 0", 끊겼으면 None. dt 는 이번 틱 effective_dt. COLLECT 는 판정표 1~3(필드·자세·시작 자세)을 프레임 수보다 먼저, 필드 여부를 아직 모르면 대기.
 - **시험**: e2e 박스는 TCP 60 mm 상류에서 시작, 시험 쿼터니언 = Rz(ψ)·Rx(π). 시험 #9 시간 = SETTLING 진입 1.40~1.60 s.
@@ -208,3 +208,13 @@ Opus 독립 재검(필수 10·권장 12)을 세션이 코드로 확인한 뒤 �
 - **단순화**: OFF 상태 삭제(off 면 ctx.rot = None), sim 의 rotate_invalid·fake_box yaw_mode 삭제(NO_YAW 는 단위·e2e).
 - **문구**: 머리말 "off 면 한 줄도 동작 안 함" → "off 면 기존 로그 열 값·제어 경로·params_sha 가 같다(새 로그 열은 null, `_yaw_field` 기록만 실행)".
 - 기각: deadband·min_deg 통합 — 1단계(min 10)→5단계(min = 데드밴드) 전환을 yaml 만으로 하려면 둘 다 필요하고, tol < deadband 검사의 기준이다.
+
+## 14. 최종 재검 반영 (Opus 5.5 PR 전 독립 재검, 10/14 — 13절보다 우선)
+재검자가 코드·sim·직접 만든 가짜 gateway 스모크(goal 20)·변이 시험(11건)으로 본 결과를 세션이 다시 재현·확인한 뒤 반영했다.
+- **α 감시 표본**: 측정 각속도가 지령과 **같은 방향**이고 `still` 이상일 때만 잰다. 지령 지연 ≥ 0.1 s 에서 (1) 출발 전 정지 표본 (2) 목표를 지나친 뒤 되돌아올 때 아직 앞 방향으로 감속하는 표본이 α 를 거의 0 으로 재 ACC_MISMATCH 오경보 → α_eff 5°/s² 로 떨어지던 것을 막는다(지연 24~150 ms 전 구간 오경보 0, 느린 로봇 45·10°/s² 검출은 그대로 *(재현)*).
+- **예외로 끈 goal**: `_rot_inputs` 를 거치지 않는 `_rot_dead_tick`(각속도 0 + 측정 정지 2틱)으로 — `_rot_inputs` 안 예외가 반복되면 TRACK 에 묶이던 경로를 없앤다.
+- **end_cause**: ROTATING·SETTLING 에서 끝나도(회전 중 취소) 손목이 기준에서 tol 밖이면 RETURN_INCOMPLETE.
+- **13절 home 문구의 범위**: "매 goal 전 OBSERVE 에 기대지 않는다" 는 **기준 각을 정하는 일**에 대한 말이다. 손목이 돌아간 채 끝난 goal 뒤의 **회복**은 sort_manager 의 OBSERVE 복귀에 기댄다(run.md ⑬). PREPARE 에서 기준 각으로 되돌리는 안은 새 동작이라 이 단위에 넣지 않는다.
+- **지령 지연 보상 없음**: 지연 80 ms 를 넘으면 지나침이 tol 을 넘는다 → run.md ⑫ 측정. 보상(외삽 지평에 지령 지연 추가)은 측정 뒤 별도.
+- **시험**: 짝수 개 ±89° 2θ 중앙값, `_push_yaw` 무효 프레임, `_try_home_ref` 유효 pose 조건, 정지 2틱, 지연 100·120 ms 오경보 없음, 회전 중 취소 end_cause — 재검이 살아남았다고 보고한 변이 4건과 새 수정 2건을 시험이 잡는 것을 변이로 확인.
+- 기각·보류: `_rot_ever` 는 지금 구조에서 결과를 바꾸지 않는 방어 조건(기준 각이 None 으로 돌아가지 않음)이지만, 기준 규칙의 의도를 코드에 남기는 값이라 그대로 둔다. rotate 키가 범위 밖이면 off 여도 READY 거부 — 형식 검사는 off 여도 하는 기존 규칙(다른 블록과 같음)이라 그대로. 로그 키 목록 두 곳(rotate·log_schema)은 순서 일치를 시험으로 고정해 두었다.

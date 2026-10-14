@@ -393,7 +393,12 @@ def _accel_watch(rs: RotState, inp: RotInputs, cfg: RotCfg, e: float) -> Step:
     if not rising:
         t1, w1 = None, None  # 램프가 끊기면 표본을 버린다
     elif not warned and ramp_n >= ACC_RAMP_TICKS and inp.w_meas is not None:
-        if t1 is None or w1 is None:
+        # 로봇이 지령과 같은 방향으로 움직일 때만 잰다 — 출발 지연(아직 정지)·지나친 뒤
+        # 되돌아올 때(아직 앞 방향으로 감속 중)는 기울기가 α 가 아니다 (최종 재검 권장 3)
+        same_dir = abs(inp.w_meas) >= cfg.still and inp.w_meas * want > 0
+        if not same_dir:
+            t1, w1 = None, None
+        elif t1 is None or w1 is None:
             t1, w1 = inp.now, inp.w_meas  # 첫 표본
         else:
             a = alpha_slope(t1, w1, inp.now, inp.w_meas)
@@ -517,7 +522,7 @@ def end_cause(rs: RotState, psi_raw: float | None, tol: float) -> str:
     if rs.state == RETURNING:
         return RETURN_INCOMPLETE
     rotated = (
-        rs.state in (DONE, FALLBACK, STOPPING)
+        rs.state in (ROTATING, SETTLING, DONE, FALLBACK, STOPPING)  # 돌기 시작한 상태 (취소 포함)
         and rs.home is not None
         and psi_raw is not None
         and abs(wrap_pi(rs.home - psi_raw)) > tol

@@ -1,6 +1,6 @@
 # S2-T18 J6 회전 파지 — Pseudo code · r2
 
-[S2T18-dd.md](S2T18-dd.md)(사용자 승인 10/14, 12절 r1 변경 포함)의 함수별 의사코드. 베이스 = main e8547a7 + T16(68cc35f).
+[S2T18-dd.md](S2T18-dd.md)(사용자 승인 10/14, 12절 r1 변경 포함)의 함수별 의사코드. 베이스 = main e8547a7 + T16(68cc35f) — 10/14 main 945c67d(#48·#51 머지) 위로 다시 쌓음.
 `rotate.py`·`fsm.py`·`control.py`·`params.py`·`log_schema.py` 는 ROS·시계·파일을 쓰지 않는다. 시각은 노드 시계 초.
 내부 각은 rad, 파라미터·로그는 deg. 최종은 코드가 기준이다.
 
@@ -440,7 +440,7 @@ test_action_e2e.py:
 | 필수 8 | 예외 반복 시 TRACK 고착, geo None | rot_dead + 노드 정지 확인, geo None 방어 |
 | 필수 9 | e2e 박스 하류 시작, 쿼터니언 식 | 60 mm 상류, down_quat = Rz(ψ)·Rx(π) |
 | 필수 10 | 0 을 rate_limit 으로 줄임 → VERIFY 각속도 ≠ 0 | want None = 즉시 0 |
-| 권장 11 | HLD↔DD 차(STALL 식, VERIFY 되돌리기) | DD 기준 명시(HLD r3 주석), VERIFY 는 0 |
+| 권장 11 | HLD↔DD 차(STALL 식, VERIFY 되돌리기) | DD 기준 명시(HLD r3 주석), VERIFY 는 0 → r2(12절)에서 LIFT·VERIFY 로 바뀜 |
 | 권장 12 | COLLECT 원인 순서, has_field None | pre_checks 먼저, None = 대기 |
 | 권장 13 | pose_ok 나이 0.3 → 0.2 | pose_extrap_max |
 | 권장 14 | omega_meas 끊김과 정지 구별 | pose_rx_age ≤ 0.05 |
