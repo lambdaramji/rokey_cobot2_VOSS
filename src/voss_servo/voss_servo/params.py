@@ -15,6 +15,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from voss_servo import rotate
+
 # 사각 구간에서 나오는 높이 = 들어가는 높이 + 이 값 (fsm.py 와 같은 값, 순환 import 를 피하려고 여기 둔다)
 BLIND_EXIT_MARGIN_MM = 5.0
 # 사각 체류 상한 = 예상 하강 시간 + 이 여유 (s). 판단값 — 시연 중 오판 PAUSED 를 막게 넉넉히 (U9a-hld D3).
@@ -59,6 +61,28 @@ POSE_PERIOD_MS = (
 NULL_STRINGS = ("null", "~")
 # 지문에서 뺄 키: 실행 위치(log.dir)·voss_config 자체 지문은 제어 설정이 아니다
 DIGEST_EXCLUDE = ("log.dir", "config_version", "config_sha256")
+# J6 회전 파지(S2-T18) 키 묶음. enable 이 True 가 아니면 지문에서 통째로 뺀다 (DD 1절·12절)
+ROTATE_PREFIX = "rotate."
+# enable 이 True 일 때만 필수 (enable·home_tool_yaw_deg 는 선택 — home 은 없으면 첫 goal 공구 yaw)
+ROTATE_REQUIRED = (
+    "rotate.deadband_deg",
+    "rotate.min_deg",
+    "rotate.max_deg",
+    "rotate.n_min",
+    "rotate.buffer_n",
+    "rotate.r_min",
+    "rotate.decide_max_s",
+    "rotate.start_tol_deg",
+    "rotate.omega_max_dps",
+    "rotate.alpha_dps2",
+    "rotate.tol_deg",
+    "rotate.omega_floor_dps",
+    "rotate.hold_dz_mm",
+    "rotate.settle_s",
+    "rotate.stall_s",
+    "rotate.still_dps",
+    "rotate.return_min_dz_mm",
+)
 
 # 검사 함수: 값을 받아 문제가 있으면 이유 문자열, 없으면 None 을 돌려준다
 Check = Callable[[Any], "str | None"]
@@ -82,6 +106,16 @@ def _retry_range(v: Any) -> str | None:
 def _z_profile(v: Any) -> str | None:
     """z.profile 은 p 또는 trapezoid (S2T14-dd 1절)."""
     return None if v in Z_PROFILES else "p 또는 trapezoid 이어야 함"  # 오타는 READY 거부
+
+
+def _unit_interval(v: Any) -> str | None:
+    """0 < v ≤ 1 (흩어짐 하한 r̄)."""
+    return None if 0.0 < v <= 1.0 else "0 초과 1 이하여야 함"
+
+
+def _at_least_one(v: Any) -> str | None:
+    """1 이상 정수 (프레임 수)."""
+    return None if v >= 1 else "1 이상이어야 함"
 
 
 def _not_empty(v: Any) -> str | None:
@@ -144,6 +178,28 @@ PARAM_SPECS: tuple[ParamSpec, ...] = (
     ParamSpec("rate_hz", "float", "Hz", True, _positive),
     ParamSpec("zero_hold_s", "float", "s", True, _non_negative),
     ParamSpec("log.dir", "str", "-", True, _not_empty),
+    # --- S2-T18 J6 회전 파지: 전부 선택 키. enable 이 True 일 때만 ROTATE_REQUIRED 가 필수 ---
+    ParamSpec("rotate.enable", "bool", "-", False),
+    ParamSpec("rotate.deadband_deg", "float", "deg", False, _positive),
+    ParamSpec("rotate.min_deg", "float", "deg", False, _non_negative),
+    ParamSpec("rotate.max_deg", "float", "deg", False, _positive),
+    ParamSpec("rotate.n_min", "int", "프레임", False, _at_least_one),
+    ParamSpec("rotate.buffer_n", "int", "프레임", False, _at_least_one),
+    ParamSpec("rotate.r_min", "float", "-", False, _unit_interval),
+    ParamSpec("rotate.decide_max_s", "float", "s", False, _positive),
+    ParamSpec(
+        "rotate.home_tool_yaw_deg", "float", "deg", False
+    ),  # yaml 에 안 적음 (없으면 첫 goal)
+    ParamSpec("rotate.start_tol_deg", "float", "deg", False, _positive),
+    ParamSpec("rotate.omega_max_dps", "float", "deg/s", False, _positive),
+    ParamSpec("rotate.alpha_dps2", "float", "deg/s²", False, _positive),
+    ParamSpec("rotate.tol_deg", "float", "deg", False, _positive),
+    ParamSpec("rotate.omega_floor_dps", "float", "deg/s", False, _non_negative),
+    ParamSpec("rotate.hold_dz_mm", "float", "mm", False, _positive),
+    ParamSpec("rotate.settle_s", "float", "s", False, _positive),
+    ParamSpec("rotate.stall_s", "float", "s", False, _positive),
+    ParamSpec("rotate.still_dps", "float", "deg/s", False, _positive),
+    ParamSpec("rotate.return_min_dz_mm", "float", "mm", False, _non_negative),
 )
 
 # 이름으로 찾기 쉽게 사전도 만든다
@@ -181,6 +237,8 @@ def _kind_error(kind: str, v: Any) -> str | None:
         return None if ok else "길이 3 숫자 목록 아님"
     if kind == "str":
         return None if isinstance(v, str) else "문자열 아님"
+    if kind == "bool":
+        return None if isinstance(v, bool) else "true·false 아님"  # S2-T18 rotate.enable
     if kind == "int_or_str":
         ok = isinstance(v, str) or (isinstance(v, int) and not isinstance(v, bool))
         return None if ok else "정수·문자열 아님"
@@ -225,6 +283,39 @@ def _cross_checks(values: dict[str, Any], bad: set[str]) -> list[tuple[str, str]
         if values["z.approach_above_top_mm"] <= exit_mm:
             out.append(("z.approach_above_top_mm", f"사각 이탈 높이 {exit_mm:g} mm 보다 커야 함"))
     out.extend(_control_checks(values, have))
+    if rotate_on(values):
+        out.extend(_rotate_checks(values, have))
+    return out
+
+
+def rotate_on(values: dict[str, Any]) -> bool:
+    """J6 회전 파지를 켰나 — rotate.enable 이 bool True 일 때만 (S2-T18)."""
+    return values.get("rotate.enable") is True
+
+
+def _rotate_checks(values: dict[str, Any], have: Callable[..., bool]) -> list[tuple[str, str]]:
+    """J6 회전 파지 교차 검사 (S2T18-dd 1절). enable 이 켜졌을 때만 부른다."""
+    v = values
+    out: list[tuple[str, str]] = []
+    if have("rotate.hold_dz_mm", "z.approach_above_top_mm"):
+        if v["rotate.hold_dz_mm"] <= v["z.approach_above_top_mm"]:  # 묶음이 접근 높이보다 높아야
+            out.append(("rotate.hold_dz_mm", "z.approach_above_top_mm 보다 커야 함"))
+    if have("rotate.hold_dz_mm", "z.vision_cutoff_above_top_mm"):
+        if v["rotate.hold_dz_mm"] < v["z.vision_cutoff_above_top_mm"] + BLIND_EXIT_MARGIN_MM:
+            out.append(("rotate.hold_dz_mm", "사각 높이 + 5 mm 이상이어야 함"))
+    names = ("rotate.deadband_deg", "rotate.min_deg", "rotate.max_deg")
+    if have(*names):
+        db, lo, hi = (v[n] for n in names)
+        if not db <= lo < hi <= 90.0:  # 180° 대칭이라 회전은 최대 90°
+            out.append(("rotate.min_deg", "deadband ≤ min < max ≤ 90 이어야 함"))
+    if have("rotate.n_min", "rotate.buffer_n") and v["rotate.n_min"] > v["rotate.buffer_n"]:
+        out.append(("rotate.n_min", "rotate.buffer_n 이하여야 함"))
+    if have("rotate.tol_deg", "rotate.deadband_deg"):
+        if v["rotate.tol_deg"] >= v["rotate.deadband_deg"]:  # 도달 허용이 데드밴드보다 작아야
+            out.append(("rotate.tol_deg", "rotate.deadband_deg 보다 작아야 함"))
+    if have("input.pose_lag_ms") and v["input.pose_lag_ms"] != 0:
+        # belt_servo yaml 짝 검사 (gateway pose_source 자체는 기동 로그로 확인 — DD 13절)
+        out.append(("input.pose_lag_ms", "rotate 는 pose_source joint_states(pose_lag 0) 전제"))
     return out
 
 
@@ -311,8 +402,8 @@ def check_params(values: dict[str, Any]) -> ReadyReport:
     for spec in PARAM_SPECS:
         v = values.get(spec.name)  # 없으면 None
         if v is None:
-            if spec.required:
-                missing.append(spec.name)  # 필수인데 안 왔다
+            if spec.required or (rotate_on(values) and spec.name in ROTATE_REQUIRED):
+                missing.append(spec.name)  # 필수인데 안 왔다 (회전 키는 enable 일 때만)
             continue
         why = _kind_error(spec.kind, v)  # 모양 검사
         if why is None and spec.check is not None:
@@ -332,6 +423,8 @@ def params_digest(values: dict[str, Any]) -> str:
     profile = present.get("z.profile")
     if profile == Z_PROFILE_P or _is_null_string(profile):
         present.pop("z.profile")  # "p"·"null"·키 없음 → 같은 지문 (S2T14-dd 1절: P 시리즈 sha 유지)
+    if not rotate_on(values):  # 회전 off 면 rotate.* 를 통째로 뺀다 → 값이 적혀 있어도 sha 유지
+        present = {k: x for k, x in present.items() if not k.startswith(ROTATE_PREFIX)}
     text = json.dumps(
         present,
         sort_keys=True,
@@ -348,3 +441,45 @@ def ready_log_line(report: ReadyReport) -> str:
         return "READY"
     bad = ", ".join(f"{k}: {why}" for k, why in report.invalid)  # "키: 이유" 목록
     return f"READY 거부: missing=[{', '.join(report.missing)}] invalid=[{bad}]"
+
+
+def rot_cfg_from_values(values: dict[str, Any], belt_dir_xy: Any) -> rotate.RotCfg:
+    """READY 값 → 회전 설정 (deg → rad, mm → m, ms → s). rotate_on 일 때만 부른다."""
+    v, rad = values, math.radians
+    home = v.get("rotate.home_tool_yaw_deg")
+    return rotate.RotCfg(
+        deadband=rad(v["rotate.deadband_deg"]),
+        min_rot=rad(v["rotate.min_deg"]),
+        max_rot=rad(v["rotate.max_deg"]),
+        tol=rad(v["rotate.tol_deg"]),
+        start_tol=rad(v["rotate.start_tol_deg"]),
+        n_min=int(v["rotate.n_min"]),
+        buffer_n=int(v["rotate.buffer_n"]),
+        r_min=float(v["rotate.r_min"]),
+        decide_max_s=float(v["rotate.decide_max_s"]),
+        home_fixed=None if home is None else rad(home),  # 없으면 첫 goal 공구 yaw
+        w_max=rad(v["rotate.omega_max_dps"]),
+        w_floor=rad(v["rotate.omega_floor_dps"]),
+        alpha=rad(v["rotate.alpha_dps2"]),
+        hold_dz=float(v["rotate.hold_dz_mm"]) / 1000.0,
+        return_min_dz=float(v["rotate.return_min_dz_mm"]) / 1000.0,
+        settle_s=float(v["rotate.settle_s"]),
+        stall_s=float(v["rotate.stall_s"]),
+        still=rad(v["rotate.still_dps"]),
+        belt_yaw=math.atan2(float(belt_dir_xy[1]), float(belt_dir_xy[0])),  # 벨트 진행 방향 각
+        lag_s=float(v["input.pose_lag_ms"]) / 1000.0,
+        extrap_max_s=float(v["input.pose_extrap_max_ms"]) / 1000.0,
+    )
+
+
+def rotate_line(values: dict[str, Any]) -> str:
+    """기동 로그 한 줄: 회전 설정 요약 (S2-T18)."""
+    if not rotate_on(values):
+        return "rotate off"
+    v = values
+    home = v.get("rotate.home_tool_yaw_deg")
+    return (
+        f"rotate on · deadband {v['rotate.deadband_deg']:g} · min {v['rotate.min_deg']:g} · "
+        f"max {v['rotate.max_deg']:g} · ω {v['rotate.omega_max_dps']:g} · "
+        f"α {v['rotate.alpha_dps2']:g} · home {'goal' if home is None else f'{home:g}'}"
+    )

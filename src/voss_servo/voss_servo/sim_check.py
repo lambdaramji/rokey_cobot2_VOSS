@@ -50,6 +50,9 @@ class Case:
     start_x_mm: float | None = None  # fake_box 시작 x
     kp: float | None = None  # control.kp_per_s (명령 인자 --kp 가 있으면 그것이 먼저)
     timeout_s: float | None = None  # goal 결과 대기 한계 (명령 인자보다 길면 이 값)
+    # --- S2-T18 J6 회전 (기본 = 끔·박스 0° = 지금 동작) ---
+    rotate: bool = False  # rotate.enable 덮어쓰기 (+ pose_lag 0)
+    box_yaw_deg: float = 0.0  # fake_box 박스 각 (벨트 기준)
 
 
 FAIL_RETREAT_CLOSE_S = (
@@ -96,6 +99,10 @@ CASES: dict[str, Case] = {
     "wide": Case(
         "wide", "normal", 40.5, grip_plan="wide", grip_close_s=1.7, max_attempts=3, timeout_s=45.0
     ),
+    # S2-T18: dry_run gateway 는 각속도를 버리고 자세를 그대로 낸다 → 30° 박스는 STALL 폴백 뒤 지금 방식
+    "rotate_stall": Case("rotate_stall", "normal", 40.5, rotate=True, box_yaw_deg=30.0),
+    # S2-T18: 3° 박스는 데드밴드·1단계 문턱 안 → SKIP(SMALL), 각속도 한 번도 안 냄
+    "rotate_small": Case("rotate_small", "normal", 40.5, rotate=True, box_yaw_deg=3.0),
 }
 
 
@@ -135,6 +142,9 @@ EXPECT: dict[tuple[str, str], Expect] = {
     ("grasp", "fail_retreat"): Expect(
         ABORTED, "GRASP_FAILED", "NOT_DETECTED", False, (*PHASES[:5],), attempts=1, retreat=True
     ),
+    # S2-T18: 회전 폴백·생략 뒤에도 지금과 같은 정상 파지
+    ("rotate", "rotate_stall"): Expect(SUCCEEDED, "OK", "", True, PHASES),
+    ("rotate", "rotate_small"): Expect(SUCCEEDED, "OK", "", True, PHASES),
     ("grasp", "wide"): Expect(
         ABORTED, "GRASP_FAILED", "WIDTH_OUT", False, (*PHASES[:5],), attempts=1, retreat=True
     ),
@@ -154,6 +164,7 @@ PROFILE_CASES: dict[str, tuple[str, ...]] = {
         "fail_retreat",
         "wide",
     ),
+    "rotate": ("rotate_stall", "rotate_small"),  # S2-T18
 }
 
 # 허용치 (사전 실험 실측: Δt 33.3 ms, watchdog 종료 뒤 0.71 s, hold 15틱 0.5 s)
@@ -188,6 +199,8 @@ TS = r"\[(\d+\.\d+)\] \[robot_gateway\]: "
 GW_STARTED = re.compile(r"robot_gateway started: (\S+)")  # 첫 단어 dry_run | real (:239)
 GW_WATCHDOG = re.compile(TS + r"servo_cmd 끊김\(watchdog\)")  # :849
 GW_STOP = re.compile(TS + r"/voss/robot/stop → (\S+)")  # :885
+# 5 s 통계 줄의 각속도 자름 수 (warn 줄은 2 s throttle 이라 통계 줄로 센다, S2-T18 r1-21)
+GW_ANGULAR = re.compile(TS + r"servo rx .*자름 \{[^}]*'angular': (\d+)")
 GW_STATS = re.compile(  # :421, 5 s 마다, 찍을 때마다 0 으로 리셋
     TS + r"servo rx .*watchdog (\d+), stop (\d+), move_stop (\d+) ok / (\d+) fail"
 )
@@ -232,6 +245,7 @@ class GatewayFacts:
     stops: list[tuple[float, str]] = field(default_factory=list)  # (시각, 결과)
     stats: list[tuple[float, int, int, int, int]] = field(default_factory=list)
     # (시각, watchdog, stop, move_stop ok, move_stop fail)
+    angular: list[tuple[float, int]] = field(default_factory=list)  # (시각, 각속도 자름 수) S2-T18
 
 
 # ---------------------------------------------------------------- 순수 판정 함수 (DD 6.9)
@@ -497,12 +511,47 @@ def parse_gateway(lines: list[str]) -> GatewayFacts:
             facts.stops.append((float(m.group(1)), m.group(2)))
         if m := GW_STATS.search(line):
             facts.stats.append((float(m.group(1)), *(int(m.group(i)) for i in range(2, 6))))
+        if m := GW_ANGULAR.search(line):
+            facts.angular.append((float(m.group(1)), int(m.group(2))))
     return facts
 
 
 def in_window(t: float, start: float | None, end: float | None) -> bool:
     """start ≤ t < end (None 이면 그쪽 끝 없음)."""
     return (start is None or t >= start) and (end is None or t < end)
+
+
+def angular_clamps(facts: GatewayFacts, win: tuple) -> int:
+    """창 안 통계 줄의 각속도 자름 수 합 (S2-T18). 통계는 5 s 뒤에 찍히므로 창 끝은 열어 둔다."""
+    return sum(n for t, n in facts.angular if in_window(t, win[0], None))
+
+
+def judge_rotation(case_name: str, rows: list[dict], clamps: int) -> Verdict:
+    """J-rot (S2-T18): 회전 하위 상태 순서·마지막 원인·각속도 자름이 기대대로인가."""
+    states = []
+    for r in (
+        rows
+    ):  # 바뀐 순서만. goal 전에 프레임이 차 있으면 첫 틱에 결정해 COLLECT 가 안 남는다 → 뺀다
+        s = r.get("rot_state")
+        if s and s != "COLLECT" and (not states or states[-1] != s):
+            states.append(s)
+    causes = [r.get("rot_cause") for r in rows if r.get("rot_cause")]
+    last = causes[-1] if causes else None
+    wz = [abs(r.get("wz_cmd_dps") or 0.0) for r in rows]
+    got = f"{'→'.join(states)} · cause {last} · max|wz| {max(wz, default=0):.1f}°/s · 자름 {clamps}"
+    if case_name == "rotate_stall":
+        want = "ROTATING→STOPPING→FALLBACK · cause STALL · 자름 > 0 (예상)"
+        seq = ["ROTATING", "STOPPING", "FALLBACK"]
+        ok = states[: len(seq)] == seq and "STALL" in causes and clamps > 0
+        return _v("J-rot", "회전 폴백", ok, want, got)
+    want = "SKIP · cause SMALL · wz 0 · 자름 0"
+    ok = states == ["SKIP"] and last == "SMALL" and max(wz, default=0) == 0 and clamps == 0
+    return _v("J-rot", "회전 생략", ok, want, got)
+
+
+def judge_no_angular(clamps: int) -> Verdict:
+    """J-ang (S2-T18): 회전 off 케이스는 gateway 가 각속도를 한 번도 자르지 않는다 (= 낸 적 없음)."""
+    return _v("J-ang", "각속도 0", clamps == 0, "자름 angular 0", f"{clamps}")
 
 
 def judge_dry_run(mode: str | None) -> Verdict:
@@ -567,6 +616,8 @@ def launch_extra(case: Case, z_profile: str | None = None) -> list[str]:
         extra.append(f"max_attempts:={case.max_attempts}")
     if case.start_x_mm is not None:
         extra.append(f"box_start_x_mm:={case.start_x_mm:g}")
+    if case.rotate:  # S2-T18
+        extra += ["rotate:=true", f"box_yaw_deg:={case.box_yaw_deg:g}"]
     return extra
 
 
@@ -949,6 +1000,11 @@ class SimRunner:
             belt = next((r.get("belt_vel_mps") for r in ticks if r.get("belt_vel_mps")), None)
             rows = progress + ([terminal] if terminal else [])
             v.append(judge_track_lock(rows, DEFAULT_START_M, belt))
+        clamps = angular_clamps(facts, win)  # S2-T18: gateway 가 자른 각속도 수
+        if case.rotate:
+            v.append(judge_rotation(case.name, progress + ([terminal] if terminal else []), clamps))
+        else:
+            v.append(judge_no_angular(clamps))  # 회전 off 회귀
         if killed:
             v.append(_unknown("J-", "정리", "SIGINT 로 종료", "SIGKILL 사용 (launch 가 안 끝남)"))
         return v

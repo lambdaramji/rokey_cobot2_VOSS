@@ -375,3 +375,34 @@ def test_s2t14_sim_launch_overrides(tmp_path) -> None:
     path = mod._write_overrides(str(tmp_path), "", "", "trapezoid")
     body = yaml.safe_load(open(path, encoding="utf-8"))
     assert body == {"belt_servo": {"ros__parameters": {"z": {"profile": "trapezoid"}}}}
+
+
+def _rows(states_causes, wz=0.0):
+    return [{"rot_state": s, "rot_cause": c, "wz_cmd_dps": wz} for s, c in states_causes]
+
+
+def test_rotation_judges_and_angular_clamps() -> None:
+    """S2-T18 J-rot·J-ang: STALL 폴백·SMALL 생략 판정, COLLECT 는 있어도 없어도, 통계 줄의 각속도 자름 합."""
+    stall = _rows(
+        [("COLLECT", None), ("ROTATING", None), ("STOPPING", "STALL"), ("FALLBACK", "STALL")]
+    )
+    assert sc.judge_rotation("rotate_stall", stall, 3).status == "PASS"
+    assert sc.judge_rotation("rotate_stall", stall[1:], 3).status == "PASS"  # 첫 틱에 결정
+    assert sc.judge_rotation("rotate_stall", stall, 0).status == "FAIL"  # 각속도를 안 냈다
+    small = _rows([("COLLECT", None), ("SKIP", "SMALL"), ("SKIP", "SMALL")])
+    assert sc.judge_rotation("rotate_small", small, 0).status == "PASS"
+    assert sc.judge_rotation("rotate_small", _rows([("SKIP", "SMALL")], wz=5.0), 0).status == "FAIL"
+    assert sc.judge_no_angular(0).status == "PASS" and sc.judge_no_angular(2).status == "FAIL"
+    ts = "[INFO] [1791557440.100000000] [robot_gateway]: "
+    lines = [
+        ts + "servo rx 30.0 Hz, speedl 150, 거부 0, 자름 {'angular': 12}, watchdog 0, stop 0, "
+        "move_stop 0 ok / 0 fail",
+        ts.replace("40.1", "45.1") + "servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, "
+        "stop 0, move_stop 0 ok / 0 fail",
+    ]
+    facts = sc.parse_gateway(lines)
+    assert sc.angular_clamps(facts, (1791557430.0, None)) == 12
+    assert sc.angular_clamps(facts, (1791557441.0, None)) == 0  # 창 앞의 줄은 세지 않는다
+    assert ("rotate", "rotate_stall") in sc.EXPECT and sc.PROFILE_CASES["rotate"]
+    assert sc.launch_extra(sc.CASES["rotate_stall"]) == ["rotate:=true", "box_yaw_deg:=30"]
+    assert sc.launch_extra(sc.CASES["normal"]) == []  # 회전 off 케이스는 인자 없음

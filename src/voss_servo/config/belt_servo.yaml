@@ -59,5 +59,25 @@ belt_servo:
                                     # 잡혀 있어 다음 요청이 BUSY 가 될 수 있다 (BUSY 는 0.5 s 뒤 한 번 더 요청, 그래도 BUSY 면 DEVICE_ERROR)
     rate_hz: 30.0                   # 서보 루프 (topics.md 계약)
     zero_hold_s: 0.5                # goal 종료 뒤 0 속도 유지. 제안 (watchdog 200 ms + 정지 0.15~0.41 s 보다 길게)
+    rotate:                         # S2-T18 J6 회전 파지 (기능 플래그, 기본 off). design/S2T18-{hld,dd,pseudo}.md
+      enable: false                 # true 면 아래 값이 모두 필요(null 이면 READY 거부), input.pose_lag_ms 0(joint_states) 전제.
+                                    # 기준 공구 yaw 를 고정하려면 rotate.home_tool_yaw_deg 를 더한다(없으면 노드 기동 뒤 첫 goal 공구 yaw)
+      deadband_deg:               null  # 제안 4 — 데드밴드 — |Δ| 이하는 돌리지 않음. 검출 바닥 1.3° + 송장 붙임 공차(yaw 관측 실험 뒤 확정)
+      min_deg:                    null  # 제안 10 — 1단계: |Δ| ≤ 10° 는 돌리지 않음 (TR-SERVO-05 단계 적용). 5단계에서 deadband 와 같게
+      max_deg:                    null  # 제안 45 — 1단계 상한 — 넘으면 돌리지 않고 진행(pending #27 a 안). 간섭·측정 ② 뒤 90
+      n_min:                      null  # 제안 5 — 목표 각 결정에 필요한 유효 yaw 프레임 수 (box_tracker min_hits 와 같음)
+      buffer_n:                   null  # 제안 15 — 트랙별 yaw 버퍼 길이 (goal 전부터 모음, D1 A 안)
+      r_min:                      null  # 제안 0.97 — 흩어짐 하한 — 2θ 평균 벡터 길이 (≈ 흩어짐 7°)
+      decide_max_s:               null  # 제안 0.5 — goal 뒤 결정 마감 — 넘으면 NO_YAW 로 회전 없이 진행
+      start_tol_deg:              null  # 제안 3 — goal 시작 공구 yaw 가 기준에서 이만큼 벗어나면 START_ROTATED (기준 = 첫 goal 공구 yaw)
+      omega_max_dps:              null  # 제안 60 — 각속도 상한 (T17 전 제안값 — 학민 확인)
+      alpha_dps2:                 null  # 제안 90 — 각가속 (T17 전 제안값). gateway servo_acc[1] 이하여야 함 — 지금 gateway 기본 10
+      tol_deg:                    null  # 제안 1.5 — 도달 허용 (deadband 보다 작아야 함)
+      omega_floor_dps:            null  # 제안 3 — 끝에서 멈춰 버리지 않게 하는 최소 각속도
+      hold_dz_mm:                 null  # 제안 50 — 회전 중 z 하한 = 윗면 + 50 (시야 보험: 회전 중 송장이 보이는 최소 +46, D2-2)
+      settle_s:                   null  # 제안 0.3 — 멈춘 뒤 정착 시간 (pose·비전이 따라오는 시간)
+      stall_s:                    null  # 제안 0.6 — 명령하고 이 시간 동안 1° 도 못 돌면 STALL (T17 전 gateway·sim 은 여기로 폴백)
+      still_dps:                  null  # 제안 2 — 이 각속도 아래면 멈춘 것
+      return_min_dz_mm:           null  # 제안 10 — LIFT·VERIFY 되돌리기는 TCP 가 윗면 + 10 위일 때만
     log:
       dir: data/servo               # 상대 경로는 실행 위치 기준. launch 는 절대 경로를 넘긴다

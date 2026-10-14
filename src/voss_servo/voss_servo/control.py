@@ -538,10 +538,12 @@ def command(
     cfg: ControlConfig,
     retreat: bool = False,
     hold_z: bool = False,
+    z_floor: float | None = None,
 ) -> Command:
     """새 phase 기준 속도. stopping·terminal·pose 없음·관측 없음이면 0.
 
     retreat = 안전 후퇴 중 (xy 는 retreat_xy), hold_z = 개방 기다리며 높이 유지 (U9b).
+    z_floor = J6 회전 중 z 하한 m (시야 보험, S2-T18). None 이면 지금과 같다.
     """
     if stopping or terminal:
         return Command(zero_cmd(), ZERO_STOP, None, None, False)  # 항상 0 (U1 회신 ⑤)
@@ -551,6 +553,8 @@ def command(
         return Command(zero_cmd(), ZERO_NO_OBS, None, None, False)
     rule = retreat_xy(geo.tcp, geo.top_z, cfg) if retreat else xy_rule(phase, geo.visible)
     z_t, v_down, v_up = z_plan(phase, geo.top_z, cfg, hold_z)
+    if z_t is not None and z_floor is not None:
+        z_t = max(z_t, z_floor)  # 회전 중에는 이 높이 아래로 내려가지 않는다 (S2-T18 D2-2)
     target = tcp_target(geo.p_pred, z_t if z_t is not None else float(geo.tcp[2]))
     e = target - geo.tcp  # z 목표가 없으면 높이 오차 0
     if rule == ZERO:
