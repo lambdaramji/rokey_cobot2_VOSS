@@ -37,6 +37,8 @@ TICK_FIELDS: tuple[str, ...] = (
     "position_valid",
     "position_source",
     "calib_version",
+    "yaw_base_deg",  # BoxTrack yaw_base(도) — yaw_valid 이고 유한할 때만 (S2-T18 0단계, 관측 기록만)
+    "yaw_valid",  # BoxTrack yaw_valid — 필드 없는 빌드·박스 없음이면 null
     "tcp_pose_m",  # 받은 TCP pose [x, y, z] (원본)
     "tcp_now_m",  # 보정 TCP (지금으로 외삽, U2)
     "tcp_extrap_s",  # 외삽 지평 (자르기 전)

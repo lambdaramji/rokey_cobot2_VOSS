@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import math
 import signal
 from collections import deque
 from dataclasses import dataclass, field, replace
@@ -90,6 +91,25 @@ DIAG_KEYS = (
 )
 # 안전 후퇴·재시도 로그 키 (U9b-dd 5절). 0 유지·예외 경로에서는 goal 끝 때 값(스냅샷)
 RETREAT_KEYS = ("retreat", "retreat_reason", "retreat_done", "retry_room_ok")
+
+
+def yaw_log_values(box: Any) -> tuple[float | None, bool | None]:
+    """BoxTrack 의 yaw 를 틱 로그용 (도, valid) 로 바꾼다 (로그 전용, 제어에 쓰지 않음, S2-T18 0단계).
+
+    yaw 필드가 없는 옛 BoxTrack(S2-T16 전 빌드)과 yaw_valid=false, 박스 없음을 로그에서 구별한다:
+    박스 없음·필드 없음 → (None, None), yaw_valid=false → (None, False), 값이 유한하지 않음 → (None, True).
+    """
+    if box is None:  # 이 트랙의 메시지를 아직 못 받음
+        return None, None
+    valid = getattr(box, "yaw_valid", None)  # 옛 메시지에는 필드가 없어 None
+    if valid is None:  # 필드 없음 = yaw 없는 빌드
+        return None, None
+    if not valid:  # 비전이 이 프레임 yaw 를 쓰지 말라고 함 (값은 0)
+        return None, False
+    yaw = getattr(box, "yaw_base", None)  # rad, 베이스 +X 에서 반시계 양
+    if not isinstance(yaw, float | int) or not math.isfinite(yaw):  # NaN·무한대·이상한 타입
+        return None, True
+    return math.degrees(yaw), True  # 사람이 읽기 쉽게 도 단위
 
 
 def _as_list(a: Any) -> list[float] | None:
@@ -1073,6 +1093,7 @@ class BeltServoNode(Node):
         pose = self._pose[0] if self._pose else None
         p = box.position_base if box else None
         t = pose.pose.position if pose else None
+        yaw_deg, yaw_ok = yaw_log_values(box)  # position_base_m 과 같은 메시지의 yaw
         return {
             "box_stamp_s": stamp_s(box.stamp) if box else None,
             "box_rx_s": entry.rx if entry else None,
@@ -1084,6 +1105,8 @@ class BeltServoNode(Node):
             "position_valid": bool(box.position_valid) if box else None,
             "position_source": int(box.position_source) if box else None,
             "calib_version": box.calib_version if box else None,
+            "yaw_base_deg": yaw_deg,  # S2-T18 0단계: 관측 기록만
+            "yaw_valid": yaw_ok,
             "tcp_pose_m": [t.x, t.y, t.z] if t else None,
         }
 

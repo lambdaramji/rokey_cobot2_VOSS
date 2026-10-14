@@ -48,8 +48,8 @@ def test_u9c_keys_present_and_counts() -> None:
     assert U9C_TICK_KEYS <= set(ls.TICK_FIELDS) and len(U9C_TICK_KEYS) == 16
     assert U9C_ATTEMPT_KEYS <= set(ls.ATTEMPT_FIELDS) and len(U9C_ATTEMPT_KEYS) == 12
     assert "obs_age_s" in ls.TICK_FIELDS
-    # U9b 후퇴 4키 + S2-T14 z_profile·z_v_cmd_mps (시도는 z_profile 만)
-    assert (len(ls.TICK_FIELDS), len(ls.ATTEMPT_FIELDS)) == (76, 35)
+    # U9b 후퇴 4키 + S2-T14 z_profile·z_v_cmd_mps (시도는 z_profile 만) + S2-T18 yaw 관측 2키 (틱만)
+    assert (len(ls.TICK_FIELDS), len(ls.ATTEMPT_FIELDS)) == (78, 35)
     assert len(set(ls.TICK_FIELDS)) == len(ls.TICK_FIELDS)  # 중복 키 없음
     assert list(ls.PHASE_T_KEYS) == ["PREPARE", "TRACK", "DESCEND", "GRASP", "LIFT", "VERIFY"]
 
