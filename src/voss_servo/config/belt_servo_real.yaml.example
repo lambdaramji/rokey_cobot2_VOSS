@@ -45,7 +45,7 @@ belt_servo:
       descend_speed_mps: null       # 하강 속도 상한. 제안 0.05 (상한 약 0.06)
       lift_speed_mps: null          # 들기 속도 상한. 제안 0.08
       height_tol_mm: null           # "높이 도달" 허용치. 제안 2
-      profile: p                    # z 속도 프로파일 (선택 키, 없어도 p). 켤 때 trapezoid(DESCEND·LIFT 사다리꼴, S2-T14),
+      profile: p                    # z 속도 프로파일 (선택 키, 없어도 p). 켤 때 trapezoid(DESCEND·LIFT 사다리꼴, S2-T14), 시연(10/15) 실기 = trapezoid(10/13 S4 5/5, U13 6.6)
                                     # 되돌림 = p 한 줄 + belt_servo 재기동. 절차·되돌림 조건: design/S2T14-run.md
     input:
       stale_timeout_s: null         # position_valid=false·pose 끊김 지속 기준. 제안 0.3
@@ -62,6 +62,6 @@ belt_servo:
                                     # J6 회전 파지(S2-T18)가 들어오면 3.0 으로 재검토. 교차 검사 > close_time_max 2.5 통과.
                                     # 참고: gateway rg2_timeout_s 6.0 이라 belt_servo 가 4 s 에 포기해도 RG2 가 잠시 바빠 다음 요청이 BUSY 일 수 있다
     rate_hz: 30.0                   # 서보 루프 (topics.md 계약)
-    zero_hold_s: 0.5                # goal 종료 뒤 0 속도 유지 (watchdog 200 ms + 정지 시간보다 길게)
+    zero_hold_s: 0.5                # goal 종료 뒤 0 속도 유지 (watchdog 200 ms + 정지 시간보다 길게) 실기 yaml 은 0.2(10/12 학민, gateway acc 100 → 정지 0.15 s 안, 10/12 로컬 20회 + 10/13 S4 36회(틱 로그 0 유지 6~7틱으로 확인) + 10/13 게이트 31회 = 87회, zero_hold 관련 이상 0; DEC-16 기준 0.25 보다 짧으니 acc 를 낮추면 되돌림)
     log:
       dir: data/servo               # T7 은 launch 인자 log_dir:=<레포>/data/servo 로 덮어쓴다
