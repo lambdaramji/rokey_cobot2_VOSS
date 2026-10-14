@@ -55,6 +55,10 @@ class VoiceFeedback:
             self.expire(now)
             if is_timeout_prompt_echo(text):
                 return None
+            if not text.strip():
+                # 잡음 구간의 빈 STT: 기존 WakeGate 처럼 무시하고 호출 대기를 유지한다
+                # (벨트·로봇 소음 뒤에 오는 명령을 버리지 않게). 실패 표시는 STT 호출 실패(fail)만.
+                return None
             woke, _ = split_wake(text)
             output = self.gate.on_text(text, now)
             if woke:
@@ -62,6 +66,4 @@ class VoiceFeedback:
             if output and self.active_id:
                 self._send("COMMAND_ACCEPTED")
                 self.active_id = ""
-            elif not text.strip():
-                self.fail(now)
             return output
