@@ -40,7 +40,6 @@ export function getResults(sessionId:string, result?:string):Promise<{items:Sort
 export function putPlan(planned:number):Promise<Summary> {
   return request('/api/sessions/current/plan',{method:'PUT',body:JSON.stringify({planned})});
 }
-export type CommandArgs = Record<string,string|string[]>;  // palletize 의 route 만 배열 (web_api.md)
-export function issueCommand(type:CommandType,args:CommandArgs={}):Promise<{command_id:string}> {
+export function issueCommand(type:CommandType,args:Record<string,string>={}):Promise<{command_id:string}> {
   return request('/api/commands',{method:'POST',body:JSON.stringify({type,args,raw_text:'HMI 버튼'})});
 }

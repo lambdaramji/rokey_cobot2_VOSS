@@ -1,6 +1,6 @@
 // HMI 명령을 검증·로컬 접근 제한 후 MQTT voss/command에 발행한다.
 // 입력: POST /api/commands JSON 및 Nginx X-Real-IP. 출력: 202 command_id.
-// 근거: docs/interfaces/web_api.md, mqtt.md (stop 원격 허용, Sprint 2 palletize).
+// 근거: docs/interfaces/web_api.md, mqtt.md (stop 원격 허용).
 package com.voss.web.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -10,7 +10,6 @@ import com.voss.web.mqtt.MqttEventRouter;
 import com.voss.web.service.SortStateStore;
 import com.voss.web.service.TimeProvider;
 import jakarta.servlet.http.HttpServletRequest;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -24,9 +23,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class CommandController {
     private static final Set<String> COMMAND_TYPES =
-            Set.of("start", "stop", "resume", "priority", "answer", "reset_zone", "palletize");
-    private static final Set<String> RESET_ZONES = Set.of("A", "B", "C", "RECHECK", "HOLD", "PALLET");
-    private static final int MAX_ROUTE = 3;
+            Set.of("start", "stop", "resume", "priority", "answer", "reset_zone");
+    private static final Set<String> RESET_ZONES = Set.of("A", "B", "C", "RECHECK", "HOLD");
     private final MqttCommandPublisher publisher;
     private final MqttEventRouter router;
     private final SortStateStore states;
@@ -95,28 +93,7 @@ public class CommandController {
             }
             return;
         }
-        if ("palletize".equals(type)) {
-            validateRoute(args);
-            return;
-        }
         validateAnswer(args);
-    }
-
-    /** palletize는 정식 동 이름 1~3개·중복 없는 배송 순서만 허용한다 (web_api.md S2-T08). */
-    private void validateRoute(JsonNode args) {
-        JsonNode route = args.path("route");
-        if (args.size() != 1 || !route.isArray() || route.isEmpty() || route.size() > MAX_ROUTE) {
-            throw invalid();
-        }
-        Set<String> seen = new HashSet<>();
-        for (JsonNode dong : route) {
-            if (!dong.isTextual() || dong.asText().isBlank() || !seen.add(dong.asText())) { throw invalid(); }
-        }
-        for (String dong : seen) {
-            if (!router.isCanonicalDong(dong)) {
-                throw new ApiException(HttpStatus.BAD_REQUEST, "UNKNOWN_DONG", "zone_map의 정식 동 이름을 지정하세요.");
-            }
-        }
     }
 
     /** answer는 box_id와 dong/zone 중 하나만 허용한다. */

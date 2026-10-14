@@ -1,6 +1,6 @@
 // 확정된 MQTT 수신 토픽을 상태 저장, SSE, 세션 예정 수량에 연결한다.
 // 입력: 토픽명과 MQTT JSON. 출력: 최신 SortState, SSE, session_plan 연결.
-// 근거: docs/interfaces/mqtt.md, web_api.md (#20, #68, Sprint 2 S2-T08).
+// 근거: docs/interfaces/mqtt.md, web_api.md (#20, #68).
 package com.voss.web.mqtt;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -20,7 +20,7 @@ public class MqttEventRouter {
     private static final Logger LOGGER = LoggerFactory.getLogger(MqttEventRouter.class);
     private static final Set<String> INPUT_TOPICS = Set.of(
             "voss/state", "voss/result", "voss/zone_map", "voss/robot",
-            "voss/command/ack", "voss/log_status", "voss/pallet/state", "voss/voice_status",
+            "voss/command/ack", "voss/log_status", "voss/voice_status",
             "voss/box_track", "voss/robot_pose", "voss/box_motion", "voss/robot_joints");
 
     private final VoiceStatusFilter voiceStatuses = new VoiceStatusFilter();
@@ -100,10 +100,9 @@ public class MqttEventRouter {
         return false;
     }
 
-    /** MQTT 토픽을 SSE 이름으로 바꾸되 command/ack·pallet/state는 별도 이름을 쓴다. */
+    /** MQTT 토픽을 SSE 이름으로 바꾸되 command/ack만 별도 이름을 쓴다. */
     private String toEventName(String topic) {
         if ("voss/command/ack".equals(topic)) { return "command_ack"; }
-        if ("voss/pallet/state".equals(topic)) { return "pallet_state"; }
         return topic.substring("voss/".length());
     }
 }

@@ -6,18 +6,10 @@
 ## 구현 범위
 
 - React/TypeScript/Vite: 운전(시작·정지·재개), 동 우선·HOLD 답변·구역 초기화, 투입 예정 수량, 최신 상태·OCR·로봇 상태·구역별 집계·보류·이력, CSV.
-- Spring Boot: `GET /api/stream` SSE(state·result·zone_map·robot·command_ack·log_status·pallet_state·link, 실시간 전용 voice_status·box_track·robot_pose·robot_joints·box_motion), `POST /api/commands`, `GET /api/stats`, `GET /api/sessions/current`, `PUT /api/sessions/current/plan`, `GET /api/results`, `GET /api/export.csv`.
-- MQTT: 구독 12개 `voss/state`, `voss/result`, `voss/zone_map`, `voss/robot`, `voss/command/ack`, `voss/log_status`, `voss/pallet/state`, `voss/voice_status`, `voss/box_track`, `voss/robot_pose`, `voss/box_motion`, `voss/robot_joints`(QoS 1/1/1/0/1/1/1/0/0/0/1/0); `voss/command` 발행(QoS 1). 접속 스냅샷은 state·zone_map·robot·log_status·pallet_state 만 — 위치·음성 이벤트는 재생하지 않는다. retained는 브로커 토픽 계약에 따름.
+- Spring Boot: `GET /api/stream` SSE(state·result·zone_map·robot·command_ack·log_status·link, 실시간 전용 voice_status·box_track·robot_pose·robot_joints·box_motion), `POST /api/commands`, `GET /api/stats`, `GET /api/sessions/current`, `PUT /api/sessions/current/plan`, `GET /api/results`, `GET /api/export.csv`.
+- MQTT: 구독 11개 `voss/state`, `voss/result`, `voss/zone_map`, `voss/robot`, `voss/command/ack`, `voss/log_status`, `voss/voice_status`, `voss/box_track`, `voss/robot_pose`, `voss/box_motion`, `voss/robot_joints`(QoS 1/1/1/0/1/1/0/0/0/1/0); `voss/command` 발행(QoS 1). 접속 스냅샷은 state·zone_map·robot·log_status 만 — 위치·음성 이벤트는 재생하지 않는다. retained는 브로커 토픽 계약에 따름.
 - SQL: `sort_log`는 조회 전용 연결만 사용하고, 투입 수량은 별도 `session_plan` 테이블에서 관리.
 - 원격 접근: `stop` 이외 명령은 Nginx가 덮어쓴 `X-Real-IP`가 localhost일 때만 허용. `X-Forwarded-For`는 무시. **단, SSH가 127.0.0.1:8080에 직접 연결되면 Nginx를 거치지 않으므로 이 헤더만으로 원격 접속자를 인증할 수 없다.**
-
-## Sprint 2 S2-T08 — 팔레트 패널 (BRD v1.5 TR-PAL-10, 남현지)
-
-- 화면: `src/PalletPanel.tsx`(04 / PALLETIZING). 경로 1~3곳 선택 → `palletize`, "팔레트 비움" → `reset_zone PALLET`(둘 다 공용 PC 로컬만). 3D 팔레트 4열×2줄×2층(트럭 머리 왼쪽·문 오른쪽, 동 색, 계획=옅게·옮기는 중=깜빡임·적재=진하게·실패=붉게), 위에서 본 칸 표(BRD 10.4 표와 같은 행 순서), 구역별 실을 수·초과·경로 제외, "배송 물량 남음" 경고, 진행률 "n개 중 m개".
-- 3D 는 SVG 사선 투영(`src/pallet.ts`, 새 의존성 없음 — three.js·WebGL 없이 결정적이라 시험할 수 있다). 박스 비율은 실제 46×31×27 mm. 앞줄 = 1줄은 임시(결정 D6·교시 S2-T02 뒤 `FRONT_LANE` 만 바꾼다).
-- 백엔드: `voss/pallet/state` 구독(QoS 1) → SSE `pallet_state`(접속 스냅샷 포함), `palletize` route 검사, `reset_zone PALLET`, SortState `PALLETIZING` 수용(빠지면 팔레타이징 중 3초 뒤 UNKNOWN).
-- 시험: `npm test`(Node 22 내장 `node --test`, `test/fixtures/pallet_s1.json` = 실제 pallet_fsm 이 만든 S1 + slot 4 실패·#37 당겨 놓기 PalletState 열 — 손으로 고치지 않는다), `./gradlew test`.
-- 공용 PC 재생·반영 ≤ 1초: `scripts/integration/README.md` "S2-T08".
 
 ## 공용 PC에서 테스트
 
@@ -28,7 +20,6 @@ cd docker/web/backend
 ./gradlew clean test bootJar
 cd ../frontend
 npm ci
-npm test
 npm run build
 ```
 

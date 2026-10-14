@@ -32,12 +32,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class MqttRouterSseIntegrationTest {
     private static final String FIRST_SESSION = "20261010T143012-a3f9";
     private static final String SECOND_SESSION = "20261011T003012-b4f0";
-    private static final String PALLET_STATE = """
-            {"run_id":"20261013T100000-c3d4","state":"RUNNING","route":["대치동","역삼동","청담동"],
-             "dongs":["대치동","역삼동","청담동"],"load":[3,7,6],"overflow":[3,0,0],"excluded":[0,0,0],
-             "overflow_warning":true,"total":16,"done":0,"failed":0,"box_id":"",
-             "slot_state":[],"slot_box_id":[],"slot_dong":[]}
-            """;
 
     private final ObjectMapper mapper = new ObjectMapper();
     private final SortStateStore states = new SortStateStore();
@@ -125,29 +119,6 @@ class MqttRouterSseIntegrationTest {
         assertFalse(body.contains("event:state"));
         assertTrue(states.getLatestState().isEmpty());
         verify(plans, never()).attachPending(FIRST_SESSION);
-    }
-
-    /** Sprint 2: 팔레트 배치도는 pallet_state 이벤트로 그대로 가고 늦은 브라우저도 스냅샷으로 받는다. */
-    @Test
-    void testPalletStateReachesSseAndSnapshot() throws Exception {
-        MvcResult early = openSseStream();
-        router.receive("voss/pallet/state", PALLET_STATE);
-        assertTrue(early.getResponse().getContentAsString().contains("event:pallet_state"));
-        assertTrue(early.getResponse().getContentAsString().contains("20261013T100000-c3d4"));
-
-        MvcResult late = openSseStream();
-        String body = late.getResponse().getContentAsString();
-        assertTrue(body.contains("event:pallet_state"));
-        assertTrue(body.contains("\"overflow_warning\":true"));
-    }
-
-    /** Sprint 2: 팔레타이징 중 SortState(PALLETIZING)를 버리지 않는다 — 버리면 3초 뒤 UNKNOWN. */
-    @Test
-    void testPalletizingStateIsAccepted() throws Exception {
-        MvcResult stream = openSseStream();
-        router.receive("voss/state", statePayload(FIRST_SESSION).replace("RUNNING", "PALLETIZING"));
-        assertEquals("PALLETIZING", states.getLatestState().orElseThrow().message().state());
-        assertTrue(stream.getResponse().getContentAsString().contains("PALLETIZING"));
     }
 
     /** 위치 이벤트는 실시간 전용이라 늦게 연결한 브라우저에 재생하지 않는다. */

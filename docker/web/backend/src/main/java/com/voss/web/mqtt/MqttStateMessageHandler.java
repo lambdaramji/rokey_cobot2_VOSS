@@ -36,8 +36,7 @@ public class MqttStateMessageHandler {
             "PICKING",
             "RECHECK",
             "ASKING",
-            "PAUSED",
-            "PALLETIZING"  // Sprint 2 S2-T08 (voss_msgs.md SortState)
+            "PAUSED"
     );
 
     private final ObjectMapper objectMapper;
