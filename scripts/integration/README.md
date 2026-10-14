@@ -25,7 +25,7 @@
 
 **안전:** 스크립트는 `/voss/sort/state`에 IDLE·ready=false 상태만 발행한다.
 로봇·벨트·그리퍼 제어 명령은 전혀 발행하지 않는다. `sort_manager` 또는
-기존 SortState 발행자가 있으면 실행을 거부한다. 시험 전 로봇이 운전 중이
+기존 SortState 발행자가 있으면 실행을 거부한다(시작 전 1.5 s discovery 대기 후 검사). box_tracker 도 SortState 를 구독하므로(크롭 stage·PICKING 트랙 보류) 떠 있으면 IDLE 로 보고 트랙 보류를 풀 수 있다 — **추종·파지 중이 아닐 때만** 실행한다. 시험 전 로봇이 운전 중이
 아닌지 현장 담당자가 확인한다. 브라우저는 Web PC 로컬에서 연다.
 
 **판정 범위:** 이 시험은 ROS 발행기→MQTT→SSE→React DOM의 비구동 실측이다.

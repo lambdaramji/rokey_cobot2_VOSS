@@ -76,6 +76,11 @@ docker compose logs --tail=100 backend frontend
 - 두 PC 비구동 시험용 Mosquitto 컨테이너·ACL 설치 절차는 **옛 레포 #155 의 제안**이었고, 지금은 `docker/mqtt/`(T11)에 있다. 공식 시연은 mqtt.md에 따라 공용 PC 호스트에서 운영한다. 비밀번호는 커밋하지 않는다.
 - 실제 DB 환경 변수, 보안 계정과 네트워크는 파일에 포함돼 있지 않습니다. 테스트 완료 전 시연 준비 완료라고 판단하지 마세요.
 
+### Workspace 위치 표시 주의
+
+- 구역 좌표(`src/lib/workspaceGeometry.ts`)는 10/12 voss_config 스냅샷(`CONFIG_SHA_SHORT`)의 복사본이다(플랜지 좌표, TCP 와 xy 1~3 mm 차이 — 표시엔 충분). zone_map 에는 좌표가 없어서 구역을 다시 교시하면 화면이 **조용히** 어긋나므로, voss_config 의 zones 를 바꾸면 이 파일과 SHA 를 같이 고친다.
+- 운반 박스 표시(`VITE_VOSS_TCP_BOX_TOP_OFFSET_MM`, 프론트 빌드 시 환경 변수)는 **TCP 좌표계** 값이다. 그리퍼가 수직 아래 자세(ry ≈ 180°)라 TCP z 축은 base 의 아래를 향한다 → 박스 윗면이 TCP 보다 base 기준 17~19 mm 위면 TCP 좌표로는 `0,0,-17` 이다(base 기준 `+17` 을 넣으면 박스가 벨트 아래에 그려진다). servo 참고값(박병후 #37·#39 리뷰): z 17~19, 닫힘축 ≈ 0, 벨트 방향 0 ± 3 mm. 실측 검증 전에는 `VITE_VOSS_BOX_OFFSET_VERIFIED=true` 를 쓰지 않는다(기본 빌드는 운반 박스 미표시).
+
 ### USB 카메라 (카메라 메뉴)
 
 대시보드를 `http://localhost`(개발 서버는 `http://localhost:5173`) 또는 HTTPS로 열고, USB 카메라 패널에서 **카메라 연결**을 눌러 브라우저 권한을 허용합니다. 카메라가 여러 개면 권한 허용 후 목록에서 USB 카메라를 선택하고 **카메라 변경**을 누릅니다. 일반 HTTP LAN IP 주소에서는 브라우저 카메라 접근이 제한됩니다.
