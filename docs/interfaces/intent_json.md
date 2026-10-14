@@ -62,6 +62,30 @@ LLM(FastAPI `/intent`, OpenAI structured output — ADR-0006)의 출력은 반�
 - intent_parser 가 `/voss/voice/say` 로 내는 문장(되묻기·준비 중·이력 응답)의 중복 억제는 intent_parser 가 맡는다(MC-025). manager 가 내는 문장은 manager 가 맡는다.
 - `box_id` 에는 원래 투입 box_id 만 싣는다(회차 없음, PL 결정 #67·#54). 다른 박스에 대한 늦은 답은 box_id 가 달라 manager 가 거른다. **같은 박스를 pause/resume 뒤 다시 물을 때는 앞 질문의 늦은 답이 섞일 수 있다**(#54 최종 정정, SRD v0.4 F-09). 질문 회차·답 수락 창·타이머 재시작은 B 상세로 sort_manager 가 정하고, 회차를 box_id 에 섞지 않는다. intent_parser 는 발화 시점의 SortState(`state`, `box_id`)로 answer 를 만든다.
 
+## 음성 stop 최종 안내 — 인터페이스 변경 제안 (승인 전, `interface` PR)
+
+`intent_parser`는 정지 키워드를 감지하면 지금처럼 `/voss/voice/intent`의 `stop`을
+LLM·TTS·zone_map·상태 확인을 기다리지 않고 즉시 발행한다. 접수 시점의
+"정지 요청을 전달했습니다." 안내는 발행하지 않는다. 최종 안내의 유일한 발행자는
+`sort_manager`이며 기존 `/voss/voice/say`와 `speech_out`을 사용한다.
+새 토픽·메시지 필드는 제안하지 않는다. manager의 stop 작업 토큰으로 음성 요청과
+`/voss/robot/stop` 응답을 연결하고, 요청 이후 새 RobotState를 추가 확인한다.
+`SortState=PAUSED`와 Command 접수 응답만으로 완료를 판정하지 않는다.
+
+| 확인 조건 | 한 번만 발행할 문장 |
+|---|---|
+| 해당 stop 작업의 로봇 서비스 성공 **및** 요청 이후 새로 수신한 `RobotState`가 `connected=true`, `state=STOPPED`, `error_code=""` | 정지되었습니다. |
+| manager가 stop 명령을 명시적으로 거부하고 로봇 stop 호출이 시작되지 않음 | 정지하지 못했습니다. 명령이 거부되었습니다. |
+| 해당 작업의 로봇 서비스 부재(`NO_SERVICE`) 또는 명시적 통신 오류(`DEVICE_ERROR`) | 정지 상태를 확인하지 못했습니다. 로봇 통신 오류입니다. |
+| 기존 stop 제한 시간 안에 서비스 응답과 신선한 `STOPPED` 상태를 모두 확인하지 못함, 또는 원인 미분류 실패 | 정지 상태를 확인하지 못했습니다. 로봇 상태를 확인해 주세요. |
+
+manager는 작업별 최종 안내를 최대 한 번만 발행하고 늦은 응답·상태를 버린다.
+중복 stop 발화가 진행 중 작업에 겹치면 한 작업으로 묶어 최종 안내를 중복하지
+않는 방안은 manager 담당자가 검토한다. `Trigger.success=true`는 move_stop 정상
+응답이지 물리적 안전 등급 비상정지의 증거가 아니다. 새 `STOPPED` 상태의 의미와
+서비스 응답의 순서는 로봇 담당자가 확인해야 하며, 그 전에는 성공 문장을 내지 않는다.
+담당 승인: sort_manager 남현지, RobotState·stop 응답 김학민, 음성 안내 정의석.
+
 ## 시험 (VC-EUS-INTENT-01, #54 MC-031)
 - 정답 세트 20문장(필수 지시 4유형 × 5)은 시험 전에 `src/voss_voice/test/fixtures/` 에 커밋한다.
 - 판정: **전체 20건 중 정답 ≥ 19**. API 오류·timeout 도 분모에 넣고 따로 보고하며, API 성공 건만의 조건부 정확도는 참고로 적는다. 허용 외 입력은 100% 거부.
