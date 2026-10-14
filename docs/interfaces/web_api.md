@@ -1,6 +1,6 @@
 # 웹·AI HTTP API (Spring Boot `/api`, FastAPI `/ai`)
 
-2026-10-13 확장 제안: SSE `box_motion`은 MQTT `voss/box_motion` JSON을 그대로 전달한다. `GRASPED`는 확인된 파지, `RELEASED`는 확인된 그리퍼 개방이다. `robot_pose.orientation`은 TCP 기준 박스 오프셋 회전용이다. Truck 수량은 계속 `/api/sessions/current.by_zone`의 DB 집계만 사용한다. 상세: [box_carry_proposal.md](box_carry_proposal.md).
+2026-10-14 확장(T13 #37, PL 리뷰): SSE `box_track`·`robot_pose`·`robot_joints`·`voice_status` **승인**(실시간 전용 — 저장·접속 스냅샷·재전송 없음), `box_motion` 은 **제안**(BoxMotion IDL 전, [box_carry_proposal.md](box_carry_proposal.md)). `robot_pose.orientation`은 TCP 기준 박스 오프셋 회전용이다. Truck 수량은 계속 `/api/sessions/current.by_zone`의 DB 집계만 사용한다.
 
 ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React, `/api` → Spring Boot(127.0.0.1:8080) 로 넘어간다. **Nginx 는 `/ai` 를 넘기지 않는다** — FastAPI 는 음성 ROS 노드만 `http://127.0.0.1:8000` 으로 부른다(Wi-Fi 에서 OpenAI 사용량이 나가지 않게). 브라우저·Spring Boot 는 ROS 에 직접 붙지 않는다(ROS ↔ 웹은 MQTT, `mqtt.md`).
 
@@ -90,7 +90,9 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 | `robot` | `voss/robot` JSON | RobotState |
 | `box_track` | `voss/box_track` JSON 그대로 | BoxTrack 유효 좌표·트랙 ID, 최대 10 Hz/트랙. 재전송 없음 |
 | `robot_pose` | `voss/robot_pose` JSON 그대로 | TCP base_link 좌표, 최대 20 Hz. 재전송 없음 |
-| `robot_joints` (제안) | `voss/robot_joints` JSON 그대로 | 기존 6축 JointState, rad, 최대 20 Hz. 저장·재전송 없음. [계약 제안](robot_joints_fk_proposal.md) |
+| `robot_joints` | `voss/robot_joints` JSON 그대로 | 기존 6축 JointState, rad, 최대 20 Hz. 저장·재전송 없음. [상세](robot_joints_fk_proposal.md) |
+| `voice_status` | `{"phase","event_id","utterance_id"}` | 음성 표시등. retained 거부·snapshot 없음. [상세](voice_status.md) |
+| `box_motion` (제안) | `voss/box_motion` JSON 그대로 | BoxMotion GRASPED/RELEASED. 저장·재전송 없음. [제안](box_carry_proposal.md) |
 | `command_ack` | `voss/command/ack` JSON | Command 응답 |
 | `log_status` | `{"status": "OK|DB_ERROR|SPOOL_FULL|STARTING", "stamp": "…"}` | `/voss/log/status` (hmi_bridge 전달) |
 | `link` | `{"mqtt": "UP|DOWN"}` | Spring Boot 브로커 연결 |
@@ -98,9 +100,9 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 - 3초 이상 `state` 가 없으면 HMI 는 `UNKNOWN` 으로 표시한다(값을 0·정상으로 위장하지 않음).
 - HMI 반영 ≤ 1초 측정: manager 상태 변경 로그 → DOM(전체), hmi_bridge 수신 → DOM(부분) 둘 다 기록(#54 MC-031).
 
-### 음성 상태 SSE 추가 제안 (승인 전)
+### 음성 상태 SSE (`voice_status`, 10/14 승인)
 
-기존 `GET /api/stream`에 `voice_status` 이벤트를 추가한다. `/api/events`는 실제 계약에 없으므로 사용하지 않는다.
+기존 `GET /api/stream`에 `voice_status` 이벤트를 더했다. `/api/events`는 실제 계약에 없으므로 사용하지 않는다.
 데이터는 `phase`, `event_id`, `utterance_id`이며 [voice_status.md](voice_status.md)의 검증·중복·연결 처리 규칙을 따른다.
 이 이벤트는 접속 직후 snapshot/재연결 replay 대상이 아니다. 다른 SSE 이벤트·DB·명령 API는 그대로다.
 
@@ -139,3 +141,5 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 - 2026-10-07: `SortState.session_id`(#78) 머지에 맞춰 "현재 세션" 확정 — 임시 규칙(최근 `sort_log` 행) 삭제, `session_id == ""` 이면 `NO_SESSION`(#78 김학민 🟢, `/api/sessions/current` 는 예정 수량만), `next` 예정 수량은 첫 결과가 아니라 `start` 때 붙임. "의존" 절 삭제.
 - 2026-10-07: 리뷰 반영(#68 남현지·김학민) — 움직이는 명령은 공용 PC 로컬만·`stop` 은 어디서든, 원격 판정은 Nginx `X-Real-IP`, 포트 바인드 표, Mosquitto ACL, Nginx `/ai` 제거, SortState.session_id 수용.
 - 2026-10-06: 초안 (#22, ADR-0006, SRD 상호확인 #52 MC-020·021·022·026·027, #54 MC-030·031). 제안 상태 — mqtt.md(10/08, #20) 확정 때 SSE `data` 형식을 함께 맞춘다.
+- 2026-10-13: (T13 #37) SSE `box_track`·`robot_pose` 추가. 제안: `robot_joints`·`box_motion`·`voice_status`(snapshot·replay 없음).
+- 2026-10-14: #37 PL 리뷰 — `robot_joints`·`voice_status` 승인, `box_motion` 제안 유지, SSE 표에 행 추가.

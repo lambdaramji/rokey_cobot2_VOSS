@@ -11,6 +11,10 @@
 | voss_config.md | voss_config.yaml 스키마 (zone_map, 구역 좌표, 벨트 속도 등) | 제안 |
 | calibration.md | config/belt_homography.yaml 스키마 (픽셀 → 베이스 xy) | 제안 (ADR-0003, 10/06) |
 | web_api.md | 웹·AI HTTP API (Spring Boot `/api` 이력·집계·명령·SSE, FastAPI `/ai` STT·intent) — ADR-0006 | 제안 (정의석, 10/06) |
+| voice_status.md | 음성 표시등 `/voss/voice/status`·MQTT `voss/voice_status`·SSE `voice_status` | 승인 (10/14, 표시 전용) |
+| robot_joints_fk_proposal.md | 6축 관절 표시 `voss/robot_joints`·FK 모델 | 승인 (10/14, 표시 전용) |
+| box_carry_proposal.md | BoxMotion 파지·개방 표시 | 제안 (10/13, IDL 미반영) |
+| deployment_two_pc_trial.md | 두 PC 분리 통합 시험 배치 | 제안 (10/11, 비구동 시험 전용 — 시연은 공용 PC 단일) |
 
 ## 변경 절차
 1. 이 폴더의 문서를 고치는 PR을 먼저 올린다 (`interface` 라벨). 영향받는 파트 담당자를 리뷰어로.

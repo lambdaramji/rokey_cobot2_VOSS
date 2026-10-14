@@ -52,14 +52,15 @@ LLM(FastAPI `/intent`, OpenAI structured output — ADR-0006)의 출력은 반�
 | "아무거나 해" | (거부) | | | | 되묻기 |
 
 ## 발화·중복
-- intent_parser 가 `/voss/voice/say` 로 내는 문장(되묻기·준비 중·이력 응답)의 중복 억제는 intent_parser 가 맡는다(MC-025). manager 가 내는 문장은 manager 가 맡는다.
+- intent_parser 가 `/voss/voice/say` 로 내는 문장(되묻기·준비 중·이력 응답)의 중복 억제는 intent_parser 가 맡는다(MC-025). manager 가 내는 문장은 manager 가 맡는다. voice_listener 의 TIMED_OUT 안내(#40)는 발화당 한 번만 낸다.
 - `box_id` 에는 원래 투입 box_id 만 싣는다(회차 없음, PL 결정 #67·#54). 다른 박스에 대한 늦은 답은 box_id 가 달라 manager 가 거른다. **같은 박스를 pause/resume 뒤 다시 물을 때는 앞 질문의 늦은 답이 섞일 수 있다**(#54 최종 정정, SRD v0.4 F-09). 질문 회차·답 수락 창·타이머 재시작은 B 상세로 sort_manager 가 정하고, 회차를 box_id 에 섞지 않는다. intent_parser 는 발화 시점의 SortState(`state`, `box_id`)로 answer 를 만든다.
 
 ## 음성 stop 최종 안내 — 인터페이스 변경 제안 (승인 전, `interface` PR)
 
-`intent_parser`는 정지 키워드를 감지하면 지금처럼 `/voss/voice/intent`의 `stop`을
-LLM·TTS·zone_map·상태 확인을 기다리지 않고 즉시 발행한다. 접수 시점의
-"정지 요청을 전달했습니다." 안내는 발행하지 않는다. 최종 안내의 유일한 발행자는
+**현재(main):** `intent_parser` 는 정지 키워드를 감지하면 `/voss/voice/intent` 의 `stop` 을
+LLM·TTS·zone_map·상태 확인 없이 즉시 발행하고 `/voss/voice/say` 는 내지 않는다(transcript_flow.py).
+sort_manager 도 stop 결과를 음성으로 안내하지 않는다(로그만).
+**제안:** 접수 시점 안내("정지 요청을 전달했습니다.")는 계속 내지 않고, 최종 안내의 유일한 발행자는
 `sort_manager`이며 기존 `/voss/voice/say`와 `speech_out`을 사용한다.
 새 토픽·메시지 필드는 제안하지 않는다. manager의 stop 작업 토큰으로 음성 요청과
 `/voss/robot/stop` 응답을 연결하고, 요청 이후 새 RobotState를 추가 확인한다.
@@ -68,9 +69,9 @@ LLM·TTS·zone_map·상태 확인을 기다리지 않고 즉시 발행한다. �
 | 확인 조건 | 한 번만 발행할 문장 |
 |---|---|
 | 해당 stop 작업의 로봇 서비스 성공 **및** 요청 이후 새로 수신한 `RobotState`가 `connected=true`, `state=STOPPED`, `error_code=""` | 정지되었습니다. |
-| manager가 stop 명령을 명시적으로 거부하고 로봇 stop 호출이 시작되지 않음 | 정지하지 못했습니다. 명령이 거부되었습니다. |
-| 해당 작업의 로봇 서비스 부재(`NO_SERVICE`) 또는 명시적 통신 오류(`DEVICE_ERROR`) | 정지 상태를 확인하지 못했습니다. 로봇 통신 오류입니다. |
-| 기존 stop 제한 시간 안에 서비스 응답과 신선한 `STOPPED` 상태를 모두 확인하지 못함, 또는 원인 미분류 실패 | 정지 상태를 확인하지 못했습니다. 로봇 상태를 확인해 주세요. |
+| manager가 stop 명령을 명시적으로 거부하고 로봇 stop 호출이 시작되지 않음 (현재 FSM 에는 없는 경로 — 방어용) | 정지하지 못했습니다. 명령이 거부되었습니다. |
+| 해당 작업의 로봇 서비스 부재(manager 내부 `NO_SERVICE`) 또는 명시적 통신 오류(gateway `Trigger.message=DEVICE_ERROR`) | 정지 상태를 확인하지 못했습니다. 로봇 통신 오류입니다. |
+| `stop_timeout_s`(3.0 s, sort_manager.yaml) 안에 — gateway `message=TIMEOUT` 포함 — 서비스 응답과 신선한 `STOPPED` 상태를 모두 확인하지 못함, 또는 원인 미분류 실패 | 정지 상태를 확인하지 못했습니다. 로봇 상태를 확인해 주세요. |
 
 manager는 작업별 최종 안내를 최대 한 번만 발행하고 늦은 응답·상태를 버린다.
 중복 stop 발화가 진행 중 작업에 겹치면 한 작업으로 묶어 최종 안내를 중복하지
@@ -94,3 +95,5 @@ manager는 작업별 최종 안내를 최대 한 번만 발행하고 늦은 응�
   - `update_zone_map` 은 C 선택 범위로 표시.
   - 리뷰 반영(#67): stop 은 로컬 키워드로 즉시 발행(LLM·zone_map 대기 없음), box_id 회차 없음(PL 결정), `count` 현재 미사용.
 - 2026-10-07: "같은 박스의 늦은 답은 해가 없다" 문장 철회 — #54 최종 정정대로 pause/resume 뒤 같은 박스 재질문에는 섞일 수 있음, 회차·수락 창은 sort_manager B 상세(SRD v0.4 F-09·TBD-009).
+- 2026-10-13: (T13 #37) 음성 stop 최종 안내 제안(sort_manager 단일 발행, 새 토픽 없음) — 제안.
+- 2026-10-14: #37 리뷰 — 현재 동작과 제안을 구분, 실패 코드 매핑(`NO_SERVICE`·`TIMEOUT`·`DEVICE_ERROR`)·`stop_timeout_s` 명시. voice_listener TIMED_OUT 안내 줄 추가.
