@@ -85,6 +85,32 @@ def normalize_down_pose(pose: Sequence[float], tol_deg: float = 0.5) -> Pose:
     return [x, y, z, _wrap_deg(rx - rz), 180.0, 0.0]
 
 
+def tool_yaw_deg(rx: float, ry: float, rz: float) -> float:
+    """두산 ZYZ 오일러(deg) → 공구 x 축의 베이스 XY 각(deg, (−180, 180]). J6 회전을 베이스 Z 기준으로 본 값.
+
+    belt_servo 의 공구 yaw(`tool_yaw_deg`)·측정 ② 와 같은 정의 — 관측 자세 ≈ −88.7°."""
+    m = zyz_to_matrix(rx, ry, rz)
+    return math.degrees(math.atan2(m[1][0], m[0][0]))
+
+
+def rotate_about_z(pose: Sequence[float], center_xy: Sequence[float], dtheta_deg: float) -> Pose:
+    """posx 를 베이스 Z 축(center_xy 를 지나는 수직선) 둘레로 dtheta 만큼 돌린다.
+
+    ZYZ 의 첫 각(rx)에 더하면 Rz(d)·Rz(a)·Ry(b)·Rz(c) = Rz(a + d)·Ry(b)·Rz(c) 라 자세가 맞다(가짜 로봇용)."""
+    x, y, z, rx, ry, rz = (float(v) for v in pose)
+    t = math.radians(dtheta_deg)
+    dx, dy = x - center_xy[0], y - center_xy[1]
+    c, s = math.cos(t), math.sin(t)
+    return [
+        center_xy[0] + c * dx - s * dy,
+        center_xy[1] + s * dx + c * dy,
+        z,
+        _wrap_deg(rx + dtheta_deg),
+        ry,
+        rz,
+    ]
+
+
 def flange_to_tcp(pose: Sequence[float], tcp_offset_mm: Sequence[float]) -> Pose:
     """플랜지 posx → TCP posx. 툴 회전은 0 이라 자세는 같고 위치만 R·offset 만큼 옮긴다."""
     x, y, z, rx, ry, rz = (float(v) for v in pose)

@@ -93,3 +93,20 @@ def test_flange_to_ros_pose_units():
     (x, y, z), q = g.flange_to_ros_pose(OBSERVE_FLANGE, TCP)
     assert [x, y, z] == pytest.approx([v / 1000.0 for v in OBSERVE_TCP_PENDANT], abs=2e-4)
     assert math.sqrt(sum(c * c for c in q)) == pytest.approx(1.0)
+
+
+def test_tool_yaw_of_observe_pose():
+    from voss_robot.geometry import tool_yaw_deg
+
+    assert tool_yaw_deg(85.25, -179.07, -6.03) == pytest.approx(-88.72, abs=0.01)
+
+
+def test_rotate_about_tcp_keeps_tcp_and_adds_yaw():
+    from voss_robot.geometry import flange_to_tcp, rotate_about_z, tool_yaw_deg
+
+    p = [-11.51, -271.11, 450.16, 85.25, -179.07, -6.03]
+    off = [1.382, 2.684, 246.642]
+    t = flange_to_tcp(p, off)
+    q = rotate_about_z(p, t[:2], 30.0)
+    assert flange_to_tcp(q, off)[:3] == pytest.approx(t[:3], abs=1e-6)
+    assert tool_yaw_deg(*q[3:]) == pytest.approx(tool_yaw_deg(*p[3:]) + 30.0)

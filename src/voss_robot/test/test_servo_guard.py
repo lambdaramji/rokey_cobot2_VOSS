@@ -1,5 +1,7 @@
 """ServoGuard — ADR-0010 robot_gateway 적용 조건 (watchdog·stop·z 하한·x 범위·속도 상한)."""
 
+import math
+
 import pytest
 from voss_robot.servo_guard import ServoGuard, ServoParams
 
@@ -139,3 +141,80 @@ def test_braking_distance_cuts_before_limit():
     assert r.vel_mm_s[2] == 0.0 and r.clamps == ["z_min"]
     slow = g.on_cmd(10.0, 10.0, (0.0, 0.0, -0.005))  # 5 mm/s 는 감속 0.125 mm 라 계속 내려간다
     assert slow.vel_mm_s[2] == -5.0
+
+
+# ---------------- 각속도 (S2-T17) ----------------
+YAW0 = -88.7  # 관측 자세 공구 yaw (voss_config observe_pose)
+
+
+def ang_guard(yaw=YAW0, **kw) -> ServoGuard:
+    kw.setdefault("lin_acc_mm_s2", 0.0)
+    g = ServoGuard(ServoParams(angular_enable=True, yaw_center_deg=YAW0, **kw))
+    g.set_pose(10.0, 0.0, -276.0, 200.0, yaw)
+    return g
+
+
+def test_angular_off_by_default_sends_zero_rotation():
+    r = guard().on_cmd(10.01, 10.0, (0.0, 0, 0), (0.0, 0.0, 0.5))
+    assert r.wz_dps == 0.0 and r.clamps == ["angular"]
+
+
+def test_angular_z_passes_as_deg_per_s():
+    r = ang_guard().on_cmd(10.01, 10.0, (0.005, 0, 0), (0.0, 0.0, math.radians(30)))
+    assert r.wz_dps == pytest.approx(30.0)
+    assert r.vel_mm_s == pytest.approx([5.0, 0.0, 0.0]) and r.clamps == []
+
+
+def test_angular_x_y_still_dropped_when_on():
+    r = ang_guard().on_cmd(10.01, 10.0, (0, 0, 0), (0.1, 0.0, math.radians(-20)))
+    assert r.wz_dps == pytest.approx(-20.0) and r.clamps == ["angular"]
+
+
+def test_angular_speed_limit():
+    r = ang_guard(max_ang_dps=60.0).on_cmd(10.01, 10.0, (0, 0, 0), (0, 0, math.radians(-90)))
+    assert r.wz_dps == pytest.approx(-60.0) and "ang_speed" in r.clamps
+
+
+def test_angular_needs_known_yaw():
+    g = ServoGuard(ServoParams(angular_enable=True, yaw_center_deg=None))
+    g.set_pose(10.0, 0.0, -276.0, 200.0, YAW0)
+    r = g.on_cmd(10.01, 10.0, (0, 0, 0), (0, 0, 0.5))
+    assert r.wz_dps == 0.0 and r.clamps == ["yaw_limit"]
+    g2 = ang_guard(yaw=None)
+    assert g2.on_cmd(10.01, 10.0, (0, 0, 0), (0, 0, 0.5)).clamps == ["yaw_limit"]
+
+
+def test_yaw_limit_cuts_outward_with_brake_angle():
+    # 60 °/s·α 90 → 감속 각 20°. 기준 +75° 에서 +방향은 75 + 20 + 예측(60 ms·이전 0) ≥ 90 이면 자름
+    g = ang_guard(yaw=YAW0 + 75.0, yaw_limit_deg=90.0, ang_acc_dps2=90.0)
+    r = g.on_cmd(10.01, 10.0, (0, 0, 0), (0, 0, math.radians(60)))
+    assert r.wz_dps == 0.0 and r.clamps == ["yaw_limit"]
+    back = g.on_cmd(10.02, 10.01, (0, 0, 0), (0, 0, math.radians(-60)))  # 안쪽으로는 그대로
+    assert back.wz_dps == pytest.approx(-60.0) and back.clamps == []
+
+
+def test_yaw_limit_wraps_across_180():
+    # 중심 −88.7 에서 −100° 쪽 = 공구 yaw +171.3 (−188.7) — 랩어라운드에도 같은 판단
+    g = ang_guard(yaw=171.3, yaw_limit_deg=90.0)
+    assert g.on_cmd(10.01, 10.0, (0, 0, 0), (0, 0, math.radians(-30))).clamps == ["yaw_limit"]
+    assert g.on_cmd(10.02, 10.01, (0, 0, 0), (0, 0, math.radians(30))).clamps == []
+
+
+def test_tick_clamps_rotation_between_commands():
+    g = ang_guard(yaw_limit_deg=90.0, ang_acc_dps2=90.0)
+    assert g.on_cmd(10.01, 10.0, (0, 0, 0), (0, 0, math.radians(30))).wz_dps == pytest.approx(30.0)
+    g.set_pose(10.1, 0.0, -276.0, 200.0, YAW0 + 85.0)  # 명령 사이에 한계 가까이
+    action, vel = g.on_tick(10.11)
+    assert action == "clamp" and vel == pytest.approx([0.0, 0.0, 0.0]) and g.last_wz == 0.0
+    assert g.on_tick(10.12) == ("", None)  # 한 번만 다시 보낸다
+
+
+def test_rotation_zeroed_on_expire_and_stop():
+    g = ang_guard(watchdog_s=0.2)
+    g.on_cmd(10.01, 10.0, (0, 0, 0), (0, 0, 0.5))
+    assert g.last_wz != 0.0
+    assert g.on_tick(10.3)[0] == "expire" and g.last_wz == 0.0
+    g.set_pose(10.3, 0.0, -276.0, 200.0, YAW0)
+    g.on_cmd(10.31, 10.3, (0, 0, 0), (0, 0, 0.5))
+    g.stop(10.32)
+    assert g.last_wz == 0.0 and not g.active

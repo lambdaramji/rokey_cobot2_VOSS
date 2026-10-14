@@ -37,7 +37,9 @@ STOP_QSTOP = 1
 
 
 class DryRunDoosan:
-    """가짜 로봇: 주어진 플랜지 자세에서 시작해, speedl 선속도를 적분해 움직인다(자세는 그대로).
+    """가짜 로봇: 주어진 플랜지 자세에서 시작해, speedl 선속도·베이스 Z 각속도를 적분해 움직인다.
+
+    각속도는 TCP 를 지나는 수직축 둘레로 돌린다(등록 TCP 기준 가정 — 실기 기준점은 에뮬레이터 E3 로 확인, S2-T17).
 
     실로봇처럼 스트림이 끊겨도 마지막 속도로 계속 간다(ADR-0010 실측) — gateway watchdog 시험용.
     """
@@ -47,6 +49,7 @@ class DryRunDoosan:
     ) -> None:
         self._pose = [float(v) for v in flange_pose]
         self._vel = [0.0, 0.0, 0.0]  # mm/s
+        self._wz = 0.0  # deg/s, 베이스 Z
         self._tcp = [float(v) for v in tcp_offset_mm]
         self._target: list[float] | None = None  # move_line 목표 (플랜지)
         self._next: list[list[float]] = []  # move_spline 남은 경유점 (플랜지)
@@ -73,6 +76,11 @@ class DryRunDoosan:
             return
         for i in range(3):
             self._pose[i] += self._vel[i] * dt
+        if self._wz:
+            from voss_robot.geometry import flange_to_tcp, rotate_about_z
+
+            c = flange_to_tcp(self._pose, self._tcp)
+            self._pose = rotate_about_z(self._pose, c[:2], self._wz * dt)
 
     def get_flange_posx(self) -> list[float]:
         """현재 플랜지 posx (mm·deg). 실제처럼 아주 짧게 기다린다."""
@@ -81,17 +89,19 @@ class DryRunDoosan:
             self._advance()
             return list(self._pose)
 
-    def speedl(self, vel_mm_s: Sequence[float], acc: Sequence[float]) -> None:
-        """speedl_stream 발행 대신: 선속도를 바로 바꾼다(가속 무시)."""
+    def speedl(self, vel_mm_s: Sequence[float], acc: Sequence[float], wz_dps: float = 0.0) -> None:
+        """speedl_stream 발행 대신: 선속도·각속도를 바로 바꾼다(가속 무시)."""
         with self._lock:
             self._advance()
             self._vel = [float(v) for v in vel_mm_s[:3]]
+            self._wz = float(wz_dps)
 
     def move_stop_async(self, done) -> None:
         """move_stop 대신: 바로 멈추고 done(ok, message) 를 부른다."""
         with self._lock:
             self._advance()
             self._vel = [0.0, 0.0, 0.0]
+            self._wz = 0.0
             self._target = None
             self._next = []
             self.stops += 1
@@ -106,6 +116,7 @@ class DryRunDoosan:
         with self._lock:
             self._advance()
             self._vel = [0.0, 0.0, 0.0]
+            self._wz = 0.0
             off = self._tcp if self.tcp_registered else [0.0, 0.0, 0.0]
             tgt = tcp_to_flange(tcp_posx, off)
             self._pose[3:] = tgt[3:]
@@ -122,6 +133,7 @@ class DryRunDoosan:
         with self._lock:
             self._advance()
             self._vel = [0.0, 0.0, 0.0]
+            self._wz = 0.0
             off = self._tcp if self.tcp_registered else [0.0, 0.0, 0.0]
             pts = [list(tcp_to_flange(q, off)) for q in tcp_points]
             self._pose[3:] = pts[-1][3:]
@@ -437,10 +449,11 @@ class RosDoosan:
         ok = self._flange.wait_for_service(timeout_sec=timeout_s)
         return self._stop.wait_for_service(timeout_sec=timeout_s) and ok
 
-    def speedl(self, vel_mm_s: Sequence[float], acc: Sequence[float]) -> None:
-        """선속도(mm/s)만 있는 speedl. 각속도 0, time 0(acc 가 우선 — ADR-0010 조건 4)."""
+    def speedl(self, vel_mm_s: Sequence[float], acc: Sequence[float], wz_dps: float = 0.0) -> None:
+        """speedl: 선속도(mm/s) + 베이스 Z 각속도(deg/s, vel[5]). x·y 각속도는 항상 0, time 0(acc 가 우선 —
+        ADR-0010 조건 4). acc = [선 mm/s², 각 deg/s²]. 각속도는 servo_guard 가 켜졌을 때만 0 이 아니다(S2-T17)."""
         m = self._speedl_msg()
-        m.vel = [float(v) for v in vel_mm_s[:3]] + [0.0, 0.0, 0.0]
+        m.vel = [float(v) for v in vel_mm_s[:3]] + [0.0, 0.0, float(wz_dps)]
         m.acc = [float(a) for a in acc]
         m.time = 0.0
         self._speedl_pub.publish(m)
