@@ -360,3 +360,26 @@ def test_two_layer_tray_partial_load_leaves_lower_layer() -> None:
     assert [m.slot for m in plan.moves if m.zone == "A"] == [6, 7, 0, 1, 2, 3]
     assert [m.slot for m in plan.moves if m.zone == "B"] == [6, 7, 8, 9, 0, 1, 2, 3, 4, 5]
     assert [(u.zone, u.slot) for u in plan.unloaded] == [("A", 4), ("A", 5)]
+
+
+@pytest.mark.parametrize("filled", [range(12), (0, 2, 3, 5, 6, 8), (1, 2, 4, 5, 7, 8, 10, 11)])
+def test_pick_order_keeps_the_exit_path_empty(filled) -> None:
+    """트레이 안 낮은 이동의 전제(박병후 #47 리뷰): C 3×2×2층(층당 6칸, 칸 = row×3 + col, col 0 = −X 출입구 쪽)에서
+    칸을 집을 때 ① 위층 박스는 모두 이미 집었고 ② 같은 층·같은 줄의 출입구 쪽(col 이 작은) 칸도 이미 비었다.
+    gateway 는 트레이 안을 TCP 40 으로 지나가는데 그 높이에서 든 박스 밑면(≈32)이 놓인 박스 윗면(≈28~33)과 겹친다
+    (voss_config.md 10/12). 순서가 바뀌면 이 시험이 먼저 깨진다."""
+    cells = 6
+    plan = pp.plan_pallet(
+        (C,), [box(n, C, s) for n, s in enumerate(filled, 1)], tray_layer_cells={"C": cells}
+    )
+    picked: set[int] = set()
+    for m in plan.moves:
+        layer, cell = divmod(m.slot, cells)
+        row, col = divmod(cell, 3)
+        for t in filled:
+            t_layer, t_cell = divmod(t, cells)
+            t_row, t_col = divmod(t_cell, 3)
+            blocks = t_layer > layer or (t_layer == layer and t_row == row and t_col < col)
+            assert not blocks or t in picked, f"칸 {m.slot} 을 집을 때 칸 {t} 가 아직 남아 있음"
+        picked.add(m.slot)
+    assert picked == set(filled)

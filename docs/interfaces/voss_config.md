@@ -23,7 +23,7 @@ zones:               # 두산 posx: x y z rx ry rz, mm/deg. 플랜지 기준(TCP
                      # pitch_y_mm(선택, 기본 pitch_mm) = Y 줄 간격. 줄 위치 = ((rows−1)/2 − row) × pitch_y_mm (pose 기준, **row 0 이 +Y** — 10/12 실측 기준, 커밋 7373e06·zone_motion.py)
                      # col_dy_mm(선택, cols 개) = 열마다 Y 보정(mm). 그 열의 모든 줄·층 칸에 더한다(트럭 +X 끝 열 +10)
                      # order(선택) = 앞쪽 칸을 채우는 순서(0..n−1 을 한 번씩, sort_manager 만 씀). n 번째 박스 → order[n], 넘어가면 n 그대로(2층 등)
-                     # in_tray_tcp_z_mm(선택, zones.<z> 키) = 이 구역의 트레이 안 이동 최저 TCP z(robot_gateway). 없으면 zone_min_in_tray_tcp_z_mm(60)
+                     # in_tray_tcp_z_mm(선택, zones.<z> 키) = 이 구역의 트레이 안 이동 최저 TCP z(robot_gateway). 없으면 zone_min_in_tray_tcp_z_mm(60). **이 높이는 지나가는 칸이 비어 있는 순서일 때만 안전**(채움 = grid.order 로 +X 끝부터, 집기 = pallet_plan 의 칸 번호 순서·위층부터 — test_pick_order_keeps_the_exit_path_empty)
                      # 자세는 ry = ±180° 라 rx·rz 가 한 값으로 정해지지 않는다(rx − rz 만 의미). robot_gateway 가 정규화한다
   A:       {pose: null, grid: {cols: 3, rows: 1, pitch_mm: 60}}
   B:       {pose: null, grid: {cols: 3, rows: 1, pitch_mm: 60}}
@@ -96,3 +96,4 @@ timing:
 - 2026-10-13 (로컬 시험 브랜치, BRD v1.5 10.7 이름에 맞춤 — 10/13 결정): zones `truck` → `pallet`, MoveToZone zone `TRUCK` → `PALLET`, mode `STAY` → `DROP`. `zones.pallet.grid.order` = 적재 순서(말한 순서대로 트럭 안쪽 1열부터 열 단위: 1층 0·4 → 2층 8·12 → 2열 1·5·9·13 …). 칸 번호(층 × 8 + 줄 × 4 + 열, 줄 0 = +Y)는 그대로라 robot_gateway 좌표는 바뀌지 않는다. sort_manager 가 칸 수(16)와 order 를 읽는다. 트레이는 10/12 에 +Y 80 mm 옮겨 재교시(칸 3 1206 해결, col_dy 는 쓰지 않음).
 - 2026-10-13 낮: **김학민 로컬 시험 브랜치(10/12 실기) 통합**(PL 결정). `zones.pallet` 는 김학민의 grid 형식(cols 4·rows 2·layers 2·pitch_mm·pitch_y_mm·order)을 쓴다 — v1.5 초안의 `lanes`·`pitch_x_mm`·`drop_margin_mm` 는 쓰지 않는다(개방 폭은 `gripper.place_open_mm`). grid `layers`·`layer_mm`·`pitch_y_mm`·`col_dy_mm`·`order`, zones.<z>.`in_tray_tcp_z_mm`, `gripper.place_open_mm`·`pick_open_mm` 그대로. 말한 순서 = 배송 순서(10/13 PL) — 위 10/13 줄의 "말한 순서대로 트럭 안쪽부터"는 쓰지 않는다.
 - 2026-10-13 저녁: `zones.pallet.grid.order` 삭제(10/13 PL 결정 Q12) — 아무도 읽지 않고 적재 순서는 `pallet_plan.slot_order` 상수다. A·B·C 의 `zones.<z>.grid.order`(앞쪽 칸 채우는 순서, sort_manager)는 그대로. 설정 파일에서 지우는 것은 demo.yaml 레포 승격(Q23) 때 함께.
+- 2026-10-14: `in_tray_tcp_z_mm` 안전 전제(지나가는 칸이 빈 순서)를 명시하고 pallet_plan 시험으로 고정 (#47 박병후 리뷰). 값·필드 변경 없음.
