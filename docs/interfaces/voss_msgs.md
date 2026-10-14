@@ -1,5 +1,14 @@
 # voss_msgs 필드 정의 (src/voss_msgs 와 1:1 — 둘 다 같이 고친다)
 
+## BoxMotion 확장 제안 (2026-10-13, 구두 승인 전달 · IDL 미반영)
+
+현재 main 의 `src/voss_msgs` IDL에는 아직 반영되지 않았다. 메시지·서비스 타입 해시가
+바뀌므로 관련 노드 담당자 승인과 일괄 재빌드 전에는 운영 계약으로 사용하지 않는다.
+
+**BoxMotion ROS 발행 토픽명(제안):** `/voss/hmi/box_motion` (기존 영역 누락을 수정한 이름; 10/14 김학민 PL 대행 확정). MQTT `voss/box_motion`·SSE `box_motion`은 그대로다. 메시지 타입·서비스 IDL 변경은 이 PR에서 하지 않는다.
+
+`BoxMotion.msg`: `string session_id`, `string box_id`, `int32 track_id`, `string phase` (`GRASPED`/`RELEASED`), `builtin_interfaces/Time stamp`, `string zone`. `GRASPED`는 LIFT·VERIFY 완료 후 manager가 `TrackAndGrasp.Result(reason=OK, grasped=true)`를 확인한 시각(물리 그리퍼 닫힘 시각 아님), `RELEASED`는 gateway의 PLACE RG2 개방 성공 `placed_stamp`이다. 이벤트는 실제 로봇 제어에 사용하지 않는다. `MoveToZone.Request` 끝에는 시각화 상관관계용 `session_id`, `box_id`, `track_id`를 추가한다. 자세한 발행·보정 제한은 [box_carry_proposal.md](box_carry_proposal.md)에 기록한다.
+
 ## msg
 | 타입 | 필드 | 비고 |
 |---|---|---|
@@ -75,3 +84,4 @@
 - 2026-10-11 오후: MoveToZone **PICK 파지 높이**를 '핑거 끝 = 박스 밑면 +8 mm' → **놓기 칸 자세 −8 mm** 로 정정 (#45, 10/11 실기 김학민). +8 계약대로(dz +3) 잡으면 박스 윗모서리를 잡았다(집음 폭 39.9). dz +3·0·−5·−8 을 차례로 시험해 −8 에서 몸통 파지(40.6)·바닥 접촉 없음. 필드(IDL)·실패 코드 변경 없음, gateway 파라미터 `zone_pick_dz_mm` 기본값만 바뀐다.
 - 2026-10-11 저녁: MoveToZone PICK 은 `RECHECK` 만(그 밖 `INVALID`), 상승 높이를 움직이기 전에 확인(안 되면 `LIMIT`), stop 뒤에는 다음 move_line 구간을 보내지 않음(그리퍼 동작 중 stop 포함) — #148 리뷰 박병후. 필드(IDL)·실패 코드 변경 없음.
 - 2026-10-12: `TrackAndGrasp` U9 문구 — `GRASP_FAILED` = 시도 한도 소진 또는 재시도 x 여유 없음, 결과 전 안전 후퇴(들기 높이). `WIDTH_OUT` 은 자동 개방 금지의 예외(결과 전 개방 뒤 상승). `DEVICE_ERROR` 에 cause `DESCEND_BLIND_TIMEOUT`(사각 체류 상한)·`RETREAT_TIMEOUT`(후퇴 상한) 추가 (옛 #37, belt_servo U9-a·U9-b). 필드(IDL)·reason 목록 변경 없음 — cause 는 belt_servo 로그 값.
+- 2026-10-13: (T13 #37) `BoxMotion`·`MoveToZone.Request` ID 추가 제안 — IDL 미반영, 타입 해시 변경 예정.
