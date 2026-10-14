@@ -6,11 +6,13 @@ import type { CommandArgs } from './api';
 import type { CommandType, PalletState } from './types';
 import {
   boxShape, columnLabel, COLS, deckShape, dongColor, drawOrder, MAX_ROUTE, overflowWarning, palletKey,
-  progress, routeFromPicks, routePreview, RUN_STATE_TEXT, shade, slotCell, summaryRows, topViewRows, VIEW_BOX,
+  progress, resetPalletAllowed, resetPalletPrompt, routeFromPicks, routePreview, RUN_STATE_TEXT, shade, slotCell,
+  summaryRows, topViewRows, VIEW_BOX,
 } from './pallet';
 
 type Props = {
   pallet:PalletState;
+  sortState:string;
   stale:boolean;
   dongs:string[];
   controlEnabled:boolean;
@@ -19,7 +21,7 @@ type Props = {
 
 const STATE_TEXT:Record<string,string> = { EMPTY:'빈 칸', PLANNED:'계획', MOVING:'옮기는 중', DONE:'적재', FAILED:'실패' };
 
-export default function PalletPanel({pallet,stale,dongs,controlEnabled,onCommand}:Props) {
+export default function PalletPanel({pallet,sortState,stale,dongs,controlEnabled,onCommand}:Props) {
   const [picks,setPicks] = useState<string[]>(Array(MAX_ROUTE).fill(''));
   const check = routeFromPicks(picks,dongs);
   const prog = progress(pallet);
@@ -27,6 +29,7 @@ export default function PalletPanel({pallet,stale,dongs,controlEnabled,onCommand
   const rows = summaryRows(pallet);
   const color = (dong:string) => dongColor(dong,dongs,pallet.dongs);
   const running = pallet.state === 'RUNNING';
+  const reset = resetPalletAllowed(sortState,pallet.state);
 
   return <section className="panel pallet-panel" data-testid="pallet-panel" data-pallet-key={palletKey(pallet)}>
     <div className="section-heading"><div><span className="eyebrow">04 / PALLETIZING</span><h2>팔레트 적재 (트럭 짐칸)</h2></div>
@@ -40,7 +43,8 @@ export default function PalletPanel({pallet,stale,dongs,controlEnabled,onCommand
     <div className="route-actions">
       <span className="route-preview">{check.ok?routePreview(check.route):check.message}</span>
       <button className="action primary" disabled={!controlEnabled||!check.ok||running} onClick={()=>check.ok&&onCommand('palletize',{route:check.route})}>▶ &nbsp; 팔레타이징 시작</button>
-      <button className="action subdued" disabled={!controlEnabled||running} onClick={()=>onCommand('reset_zone',{zone:'PALLET'})}>팔레트 비움</button>
+      <button className="action subdued" disabled={!controlEnabled||stale||!reset.ok} title={reset.ok?'실물 비움을 확인한 뒤 칸 기록을 비운다(로봇 동작 없음)':reset.reason}
+        onClick={()=>{ if (window.confirm(resetPalletPrompt(pallet))) onCommand('reset_zone',{zone:'PALLET'}); }}>트럭 짐칸 비움 확인</button>
     </div>
 
     {warning&&<p className="pallet-warning" role="alert">⚠ {warning}</p>}
@@ -76,7 +80,7 @@ export default function PalletPanel({pallet,stale,dongs,controlEnabled,onCommand
         <tbody>{rows.length?rows.map(r=><tr key={r.dong}><td><i className="dong-dot" style={{background:color(r.dong)}}/>{r.dong}</td><td>{r.order>0?`${r.order}번째`:'경로 밖'}</td><td>{r.load}</td><td className={r.overflow>0?'warn-text':''}>{r.overflow}</td><td>{r.excluded}</td></tr>)
           :<tr><td colSpan={5} className="no-rows">{pallet.run_id?'대상 조회·계획 중입니다.':'팔레타이징 실행이 없습니다.'}</td></tr>}</tbody></table></div>
     </div>
-    <p className="micro-note pallet-note">시작·비움은 공용 PC 로컬에서만. 줄 앞뒤 방향은 결정 D6·교시(S2-T02) 전 임시. 공식 기록: PostgreSQL pallet_log.</p>
+    <p className="micro-note pallet-note">시작·비움 확인은 공용 PC 로컬에서만. 비움 확인은 칸 기록만 0 으로 되돌린다 — 실물을 먼저 내린다. 줄 앞뒤 방향은 결정 D6·교시(S2-T02) 전 임시. 공식 기록: PostgreSQL pallet_log.</p>
   </section>;
 }
 

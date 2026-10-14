@@ -156,6 +156,23 @@ export function progress(st:PalletState):Progress {
 
 export const RUN_STATE_TEXT:Record<string,string> = { '':'실행 없음', RUNNING:'적재 중', PAUSED:'멈춤 — 재개하면 다음 칸부터', DONE:'완료' };
 
+/** 트럭 짐칸 비움 확인(reset_zone PALLET)을 보낼 수 있는지 — manager pallet_fsm._on_reset_pallet 과 같은 조건.
+ *  SortState 가 IDLE·PAUSED 이고, 멈춘(PAUSED)·진행 중(RUNNING) 팔레타이징이 없을 때만. 그 밖은 manager 가 거부한다. */
+export function resetPalletAllowed(sortState:string, palletRunState:string):{ok:boolean; reason:string} {
+  if (palletRunState === 'RUNNING') return { ok:false, reason:'팔레타이징 중' };
+  if (palletRunState === 'PAUSED') return { ok:false, reason:'멈춘 팔레타이징이 있음 — 재개해서 끝낸 뒤' };
+  if (sortState !== 'IDLE' && sortState !== 'PAUSED') return { ok:false, reason:'분류 IDLE·PAUSED 에서만' };
+  return { ok:true, reason:'' };
+}
+
+/** 비움 확인 대화상자 문구. 카운터만 0 으로 되돌리므로 작업자가 실물 비움을 눈으로 확인해야 한다. */
+export function resetPalletPrompt(st:PalletState):string {
+  const placed = st.slot_state.filter(s => s === 'DONE').length;
+  return `트럭 짐칸(팔레트)에 박스가 하나도 남아 있지 않은 것을 눈으로 확인했나요?\n`
+    + `확인하면 팔레트 칸 기록을 비웁니다${placed ? ` (화면상 적재 ${placed}개)` : ''}. 로봇은 움직이지 않습니다.\n`
+    + `박스가 남아 있으면 '취소' 후 먼저 내리세요 — 남은 채 비우면 다음 적재가 그 칸에 겹쳐 놓습니다.`;
+}
+
 /** 위에서 본 칸 표 (BRD v1.5 10.4 표와 같은 행 순서: 2층 1줄 · 2층 2줄 · 1층 1줄 · 1층 2줄, 열 1 → 4). */
 export function topViewRows():{label:string; slots:number[]}[] {
   const rows:{label:string; slots:number[]}[] = [];

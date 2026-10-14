@@ -299,7 +299,7 @@ export default function App() {
           <section className="panel"><div className="section-heading"><div><span className="eyebrow">EXCEPTIONS / HOLD</span><h2>보류 목록</h2></div><span className="count-badge">{held.length}건 표시</span></div><div className="hold-list">{held.length?held.map((item,index)=><div className="hold-item" key={`${item.box_id??'held'}-${index}`}><div><strong>{item.box_id??'—'}</strong><small>{item.dong??item.reason??'동 판독 대기'}</small></div><span>{item.zone??'HOLD'}</span></div>):<p className="empty">{error ? "보류 목록 조회 실패 — 서버 연결 확인 필요" : "보류 중인 기록이 없습니다."}</p>}</div></section>
         </div>
       </div>
-      <PalletPanel pallet={pallet} stale={!sseConnected||displayMqtt!=='UP'} dongs={dongs} controlEnabled={controlEnabled} onCommand={(type,args)=>void command(type,args)}/>
+      <PalletPanel pallet={pallet} sortState={displayState} stale={!sseConnected||displayMqtt!=='UP'} dongs={dongs} controlEnabled={controlEnabled} onCommand={(type,args)=>void command(type,args)}/>
       {error&&<p className="error-banner" role="alert">DB / API 조회 실패: {error} — 정확하지 않은 합계는 표시하지 않습니다.</p>}
       </>}
       <footer className="footer"><span>VOSS C-3 · WEB HMI</span><span>세션: {sessionId||'NO_SESSION'}</span><span>조회 시각: {displayTime(summary?.as_of)}</span><span>{!isLocal?'원격 조회 모드 · STOP만 허용':'공용 PC 로컬 제어'}</span></footer>

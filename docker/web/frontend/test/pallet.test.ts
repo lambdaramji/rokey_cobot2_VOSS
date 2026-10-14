@@ -6,7 +6,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   boxShape, CAPACITY, cellSlot, deckShape, dongColor, drawOrder, emptyPallet, overflowWarning, palletKey,
-  parsePalletState, progress, routeFromPicks, routePreview, slotCell, summaryRows, topViewRows, VIEW_BOX,
+  parsePalletState, progress, resetPalletAllowed, resetPalletPrompt, routeFromPicks, routePreview, slotCell, summaryRows,
+  topViewRows, VIEW_BOX,
 } from '../src/pallet.ts';
 
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/pallet_s1.json', import.meta.url), 'utf-8'));
@@ -127,4 +128,21 @@ test('경로 입력: 1~3곳, 앞에서부터, 중복·미등록 거부', () => {
 test('지연 관측 키는 박스마다 바뀐다', () => {
   const keys = states.map(palletKey);
   for (let i = 1; i < keys.length; i++) assert.notEqual(keys[i], keys[i - 1]);
+});
+
+test('짐칸 비움 확인은 manager 와 같은 조건(분류 IDLE·PAUSED, 진행·멈춘 팔레타이징 없음)에서만 보낸다', () => {
+  assert.equal(resetPalletAllowed('IDLE','').ok, true);
+  assert.equal(resetPalletAllowed('PAUSED','DONE').ok, true);
+  assert.equal(resetPalletAllowed('RUNNING','').ok, false);
+  assert.equal(resetPalletAllowed('PALLETIZING','RUNNING').ok, false);
+  assert.equal(resetPalletAllowed('PAUSED','PAUSED').ok, false);
+  assert.equal(resetPalletAllowed('UNKNOWN','').ok, false);
+});
+
+test('비움 확인 문구는 실물 확인을 묻고 화면상 적재 수를 보여 준다', () => {
+  const text = resetPalletPrompt(final);
+  assert.match(text, /눈으로 확인/);
+  assert.match(text, /화면상 적재 15개/);
+  assert.match(text, /로봇은 움직이지 않습니다/);
+  assert.doesNotMatch(resetPalletPrompt(emptyPallet()), /화면상 적재/);
 });
