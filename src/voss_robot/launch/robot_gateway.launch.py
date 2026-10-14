@@ -3,7 +3,8 @@
 개인 PC (두산 없이):  ros2 launch voss_robot robot_gateway.launch.py [dry_run_object_mm:=40.5]
 실기 (사람이 비상정지 옆에서, 브링업 뒤):  ... dry_run:=false [servo_z_min_mm:=<TCP z 하한 mm>]
 config 기본 = ~/voss_ws/config/voss_config.yaml (레포 config/ 를 복사한 호스트 사본).
-MoveToZone 기본 = 450 mm/s · 900 mm/s² · 위 모서리 블렌딩 30 mm (10/12 저녁 시나리오·10/13 게이트 실기 값, S2-T17).
+MoveToZone 기본 = 300 mm/s · 900 mm/s² · 위 모서리 블렌딩 30 mm (S2-T17). 450 은 A 칸 → OBSERVE 직선이
+    J1 축 74 mm 옆을 지나 J1 이 150 deg/s 에 걸렸다가 급감속 → 두산 9015 충돌 감지(10/14 3/3). 350 은 10/10 OK → 여유 두고 300.
     느리게: zone_vel_mm_s:=100 zone_acc_mm_s2:=200 zone_blend_mm:=0 (옛 기본 — 첫 실기·교시 확인용)
 
 [실기 금지] 두산 에뮬레이터(브링업 mode:=virtual, RG2 없음) 전용 — 두산 real + RG2 가짜:
@@ -56,7 +57,7 @@ def _gateway(context):
         )
     )
     zone_vel = LaunchConfiguration("zone_vel_mm_s").perform(context)
-    if zone_vel:  # MoveToZone 선속도(기본 450). 빈 값이면 노드 기본(100 mm/s, 45 deg/s)
+    if zone_vel:  # MoveToZone 선속도(기본 300). 빈 값이면 노드 기본(100 mm/s, 45 deg/s)
         params["zone_vel"] = [float(zone_vel), 45.0]
     blend = LaunchConfiguration("zone_blend_mm").perform(context)
     if blend:  # 위쪽 모서리 블렌딩 mm(기본 30). 빈 값이면 노드 기본 0(모서리마다 멈춤)
@@ -80,8 +81,8 @@ def generate_launch_description() -> LaunchDescription:
         [
             DeclareLaunchArgument("dry_run", default_value="true"),
             DeclareLaunchArgument("servo_z_min_mm", default_value=""),
-            # 실기 값(10/12 저녁·10/13 게이트) — 인자를 빼도 같은 속도(10/14 통합이 100 으로 떴음)
-            DeclareLaunchArgument("zone_vel_mm_s", default_value="450"),
+            # 인자를 빼도 시연 속도(10/14 통합이 100 으로 떴음). 450 이면 J1 특이점 근처 9015(10/14)
+            DeclareLaunchArgument("zone_vel_mm_s", default_value="300"),
             DeclareLaunchArgument("zone_acc_mm_s2", default_value="900"),
             DeclareLaunchArgument("zone_blend_mm", default_value="30"),
             DeclareLaunchArgument("pose_source", default_value=""),

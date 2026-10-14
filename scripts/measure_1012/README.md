@@ -26,7 +26,7 @@
 |---|---|
 | 1 | `cd ~/voss_ws/src/rokey_cobot2_VOSS/docker/db && docker compose up -d` |
 | 2 | `ros2 launch m0609_rg2_bringup bringup.launch.py mode:=real host:=192.168.1.100 port:=12345 model:=m0609` |
-| 3 | `ros2 launch voss_robot robot_gateway.launch.py dry_run:=false pose_source:=joint_states zone_vel_mm_s:=450 zone_acc_mm_s2:=900 zone_blend_mm:=30` |
+| 3 | `ros2 launch voss_robot robot_gateway.launch.py dry_run:=false pose_source:=joint_states zone_vel_mm_s:=300 zone_acc_mm_s2:=900 zone_blend_mm:=30` |
 | 4 | `ros2 run realsense2_camera realsense2_camera_node --ros-args -r __ns:=/ -r __node:=camera -p enable_color:=true -p enable_depth:=false -p enable_infra1:=false -p enable_infra2:=false -p enable_accel:=false -p enable_gyro:=false -p rgb_camera.color_profile:=1920x1080x30 -p rgb_camera.enable_auto_exposure:=false -p rgb_camera.exposure:=60 -p rgb_camera.enable_auto_white_balance:=false -p rgb_camera.white_balance:=4600.0 -p initial_reset:=true` |
 | 5 | `export $(grep '^VOSS_DB_LOGGER_PASSWORD=' docker/db/.env)` 후 `ros2 run voss_hmi sort_logger` |
 | 6 | `ros2 launch voss_vision box_tracker.launch.py` |
@@ -39,7 +39,7 @@
 
 - T2 전에 펜던트 툴·TCP = **GripperDA_v1** 인지 확인한다(docs/g0-runbook.md). T3 시작 줄이 `컨트롤러 TCP 등록 voss_config 와 같음 (차 0.0 mm)` 이어야 한다.
   `TCP 등록 없음 → 플랜지 좌표로 명령` 이면 움직이긴 하지만 펜던트 공간 제한이 핑거 끝을 막지 못한다(10/12 실기가 이 상태였다).
-- T3 시작 줄에서 PALLET 구역, vel [450.0, 45.0], acc [900.0, 90.0], blend 30.0 mm 를 확인한다.
+- T3 시작 줄에서 PALLET 구역, vel [300.0, 45.0], acc [900.0, 90.0], blend 30.0 mm 를 확인한다(10/14: 450 은 A 칸 → OBSERVE 에서 두산 9015 충돌 감지 → 300).
 - 팔레타이징은 T11 텍스트 대신 `"{command: palletize, arg: '대치동,역삼동,청담동'}"` 로도 된다. 멈춤 `stop`, 이어서 `resume`.
 - 다시 하려면 팔레트를 비우고 `stop` → `reset_zone PALLET` → `resume`.
 
