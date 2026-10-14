@@ -9,15 +9,14 @@ import yaml
 
 from voss_manager import sort_fsm as f
 
-REPO_CONFIG = os.path.join(
-    os.path.dirname(__file__), "..", "..", "..", "config", "voss_config.yaml"
-)
+# 로직 시험은 고정 설정(3×1)을 읽는다 — 레포 config 의 현장 값이 바뀌어도 기대값이 그대로다(S2-T21)
+TEST_CONFIG = os.path.join(os.path.dirname(__file__), "fixtures", "voss_config_3x1.yaml")
 SID = "20261010T143012-a3f9"
 MS = 1_000_000
 
 
 def raw_config() -> dict:
-    with open(REPO_CONFIG, encoding="utf-8") as fh:
+    with open(TEST_CONFIG, encoding="utf-8") as fh:
         return yaml.safe_load(fh)
 
 
@@ -90,7 +89,7 @@ def placed(ctx: f.Ctx, track: int, t: int = 2000 * MS, **kw) -> tuple[f.Ctx, lis
 # ---------------------------------------------------------------- 설정·ID
 
 
-def test_load_repo_config(cfg: f.Config) -> None:
+def test_load_test_config(cfg: f.Config) -> None:
     assert cfg.zone_map == {"역삼동": "A", "대치동": "B", "청담동": "C"}
     assert cfg.capacity == {"A": 3, "B": 3, "C": 3, "RECHECK": 2, "HOLD": 2}
     assert cfg.confidence_min == 0.6 and cfg.version == "1"

@@ -15,9 +15,8 @@ from voss_manager import pallet_fsm as pf
 from voss_manager import pallet_plan as pp
 from voss_manager import sort_fsm as f
 
-REPO_CONFIG = os.path.join(
-    os.path.dirname(__file__), "..", "..", "..", "config", "voss_config.yaml"
-)
+# 로직 시험은 고정 설정(3×1)을 읽는다 — 레포 config 의 현장 값이 바뀌어도 기대값이 그대로다(S2-T21)
+TEST_CONFIG = os.path.join(os.path.dirname(__file__), "fixtures", "voss_config_3x1.yaml")
 SID = "20261012T090000-a1b2"
 RUN = "20261012T150000-c3d4"
 MS = 1_000_000
@@ -30,7 +29,7 @@ HOLDING, EMPTY = 41.0, 28.0  # RG2 보고 폭: 박스를 쥠 / 빈손 (범위 39
 
 @pytest.fixture
 def cfg() -> f.Config:
-    with open(REPO_CONFIG, encoding="utf-8") as fh:
+    with open(TEST_CONFIG, encoding="utf-8") as fh:
         return replace(f.load_config(yaml.safe_load(fh)), pallet_ready=True)
 
 
@@ -421,9 +420,9 @@ def test_intent_and_config_hooks(cfg) -> None:
         "palletize",
         "역삼동,대치동",
     )
-    with open(REPO_CONFIG, encoding="utf-8") as fh:
+    with open(TEST_CONFIG, encoding="utf-8") as fh:
         raw = yaml.safe_load(fh)
-    assert f.load_config(raw).pallet_ready is False  # 교시 전 — 레포 설정에 zones.pallet 없음
+    assert f.load_config(raw).pallet_ready is False  # 교시 전 — 고정 설정에 zones.pallet 없음
     raw["zones"]["pallet"] = {"pose": [100.0, 200.0, 260.0, 0.0, 180.0, 0.0]}
     assert f.load_config(raw).pallet_ready is True
     raw["zones"]["pallet"] = {"pose": None}
@@ -559,7 +558,7 @@ def test_drop_calls_use_grid_cells(cfg) -> None:
 def test_two_layer_tray_from_config_picks_upper_layer_first(cfg) -> None:
     """voss_config 트레이 grid layers 2(한 층 6칸) → A 칸 6(칸 0 위)을 칸 0 보다 먼저 집는다(10/13 게이트).
     레포 설정(1층)은 그대로 칸 순서."""
-    with open(REPO_CONFIG, encoding="utf-8") as fh:
+    with open(TEST_CONFIG, encoding="utf-8") as fh:
         raw = yaml.safe_load(fh)
     for z in ("A", "B", "C"):
         raw["zones"][z]["grid"].update(rows=2, layers=2)
@@ -574,7 +573,7 @@ def test_two_layer_tray_from_config_picks_upper_layer_first(cfg) -> None:
 
 def two_layer() -> f.Config:
     """A·B·C 트레이를 2층(한 층 6칸)으로 바꾼 설정 — 10/13 게이트 실기와 같다."""
-    with open(REPO_CONFIG, encoding="utf-8") as fh:
+    with open(TEST_CONFIG, encoding="utf-8") as fh:
         raw = yaml.safe_load(fh)
     for z in ("A", "B", "C"):
         raw["zones"][z]["grid"].update(rows=2, layers=2)

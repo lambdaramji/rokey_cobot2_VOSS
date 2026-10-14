@@ -18,9 +18,8 @@ from voss_manager import pallet_fsm as pf
 from voss_manager import pallet_plan as pp
 from voss_manager import sort_fsm as f
 
-REPO_CONFIG = os.path.join(
-    os.path.dirname(__file__), "..", "..", "..", "config", "voss_config.yaml"
-)
+# 로직 시험은 고정 설정(3×1)을 읽는다 — 레포 config 의 현장 값이 바뀌어도 기대값이 그대로다(S2-T21)
+TEST_CONFIG = os.path.join(os.path.dirname(__file__), "fixtures", "voss_config_3x1.yaml")
 Y, D, C = "역삼동", "대치동", "청담동"
 ZONE_OF = {Y: "A", D: "B", C: "C"}
 SID = "20261013T090000-v15a"
@@ -231,7 +230,7 @@ def test_target_selection_hold_excluded_operator_box_included() -> None:
 
 
 def test_route_input_validation() -> None:
-    cfg = f.load_config(yaml.safe_load(open(REPO_CONFIG, encoding="utf-8")))
+    cfg = f.load_config(yaml.safe_load(open(TEST_CONFIG, encoding="utf-8")))
     for arg, msg in [
         ("", "1~3개"),
         ("역삼,역삼동", "두 번"),
@@ -263,7 +262,7 @@ def test_plan_is_pure_and_deterministic() -> None:
 
 @pytest.fixture
 def cfg() -> f.Config:
-    with open(REPO_CONFIG, encoding="utf-8") as fh:
+    with open(TEST_CONFIG, encoding="utf-8") as fh:
         return replace(f.load_config(yaml.safe_load(fh)), pallet_ready=True)
 
 
