@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   boxShape, CAPACITY, cellSlot, deckShape, dongColor, drawOrder, emptyPallet, overflowWarning, palletKey,
-  parsePalletState, progress, resetPalletAllowed, resetPalletPrompt, routeFromPicks, routePreview, slotCell, summaryRows,
+  GENERAL_RESET_ZONES, parsePalletState, progress, resetPalletAllowed, resetPalletPrompt, routeFromPicks, routePreview, slotCell, summaryRows,
   topViewRows, VIEW_BOX,
 } from '../src/pallet.ts';
 
@@ -145,4 +145,16 @@ test('비움 확인 문구는 실물 확인을 묻고 화면상 적재 수를 �
   assert.match(text, /화면상 적재 15개/);
   assert.match(text, /로봇은 움직이지 않습니다/);
   assert.doesNotMatch(resetPalletPrompt(emptyPallet()), /화면상 적재/);
+});
+
+test('일반 구역 초기화 메뉴에는 PALLET 이 없고, reset_zone PALLET 은 짐칸 비움 확인 버튼에서만 보낸다', () => {
+  assert.deepEqual([...GENERAL_RESET_ZONES], ['A','B','C','RECHECK','HOLD']);
+  const src = (name:string) => readFileSync(new URL(`../src/${name}`, import.meta.url), 'utf-8');
+  const app = src('App.tsx');
+  assert.match(app, /const RESET_ZONES = GENERAL_RESET_ZONES;/);
+  assert.doesNotMatch(app, /'PALLET'/);
+  const panel = src('PalletPanel.tsx');
+  const sends = panel.match(/onCommand\('reset_zone',\{zone:'PALLET'\}\)/g) ?? [];
+  assert.equal(sends.length, 1);
+  assert.match(panel, /window\.confirm\(resetPalletPrompt\(pallet\)\)\) onCommand\('reset_zone',\{zone:'PALLET'\}\)/);
 });

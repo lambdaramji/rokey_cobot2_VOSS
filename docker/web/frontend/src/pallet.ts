@@ -156,6 +156,10 @@ export function progress(st:PalletState):Progress {
 
 export const RUN_STATE_TEXT:Record<string,string> = { '':'실행 없음', RUNNING:'적재 중', PAUSED:'멈춤 — 재개하면 다음 칸부터', DONE:'완료' };
 
+/** 일반 '구역 초기화' 메뉴의 구역. PALLET 은 넣지 않는다 — 팔레트 초기화는 PalletPanel 의 '트럭 짐칸 비움 확인'
+ *  (실물 확인 대화상자)으로만 보낸다(정의석 #47 재리뷰). REST/MQTT 의 reset_zone PALLET 계약은 그대로다. */
+export const GENERAL_RESET_ZONES = ['A','B','C','RECHECK','HOLD'] as const;
+
 /** 트럭 짐칸 비움 확인(reset_zone PALLET)을 보낼 수 있는지 — manager pallet_fsm._on_reset_pallet 과 같은 조건.
  *  SortState 가 IDLE·PAUSED 이고, 멈춘(PAUSED)·진행 중(RUNNING) 팔레타이징이 없을 때만. 그 밖은 manager 가 거부한다. */
 export function resetPalletAllowed(sortState:string, palletRunState:string):{ok:boolean; reason:string} {

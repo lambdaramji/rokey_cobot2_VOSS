@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getResults, getSummary, issueCommand, putPlan, RequestFailure } from './api';
 import type { CommandArgs } from './api';
 import PalletPanel from './PalletPanel';
-import { emptyPallet, parsePalletState } from './pallet';
+import { emptyPallet, GENERAL_RESET_ZONES, parsePalletState } from './pallet';
 import type { CommandType, LinkStatus, PalletState, RobotState, SortResult, SortState, Summary, ZoneMap } from './types';
 import { VossSortingWorkspace } from './components/VossSortingWorkspace';
 import { parseBoxMotion, parseBoxTrack, parseRobotJoints, parseRobotPose, JOINT_STALE_MS, POSE_STALE_MS, TRACK_STALE_MS } from './lib/workspacePosition';
@@ -17,7 +17,7 @@ import { parseVoiceSignal } from './lib/voiceIndicator';
 import type { VoiceSignal } from './lib/voiceIndicator';
 type DisplayState = 'UNKNOWN'|string;
 const ZONES = ['A','B','C','RECHECK','HOLD'];
-const RESET_ZONES = [...ZONES,'PALLET'];  // Sprint 2: 팔레트 칸 카운터 비움
+const RESET_ZONES = GENERAL_RESET_ZONES;  // PALLET 은 팔레트 패널의 '트럭 짐칸 비움 확인'으로만
 const LOCAL_HOSTS = new Set(['localhost','127.0.0.1','::1']);
 const INITIAL_ERROR = '서버에서 데이터를 기다리는 중입니다.';
 const TIMEOUT_MS = 3000;
