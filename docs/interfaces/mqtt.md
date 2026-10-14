@@ -2,6 +2,8 @@
 
 2026-10-14 확장(T13 #37, PL 리뷰): 표시 전용 `voss/box_track`·`voss/robot_pose`(10/13 담당 3인 승인)·`voss/robot_joints`·`voss/voice_status` 를 **승인**한다 — 로봇 제어·명령 경로는 바뀌지 않는다. `voss/box_motion` 은 BoxMotion IDL·발행자가 생길 때까지 **제안**이다([box_carry_proposal.md](box_carry_proposal.md)). 6축 관절 상세는 [robot_joints_fk_proposal.md](robot_joints_fk_proposal.md), 음성은 [voice_status.md](voice_status.md).
 
+**BoxMotion ROS 입력 토픽명(10/14 김학민 PL 대행 확정):** `/voss/hmi/box_motion`. ROS의 `/voss/<영역>/<이름>` 규칙에 맞춘 이름이다. **MQTT `voss/box_motion`·SSE `box_motion`의 이름과 QoS 1·retain=false는 제안 상태로 유지한다.**
+
 격리 통합시험에서는 `VOSS_MQTT_HOST`/`VOSS_MQTT_PORT`(bridge)와
 `VOSS_MQTT_BROKER_URL`(Spring)로 **별도 루프백 브로커**를 지정할 수 있다.
 운영 기본값은 기존 `127.0.0.1:1883`이며 토픽·JSON 계약은 그대로다.
