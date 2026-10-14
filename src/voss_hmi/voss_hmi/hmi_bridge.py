@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import queue
 import time
@@ -18,18 +19,30 @@ from datetime import datetime, timedelta, timezone
 
 import paho.mqtt.client as mqtt
 import rclpy
+from geometry_msgs.msg import PoseStamped
 from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
+from sensor_msgs.msg import JointState
 from std_msgs.msg import String
 
 from voss_hmi.mqtt_logic import CommandError, pallet_state_payload, parse_command_json
-from voss_msgs.msg import PalletState, RobotState, SortResult, SortState, ZoneMap
+from voss_hmi.voice_status import forward_voice_status
+from voss_msgs.msg import BoxTrack, PalletState, RobotState, SortResult, SortState, ZoneMap
 from voss_msgs.srv import Command
+
+try:
+    from voss_msgs.msg import BoxMotion
+except ImportError:
+    # BoxMotion is a separate interface proposal. Keep current main usable until
+    # the message package and its producers are approved and rebuilt together.
+    BoxMotion = None
 
 MQTT_HOST = "127.0.0.1"
 MQTT_PORT = 1883
 MQTT_USERNAME = "bridge"
 MQTT_PASSWORD_ENV = "VOSS_MQTT_BRIDGE_PASSWORD"
+MQTT_PREVIEW_USERNAME_ENV = "VOSS_MQTT_PREVIEW_USERNAME"
+MQTT_PREVIEW_PASSWORD_ENV = "VOSS_MQTT_PREVIEW_PASSWORD"
 MQTT_COMMAND_TOPIC = "voss/command"
 MQTT_ACK_TOPIC = "voss/command/ack"
 COMMAND_CACHE_TTL_S = 600.0
@@ -55,6 +68,9 @@ QOS_ROBOT = QoSProfile(
     reliability=ReliabilityPolicy.RELIABLE,
     durability=DurabilityPolicy.TRANSIENT_LOCAL,
 )
+QOS_BOX = QoSProfile(depth=5, reliability=ReliabilityPolicy.BEST_EFFORT)
+QOS_POSE = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
+JOINT_NAMES = tuple(f"joint_{index}" for index in range(1, 7))
 
 
 class HmiBridgeNode(Node):
@@ -63,8 +79,16 @@ class HmiBridgeNode(Node):
     def __init__(self) -> None:
         super().__init__("hmi_bridge")
 
+        self._voice_status_only = bool(self.declare_parameter("voice_status_only", False).value)
+        if self._voice_status_only:
+            self._start_voice_status_only()
+            return
+
         self._command_queue: queue.Queue[str] = queue.Queue(maxsize=COMMAND_QUEUE_MAX)
         self._command_cache: OrderedDict[str, tuple[float, dict | None]] = OrderedDict()
+        self._last_box_sent: dict[int, float] = {}
+        self._last_pose_sent = 0.0
+        self._last_joints_sent = 0.0
 
         self._command_client = self.create_client(Command, "/voss/sort/command")
 
@@ -92,6 +116,13 @@ class HmiBridgeNode(Node):
             self._on_robot,
             QOS_ROBOT,
         )
+        self.create_subscription(BoxTrack, "/voss/vision/box", self._on_box_track, QOS_BOX)
+        if BoxMotion is not None:
+            self.create_subscription(
+                BoxMotion, "/voss/box_motion", self._on_box_motion, QOS_RELIABLE_10
+            )
+        self.create_subscription(PoseStamped, "/voss/robot/pose", self._on_robot_pose, QOS_POSE)
+        self.create_subscription(JointState, "/dsr01/joint_states", self._on_robot_joints, QOS_POSE)
         self.create_subscription(
             String,
             "/voss/log/status",
@@ -105,12 +136,30 @@ class HmiBridgeNode(Node):
             QOS_TRANSIENT_1,  # topics.md: reliable·transient_local·1
         )
 
+        self.create_subscription(
+            String, "/voss/voice/status", self._on_voice_status, QOS_RELIABLE_10
+        )
+
         self._mqtt = self._create_mqtt_client()
-        self._mqtt.connect_async(MQTT_HOST, MQTT_PORT, keepalive=30)
+        host = os.getenv("VOSS_MQTT_HOST", MQTT_HOST)
+        port = int(os.getenv("VOSS_MQTT_PORT", str(MQTT_PORT)))
+        self._mqtt.connect_async(host, port, keepalive=30)
         self._mqtt.loop_start()
 
         self.create_timer(COMMAND_DRAIN_PERIOD_S, self._drain_commands)
         self.get_logger().info("hmi_bridge started")
+
+    def _start_voice_status_only(self) -> None:
+        """격리 음성 시험에서 기존 브리지의 상태 전달만 실행한다. 명령 구독은 만들지 않는다."""
+        self._mqtt = self._create_mqtt_client()
+        self.create_subscription(
+            String, "/voss/voice/status", self._on_voice_status, QOS_RELIABLE_10
+        )
+        host = os.getenv("VOSS_MQTT_HOST", MQTT_HOST)
+        port = int(os.getenv("VOSS_MQTT_PORT", str(MQTT_PORT)))
+        self._mqtt.connect_async(host, port, keepalive=30)
+        self._mqtt.loop_start()
+        self.get_logger().info("hmi_bridge: voice status only (no command subscription)")
 
     def destroy_node(self) -> bool:
         """MQTT 루프를 먼저 끝낸 뒤 ROS 노드를 정리한다."""
@@ -123,14 +172,25 @@ class HmiBridgeNode(Node):
         return destroy_result
 
     def _create_mqtt_client(self) -> mqtt.Client:
-        """bridge 전용 계정으로 Mosquitto 클라이언트를 만든다."""
+        """표시 전용 시험에는 별도 계정, 일반 모드에는 기존 bridge 계정을 쓴다."""
 
-        password = os.environ.get(MQTT_PASSWORD_ENV)
+        if self._voice_status_only:
+            username = os.environ.get(MQTT_PREVIEW_USERNAME_ENV)
+            password_env = MQTT_PREVIEW_PASSWORD_ENV
+            if not username:
+                raise RuntimeError(f"{MQTT_PREVIEW_USERNAME_ENV} is required")
+        else:
+            username = MQTT_USERNAME
+            password_env = MQTT_PASSWORD_ENV
+
+        password = os.environ.get(password_env)
         if not password:
-            raise RuntimeError(f"{MQTT_PASSWORD_ENV} is required")
+            raise RuntimeError(f"{password_env} is required")
 
-        client = mqtt.Client(client_id="voss-hmi-bridge", protocol=mqtt.MQTTv311)
-        client.username_pw_set(MQTT_USERNAME, password)
+        # 시험용 실행이 기존 운영 bridge의 MQTT 연결을 밀어내지 않도록 ID만 분리한다.
+        client_id = "voss-hmi-voice-preview" if self._voice_status_only else "voss-hmi-bridge"
+        client = mqtt.Client(client_id=client_id, protocol=mqtt.MQTTv311)
+        client.username_pw_set(username, password)
         client.on_connect = self._on_mqtt_connect
         client.on_disconnect = self._on_mqtt_disconnect
         client.on_message = self._on_mqtt_message
@@ -144,7 +204,8 @@ class HmiBridgeNode(Node):
             self.get_logger().error(f"MQTT connect failed rc={rc}")
             return
 
-        client.subscribe(MQTT_COMMAND_TOPIC, qos=1)
+        if not self._voice_status_only:
+            client.subscribe(MQTT_COMMAND_TOPIC, qos=1)
         self.get_logger().info("MQTT connected")
 
     def _on_mqtt_disconnect(self, client, userdata, rc) -> None:
@@ -245,6 +306,135 @@ class HmiBridgeNode(Node):
             "stamp": _ros_time_to_iso(message.header.stamp),
         }
         self._publish_json("voss/robot", payload, qos=0, retain=False)
+
+    def _on_box_track(self, message: BoxTrack) -> None:
+        """박스별 최대 10 Hz로 촬영 시각의 베이스 좌표를 전달한다."""
+        now = time.monotonic()
+        track_id = int(message.track_id)
+        if now - self._last_box_sent.get(track_id, -math.inf) < 0.1:
+            return
+        stamp = _ros_time_to_iso(message.stamp)
+        if stamp is None:
+            return
+        point = message.position_base
+        valid = bool(message.position_valid) and all(
+            math.isfinite(value) for value in (point.x, point.y, point.z)
+        )
+        self._last_box_sent[track_id] = now
+        if len(self._last_box_sent) > 256:
+            self._last_box_sent = {
+                key: seen for key, seen in self._last_box_sent.items() if now - seen < 1.0
+            }
+        self._publish_json(
+            "voss/box_track",
+            {
+                "track_id": track_id,
+                "stamp": stamp,
+                "position_valid": valid,
+                "position_base": {"x": point.x, "y": point.y, "z": point.z} if valid else None,
+                "position_source": int(message.position_source),
+                "calib_version": message.calib_version,
+            },
+            qos=0,
+            retain=False,
+        )
+
+    def _on_box_motion(self, message: BoxMotion) -> None:
+        if (
+            message.phase not in ("GRASPED", "RELEASED")
+            or not message.session_id
+            or not message.box_id
+            or message.track_id < 0
+        ):
+            return
+        stamp = _ros_time_to_iso(message.stamp)
+        if stamp is None:
+            return
+        self._publish_json(
+            "voss/box_motion",
+            {
+                "session_id": message.session_id,
+                "box_id": message.box_id,
+                "track_id": int(message.track_id),
+                "phase": message.phase,
+                "stamp": stamp,
+                "zone": message.zone,
+            },
+            qos=1,
+            retain=False,
+        )
+
+    def _on_robot_pose(self, message: PoseStamped) -> None:
+        """TCP 위치만 최대 20 Hz로 전달하며 관절 자세는 추정하지 않는다."""
+        now = time.monotonic()
+        if now - self._last_pose_sent < 0.05 or message.header.frame_id != "base_link":
+            return
+        stamp = _ros_time_to_iso(message.header.stamp)
+        point = message.pose.position
+        orientation = message.pose.orientation
+        if stamp is None or not all(
+            math.isfinite(value)
+            for value in (
+                point.x,
+                point.y,
+                point.z,
+                orientation.x,
+                orientation.y,
+                orientation.z,
+                orientation.w,
+            )
+        ):
+            return
+        self._last_pose_sent = now
+        self._publish_json(
+            "voss/robot_pose",
+            {
+                "stamp": stamp,
+                "frame_id": "base_link",
+                "position": {"x": point.x, "y": point.y, "z": point.z},
+                "orientation": {
+                    "x": orientation.x,
+                    "y": orientation.y,
+                    "z": orientation.z,
+                    "w": orientation.w,
+                },
+            },
+            qos=0,
+            retain=False,
+        )
+
+    def _on_robot_joints(self, message: JointState) -> None:
+        """컨트롤러 관절 6개를 이름순 rad로 최대 20 Hz 표시 경로에 전달한다."""
+        now = time.monotonic()
+        if now - self._last_joints_sent < 0.05 or len(message.name) != len(message.position):
+            return
+        stamp = _ros_time_to_iso(message.header.stamp)
+        if stamp is None:
+            return
+        measured_at = message.header.stamp.sec + message.header.stamp.nanosec / 1_000_000_000
+        if not -1.0 <= time.time() - measured_at <= 1.0:
+            return
+        named = dict(zip(message.name, message.position, strict=True))
+        if any(name not in named for name in JOINT_NAMES):
+            return
+        angles = [float(named[name]) for name in JOINT_NAMES]
+        if not all(math.isfinite(angle) for angle in angles):
+            return
+        self._last_joints_sent = now
+        self._publish_json(
+            "voss/robot_joints",
+            {
+                "stamp": stamp,
+                "frame_id": "base_link",
+                "name": JOINT_NAMES,
+                "position": angles,
+            },
+            qos=0,
+            retain=False,
+        )
+
+    def _on_voice_status(self, message: String) -> None:
+        forward_voice_status(self._mqtt, message.data)
 
     def _on_log_status(self, message: String) -> None:
         """logger 상태를 retained voss/log_status로 발행한다."""
