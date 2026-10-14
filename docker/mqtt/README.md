@@ -5,7 +5,7 @@
 공식 배치(mqtt.md #20, ADR-0006)는 **공용 PC** 한 대에서 `127.0.0.1:1883` 만 연다. 두 PC 시험
 ([deployment_two_pc_trial.md](../../docs/interfaces/deployment_two_pc_trial.md), 제안)에서는 같은 설정을 Web PC 에
 띄우고 Nodes PC 가 SSH 터널을 쓴다. 공용 PC 에는 시스템 mosquitto 패키지가 없으므로 이 compose 가 브로커다.
-기존 7개 토픽·QoS는 유지한다. 추적·관절·음성 표시 토픽은 `interface` PR 승인 대상이다.
+#20 확정 7개 토픽·QoS는 그대로다.
 추적·관절·음성 표시 토픽(`voss/box_track`·`robot_pose`·`robot_joints`·`voice_status`)은 10/14 PL 리뷰로
 표시 전용 승인, `voss/box_motion` 은 메시지가 생길 때까지 제안이다(ACL 에 미리 있어도 발행자가 없다).
 격리 시험 계정 `voice_preview` 는 `voss/voice_status` write 만 허용한다.
