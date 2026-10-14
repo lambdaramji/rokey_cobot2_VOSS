@@ -19,5 +19,12 @@
   녹화는 g0-runbook 3절 토픽(`image_raw/compressed`·`/voss/vision/box`·`/voss/robot/pose`·액션 feedback)을 쓴다. 한글은 Nanum 폰트가 있으면 PIL 로, 없으면 영문 (남현지)
 - `calib/descend_visibility.py` — 하강 중 송장이 화면 아래 끝에 걸려 BoxTrack 이 끊기기 시작하는 TCP 높이(박스 회전각·정렬 오차·TCP 가 박스보다 하류로 앞선 거리 `--tcp-ahead` 별)와 그 사이 LOST 여부 → belt_servo `vision_cutoff_above_top_mm` 근거. 핸드아이 모델 값이고 `--tcp-ahead` 에 민감하다(10/10 g1_s1 재생의 실제 끊김 윗면 +31~37 mm 는 0 과 맞음) — 새 조건은 `box_overlay.py` 로 녹화를 확인한다 (남현지)
 - `calib/pose_lag_eval.py` — 영상-pose 지연(box_tracker `pose_lag_ms`)과 이동 중 좌표 오차를 녹화 하나로 잰다(T21 #30, calibration.md 이동 중 검증). 박스를 세워 두고 로봇만 움직인 녹화(이동 전후 3 s 정지, +x 한 방향·두 속도면 충분)에서 box_tracker 와 같은 계산으로 lag 를 훑어 이동 프레임 RMS 가 가장 작은 값을 고르고, 진행 방향 오차의 기울기로 한 번 더 확인한다. pose 값 갱신 간격(service 0.1 s 계단, #118)도 알려 준다. 계산은 `voss_vision/pose_lag.py`(pytest). `python3 tools/calib/pose_lag_eval.py <bag> --hand-eye config/hand_eye.yaml --homography config/belt_homography.yaml [--lags=-20:150:5] [--csv out.csv]` (남현지)
+- `calib/j6_yaw_eval.py` — **J6 회전 시 핸드아이 오차·박스 yaw**(S2-T16, R-28·TR-SERVO-06 실기 측정). 박스를 세워 두고(벨트 정지) 관측 자세에서 J6 만 0 → 15 → 30 → 45°(되면 −쪽도) 돌리며 각마다 약 3 s 멈춘 녹화 — 박스가 그대로라 J6 각마다 좌표·yaw 가 같아야 하고, 관측 자세 구간 대비 차가 J6 회전 때 오차다(관측 자세 구간은 호모그래피와도 비교). 정지는 병진·회전 둘 다 본다(J6 만 돌리면 TCP 점은 그대로). 계산은 `voss_vision/j6_eval.py`(pytest, box_tracker 와 같은 검출·변환). 판정(제안값) Δ위치 ≤ 5 mm, |Δyaw| ≤ 2°. 녹화 하나 = 박스 한 번 놓기(대략 0·15·30·45°마다 새 녹화)
+  - **박스는 TCP 바로 아래(공구축이 벨트 평면과 만나는 점)에 둔다** — 공구축 위 점은 J6 를 돌려도 화면 같은 자리에 있어 0~90° 내내 보인다. 화면 가운데에 두면 J6 를 돌릴 때 시야 밖으로 나간다(10/13 합성 녹화).
+  - 로봇 자세 이동은 김학민이 티치펜던트·저속, 비상정지 대기자 옆. 토픽: `/camera/color/image_raw/compressed`·`/camera/color/camera_info`·`/voss/robot/pose`
+  ```bash
+  python3 tools/calib/j6_yaw_eval.py <녹화> [<녹화> …] --hand-eye config/hand_eye.yaml --homography config/belt_homography.yaml [--lag-ms 60] [--csv j6.csv]
+  ```
+  핸드아이가 맞는 합성 녹화(10/13)에서 J6 0~90° 남는 값 ≤ 1.2 mm·1.3°(원근으로 사다리꼴인 송장에 회전 사각형을 맞추는 검출 바닥값) — yaw 기준 2° 와 여유가 크지 않다 (남현지)
 - `colab/t17_yolo_train.ipynb` — 자동 라벨로 YOLO nano 학습·이어 학습·holdout 평가·ONNX 내보내기. 입력·체크포인트·출력 경로는 팀 Drive 구조(`docs/setup/drive.md`)를 따른다 (남현지)
 - `mock/g0_mock.py` — G0 모의 상대: belt_servo 액션(`--servo`)·robot_gateway MoveToZone·stop·pose(`--robot`)·sort_logger 상태(`--log`)·박스 1개 BoxTrack·LabelRead(`--vision`). 진짜 서버·발행자가 이미 있으면 그 부분은 띄우지 않는다. 장비를 움직이지 않는다 — sort_manager 를 로봇 없이 끝까지 돌려 보는 용도 (남현지)

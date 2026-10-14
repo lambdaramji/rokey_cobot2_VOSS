@@ -12,11 +12,14 @@ from voss_vision.tracker_logic import (
     LoopStats,
     PlaybackClock,
     choose_position,
+    choose_yaw,
     crop_window,
+    fold_yaw,
     hold_track_id,
     label_stage,
     near_observe,
     sharpness,
+    yaw_from_ends,
 )
 
 
@@ -173,3 +176,34 @@ def test_playback_clock_scales_by_rate() -> None:
     assert c(101.0, 0.0) == pytest.approx(5000.5)  # 2배속이면 녹화 1 s 가 지금 0.5 s
     with pytest.raises(ValueError):
         PlaybackClock(0.0)
+
+
+# ---------------------------------------------------------------- yaw (S2-T16, voss_msgs.md BoxTrack)
+
+
+@pytest.mark.parametrize(
+    "deg, want",
+    [(0, 0), (180, 0), (-180, 0), (90, 90), (-90, 90), (100, -80), (-100, 80), (45, 45), (270, 90)],
+)
+def test_fold_yaw_to_half_open_range(deg: float, want: float) -> None:
+    y = fold_yaw(np.radians(deg))
+    assert -np.pi / 2 < y <= np.pi / 2
+    assert y == pytest.approx(np.radians(want), abs=1e-9)
+
+
+def test_yaw_from_ends_ignores_end_order_and_rejects_degenerate() -> None:
+    a, b = (0.0, 0.0), (10.0, 10.0)
+    assert yaw_from_ends(a, b) == pytest.approx(np.pi / 4)
+    assert yaw_from_ends(b, a) == pytest.approx(np.pi / 4)  # 180° 대칭
+    assert yaw_from_ends(a, (0.5, 0.5)) is None  # 1 mm 미만
+    assert yaw_from_ends(a, (float("nan"), 1.0)) is None
+
+
+def test_choose_yaw_uses_only_the_position_source() -> None:
+    he = ((0.0, 0.0), (0.0, 20.0))  # 90°
+    homo = ((0.0, 0.0), (20.0, 0.0))  # 0°
+    assert choose_yaw(SRC_HAND_EYE, True, he, homo) == (pytest.approx(np.pi / 2), True)
+    assert choose_yaw(SRC_HOMOGRAPHY, True, he, homo) == (0.0, True)
+    assert choose_yaw(SRC_HOMOGRAPHY, True, he, None) == (0.0, False)  # 다른 출처로 메우지 않는다
+    assert choose_yaw(SRC_HAND_EYE, False, he, homo) == (0.0, False)  # position 무효면 yaw 도 무효
+    assert choose_yaw(SRC_NONE, True, he, homo) == (0.0, False)

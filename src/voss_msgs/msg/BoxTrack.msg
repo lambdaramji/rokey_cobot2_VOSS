@@ -11,3 +11,5 @@ geometry_msgs/Point position_base   # 촬영 시각(stamp)에 관측한 박스 �
 bool position_valid       # false 면 position_base 를 쓰지 않는다 (캘리브레이션·pose 정합 불가 등)
 uint8 position_source     # SOURCE_* 상수 중 하나
 string calib_version      # 사용한 캘리브레이션 파일 version·created
+float32 yaw_base         # Sprint 2 S2-T16: 촬영 시각 박스 긴 변(46 mm)의 베이스 XY 각, rad, +X 에서 반시계 양, (−π/2, π/2] (180° 대칭)
+bool yaw_valid           # false 면 yaw_base 를 쓰지 않는다 — position 무효·각도 없는 검출기·끝점 변환 무효 (voss_msgs.md BoxTrack)

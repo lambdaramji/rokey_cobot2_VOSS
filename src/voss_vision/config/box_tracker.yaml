@@ -32,3 +32,5 @@ box_tracker:
       border_px: 4           # 화면 가장자리에 걸린 송장은 내지 않는다
       belt_green_frac: 0.25
       belt_margin_px: 60
+      belt_roi: hull         # hull = 열 범위 ∪ 벨트 볼록 껍질(J6 로 카메라가 돌아도 송장을 안 자름, S2-T16) | columns(이전)
+      belt_min_area_frac: 0.02  # hull: 초록이 화면의 2 % 미만이면 벨트 없음

@@ -19,7 +19,7 @@
 | errors_mm | {calib_rms, val_max, val{}, z_range, tilt_max_deg} | 계산점 잔차, 검증점 오차 (SR-FN-02, ≤ 5 mm 제안값), 접촉점 z 범위(≤ 3 mm), 터치 자세 툴축과 관측 자세 툴축의 최대 각(참고값, 2° 넘으면 경고 — 접촉점은 TCP 로 정규화돼 기울기 자체는 오차가 아님) |
 
 ## 쓰는 곳 (좌표 계약 — voss_msgs.md BoxTrack 과 같은 정의, #50 MC-001·002)
-- **변환은 비전 단일 책임.** box_tracker 가 `voss_vision.belt_plane.pixel_to_base_xy` (왜곡 보정 → H → 유효 영역 판정)로 박스 윗면 중심 픽셀을 바꿔 `BoxTrack.position_base` 에 싣는다. belt_servo 는 이 파일·변환 함수를 쓰지 않는다.
+- **변환은 비전 단일 책임.** box_tracker 가 `voss_vision.belt_plane.pixel_to_base_xy` (왜곡 보정 → H → 유효 영역 판정)로 박스 윗면 중심 픽셀을 바꿔 `BoxTrack.position_base` 에 싣는다. belt_servo 는 이 파일·변환 함수를 쓰지 않는다. `BoxTrack.yaw_base`(Sprint 2 S2-T16)도 같은 출처·같은 변환으로 송장 긴 변 위 두 점을 옮겨 구한다(voss_msgs.md BoxTrack).
 - **출력의 뜻:** `position_base` = 촬영 시각(`stamp`)에 관측한 **박스 윗면 중심**, m, 베이스 축. x, y 는 H, z 는 `plane_z_mm`. **TCP 목표가 아니다** — 지연·벨트 속도 예측, 파지 높이·오프셋을 반영한 핑거 끝/TCP 목표는 belt_servo 가 계산한다.
 - **이 파일의 범위:** 관측 자세에서 정지해 있을 때의 좌표. `hand_eye.yaml` 이 `moving_verified=true` 면 **기본 출처는 핸드아이**이고 이 파일은 같은 픽셀의 비교값(로그, 3 mm 경고)으로만 쓴다 — 한 트랙 안에서 출처가 바뀌어 좌표가 2~4 mm 튀지 않게, 그리고 이 파일의 유효 영역(x −100 ~ +3 mm, 박스당 약 2.1 s) 밖에서도 좌표가 이어지게(10/08 박병후 #90·#95 리뷰). 핸드아이가 없거나 미검증이면, 또는 box_tracker `observe_source: homography`(되돌림용, 게이트 측정 중 바꾸지 않음)면 `position_source=OBSERVE_HOMOGRAPHY` 로 쓴다. 이때 현재 pose(`/voss/robot/pose`, TCP)가 `flange_to_tcp(observe_pose)` 와 1 mm / 0.5°(**자세 전체 각** — 공구축 둘레 회전 포함: 카메라가 TCP 에서 떨어져 있어 rz 만 달라도 화면이 돈다) 넘게 다르거나, 픽셀이 `calib_hull_px` 밖이거나, `image_size` 가 카메라와 다르면 `position_valid=false`.
 - **이동 중 좌표는 G0 필수이며 이 파일이 대신하지 않는다** → 아래 `config/hand_eye.yaml`.

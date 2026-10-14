@@ -1,9 +1,13 @@
 """box_detect (seg) — 합성 프레임 시험: 벨트 위 박스, 빈 벨트, 손(라벨 없음), 가장자리 걸림, 버린 이유."""
 
+from dataclasses import replace
+
 import cv2
 import numpy as np
 import pytest
-from voss_vision.box_detect import SegParams, detect_boxes, detect_candidates
+from voss_vision.belt_plane import rot_zyz_deg
+from voss_vision.box_detect import DEFAULT_PARAMS, SegParams, detect_boxes, detect_candidates
+from voss_vision.hand_eye import make_t
 
 LABEL = (172, 106)  # 관측 자세 송장 px (긴 변, 짧은 변)
 
@@ -102,3 +106,122 @@ def test_hollow_label_reason_fill() -> None:
 
 def test_no_belt_candidates_none() -> None:
     assert detect_candidates(np.full((1080, 1920, 3), 200, np.uint8)) == (None, [])
+
+
+@pytest.mark.parametrize("angle", [0, 15, 30, 45, -30, 90])
+def test_half_axis_follows_label_long_side(angle: float) -> None:
+    """S2-T16: Detection.half_axis = 중심 → 송장 긴 변 끝(픽셀). frame() 의 송장 긴 변은 각 0 에서 세로(v)다."""
+    (d,) = detect_boxes(frame((1130, 600), angle))
+    hx, hy = d.half_axis
+    assert np.hypot(hx, hy) == pytest.approx(LABEL[0] / 2, abs=4)
+    want = np.arctan2(
+        np.cos(np.radians(angle)), -np.sin(np.radians(angle))
+    )  # boxPoints 의 높이 방향
+    diff = (np.arctan2(hy, hx) - want + np.pi / 2) % np.pi - np.pi / 2  # 180° 대칭
+    assert abs(np.degrees(diff)) < 1.5
+
+
+def turned(img: np.ndarray, deg: float, center=(1130, 600)) -> np.ndarray:
+    """카메라가 J6 로 돈 것처럼 화면 전체를 center 둘레로 돌린다(벨트가 기운다). 빈 곳은 밝은 바닥."""
+    m = cv2.getRotationMatrix2D(center, deg, 1.0)
+    return cv2.warpAffine(img, m, (img.shape[1], img.shape[0]), borderValue=(200, 200, 205))
+
+
+@pytest.mark.parametrize("deg", [0, 15, 30, 45, 60, 75, 90])
+def test_hull_roi_finds_label_on_a_tilted_belt(deg: float) -> None:
+    """S2-T16: J6 로 벨트가 화면에서 기울어도 송장을 자르지 않는다 — 중심·긴 변 방향이 그대로."""
+    (d,) = detect_boxes(turned(frame((1130, 600), 0), deg))
+    assert abs(d.u - 1130) < 3 and abs(d.v - 600) < 3
+    want = np.arctan2(1.0, 0.0) - np.radians(
+        deg
+    )  # 각 0 의 긴 변 = 세로, warpAffine 양각은 반시계(화면)
+    diff = (np.arctan2(d.half_axis[1], d.half_axis[0]) - want + np.pi / 2) % np.pi - np.pi / 2
+    assert abs(np.degrees(diff)) < 1.5
+
+
+@pytest.mark.parametrize("deg", [0, 15, 30, 45, 60, 75, 90])
+def test_columns_roi_never_reports_a_cut_label(deg: float) -> None:
+    """이전 열 방식은 기운 벨트에서 송장을 자를 수 있다 — 그래도 잘린 송장을 틀린 중심으로 내지는 않는다."""
+    dets = detect_boxes(
+        turned(frame((1130, 600), 0), deg), replace(DEFAULT_PARAMS, belt_roi="columns")
+    )
+    assert all(abs(d.u - 1130) < 3 and abs(d.v - 600) < 3 for d in dets)
+
+
+def test_label_cut_by_belt_region_edge_reason_border() -> None:
+    """벨트 영역 경계(여유 60 px 밖)에 걸친 송장은 화면 가장자리처럼 버린다."""
+    img = frame()
+    lab = cv2.boxPoints(
+        ((1350.0, 600.0), (LABEL[1], LABEL[0]), 0)
+    )  # 벨트(995~1265) 오른쪽 여유 끝에 걸침
+    cv2.fillPoly(img, [np.int32(lab)], (250, 250, 250))
+    for mode in ("hull", "columns"):
+        _, cands = detect_candidates(img, replace(DEFAULT_PARAMS, belt_roi=mode))
+        cut = [c for c in cands if c.area > 5000]
+        assert cut and all(c.reason == "border" for c in cut), mode
+
+
+def test_unknown_belt_roi_is_rejected() -> None:
+    with pytest.raises(ValueError):
+        detect_boxes(frame((1130, 600)), replace(DEFAULT_PARAMS, belt_roi="box"))
+
+
+# ---- 원근 장면: 관측 자세에서 J6 만 돌린 카메라로 본 벨트·박스 (test_hand_eye 와 같은 배치, 10/13 합성 녹화와 같은 장면)
+K3 = np.array([[1367.5, 0, 978.5], [0, 1367.7, 552.0], [0, 0, 1]])
+T_TCP_CAM = make_t(rot_zyz_deg(30, 22, -100), [-16.0, -44.0, -208.0])
+T_OBS = make_t(rot_zyz_deg(0, 180, 0), [-110.0, -380.0, 231.0])
+TOP_Z = 101.0
+
+
+def scene(j6: float, box_yaw: float) -> tuple[np.ndarray, np.ndarray, float]:
+    """(영상, 송장 중심 픽셀, 송장 긴 변 화면 각 rad). 박스는 TCP 바로 아래(공구축 점), 벨트는 J6 0 에서 화면 세로."""
+    cam = T_OBS @ make_t(rot_zyz_deg(j6, 0, 0), [0, 0, 0]) @ T_TCP_CAM
+    cam0 = T_OBS @ T_TCP_CAM
+    down = cam0[:3, :3] @ np.array([0, 1.0, 0])
+    bd_ = np.array([down[0], down[1], 0]) / np.hypot(down[0], down[1])
+    pp = np.array([-bd_[1], bd_[0], 0])
+    c = np.array([-110.0, -380.0, TOP_Z])
+    a = np.radians(box_yaw)
+    bx, by = np.array([np.cos(a), np.sin(a), 0]), np.array([-np.sin(a), np.cos(a), 0])
+
+    def rect(u, v, lu, lv, z):
+        return np.array(
+            [c + s * lu / 2 * u + r * lv / 2 * v for s, r in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+        ) + [0, 0, z - TOP_Z]
+
+    def proj(pts):
+        pc = (np.linalg.inv(cam) @ np.hstack([pts, np.ones((len(pts), 1))]).T).T[:, :3]
+        return (K3 @ (pc / pc[:, 2:3]).T).T[:, :2]
+
+    img = np.full((1080, 1920, 3), (200, 200, 205), np.uint8)
+    cv2.fillPoly(img, [np.int32(np.round(proj(rect(bd_, pp, 900, 80, TOP_Z - 27))))], (60, 70, 10))
+    top, bot = rect(bx, by, 46, 31, TOP_Z), rect(bx, by, 46, 31, TOP_Z - 27)
+    for i in range(4):
+        side = np.array([bot[i], bot[(i + 1) % 4], top[(i + 1) % 4], top[i]])
+        cv2.fillPoly(img, [np.int32(np.round(proj(side)))], (80, 110, 150))
+    cv2.fillPoly(img, [np.int32(np.round(proj(top)))], (110, 150, 200))
+    lab = proj(rect(bx, by, 40, 25, TOP_Z))
+    cv2.fillPoly(img, [np.int32(np.round(lab))], (250, 250, 250))
+    ends = proj(np.array([c - 20 * bx, c + 20 * bx]))
+    d = ends[1] - ends[0]
+    return img, lab.mean(0), float(np.arctan2(d[1], d[0]))
+
+
+@pytest.mark.parametrize("j6", [0, 15, 30, 45, 60, 75, 90])
+@pytest.mark.parametrize("box_yaw", [0, 30])
+def test_hull_roi_keeps_label_whole_when_camera_turns(j6: float, box_yaw: float) -> None:
+    """S2-T16: 이전 열 방식은 J6 30~75° 에서 송장을 잘라 놓치거나(박스 0°) 틀린 중심·각을 냈다(박스 30°·J6 45°:
+    12.8 mm·89°, 10/13 합성 녹화). hull 은 모든 각에서 송장 하나를 맞는 중심·긴 변 방향으로 낸다."""
+    img, center, axis = scene(j6, box_yaw)
+    (d,) = detect_boxes(img)
+    assert np.hypot(d.u - center[0], d.v - center[1]) < 3
+    diff = (np.arctan2(d.half_axis[1], d.half_axis[0]) - axis + np.pi / 2) % np.pi - np.pi / 2
+    assert abs(np.degrees(diff)) < 2.0
+
+
+@pytest.mark.parametrize("j6", [0, 15, 30, 45, 60, 75, 90])
+def test_columns_roi_drops_but_never_misplaces_a_cut_label(j6: float) -> None:
+    """이전 열 방식 + 영역 경계 거부: 잘린 송장은 버린다 — 내는 것은 늘 맞는 중심이다."""
+    img, center, _ = scene(j6, 30)
+    for d in detect_boxes(img, replace(DEFAULT_PARAMS, belt_roi="columns")):
+        assert np.hypot(d.u - center[0], d.v - center[1]) < 3

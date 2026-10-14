@@ -49,7 +49,8 @@ QOS_POSE = QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT)
 QOS_IMAGE = QoSProfile(depth=1, reliability=ReliabilityPolicy.BEST_EFFORT)
 
 SEG_KEYS = ("downscale", "v_min", "s_max", "close_px", "area_min", "area_max", "aspect_tol",
-            "fill_min", "border_px", "belt_green_frac", "belt_margin_px")  # fmt: skip
+            "fill_min", "border_px", "belt_green_frac", "belt_margin_px", "belt_roi",
+            "belt_min_area_frac")  # fmt: skip
 HOMO_HE_WARN_MM = 3.0  # 관측 자세에서 두 방식 차이가 이보다 크면 경고 (calibration.md)
 SRC_NAME = {
     BoxTrack.SOURCE_NONE: "none",
@@ -318,7 +319,7 @@ class BoxTrackerNode(Node):
                 bbox=[int(b) for b in t.bbox],
                 stamp=stamp,
             )
-            self._fill_position(m, t.u, t.v, pose_t, at_obs)
+            self._fill_position(m, t.u, t.v, pose_t, at_obs, t.half_axis)
             self.pub_box.publish(m)
             with self._stats_lock:
                 self.stats.add_box(SRC_NAME[m.position_source], m.position_valid)
@@ -353,17 +354,26 @@ class BoxTrackerNode(Node):
         )
         return t, at_obs
 
-    def _fill_position(self, m: BoxTrack, u: float, v: float, pose_t, at_obs: bool) -> None:
-        he_xyz = None
+    def _fill_position(
+        self, m: BoxTrack, u: float, v: float, pose_t, at_obs: bool, half_axis=None
+    ) -> None:
+        # 중심 + (yaw 용) 송장 긴 변 양 끝을 같은 변환으로 한 번에 옮긴다 (S2-T16, voss_msgs.md BoxTrack)
+        px = [[u, v]]
+        if half_axis is not None:
+            hx, hy = half_axis
+            px += [[u - hx, v - hy], [u + hx, v + hy]]
+        he_xyz, he_ends = None, None
         if pose_t is not None and self.he is not None and self.plane_z is not None:
-            xyz, ok = pixel_to_plane(
-                pose_t @ self.he_T, self.he_k, self.he_d, [[u, v]], self.plane_z
-            )
+            xyz, ok = pixel_to_plane(pose_t @ self.he_T, self.he_k, self.he_d, px, self.plane_z)
             he_xyz = xyz[0] if ok[0] else None
-        homo_xyz, inside = None, False
+            if len(px) == 3 and ok[1] and ok[2]:
+                he_ends = (xyz[1], xyz[2])
+        homo_xyz, homo_ends, inside = None, None, False
         if pose_t is not None and at_obs and self.homo:
-            xy, ok = pixel_to_base_xy(self.homo, np.array([[u, v]], float))
+            xy, ok = pixel_to_base_xy(self.homo, np.array(px, float))
             homo_xyz, inside = (float(xy[0, 0]), float(xy[0, 1]), self.plane_z), bool(ok[0])
+            if len(px) == 3 and ok[1] and ok[2]:
+                homo_ends = (xy[1], xy[2])
             # 관측 자세에서 두 방식 차이를 로그로 남긴다(calibration.md). 유효 영역 밖은 외삽이라 비교하지 않는다
             if he_xyz is not None and inside:
                 d = float(np.hypot(he_xyz[0] - homo_xyz[0], he_xyz[1] - homo_xyz[1]))
@@ -374,6 +384,7 @@ class BoxTrackerNode(Node):
             he_xyz, self.he_ok, self.he_verified if self.he else False, self.observe_source,
         )  # fmt: skip
         m.position_source, m.position_valid = src, valid
+        m.yaw_base, m.yaw_valid = tl.choose_yaw(src, valid, he_ends, homo_ends)
         if xyz is not None:
             m.position_base.x, m.position_base.y, m.position_base.z = (c / 1000.0 for c in xyz)
         if src == BoxTrack.SOURCE_OBSERVE_HOMOGRAPHY:

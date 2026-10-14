@@ -5,6 +5,7 @@
 - 관측 자세 판정: TCP 가 관측 자세에서 1 mm·0.5°(공구축) 안이면 호모그래피, 아니면 핸드아이(calibration.md)
 - 크롭 창·선명도·전송 간격, 지연 통계
 - 녹화 재생 시각 옮기기(`PlaybackClock`, playback_restamp)
+- 박스 yaw: position 과 같은 출처의 송장 긴 변 양 끝점 → 베이스 yaw, 180° 접기 (S2-T16, voss_msgs.md BoxTrack)
 """
 
 from __future__ import annotations
@@ -83,6 +84,34 @@ def choose_position(
     if he_xyz is not None:
         return SRC_HAND_EYE, he_ok and he_verified, tuple(he_xyz)
     return SRC_NONE, False, None
+
+
+def fold_yaw(yaw: float) -> float:
+    """rad → (−π/2, π/2]. 파지 면이 180° 대칭이라 긴 변 방향의 앞뒤를 가르지 않는다."""
+    y = math.fmod(yaw, math.pi)
+    if y <= -math.pi / 2:
+        y += math.pi
+    elif y > math.pi / 2:
+        y -= math.pi
+    return y
+
+
+def yaw_from_ends(a_mm, b_mm, min_len_mm: float = 1.0) -> float | None:
+    """베이스 위 두 점(송장 긴 변 양 끝, mm) → 박스 yaw rad. 두 점이 min_len_mm 보다 가까우면 None."""
+    dx, dy = float(b_mm[0]) - float(a_mm[0]), float(b_mm[1]) - float(a_mm[1])
+    if not math.isfinite(dx) or not math.isfinite(dy) or math.hypot(dx, dy) < min_len_mm:
+        return None
+    return fold_yaw(math.atan2(dy, dx))
+
+
+def choose_yaw(src: int, position_valid: bool, he_ends, homo_ends) -> tuple[float, bool]:
+    """BoxTrack 의 (yaw_base, yaw_valid). position 과 같은 출처의 끝점만 쓴다 — 출처가 섞이면 좌표와 각이 어긋난다.
+    끝점 = (a, b) mm 또는 None(검출기가 각도를 안 줌·변환 무효)."""
+    ends = {SRC_HAND_EYE: he_ends, SRC_HOMOGRAPHY: homo_ends}.get(src)
+    if not position_valid or ends is None:
+        return 0.0, False
+    yaw = yaw_from_ends(*ends)
+    return (0.0, False) if yaw is None else (yaw, True)
 
 
 def crop_window(

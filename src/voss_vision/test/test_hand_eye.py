@@ -1,4 +1,4 @@
-"""hand_eye — 합성 데이터: 알려진 T_tcp_camera 를 풀이로 되찾는지, 픽셀 → 평면, pose 보간."""
+"""hand_eye — 합성 데이터: 알려진 T_tcp_camera 를 풀이로 되찾는지, 픽셀 → 평면, pose 보간, J6 회전 yaw."""
 
 import numpy as np
 import pytest
@@ -19,6 +19,7 @@ from voss_vision.hand_eye import (
     solve,
     spread,
 )
+from voss_vision.tracker_logic import yaw_from_ends
 
 K = np.array([[1367.5, 0, 978.5], [0, 1367.7, 552.0], [0, 0, 1]])
 # 10/07 호모그래피에서 유도한 값과 비슷한 실제적 배치: 카메라가 TCP 위 약 208 mm, 22° 기울어짐
@@ -153,3 +154,25 @@ def test_correct_translation_recovers_optical_axis_offset() -> None:
     x = correct_translation(wrong, K, None, obs)
     assert np.allclose(x, shift, atol=0.01)
     assert plane_errors(wrong @ make_t(np.eye(3), x), K, None, obs).max() < 1e-3
+
+
+@pytest.mark.parametrize("j6", [0, 15, 30, 45, -45])
+@pytest.mark.parametrize("box_yaw", [0, 20, -35, 80])
+def test_box_yaw_is_independent_of_j6(j6: float, box_yaw: float) -> None:
+    """S2-T16: 송장 긴 변 양 끝 픽셀을 촬영 시각 pose 로 평면에 옮기면 J6 회전과 상관없이 같은 베이스 yaw (TR-SERVO-04).
+    카메라 회전은 pose 에 들어 있어 따로 보정하지 않는다(voss_msgs.md BoxTrack)."""
+    t_tcp = make_t(rot_zyz_deg(0, 180, 0), [-110.0, -380.0, 351.0]) @ make_t(
+        rot_zyz_deg(j6, 0, 0), [0, 0, 0]
+    )
+    t_base_cam = t_tcp @ T_TCP_CAM
+    c, a = np.array([-110.0, -385.0, 101.0]), np.radians(box_yaw)
+    ends = np.array(
+        [c - 20 * np.array([np.cos(a), np.sin(a), 0]), c + 20 * np.array([np.cos(a), np.sin(a), 0])]
+    )
+    pc = (np.linalg.inv(t_base_cam) @ np.hstack([ends, np.ones((2, 1))]).T).T[:, :3]
+    assert (pc[:, 2] > 0).all()
+    px = (K @ (pc / pc[:, 2:3]).T).T[:, :2]
+    assert ((px >= 0) & (px < [1920, 1080])).all()  # 화면 안
+    xyz, valid = pixel_to_plane(t_base_cam, K, None, px, 101.0)
+    assert valid.all()
+    assert np.degrees(yaw_from_ends(xyz[0], xyz[1])) == pytest.approx(box_yaw, abs=1e-6)

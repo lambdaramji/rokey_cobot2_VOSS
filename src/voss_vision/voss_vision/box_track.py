@@ -21,6 +21,8 @@ class Detection:
     v: float
     bbox: tuple[int, int, int, int]  # x, y, w, h
     score: float = 1.0
+    # 중심 → 송장 긴 변 끝 픽셀 벡터 (S2-T16 yaw). 각도를 모르는 검출기(yolo 축정렬 bbox)는 None
+    half_axis: tuple[float, float] | None = None
 
 
 @dataclass
@@ -29,6 +31,7 @@ class Track:
     u: float
     v: float
     bbox: tuple[int, int, int, int]
+    half_axis: tuple[float, float] | None = None  # 마지막 검출의 Detection.half_axis
     du: float = 0.0  # 프레임당 이동(px), 지수 평균
     dv: float = 0.0
     missed: int = 0
@@ -77,7 +80,7 @@ class Tracker:
             a = self.vel_alpha
             t.du = (1 - a) * t.du + a * (d.u - t.u) / k
             t.dv = (1 - a) * t.dv + a * (d.v - t.v) / k
-            t.u, t.v, t.bbox = d.u, d.v, d.bbox
+            t.u, t.v, t.bbox, t.half_axis = d.u, d.v, d.bbox, d.half_axis
             t.missed, t.hits = 0, t.hits + 1
             seen.append(t)
         for tid, t in list(self.tracks.items()):
@@ -89,7 +92,7 @@ class Tracker:
         for j, d in enumerate(dets):
             if j in used_d:
                 continue
-            t = Track(self._next_id, d.u, d.v, d.bbox)
+            t = Track(self._next_id, d.u, d.v, d.bbox, d.half_axis)
             self._next_id += 1
             self.tracks[t.id] = t
             seen.append(t)
