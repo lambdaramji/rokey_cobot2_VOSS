@@ -5,3 +5,6 @@ python-multipart==0.0.*
 langchain-openai==0.3.*
 openai>=1.104.2,<2
 faster-whisper==1.1.*
+# PyAV 19 제거된 metadata_errors 인자를 faster-whisper 1.1 이 사용함 (upstream #1589).
+# 음성 디코딩 TypeError 방지. 상위 패키지 업데이트 후 재검토한다.
+av>=11,<19
