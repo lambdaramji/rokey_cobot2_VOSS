@@ -19,19 +19,21 @@
 
 | # | 조건 | 확인 방법 |
 |---|---|---|
-| ① | **T17(학민) 머지**: gateway 가 servo_cmd `angular.z` 를 **베이스 Z 각속도**로 speedl 에 넘김(지금은 두 곳에서 막힘 — `servo_guard.py:82` 가 "angular" 로 자르고, `doosan.py:443` 이 speedl `vel[3:6]` 을 항상 0 으로 보냄. 둘 다 바뀌어야 한다 — 학민 #48 리뷰) | gateway 통계 줄 `자름 {'angular': N}` 이 회전 goal 에서 0 |
-| ② | gateway `servo_acc[1]` ≥ belt_servo `rotate.alpha_dps2`(제안 90). **지금 기본 10 이면 J6 를 켜지 않는다**(HLD D5·9절: 90° 가 x 문턱 초과, 관성 180°) | gateway 기동 로그 `acc [100.0, ≥90]` |
-| ③ | gateway 각속도 상한 ≥ `rotate.omega_max_dps`(제안 60) | T17 문서·기동 로그 |
+| ① | **T17(학민) 머지**: gateway 가 servo_cmd `angular.z` 를 **베이스 Z 각속도**로 speedl 에 넘김(지금은 두 곳에서 막힘 — `servo_guard.py:82` 가 "angular" 로 자르고, `doosan.py:443` 이 speedl `vel[3:6]` 을 항상 0 으로 보냄. 둘 다 바뀌어야 한다 — 학민 #48 리뷰). S2-T17 = #56 `servo_angular:=true`(기본 끔) | gateway 기동 줄 `servo angular on · ω ≤ 60 °/s · α 90 °/s² · yaw -88.7 ± 100°`. 통계 줄 `자름` 에 **`angular`·`ang_speed`·`yaw_limit` 셋 다 0**(켬이면 `angular` 는 x·y 만 센다) |
+| ② | gateway `servo_acc[1]` ≥ belt_servo `rotate.alpha_dps2`(제안 90). **10 이면 J6 를 켜지 않는다**(HLD D5·9절: 90° 가 x 문턱 초과, 관성 180°). S2-T17(#56) 뒤 기본 90 | gateway 기동 줄 `acc [100.0, 90.0]` 과 `servo angular on · … α 90 °/s²`. sim 은 `sim_check --profile rotate_gw` 의 J-gw 가 자동 비교 |
+| ③ | gateway 각속도 상한(`servo_max_ang_dps`) ≥ `rotate.omega_max_dps`(제안 60) | 기동 줄 `servo angular on · ω ≤ 60 °/s`. sim 은 J-gw |
 | ④ | **회전 중심**: 에뮬레이터(2절)로 TCP 기준인지 확인, 플랜지 기준이면 gateway 가 보정(계약상 gateway 몫 — belt_servo 는 보정하지 않는다) | 2절 E3 |
 | ⑤ | 만료·stop·자름 재전송 등 gateway 의 **모든 0 경로에 각속도 0**, 각속도 0 뒤 감속 거리 측정값 | 2절 E4·E5 |
 | ⑥ | T16 머지(**#51 945c67d, 10/14 완료**) 이후 main 으로 **호스트·비전 컨테이너 동시 빌드**: BoxTrack 에 yaw 필드 | `ros2 interface show voss_msgs/msg/BoxTrack \| grep yaw` → 2줄. belt_servo 틱 `yaw_valid` 가 true/false |
 | ⑦ | D0 interface PR #48 머지(**dd55e56, 10/14 완료** — topics.md 각속도 문구: PREPARE·TRACK·LIFT·VERIFY·안전 후퇴) | main 의 topics.md |
 | ⑧ | gateway `pose_source:=joint_states` + belt_servo `input.pose_lag_ms: 0`(rotate 가 켜지면 교차 검사가 60 을 거부) | gateway 기동 줄 `pose_source joint_states 확인: … → 사용`, 회차마다 `→ service`·`거부` 없음 |
 | ⑨ | 3단계 결과: 데드밴드·r_min·n_min(yaw 관측 실험), max_deg(측정 ②·간섭 ①) 를 measurements 에 기록하고 실기 yaml 에 반영 | measurements 문서 |
-| ⑩ | 손목 카메라 USB 케이블: 펜던트로 J6 를 관측 자세에서 ±45°(5단계면 ±90°) 천천히 돌려 당김·걸림 없음 | 사진 |
+| ⑩ | ❌ 이면 진행 금지 — **손목 카메라 USB 케이블 고정**(커넥터 고정·여유 루프). 10/14 측정 ② 에서 J6 회전 뒤 USB 커넥터가 **두 번 빠졌다**(학민 #54 리뷰). 고정 뒤 펜던트로 J6 를 관측 자세에서 ±45°(5단계면 ±90°) 천천히 돌려 당김·걸림 없음 | 고정 사진 + **회차마다** `ros2 topic hz /camera/color/image_raw` ≈ 30 Hz(끊기면 그 회차 무효) |
 | ⑪ | `/voss/robot/pose` 주기 ≤ 25 ms(≥ 40 Hz) — 회전 "정지" 판정은 pose 수신이 `rotate.pose_fresh_s`(0.05) 안일 때만 믿는다. 느리면 STOPPING 이 정지를 못 봐 TRACK 에 묶인다 → pose_fresh_s 를 측정 주기의 2배로 | `ros2 topic hz /voss/robot/pose` (joint_states 운용이면 약 50 Hz) |
 | ⑫ | J6 **지령→pose 지연** ≤ 80 ms — belt_servo 는 이 지연을 보상하지 않는다. 시험 모형 기준 지나침이 80 ms 에서 ≈1.5°(tol), 100 ms 에서 ≈2.5°, 150 ms 에서 ≈5.5°(+ 일부 TIMEOUT) *(계산, test_rotate FakeRobot)*. 각가속 오경보는 지연과 무관하게 나지 않는다(최종 재검 반영) | 에뮬레이터·실기 틱 로그: `wz_cmd_dps` 가 처음 0 이 아닌 틱 → `wz_meas_dps` 가 처음 ≥ `still_dps` 인 틱의 시각 차에서 램프 시간(still_dps/α ≈ 22 ms)을 뺀다 |
 | ⑬ | **매 goal 전 관측 자세(OBSERVE, 절대 자세)** — sort_manager 는 PLACE 뒤 OBSERVE 로 돌아오고(`sort_fsm.py:935`), 실패·취소는 PAUSED → resume 때 OBSERVE(`sort_fsm.py:838`). 손목이 돌아간 채 끝난 goal(RETURN_INCOMPLETE·회전 중 취소) 뒤 회복은 이것에 기댄다 — 기준 각은 노드 수명 동안 한 번만 정하므로, OBSERVE 없이 goal 을 이어 보내면 다음 goal 들이 START_ROTATED 로 회전 없이 돌아간 손목으로 잡는다 | 단독 액션 시험(E·4단계)은 goal 사이에 MoveToZone OBSERVE 를 직접 부른다. attempts `rot_cause` 에 START_ROTATED 가 없다 |
+| ⑭ | **회전 대기 중 시야 — 보류(사용자 10/14), 4단계 첫 회에서 확인.** 학민 #54 리뷰 1: 10/14 측정 ② B45 — TCP X −119.7·Z 151, 박스 +45° 에서 검출 0(박스가 화면 아래 가장자리, 카메라 광축이 TCP 보다 약 75 mm 상류), 벨트 가장자리 박스는 J6 + 쪽 +30° 부터 hull 경계에 걸려 검출 0(A0_2). 측정 ② 는 측정 정확도에 의문이 있어(사용자) 설계는 바꾸지 않고, 실제로 LOST 가 나면 그때 설계한다(후보: 회전 중 xy 목표를 카메라가 박스를 보는 오프셋에 두기 / 회전 대기 중 LOST 를 FF 예측으로 버티기). fake_box 는 xy 시야를 흉내 내지 않아 sim 에서 안 보인다 | 4단계 2번(15°) 첫 회 틱 로그: ROTATING·SETTLING 동안 `visible` 끊김 길이 < `input.lost_timeout_s`(0.5 s), cause LOST 없음. LOST 면 4단계 중단 → 설계 단위 |
+| ⑮ | 회전 기준 각 = gateway yaw 한계 중심 — belt_servo 기준은 노드 기동 뒤 첫 goal 의 공구 yaw(관측 자세 = −88.72°), gateway 는 `observe_pose` 공구 yaw ± `servo_yaw_limit_deg`(100°) 밖으로 가는 각속도를 자른다. 같은 값을 두 곳에 적지 않는다(`rotate.home_tool_yaw_deg` 는 null 유지, 관측 자세를 다시 가르치면 둘이 어긋남) | belt_servo 로그 `회전 기준 공구 yaw = X°` 와 gateway 기동 줄 `yaw Y ± 100°` 의 차 ≤ `rotate.start_tol_deg`(3°) |
 
 ## 2. 단계 2 — 에뮬레이터 (개인 PC, Claude 실행, T17 코드 브랜치 필요)
 에뮬레이터는 주기·지연 값은 믿지 않고 **동작 여부·방향·착지**만 본다(10/07 합의). 띄우기·정리는 `voss-dsr-virtual-up/down`, 그 밖 명령은 `voss-ros`(도메인 79).
@@ -39,7 +41,7 @@
 | # | 시험 | 방법 | 통과 |
 |---|---|---|---|
 | E1 | 회전이 실제로 돈다 | rotate on + fake_box `yaw_deg 30`, goal 1개 | 틱 `rot_state` ROTATING → SETTLING → DONE, `tool_yaw_deg` 가 30° 바뀜, STALL 없음 |
-| E2 | 부호 | 같은 회차 | `wz_cmd_dps` > 0 일 때 `tool_yaw_deg` 증가(베이스 Z +). 관측 자세에서 J6 관절은 − 방향(HLD D10) |
+| E2 | 부호 | 같은 회차 | `wz_cmd_dps` > 0 일 때 `tool_yaw_deg` 증가(베이스 Z +). 관측 자세에서 J6 관절은 − 방향(HLD D10, 10/14 측정 ② 공구 yaw Δ / J6 Δ = −1.000) |
 | E3 | 회전 중심 | 회전 구간 TCP xy(`tcp_pose_m`) 변화 | TCP 기준이면 < 1 mm. 45° 에서 ≈ 4.7 mm 면 플랜지 기준 → gateway 보정 요청(①④) |
 | E4 | 정지 경로 각속도 0 | ROTATING 중 cancel / belt_servo 강제 종료(watchdog) | 다음 speedl 의 회전 성분 0, 관성 회전량 기록 |
 | E5 | 감속 거리 | ω 60°/s 에서 0 지령 → 멈출 때까지 각 | 기록(α ≥ 90 이면 ≈ 20° 이하가 기대 — 계산 ω²/2α) |
@@ -86,11 +88,13 @@ ros2 launch voss_servo belt_servo.launch.py params:=~/voss_ws/config/belt_servo_
 **2번 첫 회 뒤 틱 로그 확인(5회를 한꺼번에 돌리지 않는다)**:
 - 첫 DESCEND 틱 `|rot_err_deg|` ≤ 1.5(tol), `rot_delta_deg` ≈ 사진 각(± 데드밴드)
 - `wz_cmd_dps` ≠ 0 인 틱의 phase 가 PREPARE·TRACK·LIFT·VERIFY 뿐
-- ROTATING 동안 `tcp_pose_m` z ≥ 윗면 + 50 mm(시야 보험), `visible` 이 끊기지 않음
+- ROTATING 동안 `tcp_pose_m` z ≥ 윗면 + 50 mm(시야 보험), `visible` 이 끊기지 않음 — 끊기면 ⑭(회전 대기 중 시야) 확인 항목으로 기록하고, LOST 면 중단
 - `rot_err_deg` = 지금 따르는 목표(회전 중 목표 각, 되돌리기 중 기준 각) − `tool_yaw_deg`(pose 원값)다. `tool_yaw_est_deg` 만 **지령 각속도로 외삽한 값**이라 T17 전·STALL 구간처럼 로봇이 안 돌면 실제 자세와 어긋난다 — 실제 자세 판단은 `tool_yaw_deg`·`rot_err_deg` 로 한다
 - 목표를 지나친 최대 각(ROTATING·SETTLING 동안 `rot_err_deg` 부호가 바뀐 뒤 최대값)이 tol(1.5°) 안인지. 넘으면 ⑫ 지연을 다시 잰다
 - `rot_time_s` ≈ 1.2~1.6 s(ω 30 이면 더 김), GOAL_END `rot_cause` 가 비어 있거나 RETURN_INCOMPLETE 면 원인 기록
-- gateway 통계 `자름` 에 angular 없음, `servo_cmd 거부` 없음
+- 되돌리기: RETURNED 뒤 `|tool_yaw_deg − 기준|` ≤ `rotate.start_tol_deg`(3°) — 도착 판정은 외삽값 ≤ tol 1.5° 라 원값 로그는 1.5° 를 살짝 넘을 수 있다(10/14 학민 sim −1.53°). 다음 goal 의 START_ROTATED 기준이 start_tol 이므로 이 값으로 본다
+- `rot_cause` 에 STOP_UNCONFIRMED(정지 확인 상한 1 s)가 있으면 ⑪ pose 주기를 다시 잰다
+- gateway 통계 `자름` 에 `angular`·`ang_speed`·`yaw_limit` 없음, `servo_cmd 거부` 없음
 
 ### 4.3 회차마다 기록
 | 회차 | 사진 각 | rot_delta | rot_state 끝 | rot_cause | rot_time_s | DESCEND rot_err | 결과 reason | 보고 폭 | 닫힘 s | 비고 |

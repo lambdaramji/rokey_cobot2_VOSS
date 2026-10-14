@@ -381,28 +381,75 @@ def _rows(states_causes, wz=0.0):
     return [{"rot_state": s, "rot_cause": c, "wz_cmd_dps": wz} for s, c in states_causes]
 
 
+def _c(angular=0, ang_speed=0, yaw_limit=0) -> dict:
+    return {"angular": angular, "ang_speed": ang_speed, "yaw_limit": yaw_limit}
+
+
 def test_rotation_judges_and_angular_clamps() -> None:
     """S2-T18 J-rot·J-ang: STALL 폴백·SMALL 생략 판정, COLLECT 는 있어도 없어도, 통계 줄의 각속도 자름 합."""
     stall = _rows(
         [("COLLECT", None), ("ROTATING", None), ("STOPPING", "STALL"), ("FALLBACK", "STALL")]
     )
-    assert sc.judge_rotation("rotate_stall", stall, 3).status == "PASS"
-    assert sc.judge_rotation("rotate_stall", stall[1:], 3).status == "PASS"  # 첫 틱에 결정
-    assert sc.judge_rotation("rotate_stall", stall, 0).status == "FAIL"  # 각속도를 안 냈다
+    assert sc.judge_rotation("rotate_stall", stall, _c(3), None).status == "PASS"
+    assert sc.judge_rotation("rotate_stall", stall[1:], _c(3), False).status == "PASS"  # 첫 틱 결정
+    assert (
+        sc.judge_rotation("rotate_stall", stall, _c(0), None).status == "FAIL"
+    )  # 각속도를 안 냈다
+    # gateway 각속도 켬이면 STALL 기대 자체가 성립하지 않는다 (학민 #54 리뷰 2)
+    assert sc.judge_rotation("rotate_stall", stall, _c(3), True).status == "FAIL"
     small = _rows([("COLLECT", None), ("SKIP", "SMALL"), ("SKIP", "SMALL")])
-    assert sc.judge_rotation("rotate_small", small, 0).status == "PASS"
-    assert sc.judge_rotation("rotate_small", _rows([("SKIP", "SMALL")], wz=5.0), 0).status == "FAIL"
-    assert sc.judge_no_angular(0).status == "PASS" and sc.judge_no_angular(2).status == "FAIL"
+    assert sc.judge_rotation("rotate_small", small, _c(), None).status == "PASS"
+    wz5 = _rows([("SKIP", "SMALL")], wz=5.0)
+    assert sc.judge_rotation("rotate_small", wz5, _c(), None).status == "FAIL"
+    assert sc.judge_no_angular(_c(), None).status == "PASS"
+    assert sc.judge_no_angular(_c(2), False).status == "FAIL"
+    assert sc.judge_no_angular(_c(0, 1), None).status == "FAIL"  # 켬 gateway 의 키도 센다
+    assert sc.judge_no_angular(_c(), True).status == "FAIL"  # 켬이면 angular 가 z 를 안 센다
     ts = "[INFO] [1791557440.100000000] [robot_gateway]: "
     lines = [
         ts + "servo rx 30.0 Hz, speedl 150, 거부 0, 자름 {'angular': 12}, watchdog 0, stop 0, "
         "move_stop 0 ok / 0 fail",
         ts.replace("40.1", "45.1") + "servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, "
         "stop 0, move_stop 0 ok / 0 fail",
+        ts.replace("40.1", "50.1") + "servo rx 30.0 Hz, speedl 150, 거부 0, "
+        "자름 {'speed': 1, 'ang_speed': 4, 'yaw_limit': 2}, watchdog 0, stop 0, move_stop 0 ok / 0 fail",
     ]
     facts = sc.parse_gateway(lines)
-    assert sc.angular_clamps(facts, (1791557430.0, None)) == 12
-    assert sc.angular_clamps(facts, (1791557441.0, None)) == 0  # 창 앞의 줄은 세지 않는다
+    assert sc.angular_clamps(facts, (1791557430.0, None)) == _c(12, 4, 2)
+    assert sc.angular_clamps(facts, (1791557446.0, None)) == _c(0, 4, 2)  # 창 앞의 줄은 세지 않는다
+    assert facts.ang_on is None  # 기동 줄 없음 = 옛 gateway
     assert ("rotate", "rotate_stall") in sc.EXPECT and sc.PROFILE_CASES["rotate"]
     assert sc.launch_extra(sc.CASES["rotate_stall"]) == ["rotate:=true", "box_yaw_deg:=30"]
+    assert sc.launch_extra(sc.CASES["rotate_ok"])[-1] == "gw_angular:=true"
     assert sc.launch_extra(sc.CASES["normal"]) == []  # 회전 off 케이스는 인자 없음
+
+
+def test_gateway_angular_lines_and_rotate_ok() -> None:
+    """S2-T17 gateway 기동 줄(켬/끔) → J-rot rotate_ok·J-gw 한도 교차 검사 (학민 #54 리뷰 2·7)."""
+    on = (
+        "[WARN] [1.0] [robot_gateway]: servo angular on · ω ≤ 60 °/s · α 90 °/s² · yaw -88.7 ± 100°"
+    )
+    facts = sc.parse_gateway([on])
+    assert facts.ang_on is True and facts.ang_limits == (60.0, 90.0)
+    off = "[INFO] [1.0] [robot_gateway]: servo angular off (각속도는 0 으로 자름)"
+    assert sc.parse_gateway([off]).ang_on is False
+    seq = ["ROTATING", "SETTLING", "DONE", "RETURNING", "RETURNED"]
+    rows = [{"rot_state": s, "rot_cause": None, "wz_cmd_dps": 10.0, "phase": "TRACK"} for s in seq]
+    rows.insert(
+        3, {"rot_state": "DONE", "phase": "DESCEND", "rot_err_deg": -0.8, "wz_cmd_dps": 0.0}
+    )
+    assert sc.judge_rotation("rotate_ok", rows, _c(), True).status == "PASS"
+    assert (
+        sc.judge_rotation("rotate_ok", rows, _c(0, 3), True).status == "FAIL"
+    )  # gateway 가 잘랐다
+    assert sc.judge_rotation("rotate_ok", rows, _c(), None).status == "UNKNOWN"  # S2-T17 전 gateway
+    bad = [dict(r, rot_err_deg=-2.0) if r.get("phase") == "DESCEND" else r for r in rows]
+    assert sc.judge_rotation("rotate_ok", bad, _c(), True).status == "FAIL"  # 남은 각 > tol
+    line = "[INFO] [2.0] [belt_servo]: rotate on · deadband 4 · min 10 · max 45 · ω 60 · α 90 · home goal"
+    assert sc.parse_servo_rotate([line]) == (60.0, 90.0)
+    assert sc.judge_gw_limits((60.0, 90.0), (60.0, 90.0)).status == "PASS"
+    assert sc.judge_gw_limits((60.0, 90.0), (60.0, 10.0)).status == "FAIL"  # servo_acc[1] 10
+    assert sc.judge_gw_limits(None, (60.0, 90.0)).status == "UNKNOWN"
+    assert ("rotate_gw", "rotate_ok") in sc.EXPECT and sc.PROFILE_CASES["rotate_gw"] == (
+        "rotate_ok",
+    )

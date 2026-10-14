@@ -11,6 +11,7 @@
         · box_start_x_mm (fake_box 시작 x) — 기본값이면 지금과 똑같이 동작
       · (S2-T14) z_profile(p|trapezoid, z.profile 덮어쓰기 — 비우면 sim yaml 의 p)
       · (S2-T18) rotate(""|true — rotate.enable + input.pose_lag_ms 0 덮어쓰기), box_yaw_deg(벨트 기준 박스 각)
+        · gw_angular(true = gateway servo_angular:=true, S2-T17 각속도 통과 — 옛 gateway 는 무시하고 자른다)
 - gripper:=fake 면 fake_gripper 를 띄우고 belt_servo 의 /voss/robot/gripper 를 /voss/sim/gripper 로 remap
   (gateway 의 그리퍼 서비스는 떠 있지만 belt_servo 가 부르지 않는다, design/U9b-dd.md 6.2).
 - gateway 는 **항상 dry_run:=true** (인자로 받지 않는다 — 시뮬에서 실기로 새지 않게).
@@ -109,16 +110,19 @@ def _setup(context):
             }
         ],
     )
+    gw_args = {
+        "dry_run": "true",  # 항상 고정
+        "dry_run_object_mm": arg("object_mm"),
+        "config": config,
+    }
+    if arg("gw_angular") == "true":  # S2-T17 gateway 각속도 통과 (기본 끔 = 지금처럼 자름)
+        gw_args["servo_angular"] = "true"
     # Jazzy: launch_arguments 는 (이름, 값) 쌍 목록 → dict 면 .items() (dict 그대로면 키만 남아 깨진다)
     gateway = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(robot_share, "launch", "robot_gateway.launch.py")
         ),
-        launch_arguments={
-            "dry_run": "true",  # 항상 고정
-            "dry_run_object_mm": arg("object_mm"),
-            "config": config,
-        }.items(),
+        launch_arguments=gw_args.items(),
     )
     servo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(servo_share, "launch", "belt_servo.launch.py")),
@@ -149,6 +153,7 @@ def _setup(context):
         f"kp={arg('kp') or '(sim yaml)'} max_attempts={arg('max_attempts') or '(sim yaml)'} "
         f"z_profile={arg('z_profile') or '(sim yaml)'} "
         f"rotate={arg('rotate') or '(sim yaml off)'} box_yaw={arg('box_yaw_deg')} "
+        f"gw_angular={arg('gw_angular') or 'false'} "
         f"gripper={gripper} plan={arg('grip_plan')} close={arg('grip_close_s')} "
         f"start_x={arg('box_start_x_mm')} log_dir={log_dir or '(sim yaml)'} — gateway dry_run 고정"
     )
@@ -172,6 +177,7 @@ def generate_launch_description() -> LaunchDescription:
         ("z_profile", "", "z.profile 덮어쓰기 p | trapezoid (비우면 sim yaml, S2-T14)"),
         ("rotate", "", "true = rotate.enable + pose_lag 0 덮어쓰기 (비우면 sim yaml off, S2-T18)"),
         ("box_yaw_deg", "0", "fake_box 박스 각 — 벨트 방향 기준 deg (S2-T18)"),
+        ("gw_angular", "", "true = gateway 각속도 통과 servo_angular (S2-T17, 기본 끔)"),
     ]
     decls = [DeclareLaunchArgument(n, default_value=d, description=t) for n, d, t in args]
     return LaunchDescription([*decls, OpaqueFunction(function=_setup)])

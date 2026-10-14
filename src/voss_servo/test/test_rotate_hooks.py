@@ -20,6 +20,7 @@ from voss_servo.params import (
 
 from voss_msgs.msg import BoxTrack
 from voss_servo import control, fsm
+from voss_servo import rotate as rt
 
 # sim yaml 과 같은 회전 제안값 (config/belt_servo_sim.yaml rotate 블록)
 ROT = {
@@ -180,6 +181,9 @@ class _Log:
     def info(self, *_a, **_k) -> None:
         pass
 
+    def warning(self, *_a, **_k) -> None:
+        pass
+
 
 class _Node:
     """BeltServoNode 의 회전 보조 메서드만 빌려 쓰는 가짜 (ROS 없이)."""
@@ -241,7 +245,9 @@ def test_home_ref_only_from_valid_fresh_pose_and_once() -> None:
 def test_rot_dead_tick_needs_two_still_ticks() -> None:
     """예외로 끈 goal: 각속도 0, 측정 정지가 2틱 이어져야 진행 · 움직이면 다시 센다 (M12, 권장 2)."""
     n = _Node()
-    ctx = SimpleNamespace(wz=0.3, rot_still_n=0, rot_io=None)
+    ctx = SimpleNamespace(
+        wz=0.3, rot_still_n=0, rot_io=None, rot_dead_since=1.0, rot_dead_capped=False, rot_warn=None
+    )
     n._yaw_prev, n._yaw_value = (0.00, 1.00), (0.02, 1.02)  # 1 rad/s 로 도는 중
     n._pose = (None, 1.02)
     assert n._rot_dead_tick(ctx, 1.03) is False and ctx.wz == 0.0
@@ -252,3 +258,15 @@ def test_rot_dead_tick_needs_two_still_ticks() -> None:
     n._yaw_prev, n._yaw_value = (0.02, 1.02), (0.05, 1.36)  # 다시 움직임 (0.34 s 뒤 첫 변화 = 모름)
     n._pose = (None, 1.36)
     assert n._rot_dead_tick(ctx, 1.37) is False and ctx.rot_still_n == 0
+
+
+def test_rot_dead_tick_cap_without_motion_info() -> None:
+    """예외로 끈 goal 이 측정 각속도를 계속 모르면 STOP_CAP 뒤 진행 (학민 #54 리뷰 4)."""
+    n = _Node()
+    ctx = SimpleNamespace(
+        wz=0.0, rot_still_n=0, rot_io=None, rot_dead_since=5.0, rot_dead_capped=False, rot_warn=None
+    )
+    n._pose = None  # pose 가 끊김 → 측정 각속도 모름
+    assert n._rot_dead_tick(ctx, 5.0 + rt.STOP_CAP - 0.01) is False
+    assert n._rot_dead_tick(ctx, 5.0 + rt.STOP_CAP) is True and ctx.rot_warn == rt.STOP_UNCONFIRMED
+    assert n._rot_dead_tick(ctx, 5.0 + rt.STOP_CAP + 0.03) is True  # 한 번 넘기면 계속 허용

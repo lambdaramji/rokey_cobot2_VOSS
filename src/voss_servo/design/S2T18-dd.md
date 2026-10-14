@@ -218,3 +218,11 @@ Opus 독립 재검(필수 10·권장 12)을 세션이 코드로 확인한 뒤 �
 - **지령 지연 보상 없음**: 지연 80 ms 를 넘으면 지나침이 tol 을 넘는다 → run.md ⑫ 측정. 보상(외삽 지평에 지령 지연 추가)은 측정 뒤 별도.
 - **시험**: 짝수 개 ±89° 2θ 중앙값, `_push_yaw` 무효 프레임, `_try_home_ref` 유효 pose 조건, 정지 2틱, 지연 100·120 ms 오경보 없음, 회전 중 취소 end_cause — 재검이 살아남았다고 보고한 변이 4건과 새 수정 2건을 시험이 잡는 것을 변이로 확인.
 - 기각·보류: `_rot_ever` 는 지금 구조에서 결과를 바꾸지 않는 방어 조건(기준 각이 None 으로 돌아가지 않음)이지만, 기준 규칙의 의도를 코드에 남기는 값이라 그대로 둔다. rotate 키가 범위 밖이면 off 여도 READY 거부 — 형식 검사는 off 여도 하는 기존 규칙(다른 블록과 같음)이라 그대로. 로그 키 목록 두 곳(rotate·log_schema)은 순서 일치를 시험으로 고정해 두었다.
+
+## 15. #54 리뷰 반영 (김학민 10/14 — 14절보다 우선)
+세션이 각 지적을 코드·S2-T17 브랜치(#56 `33d62c9`)로 확인한 뒤 반영했다.
+- **STOPPING 상한 `STOP_CAP` 1.0 s** (리뷰 4): 측정 각속도를 모르는 채(pose 지터·끊김) 상한이 지나면 FALLBACK + 경고 `STOP_UNCONFIRMED`(원래 원인은 유지). 예외로 끈 goal(`_rot_dead_tick`)도 같은 상한. 1.0 s = 60°/s 를 α 90 으로 세우는 0.67 s + pose 정지 판정 여유. 그동안 각속도는 계속 0 이다.
+- **STALL 이동 창** (리뷰 5): 시작 각 기준(1° 이상 돈 뒤 멈추면 TIMEOUT 까지 모름) → "계속 돌라고 했는데(|지령| ≥ ω 바닥) 최근 stall_s 동안 1° 미만" 으로. 1° 움직이거나 거의 0 을 지령하면 기준을 지금으로 옮긴다. ROTATING·RETURNING 같은 함수(`_stall_window`), `ret_psi_start` 필드는 없앴다.
+- **sim_check** (리뷰 2·3·7): 케이스마다 gateway 각속도 켬/끔(`gw_angular`, sim.launch `gw_angular:=true` → gateway `servo_angular:=true`). `rotate_stall` 은 끔이어야 성립(켬 기동 줄이면 FAIL), 새 `rotate_ok`(프로필 `rotate_gw`, S2-T17 gateway 필요 — 없으면 UNKNOWN) = ROTATING→SETTLING→DONE→RETURNING→RETURNED·첫 DESCEND |rot_err| ≤ 1.5°·`ang_speed`·`yaw_limit` 0. 자름은 `angular`·`ang_speed`·`yaw_limit` 키별로 센다. J-ang 은 gateway 끔 + 셋 다 0. 켬이면 J-gw: belt_servo ω·α ≤ gateway 기동 줄 ω·α.
+- **문서만** (리뷰 6·8·9·run.md): 기준 각은 `home_tool_yaw_deg` null 유지(같은 값을 두 곳에 두지 않음) + run.md ⑮ 로그 대조. 되돌리기 판정은 run.md 4.2 에 start_tol 기준. yaml α 주석. run.md ①②③ 확인 줄, ⑩ USB 고정 ❌, E2 부호 실측.
+- **보류 — 리뷰 1 (회전 대기 중 시야)**: 측정 ② B45 에서 정렬 자리(TCP X −119.7·Z 151, 박스 +45°) 검출 0 보고. HLD D2-2 "+46 이면 보인다" 는 hand_eye 모델 계산. 측정 ② 정확도에 의문이 있어 설계는 바꾸지 않고(사용자 10/14), 4단계 첫 회 틱 로그로 확인한 뒤 실제로 LOST 가 나면 설계 단위로 다룬다(후보: 회전 중 xy 목표 오프셋 / 회전 대기 중 LOST 를 FF 예측으로) — run.md ⑭.

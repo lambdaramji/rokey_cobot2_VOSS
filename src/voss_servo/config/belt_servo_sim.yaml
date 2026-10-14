@@ -62,7 +62,7 @@ belt_servo:
       decide_max_s:               0.5   # goal 뒤 결정 마감 — 넘으면 NO_YAW 로 회전 없이 진행
       start_tol_deg:              3     # goal 시작 공구 yaw 가 기준에서 이만큼 벗어나면 START_ROTATED (기준 = 첫 goal 공구 yaw)
       omega_max_dps:              60    # 각속도 상한 (T17 전 제안값 — 학민 확인)
-      alpha_dps2:                 90    # 각가속 (T17 전 제안값). gateway servo_acc[1] 이하여야 함 — 지금 gateway 기본 10
+      alpha_dps2:                 90    # 각가속 (T17 전 제안값). gateway servo_acc[1] 이하여야 함 — S2-T17(#56) 기본 90, 그 전 gateway 는 10
       tol_deg:                    1.5   # 도달 허용 (deadband 보다 작아야 함)
       omega_floor_dps:            3     # 끝에서 멈춰 버리지 않게 하는 최소 각속도
       hold_dz_mm:                 50    # 회전 중 z 하한 = 윗면 + 50 (시야 보험: 회전 중 송장이 보이는 최소 +46, D2-2)

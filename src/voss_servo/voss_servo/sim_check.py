@@ -53,6 +53,7 @@ class Case:
     # --- S2-T18 J6 회전 (기본 = 끔·박스 0° = 지금 동작) ---
     rotate: bool = False  # rotate.enable 덮어쓰기 (+ pose_lag 0)
     box_yaw_deg: float = 0.0  # fake_box 박스 각 (벨트 기준)
+    gw_angular: bool = False  # gateway 각속도 통과(S2-T17 servo_angular_enable) 켬 — 기본 끔(자름)
 
 
 FAIL_RETREAT_CLOSE_S = (
@@ -99,10 +100,12 @@ CASES: dict[str, Case] = {
     "wide": Case(
         "wide", "normal", 40.5, grip_plan="wide", grip_close_s=1.7, max_attempts=3, timeout_s=45.0
     ),
-    # S2-T18: dry_run gateway 는 각속도를 버리고 자세를 그대로 낸다 → 30° 박스는 STALL 폴백 뒤 지금 방식
+    # S2-T18: gateway 각속도 끔(기본·S2-T17 전)이면 자세가 그대로 → 30° 박스는 STALL 폴백 뒤 지금 방식
     "rotate_stall": Case("rotate_stall", "normal", 40.5, rotate=True, box_yaw_deg=30.0),
     # S2-T18: 3° 박스는 데드밴드·1단계 문턱 안 → SKIP(SMALL), 각속도 한 번도 안 냄
     "rotate_small": Case("rotate_small", "normal", 40.5, rotate=True, box_yaw_deg=3.0),
+    # S2-T18 × S2-T17: gateway 각속도 켬(dry_run 이 자세를 돌림) → 30° 회전·정착·되돌리기 (학민 #54 리뷰 2)
+    "rotate_ok": Case("rotate_ok", "normal", 40.5, rotate=True, box_yaw_deg=30.0, gw_angular=True),
 }
 
 
@@ -145,6 +148,7 @@ EXPECT: dict[tuple[str, str], Expect] = {
     # S2-T18: 회전 폴백·생략 뒤에도 지금과 같은 정상 파지
     ("rotate", "rotate_stall"): Expect(SUCCEEDED, "OK", "", True, PHASES),
     ("rotate", "rotate_small"): Expect(SUCCEEDED, "OK", "", True, PHASES),
+    ("rotate_gw", "rotate_ok"): Expect(SUCCEEDED, "OK", "", True, PHASES),
     ("grasp", "wide"): Expect(
         ABORTED, "GRASP_FAILED", "WIDTH_OUT", False, (*PHASES[:5],), attempts=1, retreat=True
     ),
@@ -164,7 +168,9 @@ PROFILE_CASES: dict[str, tuple[str, ...]] = {
         "fail_retreat",
         "wide",
     ),
-    "rotate": ("rotate_stall", "rotate_small"),  # S2-T18
+    # S2-T18 (gateway 각속도 끔 — main gateway 로도 돈다)
+    "rotate": ("rotate_stall", "rotate_small"),
+    "rotate_gw": ("rotate_ok",),  # S2-T18 × S2-T17: servo_angular_enable 가 있는 gateway 필요
 }
 
 # 허용치 (사전 실험 실측: Δt 33.3 ms, watchdog 종료 뒤 0.71 s, hold 15틱 0.5 s)
@@ -199,8 +205,16 @@ TS = r"\[(\d+\.\d+)\] \[robot_gateway\]: "
 GW_STARTED = re.compile(r"robot_gateway started: (\S+)")  # 첫 단어 dry_run | real (:239)
 GW_WATCHDOG = re.compile(TS + r"servo_cmd 끊김\(watchdog\)")  # :849
 GW_STOP = re.compile(TS + r"/voss/robot/stop → (\S+)")  # :885
-# 5 s 통계 줄의 각속도 자름 수 (warn 줄은 2 s throttle 이라 통계 줄로 센다, S2-T18 r1-21)
-GW_ANGULAR = re.compile(TS + r"servo rx .*자름 \{[^}]*'angular': (\d+)")
+# 5 s 통계 줄의 자름 사전 (warn 줄은 2 s throttle 이라 통계 줄로 센다, S2-T18 r1-21). 0 인 키는 빠진다.
+# 각속도 관련 키: angular(끔이면 angular.z 전부, 켬이면 x·y 만), ang_speed·yaw_limit(켬일 때, S2-T17)
+GW_CLAMPS = re.compile(TS + r"servo rx .*자름 \{([^}]*)\}")
+CLAMP_ITEM = re.compile(r"'(\w+)': (\d+)")
+ANG_KEYS = ("angular", "ang_speed", "yaw_limit")
+# S2-T17 gateway 기동 줄 (켬이면 한도, 끔이면 off 한 줄. 옛 gateway 는 둘 다 없음 = 끔)
+GW_ANG_ON = re.compile(r"servo angular on · ω ≤ ([\d.]+) °/s · α ([\d.]+) °/s²")
+GW_ANG_OFF = re.compile(r"servo angular off")
+# belt_servo 회전 설정 줄 (params.rotate_line)
+SERVO_ROTATE = re.compile(r"\[belt_servo\]: rotate on · .* ω ([\d.]+) · α ([\d.]+) ·")
 GW_STATS = re.compile(  # :421, 5 s 마다, 찍을 때마다 0 으로 리셋
     TS + r"servo rx .*watchdog (\d+), stop (\d+), move_stop (\d+) ok / (\d+) fail"
 )
@@ -245,7 +259,10 @@ class GatewayFacts:
     stops: list[tuple[float, str]] = field(default_factory=list)  # (시각, 결과)
     stats: list[tuple[float, int, int, int, int]] = field(default_factory=list)
     # (시각, watchdog, stop, move_stop ok, move_stop fail)
-    angular: list[tuple[float, int]] = field(default_factory=list)  # (시각, 각속도 자름 수) S2-T18
+    # (시각, 자름 사전) S2-T18
+    clamps: list[tuple[float, dict[str, int]]] = field(default_factory=list)
+    ang_on: bool | None = None  # gateway 각속도 통과 켬 (None = 기동 줄 없음 = 옛 gateway, 자름)
+    ang_limits: tuple[float, float] | None = None  # 켬일 때 (ω 상한 °/s, α °/s²)
 
 
 # ---------------------------------------------------------------- 순수 판정 함수 (DD 6.9)
@@ -511,8 +528,13 @@ def parse_gateway(lines: list[str]) -> GatewayFacts:
             facts.stops.append((float(m.group(1)), m.group(2)))
         if m := GW_STATS.search(line):
             facts.stats.append((float(m.group(1)), *(int(m.group(i)) for i in range(2, 6))))
-        if m := GW_ANGULAR.search(line):
-            facts.angular.append((float(m.group(1)), int(m.group(2))))
+        if m := GW_CLAMPS.search(line):
+            items = {k: int(n) for k, n in CLAMP_ITEM.findall(m.group(2))}
+            facts.clamps.append((float(m.group(1)), items))
+        if m := GW_ANG_ON.search(line):
+            facts.ang_on, facts.ang_limits = True, (float(m.group(1)), float(m.group(2)))
+        elif GW_ANG_OFF.search(line):
+            facts.ang_on = False
     return facts
 
 
@@ -521,37 +543,96 @@ def in_window(t: float, start: float | None, end: float | None) -> bool:
     return (start is None or t >= start) and (end is None or t < end)
 
 
-def angular_clamps(facts: GatewayFacts, win: tuple) -> int:
-    """창 안 통계 줄의 각속도 자름 수 합 (S2-T18). 통계는 5 s 뒤에 찍히므로 창 끝은 열어 둔다."""
-    return sum(n for t, n in facts.angular if in_window(t, win[0], None))
+def angular_clamps(facts: GatewayFacts, win: tuple) -> dict[str, int]:
+    """창 안 통계 줄의 각속도 자름 수를 키별로 합 (S2-T18). 통계는 5 s 뒤에 찍히므로 창 끝은 열어 둔다."""
+    out = dict.fromkeys(ANG_KEYS, 0)
+    for t, items in facts.clamps:
+        if in_window(t, win[0], None):
+            for k in ANG_KEYS:
+                out[k] += items.get(k, 0)
+    return out
 
 
-def judge_rotation(case_name: str, rows: list[dict], clamps: int) -> Verdict:
+def _clamp_text(c: dict[str, int]) -> str:
+    return " ".join(f"{k} {c[k]}" for k in ANG_KEYS)
+
+
+def judge_rotation(
+    case_name: str, rows: list[dict], clamps: dict[str, int], ang_on: bool | None
+) -> Verdict:
     """J-rot (S2-T18): 회전 하위 상태 순서·마지막 원인·각속도 자름이 기대대로인가."""
     states = []
-    for r in (
-        rows
-    ):  # 바뀐 순서만. goal 전에 프레임이 차 있으면 첫 틱에 결정해 COLLECT 가 안 남는다 → 뺀다
+    # 바뀐 순서만. goal 전에 프레임이 차 있으면 첫 틱에 결정해 COLLECT 가 안 남는다 → 뺀다
+    for r in rows:
         s = r.get("rot_state")
         if s and s != "COLLECT" and (not states or states[-1] != s):
             states.append(s)
     causes = [r.get("rot_cause") for r in rows if r.get("rot_cause")]
     last = causes[-1] if causes else None
     wz = [abs(r.get("wz_cmd_dps") or 0.0) for r in rows]
-    got = f"{'→'.join(states)} · cause {last} · max|wz| {max(wz, default=0):.1f}°/s · 자름 {clamps}"
-    if case_name == "rotate_stall":
-        want = "ROTATING→STOPPING→FALLBACK · cause STALL · 자름 > 0 (예상)"
+    got = (
+        f"{'→'.join(states)} · cause {last} · max|wz| {max(wz, default=0):.1f}°/s · "
+        f"gateway 각속도 {'켬' if ang_on else '끔'} · 자름 {_clamp_text(clamps)}"
+    )
+    if case_name == "rotate_ok":  # gateway 켬: 실제로 돌고 정착하고 되돌아온다
+        want = "ROTATING→SETTLING→DONE→RETURNING→RETURNED · 첫 DESCEND |rot_err| ≤ 1.5° · ang_speed·yaw_limit 0"
+        if not ang_on:
+            return _unknown(
+                "J-rot", "회전 성공", want, "gateway 각속도 켬 기동 줄 없음 (S2-T17 전 gateway)"
+            )
+        seq = ["ROTATING", "SETTLING", "DONE", "RETURNING", "RETURNED"]
+        first = next((r for r in rows if r.get("phase") == "DESCEND"), None)
+        err = abs(first.get("rot_err_deg") or 99.0) if first else 99.0
+        ok = states == seq and err <= 1.5 and clamps["ang_speed"] == 0 and clamps["yaw_limit"] == 0
+        return _v("J-rot", "회전 성공", ok, want, f"{got} · 첫 DESCEND |rot_err| {err:.2f}°")
+    if case_name == "rotate_stall":  # gateway 끔이어야 성립하는 기대
+        want = (
+            "gateway 각속도 끔 · ROTATING→STOPPING→FALLBACK · cause STALL · 자름 angular > 0 (예상)"
+        )
         seq = ["ROTATING", "STOPPING", "FALLBACK"]
-        ok = states[: len(seq)] == seq and "STALL" in causes and clamps > 0
+        ok = (
+            not ang_on and states[: len(seq)] == seq and "STALL" in causes and clamps["angular"] > 0
+        )
         return _v("J-rot", "회전 폴백", ok, want, got)
     want = "SKIP · cause SMALL · wz 0 · 자름 0"
-    ok = states == ["SKIP"] and last == "SMALL" and max(wz, default=0) == 0 and clamps == 0
+    ok = (
+        states == ["SKIP"]
+        and last == "SMALL"
+        and max(wz, default=0) == 0
+        and sum(clamps.values()) == 0
+    )
     return _v("J-rot", "회전 생략", ok, want, got)
 
 
-def judge_no_angular(clamps: int) -> Verdict:
-    """J-ang (S2-T18): 회전 off 케이스는 gateway 가 각속도를 한 번도 자르지 않는다 (= 낸 적 없음)."""
-    return _v("J-ang", "각속도 0", clamps == 0, "자름 angular 0", f"{clamps}")
+def judge_no_angular(clamps: dict[str, int], ang_on: bool | None) -> Verdict:
+    """J-ang (S2-T18): 회전 off 케이스는 gateway 가 각속도를 한 번도 자르지 않는다 (= 낸 적 없음).
+
+    gateway 각속도 끔(기본)이면 angular 가 angular.z 까지 센다. 켬이면 angular 는 x·y 만이라
+    끔이어야 이 판정이 belt_servo 의 angular.z 를 잡는다 (학민 #54 리뷰 3).
+    """
+    want = "gateway 각속도 끔 · 자름 angular·ang_speed·yaw_limit 0"
+    ok = not ang_on and sum(clamps.values()) == 0
+    return _v("J-ang", "각속도 0", ok, want, f"{'켬' if ang_on else '끔'} · {_clamp_text(clamps)}")
+
+
+def judge_gw_limits(servo: tuple[float, float] | None, gw: tuple[float, float] | None) -> Verdict:
+    """J-gw (S2-T18 × S2-T17): belt_servo ω_max·α ≤ gateway 각속도 상한·servo_acc[1] (학민 #54 리뷰 7)."""
+    want = "rotate ω ≤ gateway ω · rotate α ≤ gateway α"
+    if servo is None or gw is None:
+        return _unknown(
+            "J-gw", "각속도 한도", want, f"기동 줄 없음 (belt_servo {servo}, gateway {gw})"
+        )
+    ok = servo[0] <= gw[0] and servo[1] <= gw[1]
+    got = f"belt_servo ω {servo[0]:g} · α {servo[1]:g} / gateway ω {gw[0]:g} · α {gw[1]:g}"
+    return _v("J-gw", "각속도 한도", ok, want, got)
+
+
+def parse_servo_rotate(lines: list[str]) -> tuple[float, float] | None:
+    """launch.log → belt_servo 회전 설정 (ω_max °/s, α °/s²). 회전 off·옛 노드면 None."""
+    for line in lines:
+        if m := SERVO_ROTATE.search(line):
+            return float(m.group(1)), float(m.group(2))
+    return None
 
 
 def judge_dry_run(mode: str | None) -> Verdict:
@@ -618,6 +699,8 @@ def launch_extra(case: Case, z_profile: str | None = None) -> list[str]:
         extra.append(f"box_start_x_mm:={case.start_x_mm:g}")
     if case.rotate:  # S2-T18
         extra += ["rotate:=true", f"box_yaw_deg:={case.box_yaw_deg:g}"]
+    if case.gw_angular:  # S2-T17 gateway 각속도 통과 (기본 끔)
+        extra.append("gw_angular:=true")
     return extra
 
 
@@ -1000,11 +1083,15 @@ class SimRunner:
             belt = next((r.get("belt_vel_mps") for r in ticks if r.get("belt_vel_mps")), None)
             rows = progress + ([terminal] if terminal else [])
             v.append(judge_track_lock(rows, DEFAULT_START_M, belt))
-        clamps = angular_clamps(facts, win)  # S2-T18: gateway 가 자른 각속도 수
+        clamps = angular_clamps(facts, win)  # S2-T18: gateway 가 자른 각속도 수 (키별)
         if case.rotate:
-            v.append(judge_rotation(case.name, progress + ([terminal] if terminal else []), clamps))
+            rows = progress + ([terminal] if terminal else [])
+            v.append(judge_rotation(case.name, rows, clamps, facts.ang_on))
+            if facts.ang_on:  # 켬일 때만 한도 교차 검사
+                servo = parse_servo_rotate(read_lines(os.path.join(run_dir, "launch.log")))
+                v.append(judge_gw_limits(servo, facts.ang_limits))
         else:
-            v.append(judge_no_angular(clamps))  # 회전 off 회귀
+            v.append(judge_no_angular(clamps, facts.ang_on))  # 회전 off 회귀
         if killed:
             v.append(_unknown("J-", "정리", "SIGINT 로 종료", "SIGKILL 사용 (launch 가 안 끝남)"))
         return v

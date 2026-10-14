@@ -268,6 +268,7 @@ def run(
     seconds: float = 6.0,
     c: rt.RotCfg | None = None,
     stuck: bool = False,
+    stuck_at: float | None = None,
 ):
     """30 Hz 로 rot_step 을 돌린다. 박스 yaw = 벨트 + Δ. 반환: 상태 기록·로봇·마지막 출력."""
     c = c or cfg(max_rot=D(90))
@@ -276,6 +277,8 @@ def run(
     wz, t, hist = 0.0, 0.0, []
     out = None
     while t < seconds:
+        if stuck_at is not None and t >= stuck_at:
+            robot.alpha, robot.w = 0.0, 0.0  # 돌다가 멈춤 (gateway 자름·걸림)
         robot.advance(t)
         w_meas = rt.omega_meas(robot.prev, robot.value, t, 0.0)
         psi_raw = robot.value[0]
@@ -361,6 +364,29 @@ def test_stall_then_stop_confirm_then_fallback() -> None:
         t += DT
     assert rt.STOPPING in seen and seen[-1] == rt.FALLBACK and rs.cause == rt.STALL
     assert rs.t_done is not None
+
+
+def test_stall_after_partial_rotation_uses_moving_window() -> None:
+    """1° 이상 돈 뒤 멈춰도 stall_s 안팎에 STALL — TIMEOUT(45° ≈ 2.6 s)까지 기다리지 않는다 (학민 #54 리뷰 5)."""
+    hist, robot, out = run(45, stuck_at=0.5)
+    t_stall = next(t for t, s, _ in hist if s == rt.STOPPING)
+    assert out.state.cause == rt.STALL and out.state.state == rt.FALLBACK
+    assert 0.5 + cfg().stall_s - DT <= t_stall <= 0.5 + cfg().stall_s + 0.2  # 멈춘 뒤 ≈ stall_s
+    assert abs(rt.wrap_pi(robot.psi - HOME)) > D(1)  # 실제로 조금 돌았던 경우
+
+
+def test_stopping_cap_when_motion_unknown() -> None:
+    """측정 각속도를 계속 모르면(pose 지터·끊김) STOP_CAP 뒤 경고와 함께 FALLBACK (학민 #54 리뷰 4)."""
+    c = cfg()
+    rs = rt.RotState(rt.STOPPING, home=HOME, cause=rt.STALL, t_start=0.0)
+    t = 0.0
+    while t < rt.STOP_CAP - DT:
+        out = rt.rot_step(rs, inputs(now=t, w_meas=None), c)
+        assert out.state.state == rt.STOPPING and out.wz == 0.0 and not out.ready
+        rs, t = out.state, t + DT
+    out = rt.rot_step(rs, inputs(now=rt.STOP_CAP + 0.001, w_meas=None), c)
+    assert out.state.state == rt.FALLBACK and out.warn == rt.STOP_UNCONFIRMED and out.ready
+    assert out.state.cause == rt.STALL and out.state.stop_since is None  # 원래 원인은 그대로
 
 
 def test_stopping_waits_for_inertia() -> None:

@@ -47,6 +47,7 @@ INTERNAL = "INTERNAL"  # 회전 계산 예외 (노드가 기록)
 SETTLE_DRIFT = "SETTLE_DRIFT"  # 정착 중 목표에서 tol 밖으로 밀림 (쫓지 않음)
 SETTLE_TIMEOUT = "SETTLE_TIMEOUT"  # 정착이 상한까지 안 됨
 ACC_MISMATCH = "ACC_MISMATCH"  # 실제 회전 가속이 설정보다 느림 (경고)
+STOP_UNCONFIRMED = "STOP_UNCONFIRMED"  # STOPPING 상한까지 정지를 확인 못 함 (경고, 그대로 진행)
 RETURN_STALL = "RETURN_STALL"  # 되돌리기 중 STALL
 RETURN_TIMEOUT = "RETURN_TIMEOUT"  # 되돌리기 중 TIMEOUT
 RETURN_INCOMPLETE = "RETURN_INCOMPLETE"  # goal 이 끝날 때 원래 각으로 못 돌아옴
@@ -65,6 +66,8 @@ TIMEOUT_ADD = 0.5
 STILL_TICKS = 2  # 정지 확인에 필요한 연속 틱
 YAW_HOLD_MAX = 0.15  # yaw 값이 이보다 오래 그대로면 정지로 본다 s (service 갱신 0.1 s 보다 길게)
 SETTLE_CAP = 1.0  # SETTLING 상한 s
+# STOPPING(정지 확인) 상한 s — 60°/s 를 α 90 으로 세우는 0.67 s + pose 정지 판정 여유
+STOP_CAP = 1.0
 POSE_FRESH_FOR_ZERO = (
     0.05  # 기본값 — 실제 값은 rotate.pose_fresh_s (pose 주기의 2배 이상, 주관 검수 c)
 )
@@ -125,9 +128,11 @@ class RotState:
     still_since: float | None = None  # 멈춰 있기 시작한 시각 (SETTLING)
     settle_start: float | None = None  # SETTLING 진입 시각
     still_n: int = 0  # 정지 확인 연속 틱 (STOPPING)
+    stop_since: float | None = None  # STOPPING 들어온 시각 (상한 STOP_CAP)
+    stall_psi: float | None = None  # STALL 이동 창 기준 공구 yaw (마지막으로 1° 움직인 자리)
+    stall_t: float | None = None  # STALL 이동 창 기준 시각
     settle_drift: bool = False  # 정착 중 밀렸나
     ret_start: float | None = None  # 되돌리기 시작 시각
-    ret_psi_start: float | None = None  # 되돌리기 시작 공구 yaw
     ret_expected: float | None = None  # 되돌리기 예상 시간
     ret_tried: bool = False  # 되돌리기를 이미 시도했나 (1회만)
 
@@ -374,13 +379,27 @@ def _rotating(rs: RotState, inp: RotInputs, cfg: RotCfg) -> Step:
     limit = TIMEOUT_K * expected_time(rs.delta, cfg.w_max, cfg.alpha) + TIMEOUT_ADD
     if el > limit:
         return replace(rs, state=STOPPING, cause=TIMEOUT, still_n=0), None, None
-    assert rs.psi_start is not None
-    if el >= cfg.stall_s and abs(wrap_pi(inp.psi_raw - rs.psi_start)) < STALL_MIN:
+    stalled, rs = _stall_window(rs, inp, cfg)
+    if stalled:
         return replace(rs, state=STOPPING, cause=STALL, still_n=0), None, None
     e = wrap_pi(rs.target - (inp.psi_est if inp.psi_est is not None else inp.psi_raw))
     if abs(e) <= cfg.tol and inp.w_meas is not None and abs(inp.w_meas) < cfg.still:
         return replace(rs, state=SETTLING, still_since=inp.now, settle_start=inp.now), None, None
     return _accel_watch(rs, inp, cfg, e)
+
+
+def _stall_window(rs: RotState, inp: RotInputs, cfg: RotCfg) -> tuple[bool, RotState]:
+    """이동 창 STALL: 계속 돌라고 했는데(|지령| ≥ ω 바닥) 최근 stall_s 동안 1° 도 못 돌았나.
+
+    시작 각만 보면 1° 이상 돈 뒤 멈춘 것(gateway 자름·걸림)을 TIMEOUT 까지 모른다 (학민 #54 리뷰 5).
+    1° 움직였거나 거의 0 을 지령하는 동안은 기준(각·시각)을 지금으로 옮긴다.
+    """
+    assert inp.psi_raw is not None
+    ref_psi, ref_t = rs.stall_psi, rs.stall_t
+    moved = ref_psi is None or abs(wrap_pi(inp.psi_raw - ref_psi)) >= STALL_MIN
+    if moved or ref_t is None or abs(inp.wz_prev) < cfg.w_floor:
+        return False, replace(rs, stall_psi=inp.psi_raw, stall_t=inp.now)  # 창 다시
+    return inp.now - ref_t >= cfg.stall_s, rs
 
 
 def _accel_watch(rs: RotState, inp: RotInputs, cfg: RotCfg, e: float) -> Step:
@@ -429,15 +448,23 @@ def _settling(rs: RotState, inp: RotInputs, cfg: RotCfg) -> Step:
 
 
 def _stopping(rs: RotState, inp: RotInputs, cfg: RotCfg) -> Step:
-    """STOPPING: 각속도 0 을 내고 실제로 멈춘 것이 2틱 이어지면 FALLBACK."""
+    """STOPPING: 각속도 0 을 내고 실제로 멈춘 것이 2틱 이어지면 FALLBACK.
+
+    측정 각속도를 모르는 채(pose 지터·끊김) STOP_CAP 이 지나면 경고와 함께 FALLBACK — TRACK 에
+    묶여 박스를 흘려보내지 않게 (학민 #54 리뷰 4). 그동안 각속도는 계속 0 이었다.
+    """
+    since = rs.stop_since if rs.stop_since is not None else inp.now
     still = inp.w_meas is not None and abs(inp.w_meas) < cfg.still
     n = rs.still_n + 1 if still else 0
+    warn = None
     if n < STILL_TICKS:
-        return replace(rs, still_n=n), None, None
+        if inp.now - since < STOP_CAP:
+            return replace(rs, still_n=n, stop_since=since), None, None
+        warn = STOP_UNCONFIRMED  # 상한 — 정지 확인 없이 진행
     t_done = rs.t_done
     if t_done is None and rs.t_start is not None:
         t_done = inp.now  # 앞 회전이 끝난 시각 (되돌리기 실패는 덮지 않는다)
-    return replace(rs, state=FALLBACK, still_n=n, t_done=t_done), None, None
+    return replace(rs, state=FALLBACK, still_n=n, t_done=t_done, stop_since=None), None, warn
 
 
 def return_ok(inp: RotInputs, cfg: RotCfg) -> bool:
@@ -462,7 +489,7 @@ def _done_or_fallback(rs: RotState, inp: RotInputs, cfg: RotCfg) -> Step:
         rs,
         state=RETURNING,
         ret_start=inp.now,
-        ret_psi_start=inp.psi_raw,
+        stall_psi=None,  # STALL 이동 창은 되돌리기 첫 틱에 다시 잡는다
         ret_tried=True,
         ret_expected=expected_time(off, cfg.w_max, cfg.alpha),
     )
@@ -473,15 +500,15 @@ def _returning(rs: RotState, inp: RotInputs, cfg: RotCfg) -> Step:
     """RETURNING: 조건이 깨지면 대기(시계 다시), TIMEOUT·STALL 감시, 도착하면 RETURNED."""
     if not return_ok(inp, cfg):
         # 대기 — 다시 움직일 때 STALL 을 잘못 내지 않게 기준 시각·각을 새로 잡는다
-        return replace(rs, ret_start=inp.now, ret_psi_start=inp.psi_raw), None, None
+        return replace(rs, ret_start=inp.now, stall_psi=None), None, None
     if not inp.pose_ok or inp.psi_raw is None:
         return replace(rs, state=STOPPING, cause=NO_POSE_YAW, still_n=0), None, None
     assert rs.ret_start is not None and rs.ret_expected is not None and rs.home is not None
     el = inp.now - rs.ret_start
     if el > TIMEOUT_K * rs.ret_expected + TIMEOUT_ADD:
         return replace(rs, state=STOPPING, cause=RETURN_TIMEOUT, still_n=0), None, None
-    start = rs.ret_psi_start if rs.ret_psi_start is not None else inp.psi_raw
-    if el >= cfg.stall_s and abs(wrap_pi(inp.psi_raw - start)) < STALL_MIN:
+    stalled, rs = _stall_window(rs, inp, cfg)
+    if stalled:
         return replace(rs, state=STOPPING, cause=RETURN_STALL, still_n=0), None, None
     psi = inp.psi_est if inp.psi_est is not None else inp.psi_raw
     if abs(wrap_pi(rs.home - psi)) <= cfg.tol:
