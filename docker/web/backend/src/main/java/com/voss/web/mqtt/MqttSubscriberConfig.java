@@ -1,4 +1,4 @@
-// Spring Boot MQTT 7개 토픽 구독과 명령 발행을 설정한다.
+// Spring Boot MQTT 수신 7개 토픽 구독(Sprint 2 voss/pallet/state 포함)과 명령 발행을 설정한다.
 // 입력: 환경 변수의 MQTT 계정 정보. 출력: MQTT ↔ Spring 메시지 채널.
 // 근거: docs/interfaces/mqtt.md (#20), web_api.md.
 package com.voss.web.mqtt;
@@ -27,9 +27,9 @@ public class MqttSubscriberConfig {
     private static final String MQTT_USERNAME = "web";
     private static final String[] INPUT_TOPICS = {
             "voss/state", "voss/result", "voss/zone_map", "voss/robot",
-            "voss/command/ack", "voss/log_status", "voss/voice_status",
+            "voss/command/ack", "voss/log_status", "voss/pallet/state", "voss/voice_status",
             "voss/box_track", "voss/robot_pose", "voss/box_motion", "voss/robot_joints"};
-    private static final int[] INPUT_QOS = {1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0};
+    private static final int[] INPUT_QOS = {1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0};
 
     MqttPahoClientFactory mqttClientFactory(String password) {
         return mqttClientFactory(password, MQTT_BROKER_URL);

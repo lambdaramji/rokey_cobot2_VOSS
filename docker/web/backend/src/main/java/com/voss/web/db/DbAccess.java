@@ -7,6 +7,7 @@ import com.voss.web.api.ApiException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Properties;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.slf4j.Logger;
@@ -15,6 +16,8 @@ import org.slf4j.LoggerFactory;
 @Component
 public class DbAccess {
     private static final Logger LOGGER = LoggerFactory.getLogger(DbAccess.class);
+    private static final String DB_CONNECT_TIMEOUT_S = "3";
+    private static final String DB_SOCKET_TIMEOUT_S = "5";
     /** 통계·이력에서는 SELECT 전용 자격 증명으로 접속한다. */
     public Connection openRead() {
         return connect("VOSS_DB_READ_URL", "VOSS_DB_READ_USER", "VOSS_DB_READ_PASSWORD", true);
@@ -34,7 +37,12 @@ public class DbAccess {
             throw dbError("DB 접속 환경 변수가 설정되지 않았습니다.");
         }
         try {
-            Connection connection = DriverManager.getConnection(url, user, password);
+            Properties options = new Properties();
+            options.setProperty("user", user);
+            options.setProperty("password", password);
+            options.setProperty("connectTimeout", DB_CONNECT_TIMEOUT_S);
+            options.setProperty("socketTimeout", DB_SOCKET_TIMEOUT_S);
+            Connection connection = DriverManager.getConnection(url, options);
             connection.setReadOnly(readOnly);
             return connection;
         } catch (SQLException exception) {

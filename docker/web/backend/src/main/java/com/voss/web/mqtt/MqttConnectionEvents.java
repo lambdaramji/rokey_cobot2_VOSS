@@ -20,11 +20,12 @@ public class MqttConnectionEvents {
         this.events = events;
     }
 
-    /** MQTT 구독 확인·연결 실패 이벤트만 처리하고 나머지는 무시한다. */
+    /** MQTT 구독·발행 연결 확인 이벤트를 UP으로 복구하고 장애는 DOWN으로 보낸다. */
     @EventListener
     public void onIntegrationEvent(ApplicationEvent event) {
         String eventName = event.getClass().getSimpleName();
-        if ("MqttSubscribedEvent".equals(eventName)) {
+        if ("MqttSubscribedEvent".equals(eventName)
+                || "MqttConnectedEvent".equals(eventName)) {
             links.markConnected();
             events.publishLink();
             return;

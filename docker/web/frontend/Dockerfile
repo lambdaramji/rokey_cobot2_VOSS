@@ -1,8 +1,8 @@
 # T13 #22 React/TS/Vite 빌드 후 Nginx로 정적 웹 제공.
 FROM node:22-alpine AS builder
 WORKDIR /app
-COPY frontend/package.json ./
-RUN npm install --no-audit --no-fund
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci --no-audit --no-fund
 COPY frontend/ ./
 RUN npm run build
 

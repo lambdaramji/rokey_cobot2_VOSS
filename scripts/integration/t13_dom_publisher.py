@@ -14,6 +14,7 @@ from urllib.error import URLError
 
 import rclpy
 from rclpy.node import Node
+
 from voss_msgs.msg import SortState
 
 API_URL = "http://127.0.0.1:8080/api/sessions/current"
@@ -37,9 +38,7 @@ def estimate_server_clock() -> tuple[float, float]:
         server_time = datetime.fromisoformat(body["as_of"])
         server_ms = server_time.timestamp() * 1000
         midpoint_ms = (started_ms + finished_ms) / 2
-        clock_samples.append(
-            (finished_ms - started_ms, server_ms - midpoint_ms)
-        )
+        clock_samples.append((finished_ms - started_ms, server_ms - midpoint_ms))
     best_rtt_ms, offset_ms = min(clock_samples)
     return offset_ms, best_rtt_ms / 2
 
@@ -60,8 +59,7 @@ def make_message(sequence: int, offset_ms: float, uncertainty_ms: float) -> Sort
     message.state = "IDLE"
     message.box_id = ""
     message.pending_question = (
-        f"{MARKER}|{sequence}|{time.time_ns() // 1_000_000}"
-        f"|{offset_ms:.1f}|{uncertainty_ms:.1f}"
+        f"{MARKER}|{sequence}|{time.time_ns() // 1_000_000}|{offset_ms:.1f}|{uncertainty_ms:.1f}"
     )
     message.track_id = -1
     message.ready = False

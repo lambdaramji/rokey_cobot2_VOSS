@@ -9,15 +9,26 @@
 - Spring Boot: `GET /api/stream` SSE(상태·결과·zone_map·robot·command_ack·log_status·link), `POST /api/commands`, `GET /api/stats`, `GET /api/sessions/current`, `PUT /api/sessions/current/plan`, `GET /api/results`, `GET /api/export.csv`.
 - MQTT: `voss/state`, `voss/result`, `voss/zone_map`, `voss/robot`, `voss/command/ack`, `voss/log_status` 구독; `voss/command` 발행(총 7개 토픽). QoS 1/1/1/0/1/1, 명령 발행 QoS 1; retained는 브로커 토픽 계약에 따름.
 - SQL: `sort_log`는 조회 전용 연결만 사용하고, 투입 수량은 별도 `session_plan` 테이블에서 관리.
-- 원격 접근: `stop` 이외 명령은 Nginx가 덮어쓴 `X-Real-IP`가 localhost일 때만 허용. `X-Forwarded-For`는 무시.
+- 원격 접근: `stop` 이외 명령은 Nginx가 덮어쓴 `X-Real-IP`가 localhost일 때만 허용. `X-Forwarded-For`는 무시. **단, SSH가 127.0.0.1:8080에 직접 연결되면 Nginx를 거치지 않으므로 이 헤더만으로 원격 접속자를 인증할 수 없다.**
 
-## 사용자 PC에서 테스트
+## Sprint 2 S2-T08 — 팔레트 패널 (BRD v1.5 TR-PAL-10, 남현지)
+
+- 화면: `src/PalletPanel.tsx`(04 / PALLETIZING). 경로 1~3곳 선택 → `palletize`, "팔레트 비움" → `reset_zone PALLET`(둘 다 공용 PC 로컬만). 3D 팔레트 4열×2줄×2층(트럭 머리 왼쪽·문 오른쪽, 동 색, 계획=옅게·옮기는 중=깜빡임·적재=진하게·실패=붉게), 위에서 본 칸 표(BRD 10.4 표와 같은 행 순서), 구역별 실을 수·초과·경로 제외, "배송 물량 남음" 경고, 진행률 "n개 중 m개".
+- 3D 는 SVG 사선 투영(`src/pallet.ts`, 새 의존성 없음 — three.js·WebGL 없이 결정적이라 시험할 수 있다). 박스 비율은 실제 46×31×27 mm. 앞줄 = 1줄은 임시(결정 D6·교시 S2-T02 뒤 `FRONT_LANE` 만 바꾼다).
+- 백엔드: `voss/pallet/state` 구독(QoS 1) → SSE `pallet_state`(접속 스냅샷 포함), `palletize` route 검사, `reset_zone PALLET`, SortState `PALLETIZING` 수용(빠지면 팔레타이징 중 3초 뒤 UNKNOWN).
+- 시험: `npm test`(Node 22 내장 `node --test`, `test/fixtures/pallet_s1.json` = 실제 pallet_fsm 이 만든 S1 + slot 4 실패·#37 당겨 놓기 PalletState 열 — 손으로 고치지 않는다), `./gradlew test`.
+- 공용 PC 재생·반영 ≤ 1초: `scripts/integration/README.md` "S2-T08".
+
+## 공용 PC에서 테스트
+
+레포 루트에서 다음 명령을 실행한다.
 
 ```bash
-cd ~/collaboration/rokey_cobot2_VOSS_2/docker/web/backend
+cd docker/web/backend
 ./gradlew clean test bootJar
 cd ../frontend
-npm install
+npm ci
+npm test
 npm run build
 ```
 
@@ -32,18 +43,20 @@ cd docker/web/backend
 
 # 터미널 2: React 개발 서버
 cd docker/web/frontend
-npm install
+npm ci
 npm run dev
 ```
 
 브라우저에서 `http://127.0.0.1:5173`을 엽니다. Vite는 `/api`를 localhost:8080으로 전달합니다. 실제 MQTT/DB 환경 변수를 설정하지 않았다면 연결 DOWN·DB_ERROR 표시가 정상이며, 가짜 데이터를 채우지 않습니다.
+
+**운전 안전 계약:** 공용 PC 로컬 HMI 요청은 start/resume/priority/answer/reset_zone을 허용하고, 원격에서는 stop만 허용한다 (`web_api.md` #68). 이전 임시 `VOSS_NONSTOP_COMMANDS_ENABLED`와 `VOSS_OPERATOR_IP`는 정식 계약에 없으므로 이 PR에서 사용하지 않는다. Nginx는 `X-Real-IP`를 덮어쓰고 `X-Forwarded-For`를 무시한다. Spring 8080 포트로 직접 접속하는 SSH 터널은 Nginx를 우회하므로 **실로봇 운전 중 사용 금지**이며, 다중 PC 예외는 #155/ADR 승인과 별도 인증 전에 허용하지 않는다.
 
 ## 공용 PC 배포
 
 1. 테이블·계정은 **`docker/db/`가 이미 만든다** — `init/01_schema.sql`(`sort_log`, `session_plan`), `init/02_roles.sh`(`voss_web`: `sort_log` SELECT만, `session_plan` 읽기·쓰기). 별도 SQL 을 두지 않는다(스키마 이중화 방지). `sort_log` INSERT 는 `sort_logger` 계정뿐입니다.
 2. `docker/web/.env.example`를 참고해 `docker/web/.env` 파일을 **로컬에서 직접 만들고** 실제 비밀번호와 JDBC URL을 입력합니다. 이 `.env`는 `.gitignore` 대상입니다. 샘플 파일에는 비밀번호를 넣지 마세요. Spring Boot의 READ/PLAN 접속값만 두며, PostgreSQL 초기화 및 logger 비밀번호는 `docker/db/.env`에 둡니다.
 3. Mosquitto의 `web` 계정은 `voss/command` 쓰기 및 `voss/#` 읽기 ACL이 필요합니다. 실제 구독 테스트 때 `VOSS_MQTT_ENABLED=true`로 변경합니다.
-4. Docker Compose 호스트 네트워크 사용이 공용 PC/ufw/포트 점유 정책과 맞는지 현장에서 확인합니다. 80 Nginx, 8080 Spring localhost, 1883 Mosquitto, 5432 PostgreSQL localhost입니다.
+4. Docker Compose 호스트 네트워크 사용이 공용 PC/ufw/포트 점유 정책과 맞는지 현장에서 확인합니다. 80 Nginx, 8080 Spring localhost, 1883 **공용 PC 호스트 Mosquitto(계약 mqtt.md)**, 5432 PostgreSQL localhost입니다.
 
 ```bash
 cd docker/web
@@ -69,6 +82,7 @@ docker compose logs --tail=100 backend frontend
 - `voss/command`의 HTTP 202는 **브로커 전달**을 의미하며 manager의 접수/로봇 동작 완료가 아닙니다. `command_ack`와 `state`/`result`로 따로 표시합니다.
 - 현재 세션은 `SortState.session_id`만 기준으로 하며 첫 `start` 전 `""`입니다. 암묵적인 결과·통계·CSV 조회에는 `404 NO_SESSION`을 반환합니다. 현재 세션 요약은 `""`·planned·0 건으로 반환합니다(DB 서비스가 접속 가능한 경우).
 - `session_plan`의 `next` 예정 수량은 새 세션이 처음 조회될 때 실제 session_id로 옮깁니다. 첫 상태 수신 직후가 아니라 첫 DB 조회 시점에 반영되는 구현이므로 팀 계약의 엄격한 트리거와 차이가 있습니다. 실제 통합시험에서 확인 후 필요하면 인터페이스 변경 없이 처리 시점을 맞추세요.
+- 두 PC 비구동 시험용 Mosquitto 컨테이너·ACL 설치 절차는 **#155의 제안**이며 이 PR에는 포함하지 않는다. 공식 시연은 mqtt.md에 따라 공용 PC 호스트에서 운영한다. 비밀번호는 커밋하지 않는다.
 - 실제 DB 환경 변수, 보안 계정과 네트워크는 파일에 포함돼 있지 않습니다. 테스트 완료 전 시연 준비 완료라고 판단하지 마세요.
 
 ### Web PC USB 카메라
