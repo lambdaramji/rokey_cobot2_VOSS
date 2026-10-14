@@ -63,10 +63,19 @@ def test_listener_says_once_for_timeout_event():
     assert [message.data for message in spoken] == [TIMEOUT_SAY]
 
 
-def test_empty_stt_fails_and_disarms():
+def test_empty_stt_keeps_waiting_like_wake_gate():
     flow, events = feedback()
     flow.on_text("헬로 로키", 0)
-    flow.on_text("", 1)
+    assert flow.on_text("", 1) is None
+    assert flow.gate.armed
+    assert flow.on_text("테스트", 2) == "테스트"
+    assert [e["phase"] for e in events] == ["WAKE_DETECTED", "COMMAND_ACCEPTED"]
+
+
+def test_stt_call_failure_after_wake_fails_and_disarms():
+    flow, events = feedback()
+    flow.on_text("헬로 로키", 0)
+    flow.fail(1)
     assert events[-1]["phase"] == "RECOGNITION_FAILED"
     assert flow.on_text("테스트", 2) is None
 
