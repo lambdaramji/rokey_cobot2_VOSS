@@ -1,7 +1,8 @@
 """표시 전용 음성 JSON을 검증하고, 연결 중에만 기존 MQTT 클라이언트로 보낸다."""
+
 import json
 
-PHASES = {'WAKE_DETECTED', 'COMMAND_ACCEPTED', 'RECOGNITION_FAILED', 'TIMED_OUT'}
+PHASES = {"WAKE_DETECTED", "COMMAND_ACCEPTED", "RECOGNITION_FAILED", "TIMED_OUT"}
 
 
 def parse_voice_status(raw):
@@ -11,11 +12,17 @@ def parse_voice_status(raw):
         return None
     if not isinstance(data, dict):
         return None
-    if not isinstance(data.get('phase'), str) or data['phase'] not in PHASES:
+    if not isinstance(data.get("phase"), str) or data["phase"] not in PHASES:
         return None
-    if any(not isinstance(data.get(key), str) or not data[key].strip() or data[key] != data[key].strip() or len(data[key]) > 128 for key in ('event_id', 'utterance_id')):
+    if any(
+        not isinstance(data.get(key), str)
+        or not data[key].strip()
+        or data[key] != data[key].strip()
+        or len(data[key]) > 128
+        for key in ("event_id", "utterance_id")
+    ):
         return None
-    return {key: data[key] for key in ('phase', 'event_id', 'utterance_id')}
+    return {key: data[key] for key in ("phase", "event_id", "utterance_id")}
 
 
 def forward_voice_status(client, raw):
@@ -23,5 +30,5 @@ def forward_voice_status(client, raw):
     payload = parse_voice_status(raw)
     if payload is None or not client.is_connected():
         return False
-    result = client.publish('voss/voice_status', json.dumps(payload), qos=0, retain=False)
+    result = client.publish("voss/voice_status", json.dumps(payload), qos=0, retain=False)
     return result.rc == 0
