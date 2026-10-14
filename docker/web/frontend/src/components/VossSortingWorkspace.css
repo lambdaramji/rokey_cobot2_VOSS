@@ -1,0 +1,172 @@
+/*
+ * VOSS Sorting Workspace UI — 기존 웹 테마와 어울리는 읽기 전용 2D 모니터링.
+ * 실제 제어 버튼이나 접근 제어 코드를 변경하지 않는다.
+ * 애니메이션 좌표는 UI 표현이며 로봇 명령값이 아니다.
+ */
+.voss-ws {
+  width: 100%;
+  margin-bottom: 20px;
+  box-sizing: border-box;
+  overflow: hidden;
+  border: 1px solid #274559;
+  border-radius: 18px;
+  color: #dceef5;
+  background: #0b1828;
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.03);
+  font-family: inherit;
+}
+.voss-ws__header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 17px 0 9px;
+}
+.voss-ws__header h2 {
+  margin: 4px 0 0;
+  font-size: clamp(18px, 2.3vw, 25px);
+  line-height: 1.3;
+  letter-spacing: -.025em;
+}
+.voss-ws__eyebrow {
+  font-size: 10px;
+  color: #68b8c5;
+  letter-spacing: .17em;
+  font-weight: 700;
+  margin: 0;
+}
+.voss-ws__header-right { display: flex; flex-direction: column; gap: 5px; margin-left: auto; text-align: right; }
+.voss-ws__status {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .035em;
+  color: #d6b78c;
+}
+.voss-ws__status--live { color: #75ded1; }
+.voss-ws__demo-button { align-self: flex-end; padding: 5px 9px; border: 1px solid #68b8c5; border-radius: 6px; background: #173446; color: #dceef5; cursor: pointer; font: inherit; font-size: 11px; }
+.voss-ws__source { color: #668aa1; font-size: 10px; }
+.voss-ws__canvas { position: relative; }
+.voss-ws__canvas > svg { display: block; width: 100%; height: auto; }
+.voss-ws__tray-shell { fill: rgba(23, 45, 63, .80); stroke-width: 2.5; }
+.voss-ws__zone-title { fill: #a6e3e2; font-size: 27px; font-weight: 650; letter-spacing: .03em; }
+.voss-ws__zone-count { fill: #e8f6f8; font-size: 29px; font-weight: 800; letter-spacing: .02em; }
+.voss-ws__robot-area { fill: rgba(43, 83, 102, .25); stroke: #2e6e7e; stroke-width: 1.7; }
+.voss-ws__robot-base { fill: #143a47; stroke: #61d4c9; stroke-width: 6; }
+.voss-ws__robot-arm {
+  transform-origin: 600px 540px;
+  transform: rotate(var(--robot-turn)) scaleX(var(--robot-reach, 1));
+  transition: transform 900ms cubic-bezier(.3,.7,.3,1);
+}
+.voss-ws__robot-arm--tcp { transition: transform 100ms linear; }
+.voss-ws__robot-arm--stopped { opacity: .63; }
+.voss-ws__tcp-point { fill: #fff2a9; }
+.voss-ws__tcp-point--stale { opacity: .45; }
+.voss-ws__robot-z { fill: #9bbdc9; font-size: 15px; }
+.voss-ws__tracked-box { transition: transform 100ms linear; }
+.voss-ws__tracked-box rect { fill: #cc9453; stroke: #ffce83; stroke-width: 4; }
+.voss-ws__arm-link { stroke: #65dfd0; stroke-width: 15; stroke-linecap: round; }
+.voss-ws__arm-shadow { stroke: rgba(2, 10, 18, .65); stroke-width: 18; stroke-linecap: round; }
+.voss-ws__arm-joint { fill: #d5f8ef; stroke: #30b5b2; stroke-width: 2; }
+.voss-ws__robot-hub { fill: #77e4d8; stroke: #cafff2; stroke-width: 2.5; }
+.voss-ws__robot-title { fill: #b6dce3; font-size: 23px; font-weight: 500; letter-spacing: .03em; }
+.voss-ws__belt { fill: #304559; stroke: #6b8ba0; stroke-width: 3; }
+.voss-ws__belt-line { stroke: #65879b; stroke-width: 3; opacity: .60; }
+.voss-ws__belt-box { fill: #cc9453; stroke: #ffce83; stroke-width: 4; filter: drop-shadow(0 0 6px rgba(255, 182, 91, .65)); }
+.voss-ws__belt-box--moving { animation: voss-ws-box-motion 5s linear forwards; }
+/* 작은 표시등 한 개만 상시 표시한다. 실제 마이크 제어 버튼은 아니다. */
+.voss-ws__voice-widget {
+  position: absolute;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+.voss-ws__voice-button {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  padding: 0;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  cursor: pointer;
+  background: rgba(17, 39, 49, .96);
+  box-shadow: 0 0 14px currentColor;
+  transition: color .2s ease, box-shadow .2s ease;
+}
+.voss-ws__voice-button svg { width: 25px; height: 25px; }
+.voss-ws__voice-button--green { color: #54d79d; }
+.voss-ws__voice-button--yellow {
+  color: #ffca5c;
+  animation: voss-ws-voice-wait 1.25s ease-in-out infinite;
+}
+.voss-ws__voice-button--red { color: #f37c79; }
+.voss-ws__voice-button:focus-visible { outline: 2px solid #f9fafb; outline-offset: 4px; }
+.voss-ws__voice-error {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 10px);
+  width: 258px;
+  max-width: calc(100vw - 40px);
+  box-sizing: border-box;
+  padding: 11px 13px;
+  border: 1px solid #e88b84;
+  border-radius: 10px;
+  background: #321e29;
+  color: #ffe5e1;
+  font-size: 12px;
+  line-height: 1.55;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .4);
+}
+.voss-ws__voice-error span { display: block; margin-top: 4px; color: #f0b8b1; font-size: 11px; }
+@keyframes voss-ws-voice-wait {
+  0%, 100% { box-shadow: 0 0 8px #ffca5c; }
+  50% { box-shadow: 0 0 20px #ffca5c; }
+}
+@media (max-width: 600px) {
+  .voss-ws__voice-button { width: 42px; height: 42px; }
+  .voss-ws__voice-button svg { width: 21px; height: 21px; }
+  .voss-ws__voice-error { width: 210px; font-size: 11px; }
+}
+@keyframes voss-ws-box-motion {
+  from { transform: translateX(0); }
+  to { transform: translateX(var(--belt-travel-px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .voss-ws__belt-box--moving { animation: none; }
+  .voss-ws__robot-arm { transition: none; }
+  .voss-ws__voice-button--yellow { animation: none; }
+}
+
+/* PICKING은 파지 시도 단계다. 실제 그립 성공으로 오인하지 않도록 반투명 표시한다. */
+.voss-ws__grip-preview {
+  fill: rgba(220, 149, 75, .52);
+  stroke: #ffce83;
+  stroke-width: 3;
+  stroke-dasharray: 6 4;
+  animation: voss-ws-grip-attempt .5s ease-in-out infinite alternate;
+}
+/* PLACED 이벤트 후 실제 이송 궤적이 아닌 짧은 시각적 이동을 재생한다. */
+.voss-ws__drop-preview {
+  fill: #e1a25f;
+  stroke: #ffdb99;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 8px rgba(255, 174, 80, .65));
+  pointer-events: none;
+  animation: voss-ws-drop-preview 3s ease-in-out forwards;
+}
+@keyframes voss-ws-grip-attempt {
+  from { opacity: .35; }
+  to { opacity: 1; }
+}
+@keyframes voss-ws-drop-preview {
+  0% { opacity: .95; transform: translate(0, 0) scale(1); }
+  85% { opacity: .95; transform: translate(var(--drop-dx), var(--drop-dy)) scale(1); }
+  100% { opacity: 0; transform: translate(var(--drop-dx), var(--drop-dy)) scale(.95); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .voss-ws__grip-preview, .voss-ws__drop-preview { animation: none; }
+  .voss-ws__drop-preview { opacity: 0; }
+}
+
+.voss-ws__mic-test{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:12px 20px;background:#162e3d;font-size:12px}
+.voss-ws__mic-test button{padding:8px 12px;border:1px solid #52758a;border-radius:7px;background:#213f51;color:#e5eefb}

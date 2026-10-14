@@ -47,3 +47,24 @@
 
 **안전:** `/voss/pallet/state` 화면용 상태만 발행한다. 로봇·벨트·그리퍼 명령, `/voss/sort/command`, MQTT `voss/command` 는 발행하지 않는다. 같은 PC 시계라 시계 보정은 없다(T13 과 다름).
 **판정 범위:** ROS 발행 → hmi_bridge → MQTT → SSE → React DOM. 실제 sort_manager 발행 → DOM 은 팔레타이징 실기(S2-T02·T03·T21 뒤)에서 다시 잰다.
+
+## T14 — 지시 4종 각 1회 (#23)
+
+`src/voss_voice/test/fixtures/intent_cases.json` 기준으로
+1. **운전**: 시작/정지/재개 중 시험 지시(예 `작업 시작해`)
+2. **우선**: `역삼동부터 분류해` → priority(역삼동)
+3. **답변**: ASKING+box_id 확인 후 `대치동` → answer(대치동, 동일 box_id)
+4. **이력**: `보류 몇 개야` → `GET /api/stats` → `/voss/voice/say`
+
+**안전한 선행 시험:** robot과 연결되지 않은 별도 ROS_DOMAIN_ID에서
+가짜 manager·ZoneMap·SortState로 텍스트 입력 경로부터 검증한다.
+기존 실제 도메인에 `/voss/voice/transcript`·`/voss/voice/intent`를 시험 발행하지 않는다.
+특히 음성 `start`·`priority`는 웹의 로컬 제한(비-stop 명령은 공용 PC 로컬만)
+보호 대상이 **아니다**. `speech_out`·마이크/Whisper 시험과 실제
+sort_manager/로봇 전체 루프는 후속이며, 김학민 현장 안전 담당자와
+남현지 PL이 실제 실행과 동작 판정을 맡는다.
+
+**T14 완료 기준:** 4유형 각각 transcript→intent_parser→sort_manager 접수
+→상태·결과→HMI/DB와 TTS 응답을 실제로 1회씩 확인한다.
+별도 도메인의 mock 경로와 단독 REST/TTS 시험은 준비·부분 검증이지
+T14 전체 루프 완료나 실로봇 구동 완료 증거가 아니다.

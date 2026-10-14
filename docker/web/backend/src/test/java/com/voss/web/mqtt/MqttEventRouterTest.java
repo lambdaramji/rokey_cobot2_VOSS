@@ -15,6 +15,38 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 class MqttEventRouterTest {
+    @Test
+    void positionEventsReachSse() throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        LiveEvents events = mock(LiveEvents.class);
+        SortStateStore store = new SortStateStore();
+        MqttEventRouter router = new MqttEventRouter(mapper,
+                new MqttStateMessageHandler(mapper, store), store, events, mock(PlanRepository.class));
+        String track = "{\"track_id\":7,\"position_valid\":true}";
+        String pose = "{\"frame_id\":\"base_link\",\"position\":{\"x\":0.1}}";
+        String joints = "{\"frame_id\":\"base_link\",\"name\":[\"joint_1\"],\"position\":[0.1]}";
+        router.receive("voss/box_track", track);
+        router.receive("voss/robot_pose", pose);
+        router.receive("voss/robot_joints", joints);
+        org.mockito.Mockito.verify(events).publish("box_track", mapper.readTree(track));
+        org.mockito.Mockito.verify(events).publish("robot_pose", mapper.readTree(pose));
+        org.mockito.Mockito.verify(events).publish("robot_joints", mapper.readTree(joints));
+    }
+
+    @Test
+    void voiceStatusIsValidatedAndForwardedToSse() throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        LiveEvents events = mock(LiveEvents.class);
+        SortStateStore store = new SortStateStore();
+        MqttEventRouter router = new MqttEventRouter(mapper,
+                new MqttStateMessageHandler(mapper, store), store, events, mock(PlanRepository.class));
+        String valid = "{\"phase\":\"WAKE_DETECTED\",\"event_id\":\"e1\",\"utterance_id\":\"u1\"}";
+        router.receive("voss/voice_status", "{\"phase\":\"INVALID\"}");
+        org.mockito.Mockito.verifyNoInteractions(events);
+        router.receive("voss/voice_status", valid);
+        org.mockito.Mockito.verify(events).publish("voice_status", mapper.readTree(valid));
+    }
+
     private final ObjectMapper mapper = new ObjectMapper();
     private final SortStateStore stateStore = new SortStateStore();
     private final MqttEventRouter router = new MqttEventRouter(mapper,

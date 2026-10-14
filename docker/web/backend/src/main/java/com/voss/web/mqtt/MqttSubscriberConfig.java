@@ -27,16 +27,22 @@ public class MqttSubscriberConfig {
     private static final String MQTT_USERNAME = "web";
     private static final String[] INPUT_TOPICS = {
             "voss/state", "voss/result", "voss/zone_map", "voss/robot",
-            "voss/command/ack", "voss/log_status", "voss/pallet/state"};
-    private static final int[] INPUT_QOS = {1, 1, 1, 0, 1, 1, 1};
+            "voss/command/ack", "voss/log_status", "voss/pallet/state", "voss/voice_status",
+            "voss/box_track", "voss/robot_pose", "voss/box_motion", "voss/robot_joints"};
+    private static final int[] INPUT_QOS = {1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0};
+
+    MqttPahoClientFactory mqttClientFactory(String password) {
+        return mqttClientFactory(password, MQTT_BROKER_URL);
+    }
 
     /** 브로커 인증 정보를 환경 변수에서 읽어 MQTT 클라이언트에 넣는다. */
     @Bean
     public MqttPahoClientFactory mqttClientFactory(
-            @Value("${VOSS_MQTT_WEB_PASSWORD:}") String password) {
+            @Value("${VOSS_MQTT_WEB_PASSWORD:}") String password,
+            @Value("${VOSS_MQTT_BROKER_URL:tcp://127.0.0.1:1883}") String brokerUrl) {
         if (password.isBlank()) { throw new IllegalStateException("VOSS_MQTT_WEB_PASSWORD 환경 변수가 필요합니다."); }
         MqttConnectOptions options = new MqttConnectOptions();
-        options.setServerURIs(new String[]{MQTT_BROKER_URL});
+        options.setServerURIs(new String[]{brokerUrl});
         options.setUserName(MQTT_USERNAME);
         options.setPassword(password.toCharArray());
         options.setConnectionTimeout(5);
@@ -71,7 +77,8 @@ public class MqttSubscriberConfig {
             Object topic = message.getHeaders().get(MqttHeaders.RECEIVED_TOPIC);
             Object payload = message.getPayload();
             if (topic instanceof String topicText && payload instanceof String jsonText) {
-                router.receive(topicText, jsonText);
+                boolean retained = Boolean.TRUE.equals(message.getHeaders().get(MqttHeaders.RECEIVED_RETAINED));
+                router.receive(topicText, jsonText, retained);
             }
         };
     }

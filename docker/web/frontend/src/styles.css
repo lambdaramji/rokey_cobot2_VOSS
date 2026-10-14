@@ -13,3 +13,36 @@
 .pallet-tables{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:18px}.pallet-tables caption{text-align:left;font-size:11px;color:#8ea6b6;padding-bottom:8px}.top-view th{white-space:nowrap}.slot-cell{border-left:4px solid #2a4153;background:#0d1c2a;line-height:1.35}.slot-cell b{color:#e6f4fb;margin-right:3px}.slot-cell small{display:block;font-size:9px;color:#7d97a8}.slot-planned{opacity:.75}.slot-moving{background:#173445;outline:1px solid #8fe8ee}.slot-done{background:#10263a}.slot-failed{background:#3a1f25}.slot-empty{color:#56707f}
 .dong-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}.warn-text{color:#f6c48d;font-weight:700}.pallet-note{text-align:left;margin-top:12px}
 @media(max-width:1200px){.pallet-tables{grid-template-columns:1fr}}@media(max-width:700px){.route-picker{grid-template-columns:1fr}}
+
+/* 작업공간 옆에 세션 요약을 배치한다. */
+.monitoring-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:19px;align-items:stretch;margin-bottom:20px}
+.monitoring-grid>.voss-ws{min-width:0;margin-bottom:0}
+.monitoring-grid>.summary-grid{grid-template-columns:minmax(0,1fr);margin-bottom:0}
+@media(max-width:1000px){.monitoring-grid{grid-template-columns:minmax(0,1fr)}.monitoring-grid>.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.robot-status-panel>.section-heading{flex-wrap:wrap;gap:10px;margin-bottom:18px}
+.operation-status{padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid #243949}
+.robot-status-panel .robot-visual>div:last-child{min-width:0;overflow-wrap:anywhere}
+@media(max-width:1000px){.monitoring-grid>.summary-grid>.robot-status-panel{grid-column:1 / -1}}
+
+.camera-preview{position:relative;aspect-ratio:16/9;background:#08121e;border:1px solid #243949;border-radius:10px;overflow:hidden}
+.camera-preview video{display:block;width:100%;height:100%;object-fit:contain}
+.camera-preview>span{position:absolute;inset:0;display:grid;place-items:center;color:#829bad;font-size:12px}
+.camera-controls{margin-top:18px}
+.camera-controls .inline-input{flex-wrap:wrap}
+.camera-controls select{flex-basis:100%}
+.camera-controls button{min-height:39px}
+
+.navigation>button{padding:13px 15px;border:0;border-radius:9px;background:transparent;color:inherit;font:inherit;text-align:left}
+.navigation>button:focus-visible{outline:2px solid #66e4d9;outline-offset:2px}
+.camera-page{display:grid;grid-template-columns:minmax(0,1fr);max-width:960px}
+@media(max-width:700px){.sidebar{flex-wrap:wrap;gap:12px}.navigation{display:flex;flex-direction:row;order:3;width:100%}.navigation>button{flex:1}}
+
+.camera-preview>img{width:100%;height:100%;object-fit:contain}
+.camera-connect{margin-top:18px;padding:0 16px}
+
+/* 기존 제어 패널 스타일은 유지하고 투입 수량 증감 조작만 분리한다. */
+.plan-stepper{display:flex;flex:1;min-width:0;gap:5px}
+.plan-stepper input{text-align:center;appearance:textfield;-moz-appearance:textfield}
+.plan-stepper input::-webkit-inner-spin-button,.plan-stepper input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.plan-stepper button{min-width:31px;padding:0 8px;font-size:18px;line-height:1}

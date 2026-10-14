@@ -150,6 +150,25 @@ class MqttRouterSseIntegrationTest {
         assertTrue(stream.getResponse().getContentAsString().contains("PALLETIZING"));
     }
 
+    /** 음성 이벤트는 기존 SSE로 전달하지만 새 연결에 과거 호출어를 재생하지 않는다. */
+    @Test
+    void voiceStatusIsLiveOnlyAndDeduplicated() throws Exception {
+        MvcResult stream = openSseStream();
+        String wake = "{\"phase\":\"WAKE_DETECTED\",\"event_id\":\"e1\",\"utterance_id\":\"u1\"}";
+        router.receive("voss/voice_status", wake, true);
+        assertFalse(stream.getResponse().getContentAsString().contains("event:voice_status"));
+        router.receive("voss/voice_status", wake);
+        String once = stream.getResponse().getContentAsString();
+        assertTrue(once.contains("event:voice_status"));
+        router.receive("voss/voice_status", wake);
+        assertEquals(once, stream.getResponse().getContentAsString());
+        MvcResult later = openSseStream();
+        assertFalse(later.getResponse().getContentAsString().contains("event:voice_status"));
+        router.receive("voss/voice_status", "{\"phase\":\"COMMAND_ACCEPTED\",\"event_id\":\"e2\",\"utterance_id\":\"u1\"}");
+        assertTrue(stream.getResponse().getContentAsString().contains("COMMAND_ACCEPTED"));
+        verify(plans, never()).attachPending(FIRST_SESSION);
+    }
+
     /** 실제 브로커 대신 MockMvc로 SSE HTTP 연결을 만든다. */
     private MvcResult openSseStream() throws Exception {
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(new StreamController(live)).build();

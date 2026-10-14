@@ -66,16 +66,16 @@ class MqttSubscriberConfigTest {
         assertTrue(options.isAutomaticReconnect());
     }
 
-    /** 수신 7개 토픽(Sprint 2 voss/pallet/state 포함)과 QoS를 전체 계약에 맞게 구독한다. */
+    /** 수신 토픽(Sprint 2 voss/pallet/state, 위치·음성 이벤트 포함)과 QoS를 계약에 맞게 구독한다. */
     @Test
     void testSubscriberUsesContractTopicsAndQos() {
         MqttPahoClientFactory factory = config.mqttClientFactory(TEST_PASSWORD);
         MqttPahoMessageDrivenChannelAdapter adapter =
                 config.mqttStateAdapter(factory, new DirectChannel());
         assertArrayEquals(new String[]{"voss/state", "voss/result", "voss/zone_map",
-                "voss/robot", "voss/command/ack", "voss/log_status", "voss/pallet/state"},
-                adapter.getTopic());
-        assertArrayEquals(new int[]{1, 1, 1, 0, 1, 1, 1}, adapter.getQos());
+                "voss/robot", "voss/command/ack", "voss/log_status", "voss/pallet/state", "voss/voice_status",
+                "voss/box_track", "voss/robot_pose", "voss/box_motion", "voss/robot_joints"}, adapter.getTopic());
+        assertArrayEquals(new int[]{1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0}, adapter.getQos());
     }
 
     /** 수신 채널은 토픽 헤더를 라우터로 전달한다. */

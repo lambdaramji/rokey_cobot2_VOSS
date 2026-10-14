@@ -20,8 +20,10 @@ public class MqttEventRouter {
     private static final Logger LOGGER = LoggerFactory.getLogger(MqttEventRouter.class);
     private static final Set<String> INPUT_TOPICS = Set.of(
             "voss/state", "voss/result", "voss/zone_map", "voss/robot",
-            "voss/command/ack", "voss/log_status", "voss/pallet/state");
+            "voss/command/ack", "voss/log_status", "voss/pallet/state", "voss/voice_status",
+            "voss/box_track", "voss/robot_pose", "voss/box_motion", "voss/robot_joints");
 
+    private final VoiceStatusFilter voiceStatuses = new VoiceStatusFilter();
     private final ObjectMapper mapper;
     private final MqttStateMessageHandler stateHandler;
     private final SortStateStore stateStore;
@@ -42,11 +44,17 @@ public class MqttEventRouter {
 
     /** 계약에 정의된 토픽과 JSON 객체만 처리한다. */
     public void receive(String topic, String payload) {
+        receive(topic, payload, false);
+    }
+
+    /** 기존 토픽의 처리는 유지하고 음성 이벤트에만 retained/중복 검증을 적용한다. */
+    public void receive(String topic, String payload, boolean retained) {
         if (!INPUT_TOPICS.contains(topic)) { return; }
         if (payload == null || payload.isBlank()) { return; }
         try {
             JsonNode json = mapper.readTree(payload);
             if (json == null || !json.isObject()) { return; }
+            if ("voss/voice_status".equals(topic) && !voiceStatuses.accept(json, retained)) { return; }
             if ("voss/state".equals(topic)) {
                 handleState(payload, json);
                 return;
