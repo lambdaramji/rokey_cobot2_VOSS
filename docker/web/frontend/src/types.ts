@@ -7,4 +7,6 @@ export type ZoneMap = { version:string; entries:{dong:string;zone:string;code:st
 export type Summary = { ok:true; session_id:string; planned:number; placed:number; held:number; failed:number; passed:number; remaining:number; by_zone:Record<string,number>; as_of:string };
 export type ApiError = { ok:false; message:string; detail?:string };
 export type LinkStatus = 'UP'|'DOWN';
-export type CommandType = 'start'|'stop'|'resume'|'priority'|'answer'|'reset_zone';
+export type CommandType = 'start'|'stop'|'resume'|'priority'|'answer'|'reset_zone'|'palletize';
+// Sprint 2 S2-T08: voss/pallet/state = PalletState 필드 그대로 (voss_msgs.md, 칸 배열 16 = slot 0~15).
+export type PalletState = { run_id:string; state:string; route:string[]; dongs:string[]; load:number[]; overflow:number[]; excluded:number[]; overflow_warning:boolean; total:number; done:number; failed:number; box_id:string; slot_state:string[]; slot_box_id:string[]; slot_dong:string[] };

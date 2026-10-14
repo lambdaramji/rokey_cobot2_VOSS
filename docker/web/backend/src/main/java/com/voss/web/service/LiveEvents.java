@@ -23,7 +23,7 @@ public class LiveEvents {
     private static final Logger LOGGER = LoggerFactory.getLogger(LiveEvents.class);
     private static final long SSE_TIMEOUT_MS = 0L;
     private static final List<String> SNAPSHOT_EVENTS =
-            List.of("state", "zone_map", "robot", "log_status");
+            List.of("state", "zone_map", "robot", "log_status", "pallet_state");
 
     private final ObjectMapper mapper;
     private final MqttLinkStatusStore link;
