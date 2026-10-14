@@ -5,7 +5,9 @@
 현재 main 의 `src/voss_msgs` IDL에는 아직 반영되지 않았다. 메시지·서비스 타입 해시가
 바뀌므로 관련 노드 담당자 승인과 일괄 재빌드 전에는 운영 계약으로 사용하지 않는다.
 
-`BoxMotion.msg`: `string session_id`, `string box_id`, `int32 track_id`, `string phase` (`GRASPED`/`RELEASED`), `builtin_interfaces/Time stamp`, `string zone`. `GRASPED`는 manager의 `TrackAndGrasp.Result(reason=OK, grasped=true)` 확인 시각, `RELEASED`는 gateway의 PLACE RG2 개방 성공 `placed_stamp`이다. 이벤트는 실제 로봇 제어에 사용하지 않는다. `MoveToZone.Request` 끝에는 시각화 상관관계용 `session_id`, `box_id`, `track_id`를 추가한다. 자세한 발행·보정 제한은 [box_carry_proposal.md](box_carry_proposal.md)에 기록한다.
+**BoxMotion ROS 발행 토픽명(제안):** `/voss/hmi/box_motion` (기존 영역 누락을 수정한 이름; 김학민 PL 대행의 최종 확정 필요). MQTT `voss/box_motion`·SSE `box_motion`은 그대로다. 메시지 타입·서비스 IDL 변경은 이 PR에서 하지 않는다.
+
+`BoxMotion.msg`: `string session_id`, `string box_id`, `int32 track_id`, `string phase` (`GRASPED`/`RELEASED`), `builtin_interfaces/Time stamp`, `string zone`. `GRASPED`는 LIFT·VERIFY 완료 후 manager가 `TrackAndGrasp.Result(reason=OK, grasped=true)`를 확인한 시각(물리 그리퍼 닫힘 시각 아님), `RELEASED`는 gateway의 PLACE RG2 개방 성공 `placed_stamp`이다. 이벤트는 실제 로봇 제어에 사용하지 않는다. `MoveToZone.Request` 끝에는 시각화 상관관계용 `session_id`, `box_id`, `track_id`를 추가한다. 자세한 발행·보정 제한은 [box_carry_proposal.md](box_carry_proposal.md)에 기록한다.
 
 ## msg
 | 타입 | 필드 | 비고 |
