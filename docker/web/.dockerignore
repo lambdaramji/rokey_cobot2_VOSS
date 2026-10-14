@@ -1,0 +1,10 @@
+# T13 #22: 빌드 컨텍스트에서 로컬 비밀값·산출물을 제외한다.
+.env
+**/.env
+**/.env.local
+**/node_modules
+**/.gradle
+**/build
+**/dist
+**/*.tsbuildinfo
+.git
