@@ -22,6 +22,11 @@ docker compose up -d
 docker compose ps                 # STATUS 가 healthy 인지
 ```
 
+`docker/db/.env`는 PostgreSQL 초기화 전용이다. 관리자 비밀번호와
+`voss_logger`, `voss_web` 역할 생성용 비밀번호를 둔다. Spring Boot 접속 변수는
+`docker/web/.env`에 별도로 두며, 거기의 `VOSS_DB_READ_PASSWORD`·`VOSS_DB_PLAN_PASSWORD`(둘 다
+`voss_web` 계정)는 여기의 `VOSS_DB_WEB_PASSWORD`와 같은 값이어야 한다.
+
 ## 마이그레이션 (공용 PC, 사람이 실행)
 데이터 폴더가 이미 있으면 `init/` 이 다시 돌지 않는다. sort_logger 를 끈 뒤 한 번 실행한다(여러 번 실행해도 결과가 같다).
 ```bash
