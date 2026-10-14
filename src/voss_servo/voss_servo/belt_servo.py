@@ -313,6 +313,8 @@ class BeltServoNode(Node):
         self._yaw_prev: tuple[float, float] | None = None  # 그 직전 값 (측정 각속도)
         self._tilt: float | None = None  # 공구 z 축 기울기
         self._home_ref = cfg.home_fixed if cfg else None  # 기준 공구 yaw (없으면 첫 goal 에서)
+        # 이 노드가 한 번이라도 돌았나 — 돈 뒤에는 기준을 새로 잡지 않는다 (돌아간 손목을 기준 삼기 방지)
+        self._rot_ever = False
         self._last_wz = 0.0  # 마지막 발행 각속도 (외삽·변화 제한 입력)
         if self.ready:
             self.get_logger().info(rotate_line(self.values))
@@ -533,14 +535,32 @@ class BeltServoNode(Node):
             self._execute_cleanup(ctx)
 
     def _start_rotate(self, ctx: GoalCtx, now: float) -> None:
-        """기준 공구 yaw 가 아직 없으면 이 goal 시작 자세로 정하고(노드 기동 뒤 첫 goal), COLLECT 로."""
-        if self._home_ref is None and self._yaw_value is not None and self._tilt is not None:
-            if self._tilt <= rotate.TILT_MAX:
-                self._home_ref = self._yaw_value[0]
-                self.get_logger().info(
-                    f"회전 기준 공구 yaw = {math.degrees(self._home_ref):.2f}° (노드 기동 뒤 첫 goal)"
-                )
+        """기준 공구 yaw 를 정할 수 있으면 정하고(노드 기동 뒤 첫 goal), COLLECT 로."""
+        self._try_home_ref(now)
         ctx.rot = rotate.RotState(rotate.COLLECT, t_goal=now)
+
+    def _pose_ok(self, now: float) -> bool:
+        """공구 자세가 유효하고 신선한가: 값 있음 · 기울기 ≤ 5° · 마지막 수신이 외삽 상한 안."""
+        rx_age = now - self._pose[1] if self._pose else math.inf
+        return (
+            self._yaw_value is not None
+            and self._tilt is not None
+            and self._tilt <= rotate.TILT_MAX
+            and rx_age <= self._rot_cfg.extrap_max_s
+        )
+
+    def _try_home_ref(self, now: float) -> None:
+        """기준 공구 yaw 가 없고, 이 노드가 아직 한 번도 돌지 않았고, 자세가 유효할 때만 지금 공구 yaw 로.
+
+        돈 뒤(되돌리기 실패로 손목이 돌아간 채일 수 있음)에는 새로 잡지 않는다 → 그 goal 들은
+        rotate.pre_checks 가 NO_POSE_YAW 로 돌리지 않는다 (주관 검수 a).
+        """
+        if self._home_ref is not None or self._rot_ever or not self._pose_ok(now):
+            return
+        self._home_ref = self._yaw_value[0]
+        self.get_logger().info(
+            f"회전 기준 공구 yaw = {math.degrees(self._home_ref):.2f}° (노드 기동 뒤 첫 goal)"
+        )
 
     def _execute_cleanup(self, ctx: GoalCtx | None) -> None:
         """비정상으로 빠져나왔을 때 busy 가 영구히 남지 않게 한다."""
@@ -749,6 +769,8 @@ class BeltServoNode(Node):
         if not self._rot_on or ctx.rot is None:
             return True  # 회전 off — 지금과 같다
         try:
+            if ctx.rot.state == rotate.COLLECT:
+                self._try_home_ref(now)  # goal 수락 때 pose 가 없었으면 첫 틱들에서 (돌기 전에만)
             inp = self._rot_inputs(ctx, geo, now)
             ctx.rot_io = (inp.psi_raw, inp.psi_est, inp.w_meas)
             if ctx.rot_dead:  # 예외로 끈 goal: 0 을 내고 실제로 멈춘 것이 2틱 이어지면 진행
@@ -766,6 +788,8 @@ class BeltServoNode(Node):
             ctx.rot = replace(ctx.rot, cause=rotate.INTERNAL)
             return False
         ctx.rot, ctx.wz, ctx.rot_floor, ctx.rot_warn = out.state, out.wz, out.z_floor, out.warn
+        if out.state.state == rotate.ROTATING:
+            self._rot_ever = True  # 이제부터 기준을 새로 잡지 않는다
         if out.warn == rotate.ACC_MISMATCH:
             a = math.degrees(out.state.alpha_eff)
             self.get_logger().warning(
@@ -789,12 +813,7 @@ class BeltServoNode(Node):
                 cur[0], cur[1], cfg.lag_s, self._last_wz, now, cfg.extrap_max_s
             )
         rx_age = now - self._pose[1] if self._pose else math.inf  # 마지막 pose 수신 나이
-        pose_ok = (
-            psi_raw is not None
-            and self._tilt is not None
-            and self._tilt <= rotate.TILT_MAX
-            and rx_age <= cfg.extrap_max_s
-        )
+        pose_ok = self._pose_ok(now)
         return rotate.RotInputs(
             now=now,
             phase=ctx.state.phase,
@@ -807,7 +826,7 @@ class BeltServoNode(Node):
             psi_est=psi_est,
             tilt=self._tilt,
             pose_ok=pose_ok,
-            w_meas=rotate.omega_meas(self._yaw_prev, cur, now, rx_age),
+            w_meas=rotate.omega_meas(self._yaw_prev, cur, now, rx_age, cfg.pose_fresh_s),
             wz_prev=self._last_wz,
             dt=control.effective_dt(ctx.last_calc, now, self._ctrl.dt_nominal),  # 이번 틱 dt
             err_along=_as_float(geo.err_along) if geo else None,

@@ -65,7 +65,9 @@ TIMEOUT_ADD = 0.5
 STILL_TICKS = 2  # 정지 확인에 필요한 연속 틱
 YAW_HOLD_MAX = 0.15  # yaw 값이 이보다 오래 그대로면 정지로 본다 s (service 갱신 0.1 s 보다 길게)
 SETTLE_CAP = 1.0  # SETTLING 상한 s
-POSE_FRESH_FOR_ZERO = 0.05  # "값이 그대로 = 정지" 는 pose 메시지가 이 안에 왔을 때만 s
+POSE_FRESH_FOR_ZERO = (
+    0.05  # 기본값 — 실제 값은 rotate.pose_fresh_s (pose 주기의 2배 이상, 주관 검수 c)
+)
 YAW_SAME = 1e-6  # 같은 yaw 값으로 보는 차 rad
 
 # ---------------------------------------------------------------- 자료형
@@ -96,6 +98,7 @@ class RotCfg:
     belt_yaw: float  # 벨트 진행 방향의 베이스 XY 각
     lag_s: float  # pose stamp 지연 (input.pose_lag_ms)
     extrap_max_s: float  # 외삽 지평 상한 (input.pose_extrap_max_ms)
+    pose_fresh_s: float = POSE_FRESH_FOR_ZERO  # "값 그대로 = 정지" 를 믿는 pose 수신 나이 상한
 
 
 @dataclass(frozen=True)
@@ -259,13 +262,17 @@ def omega_meas(
     cur: tuple[float, float] | None,
     now: float,
     pose_rx_age: float,
+    fresh_s: float = POSE_FRESH_FOR_ZERO,
 ) -> float | None:
-    """(yaw, 그 값이 처음 온 stamp) 두 개 → 측정 각속도 rad/s. 모르면 None."""
+    """(yaw, 그 값이 처음 온 stamp) 두 개 → 측정 각속도 rad/s. 모르면 None.
+
+    fresh_s = 마지막 pose 수신이 이보다 최근이면 "값 그대로 = 정지" 로 본다 (rotate.pose_fresh_s).
+    """
     if cur is None:
         return None  # pose 를 아직 못 받음
     if now - cur[1] > YAW_HOLD_MAX:
         # 값이 오래 그대로: 메시지가 오고 있으면 정지, 메시지가 끊겼으면 모름
-        return 0.0 if pose_rx_age <= POSE_FRESH_FOR_ZERO else None
+        return 0.0 if pose_rx_age <= fresh_s else None
     if prev is None:
         return None  # 값이 하나뿐
     dt = cur[1] - prev[1]  # 두 값이 처음 온 시각 차
@@ -292,6 +299,10 @@ def pre_checks(inp: RotInputs, cfg: RotCfg) -> str | None:
         return "WAIT"  # 박스 메시지를 아직 못 받음
     if inp.psi_raw is None or inp.tilt is None or inp.tilt > TILT_MAX:
         return NO_POSE_YAW  # 공구 자세를 믿을 수 없다
+    if inp.home_ref is None:
+        return (
+            NO_POSE_YAW  # 유효한 pose 로 정한 기준 공구 yaw 가 없다 → 돌리지 않는다 (주관 검수 a)
+        )
     if inp.home_ref is not None and abs(wrap_pi(inp.psi_raw - inp.home_ref)) > cfg.start_tol:
         return START_ROTATED  # 기준 각에서 벗어난 채 시작 → Δ 가 틀린다
     return None
@@ -486,9 +497,10 @@ _HANDLERS = {
 
 def rot_step(rs: RotState, inp: RotInputs, cfg: RotCfg) -> RotOut:
     """회전 하위 상태 한 틱: 전이 + 각속도 + 정렬 허용 + z 하한 (pseudo r2 4절)."""
-    if rs.home is None:
-        home = inp.home_ref if inp.home_ref is not None else inp.psi_raw  # 기준 공구 yaw
-        rs = replace(rs, home=home)
+    if rs.home is None and inp.home_ref is not None:
+        # 기준 공구 yaw 는 노드가 유효한 pose 로만 정한다 — 지금 자세로 대신하지 않는다 (주관 검수 a:
+        # 되돌리기에 실패해 돌아간 손목을 기준으로 삼아 Δ 만큼 더 도는 길을 막는다)
+        rs = replace(rs, home=inp.home_ref)
     handler = _HANDLERS.get(rs.state)
     want, warn = None, None  # SKIP·RETURNED: 즉시 0
     if handler is not None:

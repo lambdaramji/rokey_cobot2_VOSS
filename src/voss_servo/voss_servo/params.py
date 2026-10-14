@@ -82,6 +82,7 @@ ROTATE_REQUIRED = (
     "rotate.stall_s",
     "rotate.still_dps",
     "rotate.return_min_dz_mm",
+    "rotate.pose_fresh_s",
 )
 
 # 검사 함수: 값을 받아 문제가 있으면 이유 문자열, 없으면 None 을 돌려준다
@@ -200,6 +201,7 @@ PARAM_SPECS: tuple[ParamSpec, ...] = (
     ParamSpec("rotate.stall_s", "float", "s", False, _positive),
     ParamSpec("rotate.still_dps", "float", "deg/s", False, _positive),
     ParamSpec("rotate.return_min_dz_mm", "float", "mm", False, _non_negative),
+    ParamSpec("rotate.pose_fresh_s", "float", "s", False, _positive),  # pose 주기의 2배 이상
 )
 
 # 이름으로 찾기 쉽게 사전도 만든다
@@ -313,6 +315,9 @@ def _rotate_checks(values: dict[str, Any], have: Callable[..., bool]) -> list[tu
     if have("rotate.tol_deg", "rotate.deadband_deg"):
         if v["rotate.tol_deg"] >= v["rotate.deadband_deg"]:  # 도달 허용이 데드밴드보다 작아야
             out.append(("rotate.tol_deg", "rotate.deadband_deg 보다 작아야 함"))
+    if have("rotate.pose_fresh_s") and v["rotate.pose_fresh_s"] >= rotate.YAW_HOLD_MAX:
+        # 정지 판정 시간보다 짧아야 "pose 끊김" 과 "값 그대로 = 정지" 를 가른다 (주관 검수 c)
+        out.append(("rotate.pose_fresh_s", f"{rotate.YAW_HOLD_MAX:g} s 보다 작아야 함"))
     if have("input.pose_lag_ms") and v["input.pose_lag_ms"] != 0:
         # belt_servo yaml 짝 검사 (gateway pose_source 자체는 기동 로그로 확인 — DD 13절)
         out.append(("input.pose_lag_ms", "rotate 는 pose_source joint_states(pose_lag 0) 전제"))
@@ -469,6 +474,7 @@ def rot_cfg_from_values(values: dict[str, Any], belt_dir_xy: Any) -> rotate.RotC
         belt_yaw=math.atan2(float(belt_dir_xy[1]), float(belt_dir_xy[0])),  # 벨트 진행 방향 각
         lag_s=float(v["input.pose_lag_ms"]) / 1000.0,
         extrap_max_s=float(v["input.pose_extrap_max_ms"]) / 1000.0,
+        pose_fresh_s=float(v["rotate.pose_fresh_s"]),
     )
 
 

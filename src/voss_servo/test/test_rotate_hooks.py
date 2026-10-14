@@ -37,6 +37,7 @@ ROT = {
     "rotate.stall_s": 0.6,
     "rotate.still_dps": 2,
     "rotate.return_min_dz_mm": 10,
+    "rotate.pose_fresh_s": 0.05,
 }
 
 
@@ -97,6 +98,8 @@ def test_rotate_on_needs_all_keys_and_bool_only() -> None:
         ({"rotate.n_min": 20}, "rotate.n_min"),  # buffer 보다 크다
         ({"rotate.tol_deg": 4}, "rotate.tol_deg"),  # deadband 와 같다
         ({"input.pose_lag_ms": 60.0}, "input.pose_lag_ms"),  # service 짝
+        # 정지 판정 시간과 같다 (주관 검수 c)
+        ({"rotate.pose_fresh_s": 0.15}, "rotate.pose_fresh_s"),
     ],
 )
 def test_rotate_cross_checks(over: dict, key: str) -> None:
@@ -120,6 +123,7 @@ def test_rot_cfg_units_and_belt_yaw() -> None:
     assert cfg.hold_dz == pytest.approx(0.050)
     assert cfg.belt_yaw == pytest.approx(math.pi / 2)
     assert cfg.home_fixed is None and cfg.lag_s == 0.0 and cfg.extrap_max_s == pytest.approx(0.2)
+    assert cfg.pose_fresh_s == pytest.approx(0.05)
     fixed = rot_cfg_from_values(on_values(**{"rotate.home_tool_yaw_deg": -88.72}), (1.0, 0.0, 0))
     assert math.degrees(fixed.home_fixed) == pytest.approx(-88.72)
     assert "home -88.72" in rotate_line(on_values(**{"rotate.home_tool_yaw_deg": -88.72}))

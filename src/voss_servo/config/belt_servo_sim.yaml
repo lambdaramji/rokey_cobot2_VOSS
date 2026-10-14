@@ -70,5 +70,6 @@ belt_servo:
       stall_s:                    0.6   # 명령하고 이 시간 동안 1° 도 못 돌면 STALL (T17 전 gateway·sim 은 여기로 폴백)
       still_dps:                  2     # 이 각속도 아래면 멈춘 것
       return_min_dz_mm:           10    # LIFT·VERIFY 되돌리기는 TCP 가 윗면 + 10 위일 때만
+      pose_fresh_s:               0.05  # pose 주기의 2배 이상(joint_states 50 Hz → 0.05). 이보다 최근에 pose 가 왔는데 값이 그대로면 정지
     log:
       dir: /tmp/voss_sim/servo

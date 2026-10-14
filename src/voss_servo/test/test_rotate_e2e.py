@@ -57,6 +57,7 @@ ROT_PARAMS = {
     "rotate.stall_s": 0.6,
     "rotate.still_dps": 2.0,
     "rotate.return_min_dz_mm": 10.0,
+    "rotate.pose_fresh_s": 0.05,
 }
 ROT_ON = {**MOVING["params"], **ROT_PARAMS, "input.pose_lag_ms": 0.0}  # joint_states 짝
 
@@ -231,3 +232,18 @@ def test_cancel_during_rotation_zeroes_angular(renv) -> None:
     assert res.status == GoalStatus.STATUS_CANCELED
     after = client.cmds[n_before + 1 :]  # 취소 요청이 처리된 다음 틱부터
     assert after and all(c.twist.angular.z == 0.0 for c in after)
+
+
+@pytest.mark.parametrize("renv", [{"params": ROT_ON, "yaw": 30.0}], indirect=True)
+def test_no_home_after_rotation_means_no_rotation(renv) -> None:
+    """주관 검수 a: 이 노드가 이미 돈 뒤 기준이 비어 있으면(늦게 잡지 않음) NO_POSE_YAW, 각속도 0, 결과 OK."""
+    node, client, ex, tmp = renv
+    node._rot_ever, node._home_ref = True, None  # 앞 goal 이 돌았고 기준을 못 잡은 상황
+    spin_for(ex, 0.4)
+    handle = send(client, ex)
+    res = spin_until(ex, handle.get_result_async(), 15.0)
+    assert res.status == GoalStatus.STATUS_SUCCEEDED
+    ticks = goal_ticks(tmp)
+    assert {t["rot_state"] for t in ticks} <= {"COLLECT", "SKIP"}
+    assert any(t["rot_cause"] == "NO_POSE_YAW" for t in ticks)
+    assert all(c.twist.angular.z == 0.0 for c in client.cmds) and node._home_ref is None

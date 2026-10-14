@@ -465,3 +465,19 @@ def test_log_values_keys_and_off() -> None:
     assert tuple(v) == rt.ROT_LOG_KEYS
     assert v["rot_cause"] == rt.RETURN_INCOMPLETE and v["rot_time_s"] == pytest.approx(1.8)
     assert v["rot_delta_deg"] == pytest.approx(30) and v["rot_err_deg"] == pytest.approx(0)
+
+
+def test_no_home_ref_means_no_rotation() -> None:
+    """주관 검수 a: 유효한 pose 로 정한 기준이 없으면 지금 자세로 대신하지 않고 NO_POSE_YAW 로 돌리지 않는다."""
+    c = cfg()
+    assert rt.pre_checks(inputs(home_ref=None), c) == rt.NO_POSE_YAW
+    out = rt.rot_step(rt.RotState(rt.COLLECT, t_goal=0.0), inputs(home_ref=None), c)
+    assert (out.state.state, out.state.cause, out.state.home) == (rt.SKIP, rt.NO_POSE_YAW, None)
+    assert out.wz == 0.0 and out.ready
+
+
+def test_omega_meas_fresh_parameter() -> None:
+    """주관 검수 c: "값 그대로 = 정지" 를 믿는 pose 수신 나이를 파라미터로 (pose 가 느린 소스 대응)."""
+    prev, cur = (0.0, 1.0), (0.1, 1.05)
+    assert rt.omega_meas(prev, cur, 1.25, 0.08) is None  # 기본 0.05 — 80 ms 전 수신은 끊김으로 본다
+    assert rt.omega_meas(prev, cur, 1.25, 0.08, fresh_s=0.1) == 0.0  # 10 Hz 소스면 0.1 로
