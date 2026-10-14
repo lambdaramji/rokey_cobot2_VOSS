@@ -20,18 +20,17 @@ public class MqttConnectionEvents {
         this.events = events;
     }
 
-    /** MQTT 구독·발행 연결 확인 이벤트를 UP으로 복구하고 장애는 DOWN으로 보낸다. */
+    /** 구독 확인(재접속 때 재구독 포함)은 UP, 연결 실패는 DOWN. 발행 성공 복구는 MqttCommandPublisher 가 맡는다. */
     @EventListener
     public void onIntegrationEvent(ApplicationEvent event) {
         String eventName = event.getClass().getSimpleName();
-        if ("MqttSubscribedEvent".equals(eventName)
-                || "MqttConnectedEvent".equals(eventName)) {
+        // spring-integration-mqtt 6.5 에는 Connected·ConnectionLost 이벤트 클래스가 없다(jar 확인).
+        if ("MqttSubscribedEvent".equals(eventName)) {
             links.markConnected();
             events.publishLink();
             return;
         }
-        if ("MqttConnectionFailedEvent".equals(eventName)
-                || "MqttConnectionLostEvent".equals(eventName)) {
+        if ("MqttConnectionFailedEvent".equals(eventName)) {
             links.markDisconnected();
             events.publishLink();
         }

@@ -16,7 +16,7 @@
 2. **Nodes PC** (일반 ROS 도메인, 재기동 필요 없음):
    ```bash
    source /opt/ros/jazzy/setup.bash
-   source install/setup.bash
+   source ~/voss_ws/install/setup.bash
    python3 scripts/integration/t13_dom_publisher.py
    ```
 3. Web PC Console의 12행 `console.table`과 최종 `p95`, `최대 지연 상한`,
@@ -34,7 +34,7 @@
 
 ## S2-T08 — 팔레트 3D 화면 재생 · 반영 ≤ 1초 (공용 PC 한 대)
 
-**전제:** Sprint 2 `voss_msgs`(PalletState)가 빌드된 워크스페이스(`integ/1013-gate-v15` 이후), `hmi_bridge`·Mosquitto·웹(Spring Boot·Nginx)이 떠 있고 **`sort_manager` 는 꺼져 있다**(재생기가 확인하고 거부한다). 재생 데이터는 `docker/web/frontend/test/fixtures/pallet_s1.json`(실제 pallet_fsm 의 S1 + slot 4 실패·#37 당겨 놓기, 화면 칸 번호 = slot + 1).
+**전제:** main 에는 아직 없음 — Sprint 2 `voss_msgs`(PalletState)와 `/voss/pallet/state` 를 `voss/pallet/state` 로 넘기는 Sprint 2 `hmi_bridge` 가 빌드된 워크스페이스(현재 `integ/1014-s4`), `hmi_bridge`·Mosquitto·웹(Spring Boot·Nginx)이 떠 있고 **`sort_manager` 는 꺼져 있다**(재생기가 확인하고 거부한다). 재생 데이터는 `docker/web/frontend/test/fixtures/pallet_s1.json`(실제 pallet_fsm 의 S1 + slot 4 실패·pending #37 당겨 놓기, 화면 칸 번호 = slot + 1).
 
 1. 공용 PC 브라우저 `http://127.0.0.1/` → F12 Console 에 `s2_pallet_dom_observer.js` 내용을 붙여 넣는다 → `S2-T08 관측 준비 완료`.
 2. 공용 PC 터미널(레포 루트):

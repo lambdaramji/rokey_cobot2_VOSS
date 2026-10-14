@@ -31,6 +31,9 @@ class MqttEventRouterTest {
         org.mockito.Mockito.verify(events).publish("box_track", mapper.readTree(track));
         org.mockito.Mockito.verify(events).publish("robot_pose", mapper.readTree(pose));
         org.mockito.Mockito.verify(events).publish("robot_joints", mapper.readTree(joints));
+        String motion = "{\"phase\":\"GRASPED\",\"track_id\":7}";
+        router.receive("voss/box_motion", motion);
+        org.mockito.Mockito.verify(events).publish("box_motion", mapper.readTree(motion));
     }
 
     @Test

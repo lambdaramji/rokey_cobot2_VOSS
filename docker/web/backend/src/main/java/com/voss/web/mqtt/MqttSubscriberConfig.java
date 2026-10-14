@@ -1,4 +1,4 @@
-// Spring Boot MQTT 수신 7개 토픽 구독(Sprint 2 voss/pallet/state 포함)과 명령 발행을 설정한다.
+// Spring Boot MQTT 수신 12개 토픽 구독(Sprint 2 voss/pallet/state, 위치·음성 표시 이벤트 포함)과 명령 발행을 설정한다.
 // 입력: 환경 변수의 MQTT 계정 정보. 출력: MQTT ↔ Spring 메시지 채널.
 // 근거: docs/interfaces/mqtt.md (#20), web_api.md.
 package com.voss.web.mqtt;

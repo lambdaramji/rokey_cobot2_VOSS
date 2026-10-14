@@ -1,6 +1,6 @@
 // MQTT 명령 발행 실패 후 재시도·복구 및 SSE 상태 변화를 검증한다.
 // 입력: 모의 MQTT MessageChannel 반환값. 출력: DOWN·UP 상태 및 MQTT_DOWN.
-// 근거: docs/interfaces/web_api.md, mqtt.md, PR #146 PL 리뷰.
+// 근거: docs/interfaces/web_api.md, mqtt.md, 옛 레포 PR #146 PL 리뷰.
 package com.voss.web.mqtt;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
