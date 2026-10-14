@@ -17,7 +17,7 @@ import { parseVoiceSignal } from './lib/voiceIndicator';
 import type { VoiceSignal } from './lib/voiceIndicator';
 type DisplayState = 'UNKNOWN'|string;
 const ZONES = ['A','B','C','RECHECK','HOLD'];
-const RESET_ZONES = [...ZONES,'PALLET'];  // Sprint 2: 팔레트 칸 카운터 비움
+const RESET_ZONES = ZONES;
 const LOCAL_HOSTS = new Set(['localhost','127.0.0.1','::1']);
 const INITIAL_ERROR = '서버에서 데이터를 기다리는 중입니다.';
 const TIMEOUT_MS = 3000;
