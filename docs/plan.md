@@ -69,7 +69,7 @@
 | 10/14~15 | 리허설 지원·환경 재점검 | 리허설 통과 |
 
 ## Sprint 2 (BRD v1.5, 10/12~10/14)
-상세: `requirements/VOSS_BRD_v1.5.docx` 10장(사본 `requirements/VOSS_BRD.md`), 이슈 초안 `requirements/sprint2/issue_drafts/`. 일정표 S2-TXX 와 이슈 번호가 같다.
+상세: `requirements/VOSS_BRD_v1.7.docx` 10장(v1.6~v1.7 변경은 10.13)(사본 `requirements/VOSS_BRD.md`), 이슈 초안 `requirements/sprint2/issue_drafts/`. 일정표 S2-TXX 와 이슈 번호가 같다.
 
 - **세 기능**: 팔레타이징(10.1~10.5·10.12, 남현지) · 음성 시스템 기동(10.6, 정의석) · 추종·파지 고도화(10.11, 박병후 제안).
 - **v1.5 확장(10/12)**: 시연 박스 20개(역삼·대치·청담 각 6 + 흐린 1 + 판별 불가 1), 팔레트 4열 × 2줄 × 2층 = 16칸 고정, 16개 초과 시 물량 많은 동부터 배정(동률이면 먼저 방문하는 동이 후순위)하고 나머지는 원래 구역에 둠. 3D HMI·완료 안내·이력 질의(TR-PAL-12) 필수.
