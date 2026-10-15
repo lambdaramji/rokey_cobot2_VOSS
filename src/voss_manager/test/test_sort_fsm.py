@@ -746,6 +746,16 @@ def test_tracking_read_upgrades_recheck_box(cfg: f.Config) -> None:
     assert of(acts, f.CallMove) == [f.CallMove("B", 0, "")]
 
 
+def test_tracking_read_after_goal_is_logged_not_used(cfg: f.Config) -> None:
+    """goal 이 끝난 뒤 온 2단계 판독은 쓰지 않고(재확인 그대로) 로그로만 남긴다 — T19 2단계 실기 집계용."""
+    ctx, _, _ = run(running(cfg), label(5, conf=0.4))
+    ctx, _, _ = run(ctx, f.GoalDone(True, True, "OK", 1, 6000 * MS))
+    assert ctx.box.zone == "RECHECK" and ctx.phase != f.PH_GOAL
+    ctx, acts, _ = run(ctx, label(5, conf=0.9, stage=2, t=7000 * MS))
+    assert ctx.box.zone == "RECHECK"
+    assert any("늦게 도착" in a.text for a in of(acts, f.Log))
+
+
 def test_target_full_after_recheck_waits_for_reset(cfg: f.Config) -> None:
     ctx = running(cfg)
     for i in range(3):
