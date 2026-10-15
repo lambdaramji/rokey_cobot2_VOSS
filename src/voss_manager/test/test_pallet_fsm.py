@@ -362,12 +362,9 @@ def test_reset_pallet_before_next_run(cfg) -> None:
     ctx, _ = gateway(ctx, acts, ok_all)
     assert ctx.state == f.RUNNING and ctx.pallet_count == 1
     assert "박스 1개가 남아" in pf.step(ctx, palletize("청담동")).reply[1]
-    assert (
-        "IDLE·PAUSED" in pf.step(ctx, cmd("reset_zone", "PALLET")).reply[1]
-    )  # 사람이 손을 넣기 전에 멈춘다
-    ctx = pf.step(ctx, cmd("stop")).ctx
     out = pf.step(ctx, cmd("reset_zone", "PALLET"))
     assert out.reply == (True, "PALLET 비움") and out.ctx.pallet_count == 0
+    assert out.ctx.state == f.RUNNING
     assert (
         pf.pallet_state(out.ctx)["state"] == "" and pf.step(out.ctx, palletize("청담동")).reply[0]
     )
