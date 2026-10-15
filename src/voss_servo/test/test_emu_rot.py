@@ -75,3 +75,13 @@ def test_args_defaults() -> None:
         90.0,
         0.2,
     )
+
+
+def test_refuses_real_robot_environment() -> None:
+    """실로봇 방어: 도메인 없음·30, 로봇 유선망 192.168.1.x 인터페이스(도메인을 잘못 export 한 공용 PC)."""
+    lan = ["2: wlo1    inet 10.0.0.5/24 brd 10.0.0.255 scope global wlo1"]
+    robot = [*lan, "3: enp3s0    inet 192.168.1.10/24 brd 192.168.1.255 scope global enp3s0"]
+    assert er.refuse_reason("79", lan) is None
+    assert er.refuse_reason(None, lan) and er.refuse_reason("", lan) and er.refuse_reason("30", lan)
+    assert er.refuse_reason("79", robot) == "로봇 유선망(192.168.1.x)에 연결되어 있음"
+    assert not er.robot_net(["4: lo    inet 127.0.0.1/8 scope host lo"])

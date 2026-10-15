@@ -226,3 +226,12 @@ Opus 독립 재검(필수 10·권장 12)을 세션이 코드로 확인한 뒤 �
 - **sim_check** (리뷰 2·3·7): 케이스마다 gateway 각속도 켬/끔(`gw_angular`, sim.launch `gw_angular:=true` → gateway `servo_angular:=true`). `rotate_stall` 은 끔이어야 성립(켬 기동 줄이면 FAIL), 새 `rotate_ok`(프로필 `rotate_gw`, S2-T17 gateway 필요 — 없으면 UNKNOWN) = ROTATING→SETTLING→DONE→RETURNING→RETURNED·첫 DESCEND |rot_err| ≤ 1.5°·`ang_speed`·`yaw_limit` 0. 자름은 `angular`·`ang_speed`·`yaw_limit` 키별로 센다. J-ang 은 gateway 끔 + 셋 다 0. 켬이면 J-gw: belt_servo ω·α ≤ gateway 기동 줄 ω·α.
 - **문서만** (리뷰 6·8·9·run.md): 기준 각은 `home_tool_yaw_deg` null 유지(같은 값을 두 곳에 두지 않음) + run.md ⑮ 로그 대조. 되돌리기 판정은 run.md 4.2 에 start_tol 기준. yaml α 주석. run.md ①②③ 확인 줄, ⑩ USB 고정 ❌, E2 부호 실측.
 - **보류 — 리뷰 1 (회전 대기 중 시야)**: 측정 ② B45 에서 정렬 자리(TCP X −119.7·Z 151, 박스 +45°) 검출 0 보고. HLD D2-2 "+46 이면 보인다" 는 hand_eye 모델 계산. 측정 ② 정확도에 의문이 있어 설계는 바꾸지 않고(사용자 10/14), 4단계 첫 회 틱 로그로 확인한 뒤 실제로 LOST 가 나면 설계 단위로 다룬다(후보: 회전 중 xy 목표 오프셋 / 회전 대기 중 LOST 를 FF 예측으로) — run.md ⑭.
+
+## 16. 실기 반영 (10/15, #179 [S2T18-result.md](S2T18-result.md) — 15절보다 우선, 실기 우선)
+설계값은 위 절에 그대로 두고 여기서 "설계값 → 실기값(근거)" 로 바꾼다.
+- **decide**: fold(Δ) 뒤 `flip_above` 가 있고 Δ > flip_above 면 **Δ ← Δ − π**(+70 초과 → −110~−90), 그다음 SMALL·OUT_OF_RANGE 판정. 근거: + 회전 67° 이상 시야 LOST(5단계 9/18) → 6단계 14/14.
+- **파라미터(선택 키 2개 추가)**: `rotate.flip_above_deg`(실기 70, 없으면 flip 안 함), `rotate.lost_timeout_s`(실기 1.2, 없으면 input 값). 교차 검사: deadband ≤ min < max ≤ **180 − flip**(flip 없으면 90), **min < flip ≤ 90**, **rotate.lost_timeout_s ≥ input.lost_timeout_s**. 실기 max_deg 45/90(설계 1·5단계) → **110**.
+- **LOST 판정**: 설계 `input.lost_timeout_s`(0.5) 단일 → 회전 goal(ROTATING·SETTLING·DONE·STOPPING·FALLBACK)의 PREPARE·TRACK 에서만 `rotate.lost_timeout_s`(1.2), SKIP·COLLECT·DESCEND 이후는 0.5 그대로(`belt_servo._lost_timeout`). 끊긴 동안 마지막 관측 + FF 예측으로 따라가고, 정렬은 `control.geometry` 의 visible·obs_age 조건 그대로라 끊긴 채 DESCEND 하지 않는다.
+- **로그 키**: 틱 회전 키 12 → **13**, 시도 4 → **5** — `rot_end_left_deg`(goal 끝 틱만, 공구 yaw − 기준 각, 부호 포함). 설계 "되돌리기 미완 = RETURN_INCOMPLETE" 는 그대로지만 실기에서 약 30° 넘는 회전은 정상이다(되돌림 창 ≈0.8 s, 남은 각 ≈ \|Δ\| − 39°).
+- **gateway 짝(#179, 학민)**: `servo_yaw_limit_deg` launch 인자(실기 130), 등록 TCP 확인을 MoveToZone 중 건너뜀(service 영구 전환 오판 수정). 130 여유는 run.md 9.2(두 계산 나란히, 학민 결정 대기).
+- **실측으로 확정된 설계 가정**: 부호 +(R1), 등록 TCP 기준 회전(R2, ≤ 0.20 mm), 지연 40~52 ms(≤ 80), 정지 지터 0.10 °/s(still_dps 2 유지), pose 주기 중앙 20 ms(pose_fresh_s 0.05 유지).

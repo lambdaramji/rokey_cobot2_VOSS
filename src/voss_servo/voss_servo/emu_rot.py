@@ -2,8 +2,10 @@
 
 belt_servo 대신 `/voss/robot/servo_cmd`(TwistStamped, 선속도 0, angular.z rad/s)를 30 Hz 로 보내고
 `/voss/robot/pose` 의 공구 yaw·TCP xy 를 기록한다. 두산은 부르지 않는다(robot_gateway 만 — 절대 규칙 3).
-**에뮬레이터 전용.** ROS_DOMAIN_ID 30(실로봇 도메인)이거나 시작 자세가 관측 자세(공구 yaw −88.7° ± 3°)가
-아니면 시작하지 않는다. 판정은 명령 내용(gateway 통계·기동 줄)으로 하고, 여기 수치는 기록이다(ADR-0010 결과 6).
+**에뮬레이터 전용 — 실로봇 방어**: ROS_DOMAIN_ID 가 비었거나 30(실로봇 도메인)이거나, 로봇 유선망(192.168.1.x)
+인터페이스가 있으면 시작하지 않는다(voss-ros 래퍼와 같은 조건 — 도메인을 잘못 export 한 공용 PC 도 막는다).
+**실험 전제(방어가 아님)**: 시작 자세가 관측 자세(공구 yaw −88.7° ± 3°)여야 한다 — 실로봇도 관측 자세에 있을 수
+있으므로 이것은 안전장치가 아니다. 판정은 명령 내용(gateway 통계·기동 줄)으로 하고, 여기 수치는 기록이다(ADR-0010 결과 6).
 
     voss-ros python3 -m voss_servo.emu_rot pure  --dir +1   # E3′ 30°/s 1.0 s (≈30°) → TCP xy 이동
     voss-ros python3 -m voss_servo.emu_rot over  --dir +1   # E8① 90°/s 0.5 s → 실제 각속도 ≤ 60
@@ -68,6 +70,20 @@ def make_plan(mode: str, sign: int, stop: bool = False) -> Plan:
     if mode == "brake":
         return Plan(mode, 60.0 * s, 0.9, 0.0, stop_call=stop)
     raise ValueError(f"모르는 모드 {mode}")
+
+
+def robot_net(ipv4_lines: list[str]) -> bool:
+    """`ip -4 -o addr` 줄들 중 로봇 유선망(192.168.1.x) 주소가 있나 (voss-ros 래퍼와 같은 조건)."""
+    return any(" 192.168.1." in line for line in ipv4_lines)
+
+
+def refuse_reason(domain: str | None, ipv4_lines: list[str]) -> str | None:
+    """실로봇 환경이면 거부 사유, 아니면 None."""
+    if domain in (None, "", "30"):
+        return "ROS_DOMAIN_ID 가 비었거나 30(실로봇) — 에뮬레이터 도메인을 명시하라"
+    if robot_net(ipv4_lines):
+        return "로봇 유선망(192.168.1.x)에 연결되어 있음"
+    return None
 
 
 def wrap_deg(a: float) -> float:
@@ -139,6 +155,8 @@ def summarize(rows: list[dict], center_deg: float, cmd_end_t: float | None) -> d
 
 
 def _node_main(args: argparse.Namespace) -> int:  # pragma: no cover - 에뮬레이터에서만
+    import subprocess
+
     import rclpy
     import rclpy.executors
     from geometry_msgs.msg import PoseStamped, TwistStamped
@@ -148,10 +166,16 @@ def _node_main(args: argparse.Namespace) -> int:  # pragma: no cover - 에뮬레
 
     from voss_servo import rotate
 
-    if os.environ.get("ROS_DOMAIN_ID", "") in ("", "30"):
-        print(
-            "ROS_DOMAIN_ID 가 비었거나 30(실로봇) — 에뮬레이터 도메인을 명시하라", file=sys.stderr
-        )
+    try:  # 주소 목록을 못 읽으면 안전하게 거부한다
+        lines = subprocess.run(
+            ["ip", "-4", "-o", "addr"], capture_output=True, text=True, check=True
+        ).stdout.splitlines()
+    except (OSError, subprocess.CalledProcessError) as exc:
+        print(f"ip addr 실패 — 거부: {exc}", file=sys.stderr)
+        return 3
+    why = refuse_reason(os.environ.get("ROS_DOMAIN_ID"), lines)
+    if why:
+        print(why, file=sys.stderr)
         return 3
     plan = make_plan(args.mode, args.dir, args.stop)
     rclpy.init()
