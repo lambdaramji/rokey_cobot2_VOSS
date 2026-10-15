@@ -112,7 +112,7 @@ ros2 run voss_vision camera_preview
 
 송출 노드는 최근 원본 프레임 최대 10장만 보관하고 JPEG 전송 전에 최대 960×540으로 줄입니다. box_tracker·OCR·belt_servo와 함께 실행할 때의 실제 부하는 아직 측정하지 않았으므로 게이트 측정 중에는 송출 노드를 실행하지 않습니다.
 
-Web PC의 개발 서버(`npm run dev`)와 배포 Nginx는 `/camera/gripper/frame.jpg`를 로컬 `127.0.0.1:8091`로 전달합니다. 송출 노드가 실행되지 않았거나 입력 영상이 없으면 OFFLINE으로 표시됩니다. Web PC의 80번 포트로 관제 화면을 연 다른 PC도 그리퍼·USB 영상을 볼 수 있습니다. 운전 명령의 로컬 접근 제한은 별도로 유지됩니다.
+Web PC의 개발 서버(`npm run dev`)와 배포 Nginx는 `/camera/gripper/frame.jpg`를 로컬 `127.0.0.1:8091`로 전달합니다. 송출 노드가 실행되지 않았거나 입력 영상이 없으면 OFFLINE으로 표시됩니다. 배포 Nginx의 그리퍼·USB 영상 경로는 Web PC 로컬 브라우저에만 허용합니다. 원격 관제 브라우저는 영상을 볼 수 없습니다.
 
 ### 제어 버튼 음성 안내 (Nodes PC)
 
