@@ -90,8 +90,12 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 
 `{"action":"start|stop|resume|priority|answer|reset_zone|palletize|plan"}` 하나만 받는다. 로컬 Nginx의 `X-Real-IP`가 `127.0.0.1` 또는 `::1`일 때만 `202`와 `request_id`를 반환하고, 고정 문구 코드만 MQTT `voss/voice/request`로 보낸다. 브리지가 `/voss/voice/say`로 전달하고 Nodes PC의 `speech_out`이 재생한다. 응답은 MQTT 전송 접수이며 실제 스피커 출력이나 로봇 동작 완료를 보장하지 않는다.
 
+`scripts/web_pc_voice.sh`를 실행하면 Web PC에서도 `speech_out`이 동작한다. Web PC와 Nodes PC가 같은 ROS 도메인에서 둘 다 구독하면 같은 `/voss/voice/say`를 중복 재생할 수 있으므로 현장에서는 한쪽만 실행하고 실제 재생 위치를 확인한다. 질문 TTS의 SSE 폴백은 Web PC 로컬 발행이다.
+
 ### `POST /api/voice/text` — 로컬 관제 화면 자연어 명령
 요청은 `{"request_id":"<UUID>","text":"역삼, 대치 순서로 팔레타이징 실행해"}`다. 텍스트는 1~240자이며 Web PC 로컬 `X-Real-IP`만 허용한다. `202`는 MQTT 전달 접수일 뿐이다. 텍스트는 `voss/voice/text` → Web PC 브리지 → 로컬 ROS `intent_parser`로 가서 음성과 같은 동·구역 검증을 받는다. Web PC의 intent_parser는 `GET /api/stream`의 `zone_map`·`state`로도 허용 동과 현재 질문을 갱신한다(PC 간 ROS 데이터 지연 대비). 해석 결과 문구는 MQTT `voss/voice/text/reply` → SSE `text_reply`로 반환한다. 실행 명령은 Web PC의 intent_parser가 로컬 `POST /api/commands`로 보내며, 거부·접속 오류 시 성공 안내를 하지 않는다. `"팔레타이징 실행해"`처럼 배송 순서가 없으면 실행하지 않고 순서를 묻는다. 실제 명령 접수·완료 여부는 별도 `command_ack`·로봇 상태로 확인한다.
+
+`recheck` 명령은 BRD v1.7 기본 시연 흐름에서는 사용하지 않지만 `defer_recheck: true` 운용의 보류 박스 재처리 폴백으로 유지한다.
 
 ### `GET /api/stream` — SSE (React 실시간 갱신)
 | event | data | 원천 |
