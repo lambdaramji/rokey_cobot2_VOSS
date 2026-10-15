@@ -34,6 +34,7 @@ from voss_robot.geometry import (
     flange_to_tcp,
     segment_distance_mm,
     tcp_to_flange,
+    tool_yaw_deg,
 )
 from voss_robot.pose_source import StartupCheck, fresh
 from voss_robot.rg2 import DryRunRg2, Rg2
@@ -114,6 +115,12 @@ class RobotGatewayNode(Node):
         self.servo_acc = [
             float(a) for a in self.declare_parameter("servo_acc", [100.0, 10.0]).value
         ]
+        # 각속도 통과(S2-T17, topics.md robot_gateway 행). 기본 off = 지금처럼 자르고 servo_acc 도 그대로(시연 라인).
+        # 켤 때만 speedl 각가속 acc[1] 을 servo_ang_acc_dps2 로(belt_servo rotate.alpha_dps2 제안 90, #164 PL 리뷰 2)
+        angular_enable = bool(self.declare_parameter("servo_angular_enable", False).value)
+        ang_acc = float(self.declare_parameter("servo_ang_acc_dps2", 90.0).value)
+        if angular_enable:
+            self.servo_acc[1] = ang_acc
         sp = ServoParams(
             lin_acc_mm_s2=self.servo_acc[0],
             watchdog_s=float(self.declare_parameter("servo_watchdog_s", 0.2).value),
@@ -122,6 +129,11 @@ class RobotGatewayNode(Node):
             x_range_mm=tuple(self.declare_parameter("servo_x_range_mm", [-107.0, 638.0]).value),
             pose_max_age_s=float(self.declare_parameter("servo_pose_max_age_s", 0.1).value),
             pose_latency_s=float(self.declare_parameter("servo_pose_latency_s", 0.06).value),
+            angular_enable=angular_enable,
+            max_ang_dps=float(self.declare_parameter("servo_max_ang_dps", 60.0).value),
+            ang_acc_dps2=self.servo_acc[1],
+            yaw_center_deg=tool_yaw_deg(*observe[3:6]) if len(observe) == 6 else None,
+            yaw_limit_deg=float(self.declare_parameter("servo_yaw_limit_deg", 100.0).value),
         )
         # joint_states 소스는 stamp 가 관절 읽은 시각이라 응답 지연(60 ms)을 다시 더하지 않는다. belt_servo 하강 상한과
         # 같이 정할 값(#118 리뷰 박병후) — 확인 통과 뒤 이 값으로 바꾼다
@@ -303,6 +315,14 @@ class RobotGatewayNode(Node):
             f"{1e3 * sp.watchdog_s:.0f} ms, max {sp.max_speed_mm_s:.0f} mm/s, TCP z ≥ "
             f"{sp.z_min_mm:.1f} mm, x {sp.x_range_mm[0]:.0f}~{sp.x_range_mm[1]:.0f} mm, acc {self.servo_acc}"
         )
+        if sp.angular_enable:
+            yc = "모름 → 각속도 0" if sp.yaw_center_deg is None else f"{sp.yaw_center_deg:.1f}"
+            self.get_logger().warn(
+                f"servo angular on · ω ≤ {sp.max_ang_dps:.0f} °/s · α {self.servo_acc[1]:.0f} °/s² · "
+                f"yaw {yc} ± {sp.yaw_limit_deg:.0f}° (S2-T17 — 시연 라인에서는 끈다)"
+            )
+        else:
+            self.get_logger().info("servo angular off (각속도는 0 으로 자름)")
         threading.Thread(target=self._startup_tcp_check, daemon=True).start()
 
     def _require_emulator(self, prefix: str, wait_s: float = 3.0) -> None:
@@ -534,7 +554,9 @@ class RobotGatewayNode(Node):
         self.pose_pub.publish(msg)
         self._last_pose_t = time.monotonic()
         with self._glock:  # servo 작업 영역 판단용 (mm, 응답 수신 시각)
-            self.guard.set_pose(stamp.nanoseconds * 1e-9, x * 1e3, y * 1e3, z * 1e3)
+            self.guard.set_pose(
+                stamp.nanoseconds * 1e-9, x * 1e3, y * 1e3, z * 1e3, tool_yaw_deg(*flange[3:6])
+            )
         s = self._stats
         s["n"] += 1
         s["rtt"].append(rtt)
@@ -1187,7 +1209,15 @@ class RobotGatewayNode(Node):
             "rx": 0,
             "pub": 0,
             "rej": {"stop": 0, "old": 0, "no_pose": 0, "busy": 0},
-            "clamp": {"speed": 0, "z_min": 0, "x_min": 0, "x_max": 0, "angular": 0},
+            "clamp": {
+                "speed": 0,
+                "z_min": 0,
+                "x_min": 0,
+                "x_max": 0,
+                "angular": 0,
+                "ang_speed": 0,
+                "yaw_limit": 0,
+            },
             "expire": 0,
             "stop": 0,
             "ms_ok": 0,
@@ -1212,7 +1242,7 @@ class RobotGatewayNode(Node):
             ss["clamp"][c] += 1
         if r.clamps:
             self.get_logger().warn(f"servo_cmd 자름: {r.clamps}", throttle_duration_sec=2.0)
-        self.dsr.speedl(r.vel_mm_s, self.servo_acc)
+        self.dsr.speedl(r.vel_mm_s, self.servo_acc, r.wz_dps)
         ss["pub"] += 1
         if self.stopped or not self._was_active:
             self.stopped = False  # 새 모션 → STOPPED 해제
@@ -1222,8 +1252,9 @@ class RobotGatewayNode(Node):
     def _on_servo_tick(self) -> None:
         with self._glock:
             action, vel = self.guard.on_tick(self._now())
+            wz = self.guard.last_wz
         if action == "clamp":  # 명령 사이에 한계에 닿음 → 자른 속도로 바로 다시 보낸다
-            self.dsr.speedl(vel, self.servo_acc)
+            self.dsr.speedl(vel, self.servo_acc, wz)
             self._sstats["pub"] += 1
         elif action == "expire":
             self._was_active = False
@@ -1233,8 +1264,8 @@ class RobotGatewayNode(Node):
             self._halt("watchdog")
 
     def _halt(self, why: str, done=None) -> None:
-        """① 속도 0 speedl ② 이어서 항상 move_stop (정지 판별 안 함, ADR-0010 조건 2·#53 MC-014)."""
-        self.dsr.speedl([0.0, 0.0, 0.0], self.servo_acc)
+        """① 속도 0 speedl(각속도도 0) ② 이어서 항상 move_stop (정지 판별 안 함, ADR-0010 조건 2·#53 MC-014)."""
+        self.dsr.speedl([0.0, 0.0, 0.0], self.servo_acc, 0.0)
 
         def finished(ok: bool, message: str) -> None:
             self._sstats["ms_ok" if ok else "ms_fail"] += 1
