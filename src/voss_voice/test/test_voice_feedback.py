@@ -5,6 +5,7 @@ from voss_voice.listen_logic import WakeGate
 from voss_voice.voice_feedback import (
     TIMEOUT_SAY,
     VoiceFeedback,
+    is_ack_echo,
     is_timeout_prompt_echo,
     should_say_timeout,
     transcript_off_refused,
@@ -46,10 +47,18 @@ def test_timeout_prompt_echo_does_not_rearm_wake():
     flow, events = feedback()
     flow.on_text("헬로 로키", 0)
     flow.expire(5.1)
-    assert is_timeout_prompt_echo(TIMEOUT_SAY.replace("'", "“").replace("로키“", "로키”"))
+    assert is_timeout_prompt_echo(TIMEOUT_SAY.replace(". ", ", "))
+    assert "헬로" not in TIMEOUT_SAY and "로키" not in TIMEOUT_SAY  # 안내음이 호출어로 잡히지 않게
     assert flow.on_text(TIMEOUT_SAY, 6) is None
     assert [e["phase"] for e in events] == ["WAKE_DETECTED", "TIMED_OUT"]
     assert not flow.gate.armed
+
+
+def test_spoken_ack_is_not_accepted_as_another_command():
+    flow, events = feedback()
+    assert is_ack_echo("요청을 처리하겠습니다.")
+    assert flow.on_text("요청을 처리하겠습니다.", 0) is None
+    assert events == []
 
 
 def listener_node(sort_state=""):

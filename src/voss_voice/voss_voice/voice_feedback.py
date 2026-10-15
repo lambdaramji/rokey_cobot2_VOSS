@@ -6,7 +6,13 @@ import uuid
 
 from voss_voice.listen_logic import split_wake
 
-TIMEOUT_SAY = "시간이 지났어요. 다시 '헬로 로키'라고 말해 주세요."
+SPOKEN_ACKS = frozenset({
+    "분류를시작하겠습니다", "요청을처리하겠습니다", "분류를재개하겠습니다",
+    "보류로처리하겠습니다", "재확인을시작하겠습니다", "말씀하신순서로적재하겠습니다",
+})
+
+# 안내문에 호출어를 넣지 않는다 — 스피커 소리가 마이크로 돌아와 호출어로 잡히는 것을 막는다 (10/15 로그).
+TIMEOUT_SAY = "시간이 지났어요. 호출어를 다시 말해 주세요."
 # 로봇이 움직이는 동안에는 안내를 말하지 않는다 — TTS 가 작업자의 "정지"와 겹치거나
 # manager 안내를 speech_out FIFO 뒤로 미는 것을 막는다(박병후 #40 리뷰). 표시 이벤트는 그대로 보낸다.
 ROBOT_BUSY_STATES = frozenset({"PICKING", "RECHECK", "PALLETIZING"})
@@ -29,6 +35,15 @@ def transcript_off_refused(publish_transcript, domain_id):
 def is_timeout_prompt_echo(text):
     """TTS 안내가 마이크 STT에 돌아온 경우 다시 호출어로 받지 않는다."""
     return re.sub(r"[\W_]+", "", text).casefold() == re.sub(r"[\W_]+", "", TIMEOUT_SAY).casefold()
+
+
+def is_ack_echo(text):
+    """고정 안내 문장이 마이크에 다시 들어온 경우 명령으로 취급하지 않는다."""
+    normalized = re.sub(r"[\W_]+", "", text).casefold()
+    return normalized in SPOKEN_ACKS or (
+        normalized.endswith(("을우선분류하겠습니다", "으로분류하겠습니다"))
+        and not normalized.startswith(("헬로", "hello"))
+    )
 
 
 class VoiceFeedback:
@@ -70,7 +85,7 @@ class VoiceFeedback:
         """기존 WakeGate 결과를 그대로 반환하고 실제 호출어에만 표시 이벤트를 붙인다."""
         with self.lock:
             self.expire(now)
-            if is_timeout_prompt_echo(text):
+            if is_timeout_prompt_echo(text) or is_ack_echo(text):
                 return None
             if not text.strip():
                 # 잡음 구간의 빈 STT: 기존 WakeGate 처럼 무시하고 호출 대기를 유지한다

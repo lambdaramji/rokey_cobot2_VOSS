@@ -5,7 +5,7 @@ import time
 
 import pytest
 from voss_voice.http_client import IntentParseError
-from voss_voice.intent_logic import SAY_RETRY, ZoneMapView
+from voss_voice.intent_logic import SAY_NOT_READY, SAY_RETRY, SAY_UNSUPPORTED, ZoneMapView
 from voss_voice.transcript_flow import SAY_AI_DOWN, SAY_BUSY, TranscriptFlow
 
 VIEW = ZoneMapView.from_entries([("역삼동", "A", ["역삼"]), ("대치동", "B", [])])
@@ -67,7 +67,7 @@ def test_llm_calls_are_serialized():
     # 한 번에 하나만 LLM 을 부르고, 그사이 온 발화는 기다리지 않고 "처리 중" 으로 돌려보낸다
     assert peak[0] == 1
     assert sorted(kinds) == ["busy", "busy", "publish"] and len(published) == 1
-    assert said == [SAY_BUSY]  # 같은 문장은 3 초 중복 억제
+    assert said == [SAY_BUSY, "분류를 시작하겠습니다."]  # busy 안내는 중복 억제
 
 
 def test_busy_utterances_do_not_hold_threads():
@@ -104,7 +104,25 @@ def test_stop_works_even_when_ai_down_and_no_zone_map():
     assert f.handle("정지")[0] == "stop" and published[0]["type"] == "stop"
 
 
-def test_stop_publishes_without_waiting_or_speaking():
+def test_unknown_command_without_zone_map_is_unsupported():
+    allowed_seen = []
+    f, published, said = _flow(lambda _, allowed: allowed_seen.append(allowed) or {"type": "unknown"})
+    f.view = None
+
+    assert f.handle("날씨 알려줘")[0] == "say"
+    assert said == [SAY_UNSUPPORTED] and published == []
+    assert allowed_seen == [{"dongs": [], "aliases": {}, "zones": []}]
+
+
+def test_known_command_without_zone_map_reports_connection():
+    f, published, said = _flow(lambda *_: {"type": "start"})
+    f.view = None
+
+    assert f.handle("분류 시작해")[0] == "say"
+    assert said == [SAY_NOT_READY] and published == []
+
+
+def test_stop_publishes_before_speaking():
     events = []
     f = TranscriptFlow(
         post_intent=lambda *_: pytest.fail("stop must not call LLM"),
@@ -113,7 +131,22 @@ def test_stop_publishes_without_waiting_or_speaking():
         say=lambda phrase: events.append(("say", phrase)),
     )
     assert f.handle("멈춰")[0] == "stop"
-    assert events == [("publish", "stop")]
+    assert events == [("publish", "stop"), ("say", "요청을 처리하겠습니다.")]
+
+
+def test_command_acknowledgement_follows_intent():
+    f, published, said = _flow(lambda *_: {"type": "start"})
+    assert f.handle("분류 시작해")[0] == "publish"
+    assert published[0]["type"] == "start"
+    assert said == ["분류를 시작하겠습니다."]
+
+
+def test_text_palletize_without_route_asks_instead_of_publishing():
+    f, published, said = _flow(lambda *_: {"type": "palletize", "route": []})
+    replies = []
+    assert f.handle("팔레타이징 실행해", report=replies.append)[0] == "say"
+    assert not published
+    assert replies == said and "순서" in replies[0]
 
 
 def test_answer_uses_state_at_utterance_time():
@@ -279,7 +312,7 @@ def test_destination_variations_do_not_call_llm(text: str, dong: str) -> None:
     result_kind, _ = flow.handle(text)
 
     assert result_kind == "publish"
-    assert len(published) == 1 and spoken == []
+    assert len(published) == 1 and spoken == [f"{dong}으로 분류하겠습니다."]
     assert published[0]["type"] == "answer"
     assert published[0]["dong"] == dong
     assert published[0]["raw_text"] == text
@@ -309,13 +342,55 @@ def test_palletize_route_is_published_in_spoken_order():
         lambda text, allowed: {"type": "palletize", "route": ["대치동", "역삼"]}
     )
     kind, _ = f.handle("대치, 역삼 순서로 실어줘")
-    assert kind == "publish" and not said
+    assert kind == "publish" and said == ["말씀하신 순서로 적재하겠습니다."]
     assert published[0]["type"] == "palletize" and published[0]["route"] == ["대치동", "역삼동"]
+
+
+def test_palletize_order_question_accepts_bare_route_reply():
+    flow, published, said = _flow(lambda text, allowed: (_ for _ in ()).throw(AssertionError("LLM 불필요")))
+
+    assert flow.handle("팔레타이징 실행해")[0] == "say"
+    assert "싣는 순서" in said[-1]
+    assert flow.handle("역삼, 대치")[0] == "publish"
+    assert published[0]["type"] == "palletize"
+    assert published[0]["route"] == ["역삼동", "대치동"]
+
+
+def test_palletize_order_question_rejects_duplicate_then_accepts_correction():
+    flow, published, said = _flow(lambda text, allowed: (_ for _ in ()).throw(AssertionError("LLM 불필요")))
+    flow.handle("팔레타이징 실행해")
+
+    assert flow.handle("역삼, 역삼")[0] == "say"
+    assert not published and "같은 동" in said[-1]
+    assert flow.handle("역삼, 대치")[0] == "publish"
+    assert published[0]["route"] == ["역삼동", "대치동"]
+
+
+def test_robot_question_takes_priority_over_pallet_route_reply():
+    flow, published, _ = _flow(lambda text, allowed: (_ for _ in ()).throw(AssertionError("LLM 불필요")))
+    flow.handle("팔레타이징 실행해")
+    flow.state, flow.box_id = "ASKING", "box-13"
+
+    assert flow.handle("역삼")[0] == "publish"
+    assert published[0]["type"] == "answer"
+    assert published[0]["box_id"] == "box-13"
 
 
 @pytest.mark.parametrize(
     "text",
-    ["송장 확인 불가", "송장 확인 불가.", "확인 불가입니다", "보류", "보류로 보내", "판독 불가"],
+    [
+        "송장 확인 불가",
+        "송장 확인 불가.",
+        "확인 불가입니다",
+        "보류",
+        "보류로 보내",
+        "판독 불가",
+        "보류로",
+        "보류 처리해줘",
+        "보류로 해줘",
+        "보류 부탁해",
+        "보류할게요",
+    ],
 )
 def test_unreadable_answer_goes_to_hold_without_llm(text: str) -> None:
     """질문 중 '송장 확인 불가'·'보류' 는 LLM 없이 보류 답 (10/12 시연 문형)."""

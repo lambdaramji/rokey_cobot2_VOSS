@@ -10,6 +10,7 @@ import json
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 
 AI_BASE = "http://127.0.0.1:8000"
 API_BASE = "http://127.0.0.1:8080"
@@ -59,6 +60,45 @@ def get_stats(query: dict, base: str = API_BASE, timeout_s: float = 2.0) -> dict
         params["dong"] = query["dong"]
     url = f"{base}/api/stats?{urllib.parse.urlencode(params)}"
     return _request(urllib.request.Request(url, method="GET"), timeout_s)
+
+
+def command_request(intent: dict) -> dict:
+    """검증된 음성 Intent를 기존 HMI 명령 API 형식으로 변환한다."""
+    kind = intent["type"]
+    if kind in {"start", "stop", "resume", "recheck"}:
+        args = {}
+    elif kind == "priority":
+        args = {"dong": intent["dong"]}
+    elif kind == "answer":
+        args = {"box_id": intent["box_id"]}
+        args["zone" if intent.get("zone") == "HOLD" else "dong"] = (
+            "HOLD" if intent.get("zone") == "HOLD" else intent["dong"]
+        )
+    elif kind == "palletize":
+        args = {"route": list(intent["route"])}
+    else:
+        raise ValueError(f"unsupported command: {kind}")
+    return {"type": kind, "args": args, "raw_text": intent["raw_text"]}
+
+
+def post_command(intent: dict, base: str = API_BASE, timeout_s: float = 2.0) -> bool:
+    """Web PC 로컬 명령 API의 202 접수 여부만 확인한다. 실행 완료는 ack로 판단한다."""
+    body = json.dumps(command_request(intent), ensure_ascii=False).encode("utf-8")
+    req = urllib.request.Request(
+        f"{base}/api/commands", data=body,
+        headers={"Content-Type": "application/json", "X-Real-IP": "127.0.0.1"}, method="POST",
+    )
+    # 시스템 HTTP 프록시를 통해 로컬 명령이 나가지 않도록 한다.
+    try:
+        with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(
+            req, timeout=timeout_s
+        ) as response:
+            data = json.loads(response.read().decode("utf-8"))
+            return response.status == 202 and data.get("ok") is True and bool(
+                uuid.UUID(data["command_id"])
+            )
+    except (urllib.error.URLError, TimeoutError, ValueError, KeyError, OSError):
+        return False
 
 
 def post_stt(
