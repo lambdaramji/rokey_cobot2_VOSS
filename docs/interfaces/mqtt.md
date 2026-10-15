@@ -18,9 +18,10 @@
   - `bridge`: `voss/command`·`voss/voice/request`·`voss/voice/text` read. write는 #20 확정 6개(`voss/state`·`voss/result`·`voss/zone_map`·`voss/robot`·`voss/command/ack`·`voss/log_status`)와 10/14 승인 표시 토픽 `voss/box_track`·`voss/robot_pose`·`voss/robot_joints`·`voss/voice_status`, Sprint 2 `voss/pallet/state`, 텍스트 응답 `voss/voice/text/reply`, 제안 `voss/box_motion`(발행자 생기기 전엔 쓰지 않음)만 허용한다 (`voss/command` write 금지). 템플릿 = `docker/mqtt/acl`
   - `debug`: `voss/#` read only
   - `voice_preview`: `voss/voice_status` write 하나만 (격리 음성 시험 전용, 아래 "음성 표시등 이벤트")
+  - `voice_web`: Web PC 음성 브리지 전용. `voss/voice/text` read, `voss/voice_status`·`voss/voice/text/reply` write만 허용한다. `voss/command`와 운영 상태 토픽의 read/write는 허용하지 않는다. 실제 암호는 운영자의 로컬 비밀번호 파일과 환경 변수에만 둔다.
 
-웹 텍스트 명령: `web`은 `voss/voice/text`에 QoS 1·retain false로 `{request_id,text,sent_at}`를 보낸다. Web PC 브리지(`voice_status_only:=true`, `local_text_enabled:=true`, bridge 계정)는 30초 이내 UUID 요청만 로컬 `/voss/voice/text`로 전달하고 중복 ID를 버린다. `intent_parser`는 음성과 같은 검증을 거쳐 로컬 `/voss/voice/text/reply`로 `{request_id,message}`를 보낸다. Web PC 브리지는 이를 `voss/voice/text/reply`로 발행하고 웹은 SSE `text_reply`로 표시한다. 실행 명령은 Web PC의 intent_parser가 로컬 `/api/commands`로 보내고, Nodes PC의 운영 bridge가 기존 `voss/command`를 실행한다. 운영 bridge의 종전 텍스트 구독 경로에서 같은 요청이 다시 도착해도 Web PC intent_parser는 `request_id`로 10분간 중복 실행을 막는다. `voice_preview` 계정은 이 토픽들에 접근하지 않는다.
-- 런타임 계정의 비밀번호는 환경 변수로 주입한다. hmi_bridge 는 `VOSS_MQTT_BRIDGE_PASSWORD`, Spring Boot 는 웹 컨테이너의 MQTT 비밀번호 변수를 사용한다.
+웹 텍스트 명령: `web`은 `voss/voice/text`에 QoS 1·retain false로 `{request_id,text,sent_at}`를 보낸다. Web PC 브리지(`voice_status_only:=true`, `local_text_enabled:=true`, `voice_web` 계정)는 30초 이내 UUID 요청만 로컬 `/voss/voice/text`로 전달하고 중복 ID를 버린다. `intent_parser`는 음성과 같은 검증을 거쳐 로컬 `/voss/voice/text/reply`로 `{request_id,message}`를 보낸다. Web PC 브리지는 이를 `voss/voice/text/reply`로 발행하고 웹은 SSE `text_reply`로 표시한다. 실행 명령은 Web PC의 intent_parser가 로컬 `/api/commands`로 보내고, Nodes PC의 운영 bridge가 기존 `voss/command`를 실행한다. 운영 bridge의 종전 텍스트 구독 경로에서 같은 요청이 다시 도착해도 Web PC intent_parser는 `request_id`로 10분간 중복 실행을 막는다. `voice_preview` 계정은 이 토픽들에 접근하지 않는다.
+- 런타임 계정의 비밀번호는 환경 변수로 주입한다. Nodes PC 운영 hmi_bridge는 `VOSS_MQTT_BRIDGE_PASSWORD`, Web PC 음성 브리지는 `VOSS_MQTT_VOICE_WEB_PASSWORD`, Spring Boot는 웹 컨테이너의 MQTT 비밀번호 변수를 사용한다.
 
 ## 토픽
 | 토픽 | 방향 | QoS | retained | JSON |
