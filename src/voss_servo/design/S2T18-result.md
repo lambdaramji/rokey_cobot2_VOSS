@@ -26,7 +26,7 @@ OK 회차 공통: 회전 중 TCP z ≥ 박스 윗면 + 50 mm, DESCEND·GRASP 각
 | pose 주기 | 중앙 20 ms, 최대 47~52 ms | `pose_fresh_s` 0.05 유지(⑪) |
 | watchdog 정지 | 발행이 끊기면 0.2~0.3 s 뒤 정지, 그동안 10 °/s 에서 2.3~2.6° 더 돎 | run.md E4·⑤ |
 | gateway yaw 한계 | 한계 20° 에서 +18.0°/−18.3° 정지(계산 17.4°, 자름 `yaw_limit`) | run.md ⑯ E8-R ✅ |
-| 케이블·카메라 | ±46°·±91° 카메라 끊김 최대 68 ms, 케이블 이상 없음(육안). **−110° 근처**: 실제 회차 최대 −109.4°(6260f810) 동안 손목이 −100° 를 넘은 6.2 s 에 camera_info 29.9 Hz·최대 간격 45 ms, 6단계 −101° 구간 최대 70 ms(녹화 `bag/r7_160029`·`r6_154414`) — 끊김 없음. 케이블은 15:43 rot.sh 로 약 −123°(계산, 모니터 꺼져 각도 기록 없음)까지 돌려 육안 이상 없음 | run.md ⑩ |
+| 케이블·카메라 | ±46°·±91° 카메라 끊김 최대 68 ms, 케이블 이상 없음(육안). **−110° 근처**: 실제 회차 최대 −109.4°(6260f810) 동안 손목이 −100° 를 넘은 6.2 s 에 camera_info 29.9 Hz·최대 간격 45 ms, 6단계 −101° 구간 최대 70 ms(녹화 `bag/r7_160029`·`r6_154414`) — 끊김 없음. 케이블은 15:43 rot.sh 로 약 −123°(계산, 모니터 꺼져 각도 기록 없음)까지 돌려 육안 이상 없음. **−123° 에서 카메라는 기록이 없다**(모니터·녹화 둘 다 꺼짐). 그 뒤 15:44:35 에 D435i 가 5 s 넘게 프레임을 못 보냄(`Frames Timeout`) → 15:44:45 카메라 재기동 — 이때 손목은 관측 자세(상대 0°, 녹화 15:44:14 부터)라 회전 중 끊김은 아니다, 원인 미확인 | run.md ⑩ |
 | 돌아간 손목 → MoveToZone | OBSERVE·HOLD PLACE 모두 ok(±11°~−110° 잔여 각에서) | run.md E6b·⑬ |
 
 ## 3. 5단계에서 찾은 문제와 6단계 대책
@@ -49,6 +49,7 @@ ros2 launch voss_robot robot_gateway.launch.py dry_run:=false pose_source:=joint
   servo_angular:=true servo_yaw_limit_deg:=130 config:=$HOME/voss_ws/config/voss_config.yaml
 ```
 - `servo_max_ang_dps` 60·`servo_ang_acc_dps2` 90 는 노드 기본. 한계 130 = − 쪽 최대 110 + 0.2 s × 60 °/s(12) + 여유.
+- **한계 130 의 근거·범위(#179 리뷰 박병후):** 한계는 정상 동작이 아니라 고장 때 자르는 값이다. 정상 회차 최대 −109.4°·오버슈트 0 이라 닿지 않는다. −110° 목표의 √ 감속 시작(남은 20°, 60 °/s)에서 gateway 판정은 −90 − (20 + 12 + 예측 3.6) ≈ −125.6° 라 130 까지 여유 약 4.4°(기준 yaw 가 − 쪽으로 `start_tol_deg` 3° 어긋나면 1.4°). 126° 아래로 낮추면 큰 회전이 STALL 이 된다. 다만 **확인된 범위는 카메라 −109.4°(실측)·케이블 −123°(육안)** 라 130 은 run.md ⑩ 규칙(한계 < USB 가 빠진 각)으로는 확인 밖이다 — 다음 실기에서 모니터·녹화를 켠 채 −125~−130° 카메라 끊김을 한 번 잰다.
 - 펜던트 TCP 는 voss_config `tcp_offset_mm` 로 등록(기동 줄 `컨트롤러 TCP 등록 voss_config 와 같음`).
 
 **belt_servo** (`config/belt_servo_real.yaml.example` 의 rotate 블록 = 최종값, `enable: true`·`input.pose_lag_ms: 0` — 현장 joint_states 운용과 같게)
