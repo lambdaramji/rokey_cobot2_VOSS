@@ -113,8 +113,14 @@ class RobotGatewayNode(Node):
         # ---- servo_cmd → speedl (ADR-0010). 값은 gateway 파라미터(voss_config.md 값 규칙) ----
         # [선 mm/s², 각 deg/s²]. 선가속은 time 보다 우선(조건 4). 추종 속도 값은 T26·T27 에서 정한다
         self.servo_acc = [
-            float(a) for a in self.declare_parameter("servo_acc", [100.0, 90.0]).value
-        ]  # 각가속 10 → 90 (S2-T17, belt_servo rotate.alpha_dps2 제안 90). 각속도가 0 이면 쓰이지 않는다
+            float(a) for a in self.declare_parameter("servo_acc", [100.0, 10.0]).value
+        ]
+        # 각속도 통과(S2-T17, topics.md robot_gateway 행). 기본 off = 지금처럼 자르고 servo_acc 도 그대로(시연 라인).
+        # 켤 때만 speedl 각가속 acc[1] 을 servo_ang_acc_dps2 로(belt_servo rotate.alpha_dps2 제안 90, #164 PL 리뷰 2)
+        angular_enable = bool(self.declare_parameter("servo_angular_enable", False).value)
+        ang_acc = float(self.declare_parameter("servo_ang_acc_dps2", 90.0).value)
+        if angular_enable:
+            self.servo_acc[1] = ang_acc
         sp = ServoParams(
             lin_acc_mm_s2=self.servo_acc[0],
             watchdog_s=float(self.declare_parameter("servo_watchdog_s", 0.2).value),
@@ -123,8 +129,7 @@ class RobotGatewayNode(Node):
             x_range_mm=tuple(self.declare_parameter("servo_x_range_mm", [-107.0, 638.0]).value),
             pose_max_age_s=float(self.declare_parameter("servo_pose_max_age_s", 0.1).value),
             pose_latency_s=float(self.declare_parameter("servo_pose_latency_s", 0.06).value),
-            # 각속도 통과(S2-T17, topics.md robot_gateway 행). 기본 off = 지금처럼 자른다(시연 라인)
-            angular_enable=bool(self.declare_parameter("servo_angular_enable", False).value),
+            angular_enable=angular_enable,
             max_ang_dps=float(self.declare_parameter("servo_max_ang_dps", 60.0).value),
             ang_acc_dps2=self.servo_acc[1],
             yaw_center_deg=tool_yaw_deg(*observe[3:6]) if len(observe) == 6 else None,

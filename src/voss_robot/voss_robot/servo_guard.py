@@ -4,7 +4,7 @@
   베이스 Z 각속도(deg/s).
 - 각속도: 기본(angular_enable False)은 G0 그대로 0 — 0 이 아니면 버리고 플래그만 남긴다(#53 MC-010).
   켜면(S2-T17, topics.md robot_gateway 행) angular.z 만 넘기고 x·y 는 버린다. 상한 max_ang_dps, 공구 yaw 는
-  관측 자세 yaw ± yaw_limit_deg 안에서만(감속 각을 빼고 자름). yaw 를 모르면 각속도는 0.
+  관측 자세 yaw ± yaw_limit_deg 안에서만(감속 각 + watchdog 동안 도는 각을 빼고 자름). yaw 를 모르면 각속도는 0.
 - 거부(속도를 내지 않음): stop 이전 stamp, watchdog 보다 오래된 stamp, pose 가 오래됨(작업 영역 판단 불가),
   모션 자원 사용 중(MoveToZone, topics.md 자원 규칙 — 토픽이라 응답 대신 무시·로그).
 - 자르기: 속도 크기 상한, TCP z 하한(−z 성분 0), 추종 구간 x 범위(바깥으로 가는 x 성분 0).
@@ -131,14 +131,19 @@ class ServoGuard:
         return (d + 180.0) % 360.0 - 180.0
 
     def _limit_yaw(self, now: float, wz: float) -> tuple[float, list[str]]:
-        """범위 밖으로 가는 각속도는, 예측 yaw 에서 감속 각만큼 더 돌면 범위를 넘을 때 0. yaw 를 모르면 0."""
+        """범위 밖으로 가는 각속도는, 예측 yaw 에서 감속 각(+ watchdog 동안 도는 각)만큼 더 돌면 범위를 넘을 때 0.
+        yaw 를 모르면 0."""
         if wz == 0.0:
             return 0.0, []
         rel = self.predicted_yaw_rel(now)
         if rel is None:
             return 0.0, ["yaw_limit"]
+        # 같은 방향으로 돌던 중이면 지금 각속도에서 줄어드므로 큰 쪽으로 잡는다(#164 PL 리뷰 3).
+        # 마지막 지령 뒤 watchdog 까지는 그 각속도로 계속 돈다(#164 박병후 리뷰 A)
+        cur = self.last_wz if self.active else 0.0
+        v = max(abs(wz), abs(cur)) if cur * wz > 0 else abs(wz)
         a = self.p.ang_acc_dps2
-        brake = wz * wz / (2.0 * a) if a > 0 else 0.0
+        brake = (v * v / (2.0 * a) if a > 0 else 0.0) + v * self.p.watchdog_s
         lim = self.p.yaw_limit_deg
         if (wz > 0 and rel + brake >= lim) or (wz < 0 and rel - brake <= -lim):
             return 0.0, ["yaw_limit"]

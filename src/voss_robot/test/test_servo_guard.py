@@ -185,12 +185,39 @@ def test_angular_needs_known_yaw():
 
 
 def test_yaw_limit_cuts_outward_with_brake_angle():
-    # 60 °/s·α 90 → 감속 각 20°. 기준 +75° 에서 +방향은 75 + 20 + 예측(60 ms·이전 0) ≥ 90 이면 자름
+    # 60 °/s·α 90 → 감속 각 20° + watchdog 12°. 기준 +75° 에서 +방향은 75 + 32 + 예측(60 ms·이전 0) ≥ 90 이면 자름
     g = ang_guard(yaw=YAW0 + 75.0, yaw_limit_deg=90.0, ang_acc_dps2=90.0)
     r = g.on_cmd(10.01, 10.0, (0, 0, 0), (0, 0, math.radians(60)))
     assert r.wz_dps == 0.0 and r.clamps == ["yaw_limit"]
     back = g.on_cmd(10.02, 10.01, (0, 0, 0), (0, 0, math.radians(-60)))  # 안쪽으로는 그대로
     assert back.wz_dps == pytest.approx(-60.0) and back.clamps == []
+
+
+def test_yaw_brake_uses_current_rate_when_slowing_same_way():
+    # #164 PL 리뷰 3: 60 °/s 로 돌다가 한계 15° 앞에서 1 °/s 지령 — 로봇은 60 에서 줄어드니 감속 각 20° + watchdog 12°
+    g = ang_guard(yaw_limit_deg=100.0, ang_acc_dps2=90.0, watchdog_s=0.2)
+    assert g.on_cmd(10.01, 10.0, (0, 0, 0), (0, 0, math.radians(60))).wz_dps == pytest.approx(60.0)
+    g.set_pose(10.1, 0.0, -276.0, 200.0, YAW0 + 85.0)
+    r = g.on_cmd(10.1, 10.1, (0, 0, 0), (0, 0, math.radians(1)))
+    assert r.wz_dps == 0.0 and r.clamps == ["yaw_limit"]
+
+
+def test_yaw_brake_includes_watchdog_run_on():
+    # #164 박병후 리뷰 A: 60 °/s 로 한계 25° 앞 — 감속 20° 만이면 통과하지만 watchdog 200 ms 동안 12° 더 돈다
+    g = ang_guard(yaw_limit_deg=100.0, ang_acc_dps2=90.0, watchdog_s=0.2)
+    assert g.on_cmd(10.01, 10.0, (0, 0, 0), (0, 0, math.radians(60))).wz_dps == pytest.approx(60.0)
+    g.set_pose(10.1, 0.0, -276.0, 200.0, YAW0 + 75.0)
+    r = g.on_cmd(10.1, 10.1, (0, 0, 0), (0, 0, math.radians(60)))
+    assert r.wz_dps == 0.0 and r.clamps == ["yaw_limit"]
+
+
+def test_yaw_brake_ignores_rate_in_other_direction():
+    # 반대 방향으로 돌던 각속도는 새 방향의 감속 각에 넣지 않는다(안쪽으로 되돌리기는 그대로)
+    g = ang_guard(yaw_limit_deg=100.0, ang_acc_dps2=90.0, watchdog_s=0.2)
+    g.on_cmd(10.01, 10.0, (0, 0, 0), (0, 0, math.radians(-60)))
+    g.set_pose(10.1, 0.0, -276.0, 200.0, YAW0 + 60.0)
+    r = g.on_cmd(10.1, 10.1, (0, 0, 0), (0, 0, math.radians(10)))  # 60 − 3.6 + 10²/180 + 2 < 100
+    assert r.wz_dps == pytest.approx(10.0) and r.clamps == []
 
 
 def test_yaw_limit_wraps_across_180():
