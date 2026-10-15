@@ -223,8 +223,10 @@ class HmiBridgeNode(Node):
 
         # 시험용 실행이 기존 운영 bridge의 MQTT 연결을 밀어내지 않도록 ID만 분리한다.
         client_id = (
-            "voss-hmi-voice-web" if self._voice_status_only and self._local_text_enabled
-            else "voss-hmi-voice-preview" if self._voice_status_only
+            "voss-hmi-voice-web"
+            if self._voice_status_only and self._local_text_enabled
+            else "voss-hmi-voice-preview"
+            if self._voice_status_only
             else "voss-hmi-bridge"
         )
         client = mqtt.Client(client_id=client_id, protocol=mqtt.MQTTv311)

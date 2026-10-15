@@ -32,7 +32,8 @@ def test_priority_and_recheck_use_existing_command_contract() -> None:
 def test_stop_attempts_ros_before_web_even_if_web_fails() -> None:
     calls = []
     assert attempt_stop(lambda: calls.append("ros"), lambda: calls.append("web") or False) == (
-        True, False
+        True,
+        False,
     )
     assert calls == ["ros", "web"]
 

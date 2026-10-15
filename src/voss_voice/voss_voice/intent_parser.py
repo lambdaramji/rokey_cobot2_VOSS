@@ -130,7 +130,13 @@ class IntentParserNode(Node):
                         elif not line:
                             self._on_web_context_event(event, data)
                             event, data = "", ""
-            except (urllib.error.URLError, http.client.HTTPException, TimeoutError, OSError, ValueError) as error:
+            except (
+                urllib.error.URLError,
+                http.client.HTTPException,
+                TimeoutError,
+                OSError,
+                ValueError,
+            ) as error:
                 self.get_logger().warn(f"웹 문맥 스트림 끊김 ({type(error).__name__}); 재연결")
             self._invalidate_web_context()
             self._context_stop.wait(1.0)

@@ -39,7 +39,9 @@ def test_capture_skips_decode_between_preview_frames(monkeypatch) -> None:
     threads, encoded = [], []
     monkeypatch.setattr(preview.cv2, "VideoCapture", lambda *_: camera)
     monkeypatch.setattr(preview.cv2, "setNumThreads", threads.append)
-    monkeypatch.setattr(preview.cv2, "imencode", lambda *_: (True, SimpleNamespace(tobytes=lambda: b"jpeg")))
+    monkeypatch.setattr(
+        preview.cv2, "imencode", lambda *_: (True, SimpleNamespace(tobytes=lambda: b"jpeg"))
+    )
     monkeypatch.setattr(preview.time, "monotonic", lambda: camera.grabs * 0.04)
     frames = SimpleNamespace(update=encoded.append)
 

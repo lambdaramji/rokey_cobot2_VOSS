@@ -45,7 +45,9 @@ def capture(device: str, frames: Frames, stop: threading.Event) -> None:
         camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
         camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
         camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-        camera.set(cv2.CAP_PROP_FPS, 10)  # 장치가 거부해도 grab/retrieve로 디코딩을 10 Hz 이하로 제한한다.
+        camera.set(
+            cv2.CAP_PROP_FPS, 10
+        )  # 장치가 거부해도 grab/retrieve로 디코딩을 10 Hz 이하로 제한한다.
         next_encode = 0.0
         try:
             while not stop.is_set():

@@ -20,7 +20,9 @@ def test_mqtt_credentials_are_selected_by_mode(
     monkeypatch.setenv("VOSS_MQTT_PREVIEW_USERNAME", "voice_preview")
     monkeypatch.setenv("VOSS_MQTT_PREVIEW_PASSWORD", "preview-test-value")
     with patch("voss_hmi.hmi_bridge.mqtt.Client") as client_type:
-        HmiBridgeNode._create_mqtt_client(Mock(_voice_status_only=preview, _local_text_enabled=False))
+        HmiBridgeNode._create_mqtt_client(
+            Mock(_voice_status_only=preview, _local_text_enabled=False)
+        )
     assert client_type.call_args.kwargs["client_id"] == expected_client_id
     client_type.return_value.username_pw_set.assert_called_once_with(
         expected_user, expected_password
