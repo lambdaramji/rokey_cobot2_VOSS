@@ -15,6 +15,7 @@ import logging
 import os
 import time
 from collections.abc import Iterator
+from difflib import SequenceMatcher
 from typing import Annotated
 
 from fastapi import FastAPI, File, Form, UploadFile
@@ -29,13 +30,20 @@ app = FastAPI(title="VOSS AI", docs_url=None, redoc_url=None)
 # 도메인 단어를 앞에 주면 고유명사 전사가 안정적이다
 STT_PROMPT = os.getenv(
     "WHISPER_PROMPT",
-    "헬로 로키. 역삼동, 대치동, 청담동. 분류, 보류, 멈춰, 다시 시작, 몇 개 남았어.",
+    "헬로우 로키. 헬로 로키. 역삼동, 대치동, 청담동.",
 )
 # LLM 출력 형식. OpenAI strict JSON Schema 로 보내 스키마 밖의 키·값을 처음부터 막는다.
 INTENT_RESPONSE_FORMAT = {"name": "intent", "schema": INTENT_SCHEMA, "strict": True}
 
 _whisper = None
 _intent_chain = None
+
+
+def is_prompt_echo(text: str, prompt: str | None = None) -> bool:
+    """잡음 구간에서 Whisper가 긴 initial_prompt를 되읽은 결과를 버린다."""
+    heard = "".join(ch.casefold() for ch in text if ch.isalnum())
+    seed = "".join(ch.casefold() for ch in (prompt if prompt is not None else STT_PROMPT) if ch.isalnum())
+    return len(heard) >= 20 and len(seed) >= 20 and SequenceMatcher(None, heard, seed).ratio() >= 0.82
 
 
 def _err(code: int, message: str, detail: str = "") -> JSONResponse:
@@ -118,6 +126,9 @@ def stt(audio: Annotated[UploadFile, File()], language: Annotated[str, Form()] =
             io.BytesIO(data), language=language, beam_size=1, initial_prompt=STT_PROMPT
         )
         text = " ".join(s.text.strip() for s in segments).strip()
+        if is_prompt_echo(text):
+            logging.warning("STT initial_prompt 재출력 감지: 전사 결과 무시")
+            text = ""
     except Exception as e:  # noqa: BLE001 — 모델·장치 오류를 코드로 돌려준다
         return _err(500, "STT_ERROR", type(e).__name__)
     return {
