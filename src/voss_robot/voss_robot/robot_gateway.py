@@ -465,8 +465,11 @@ class RobotGatewayNode(Node):
 
     def _js_tcp_done(self, fut) -> None:
         """joint_states 사용 중 2 s 마다: 컨트롤러 등록 TCP 가 바뀌면(펜던트 조작) fkin 이 틀어지므로 service 로.
-        움직이는 중엔 두 서비스 값이 0.1 s 어긋날 수 있어 20 mm 로 본다(두 후보는 247 mm 떨어져 헷갈리지 않음)."""
+        움직이는 중엔 두 서비스 값이 0.1 s 어긋날 수 있어 20 mm 로 본다(두 후보는 247 mm 떨어져 헷갈리지 않음).
+        MoveToZone(300 mm/s) 중에는 0.1 s 에 30 mm 라 None 으로 오판 → 결과를 버린다(10/15 U14 실기 HOLD)."""
         self._js_tcp_busy = False
+        if self.guard.motion_busy:
+            return
         try:
             ctrl, flange = fut.result()
         except Exception:
@@ -604,6 +607,7 @@ class RobotGatewayNode(Node):
             self.pose_source == "joint_states"
             and self._js_off is not None
             and not self._js_tcp_busy
+            and not self.guard.motion_busy  # MoveToZone 중엔 확인하지 않는다(위 _js_tcp_done)
             and now - self._js_tcp_t >= 2.0
         ):
             self._js_tcp_busy, self._js_tcp_t = True, now

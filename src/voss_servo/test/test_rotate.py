@@ -519,7 +519,7 @@ def test_phase_exit_stops_immediately() -> None:
 
 
 def test_log_values_keys_and_off() -> None:
-    """로그 키 12개, 회전 꺼짐이면 전부 None, 끝 틱 RETURN_INCOMPLETE."""
+    """로그 키 13개, 회전 꺼짐이면 전부 None, 끝 틱 RETURN_INCOMPLETE·남은 각."""
     assert rt.log_values(None, 0.0, None, None, None, False, None, D(1.5)) == dict.fromkeys(
         rt.ROT_LOG_KEYS
     )
@@ -531,6 +531,11 @@ def test_log_values_keys_and_off() -> None:
     assert tuple(v) == rt.ROT_LOG_KEYS
     assert v["rot_cause"] == rt.RETURN_INCOMPLETE and v["rot_time_s"] == pytest.approx(1.8)
     assert v["rot_delta_deg"] == pytest.approx(30) and v["rot_err_deg"] == pytest.approx(0)
+    assert v["rot_end_left_deg"] == pytest.approx(30)  # 끝 틱: 손목이 기준에서 +30° 남음
+    mid = rt.log_values(rs, 0.0, 0.0, HOME + D(30), HOME + D(30), False, None, D(1.5))
+    assert mid["rot_end_left_deg"] is None  # 끝 틱이 아니면 null
+    back = rt.log_values(rs, 0.0, 0.0, HOME + D(-100), None, True, None, D(1.5))
+    assert back["rot_end_left_deg"] == pytest.approx(-100)  # − 쪽(flip)도 감아서 부호 유지
 
 
 def test_no_home_ref_means_no_rotation() -> None:

@@ -103,6 +103,9 @@ class RotCfg:
     lag_s: float  # pose stamp 지연 (input.pose_lag_ms)
     extrap_max_s: float  # 외삽 지평 상한 (input.pose_extrap_max_ms)
     pose_fresh_s: float = POSE_FRESH_FOR_ZERO  # "값 그대로 = 정지" 를 믿는 pose 수신 나이 상한
+    flip_above: float | None = (
+        None  # + Δ 가 이보다 크면 Δ − π 로 반대 방향 회전 (10/15 U14 실기: + 회전 시야 나쁨). None = 끔
+    )
 
 
 @dataclass(frozen=True)
@@ -321,6 +324,9 @@ def decide(agg: Aggregate, inp: RotInputs, cfg: RotCfg) -> tuple[str, float | No
     if inp.err_along is not None and inp.err_along > 0.0:
         return DOWNSTREAM, None  # 박스가 이미 TCP 하류 (시야 판정 근거 없음)
     delta = fold_half(agg.target - cfg.belt_yaw)  # 벨트 방향 기준 상대각 = 돌릴 양
+    if cfg.flip_above is not None and delta > cfg.flip_above:
+        # 180° 대칭: + 쪽 큰 각은 − 쪽으로 (예 +80° → −100°). + 회전은 카메라가 박스를 비스듬히 봐 LOST 가 잦다
+        delta -= math.pi
     if abs(delta) <= max(cfg.deadband, cfg.min_rot):
         return SMALL, delta  # 작은 각 — 그리퍼가 스스로 맞춘다
     if abs(delta) > cfg.max_rot:
@@ -584,7 +590,7 @@ def log_values(
     warn: str | None,
     tol: float,
 ) -> dict[str, Any]:
-    """틱 로그의 회전 키 12개 (log_schema.ROT_KEYS 와 같은 이름). 회전이 꺼져 있으면 전부 None."""
+    """틱 로그의 회전 키 13개 (log_schema.ROT_KEYS 와 같은 이름). 회전이 꺼져 있으면 전부 None."""
     if rs is None:
         return dict.fromkeys(ROT_LOG_KEYS)
     if terminal:
@@ -594,6 +600,13 @@ def log_values(
     goal = rs.home if rs.state in (RETURNING, RETURNED) else rs.target  # 지금 따르는 목표
     err = wrap_pi(goal - psi_raw) if goal is not None and psi_raw is not None else None
     t_rot = rs.t_done - rs.t_start if rs.t_done is not None and rs.t_start is not None else None
+    # goal 끝 틱만: 손목이 기준 각에서 남은 각(공구 yaw − 기준, +·−). 되돌림 창(LIFT~VERIFY ≈ 0.8 s)보다 큰
+    # 회전은 RETURN_INCOMPLETE 가 정상으로 찍히므로, 실제로 얼마나 남았는지는 이 값으로 본다 (10/15 U14 실기)
+    left = (
+        wrap_pi(psi_raw - rs.home)
+        if terminal and psi_raw is not None and rs.home is not None
+        else None
+    )
     return {
         "rot_state": rs.state,
         "rot_cause": cause or None,
@@ -607,6 +620,7 @@ def log_values(
         "rot_n": rs.n,
         "rot_rbar": rs.rbar,
         "rot_time_s": t_rot,
+        "rot_end_left_deg": _deg(left),
     }
 
 
@@ -623,4 +637,5 @@ ROT_LOG_KEYS = (
     "rot_n",
     "rot_rbar",
     "rot_time_s",
+    "rot_end_left_deg",
 )

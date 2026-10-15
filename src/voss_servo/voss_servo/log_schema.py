@@ -105,6 +105,7 @@ TICK_FIELDS: tuple[str, ...] = (
     "rot_n",  # 결정에 쓴 yaw 프레임 수
     "rot_rbar",  # 결정 때 흩어짐 (2θ 평균 벡터 길이)
     "rot_time_s",  # 회전 시작 → DONE·FALLBACK
+    "rot_end_left_deg",  # goal 끝 틱만: 공구 yaw − 기준 각 (손목이 돌아간 채 끝난 양, 다음 MoveToZone 이 맞춤)
     "config_version",
     "config_sha256",
     "params_sha256",
@@ -124,6 +125,7 @@ ROT_KEYS: tuple[str, ...] = (
     "rot_n",
     "rot_rbar",
     "rot_time_s",
+    "rot_end_left_deg",
 )
 
 # 시도 레코드 키 (틱 키의 부분집합)
@@ -164,6 +166,7 @@ ATTEMPT_FIELDS: tuple[str, ...] = (
     "rot_cause",
     "rot_delta_deg",
     "rot_time_s",
+    "rot_end_left_deg",
     "config_version",
     "config_sha256",
     "params_sha256",
