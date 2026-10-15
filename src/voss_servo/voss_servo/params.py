@@ -202,6 +202,9 @@ PARAM_SPECS: tuple[ParamSpec, ...] = (
     ParamSpec("rotate.still_dps", "float", "deg/s", False, _positive),
     ParamSpec("rotate.return_min_dz_mm", "float", "mm", False, _non_negative),
     ParamSpec("rotate.pose_fresh_s", "float", "s", False, _positive),  # pose 주기의 2배 이상
+    # 10/15 U14 실기 뒤 추가 — 둘 다 선택(없으면 기존 동작). + 쪽 큰 각은 반대 방향, 회전 중 LOST 기준
+    ParamSpec("rotate.flip_above_deg", "float", "deg", False, _positive),
+    ParamSpec("rotate.lost_timeout_s", "float", "s", False, _positive),
 )
 
 # 이름으로 찾기 쉽게 사전도 만든다
@@ -306,10 +309,17 @@ def _rotate_checks(values: dict[str, Any], have: Callable[..., bool]) -> list[tu
         if v["rotate.hold_dz_mm"] < v["z.vision_cutoff_above_top_mm"] + BLIND_EXIT_MARGIN_MM:
             out.append(("rotate.hold_dz_mm", "사각 높이 + 5 mm 이상이어야 함"))
     names = ("rotate.deadband_deg", "rotate.min_deg", "rotate.max_deg")
+    flip = v.get("rotate.flip_above_deg")
+    top = 90.0 if flip is None else 180.0 - flip  # 반대 방향을 쓰면 − 쪽이 180 − flip 까지
     if have(*names):
         db, lo, hi = (v[n] for n in names)
-        if not db <= lo < hi <= 90.0:  # 180° 대칭이라 회전은 최대 90°
-            out.append(("rotate.min_deg", "deadband ≤ min < max ≤ 90 이어야 함"))
+        if not db <= lo < hi <= top:  # 180° 대칭이라 회전은 최대 90° (flip 이면 180 − flip)
+            out.append(("rotate.min_deg", f"deadband ≤ min < max ≤ {top:g} 이어야 함"))
+    if flip is not None and have("rotate.min_deg") and not v["rotate.min_deg"] < flip <= 90.0:
+        out.append(("rotate.flip_above_deg", "min < flip_above ≤ 90 이어야 함"))
+    if have("rotate.lost_timeout_s", "input.lost_timeout_s"):
+        if v["rotate.lost_timeout_s"] < v["input.lost_timeout_s"]:  # 회전 중에만 늘리는 값
+            out.append(("rotate.lost_timeout_s", "input.lost_timeout_s 이상이어야 함"))
     if have("rotate.n_min", "rotate.buffer_n") and v["rotate.n_min"] > v["rotate.buffer_n"]:
         out.append(("rotate.n_min", "rotate.buffer_n 이하여야 함"))
     if have("rotate.tol_deg", "rotate.deadband_deg"):
@@ -475,6 +485,7 @@ def rot_cfg_from_values(values: dict[str, Any], belt_dir_xy: Any) -> rotate.RotC
         lag_s=float(v["input.pose_lag_ms"]) / 1000.0,
         extrap_max_s=float(v["input.pose_extrap_max_ms"]) / 1000.0,
         pose_fresh_s=float(v["rotate.pose_fresh_s"]),
+        flip_above=None if v.get("rotate.flip_above_deg") is None else rad(v["rotate.flip_above_deg"]),
     )
 
 
@@ -488,4 +499,6 @@ def rotate_line(values: dict[str, Any]) -> str:
         f"rotate on · deadband {v['rotate.deadband_deg']:g} · min {v['rotate.min_deg']:g} · "
         f"max {v['rotate.max_deg']:g} · ω {v['rotate.omega_max_dps']:g} · "
         f"α {v['rotate.alpha_dps2']:g} · home {'goal' if home is None else f'{home:g}'}"
+        + (f" · flip >{v['rotate.flip_above_deg']:g} → −" if v.get("rotate.flip_above_deg") is not None else "")
+        + (f" · lost(회전) {v['rotate.lost_timeout_s']:g} s" if v.get("rotate.lost_timeout_s") is not None else "")
     )

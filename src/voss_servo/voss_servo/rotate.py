@@ -103,6 +103,7 @@ class RotCfg:
     lag_s: float  # pose stamp 지연 (input.pose_lag_ms)
     extrap_max_s: float  # 외삽 지평 상한 (input.pose_extrap_max_ms)
     pose_fresh_s: float = POSE_FRESH_FOR_ZERO  # "값 그대로 = 정지" 를 믿는 pose 수신 나이 상한
+    flip_above: float | None = None  # + Δ 가 이보다 크면 Δ − π 로 반대 방향 회전 (10/15 U14 실기: + 회전 시야 나쁨). None = 끔
 
 
 @dataclass(frozen=True)
@@ -321,6 +322,9 @@ def decide(agg: Aggregate, inp: RotInputs, cfg: RotCfg) -> tuple[str, float | No
     if inp.err_along is not None and inp.err_along > 0.0:
         return DOWNSTREAM, None  # 박스가 이미 TCP 하류 (시야 판정 근거 없음)
     delta = fold_half(agg.target - cfg.belt_yaw)  # 벨트 방향 기준 상대각 = 돌릴 양
+    if cfg.flip_above is not None and delta > cfg.flip_above:
+        # 180° 대칭: + 쪽 큰 각은 − 쪽으로 (예 +80° → −100°). + 회전은 카메라가 박스를 비스듬히 봐 LOST 가 잦다
+        delta -= math.pi
     if abs(delta) <= max(cfg.deadband, cfg.min_rot):
         return SMALL, delta  # 작은 각 — 그리퍼가 스스로 맞춘다
     if abs(delta) > cfg.max_rot:
