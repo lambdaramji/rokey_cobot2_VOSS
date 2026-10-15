@@ -44,6 +44,17 @@ class CommandControllerTest {
         verify(publisher, never()).publish(anyMap());
     }
 
+    @Test
+    void testForgedLocalHeaderFromRemotePeerIsRejected() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("X-Real-IP", "127.0.0.1");
+        request.setRemoteAddr("192.0.2.20");
+        ApiException error = assertThrows(ApiException.class, () ->
+                controller.command(mapper.readTree("{\"type\":\"start\",\"args\":{}}"), request));
+        assertEquals("FORBIDDEN_REMOTE", error.code());
+        verify(publisher, never()).publish(anyMap());
+    }
+
     /** stop은 원격 요청이라도 발행 가능해야 한다. */
     @Test
     void testRemoteStopIsAllowed() throws Exception {

@@ -29,8 +29,10 @@ public class VoiceAnnouncementController {
     @PostMapping("/api/voice/announce")
     public ResponseEntity<Map<String, Object>> announce(@RequestBody JsonNode request,
                                                           HttpServletRequest servletRequest) {
-        if (!"127.0.0.1".equals(servletRequest.getHeader("X-Real-IP"))
-                && !"::1".equals(servletRequest.getHeader("X-Real-IP"))) {
+        String realIp = servletRequest.getHeader("X-Real-IP");
+        String peerIp = servletRequest.getRemoteAddr();
+        if ((!"127.0.0.1".equals(realIp) && !"::1".equals(realIp))
+                || (!"127.0.0.1".equals(peerIp) && !"::1".equals(peerIp))) {
             throw new ApiException(HttpStatus.FORBIDDEN, "FORBIDDEN_REMOTE",
                     "공용 PC 로컬에서만 음성 안내를 요청할 수 있습니다.");
         }

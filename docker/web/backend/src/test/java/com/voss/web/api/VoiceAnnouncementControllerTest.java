@@ -46,4 +46,14 @@ class VoiceAnnouncementControllerTest {
                 controller.announce(mapper.readTree("{\"action\":\"start\",\"text\":\"임의 음성\"}"), local)).status());
         verify(publisher, never()).publish(org.mockito.ArgumentMatchers.anyMap());
     }
+
+    @Test
+    void forgedLocalHeaderFromRemotePeerCannotAnnounce() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("X-Real-IP", "127.0.0.1");
+        request.setRemoteAddr("192.0.2.20");
+        assertEquals(HttpStatus.FORBIDDEN, assertThrows(ApiException.class, () ->
+                controller.announce(mapper.readTree("{\"action\":\"start\"}"), request)).status());
+        verify(publisher, never()).publish(org.mockito.ArgumentMatchers.anyMap());
+    }
 }
