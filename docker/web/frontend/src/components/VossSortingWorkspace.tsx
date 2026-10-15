@@ -1,53 +1,50 @@
 /**
  * VOSS Sorting Workspace: 기존 React HMI 안에 들어가는 읽기 전용 2D 시각화.
  * 입력: /api/stream(state/result/robot) 및 /api/sessions/current 집계.
- * 출력: 실제 구역 기준점과 DB 수량. DEMO에서만 가상 로봇·박스 애니메이션.
+ * 출력: 실제 구역 기준점과 DB 수량. 로봇 그림은 상태 이벤트에 반응하는 표현용 애니메이션.
  * 관련: docs/interfaces/web_api.md #68, mqtt.md #20, voss_config.md.
  */
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import {
   PIXELS_PER_MM,
   getBeltLayout,
   getTrayShellHorizontalLayout,
+  OBSERVE_MM,
   ROBOT_BASE_MM,
   ZONES,
   getZone,
   toScreen,
 } from '../lib/workspaceGeometry';
 import type { ZoneId, ZoneLayout } from '../lib/workspaceGeometry';
-import { JOINT_LIMITS_RAD, m0609Fk } from '../lib/robotFk';
-import { INITIAL_INDICATOR, VOICE_COMMAND_TIMEOUT_MS, reduceVoiceIndicator } from '../lib/voiceIndicator';
+import { INITIAL_INDICATOR, VOICE_COMMAND_TIMEOUT_MS, VOICE_FAILURE_DISPLAY_MS, reduceVoiceIndicator } from '../lib/voiceIndicator';
 import type { VoiceSignal } from '../lib/voiceIndicator';
-import type { BoxMotionSample, BoxTrackSample, Point3, RobotJointSample, RobotPoseSample } from '../lib/workspacePosition';
-import { boxTopFromTcp, parseBoxMotion, parseBoxTrack, parseRobotJoints, parseRobotPose, JOINT_STALE_MS, POSE_STALE_MS, TRACK_STALE_MS } from '../lib/workspacePosition';
+import type { BoxMotionSample, BoxTrackSample, Point3, RobotPoseSample } from '../lib/workspacePosition';
+import { boxTopFromTcp, parseBoxMotion, parseBoxTrack, parseRobotPose, POSE_STALE_MS, TRACK_STALE_MS } from '../lib/workspacePosition';
 import './VossSortingWorkspace.css';
 
 const STATE_TIMEOUT_MS = 3000;
 const STATS_REFRESH_MS = 2000;
 const DEMO_ZONES = ['A', 'B', 'C', 'RECHECK', 'HOLD'] as const;
 type DemoPhase = 'RUNNING' | 'PICKING' | 'PLACING' | 'RETURNING';
+type IllustrationPhase = DemoPhase | 'CARRYING';
 const DEMO_PHASE_MS: Record<DemoPhase, number> = { RUNNING: 5000, PICKING: 1000, PLACING: 3000, RETURNING: 1000 };
 const BOX_WIDTH = 34;
 const BOX_HEIGHT = 36;
-// RViz2 robot_visualizer.py의 2026-10-12 실측 관절 자세. 아래 변형은 DEMO 전용이다.
-const DEMO_OBSERVE_RAD = [-93.87, -13.24, 97.51, 0, 95.73, -185].map((angle) => angle * Math.PI / 180);
-const DEMO_ZONE_J1_DEG: Record<(typeof DEMO_ZONES)[number], number> = {
-  A: -38.87, B: -8.87, C: 21.13, RECHECK: -118.87, HOLD: -138.87,
-};
-function demoJoints(phase: DemoPhase, zone: ZoneId | undefined): readonly number[] {
-  const values = [...DEMO_OBSERVE_RAD];
-  if (phase === 'PICKING') {
-    values[1] += 5 * Math.PI / 180;
-    values[2] += 10 * Math.PI / 180;
-  } else if (phase === 'PLACING' && zone && zone in DEMO_ZONE_J1_DEG) {
-    values[0] = DEMO_ZONE_J1_DEG[zone as (typeof DEMO_ZONES)[number]] * Math.PI / 180;
-    values[1] -= 18 * Math.PI / 180;
-    values[2] -= 25 * Math.PI / 180;
+const ARM_UPPER_PX = 180;
+const ARM_FOREARM_PX = 170;
+const ARM_MAX_REACH_PX = 320;
+type ScreenPoint = { x: number; y: number };
+function illustrationTarget(phase: IllustrationPhase, zone: ZoneId | undefined): ScreenPoint {
+  if (phase === 'PICKING') return toScreen(60, -285);
+  if (phase === 'CARRYING') return toScreen(180, -20);
+  if (phase === 'PLACING') {
+    const target = getZone(zone);
+    if (target) return toScreen(target.xMm, target.yMm);
   }
-  return values.map((value, index) => Math.max(JOINT_LIMITS_RAD[index][0], Math.min(JOINT_LIMITS_RAD[index][1], value)));
+  return toScreen(OBSERVE_MM.x, OBSERVE_MM.y);
 }
-const DEMO_PICKUP_TOOL0 = m0609Fk(demoJoints('PICKING', undefined)).tool0;
+const DEMO_PICKUP_POINT = illustrationTarget('PICKING', undefined);
 function configuredBoxOffset(): Point3 | null {
   if (import.meta.env.VITE_VOSS_BOX_OFFSET_VERIFIED !== 'true') return null;
   const values = String(import.meta.env.VITE_VOSS_TCP_BOX_TOP_OFFSET_MM ?? '').split(',').map(Number);
@@ -58,12 +55,18 @@ const VERIFIED_BOX_OFFSET = configuredBoxOffset();
 const workspaceBelt = getBeltLayout();
 const WORKSPACE_VIEWBOX_LEFT = workspaceBelt.leftX - 32;
 const WORKSPACE_VIEWBOX_WIDTH = workspaceBelt.lengthPx + 64;
-const WORKSPACE_VIEWBOX_HEIGHT = 1035;
+const WORKSPACE_VIEWBOX_TOP = 140;
+const WORKSPACE_VIEWBOX_HEIGHT = 815;
 const truckShell = getTrayShellHorizontalLayout(getZone('TRUCK')!);
 const zoneCShell = getTrayShellHorizontalLayout(getZone('C')!);
+const holdShell = getTrayShellHorizontalLayout(getZone('HOLD')!);
+// 각 구역의 표시 테두리는 동일 크기다. 실제 구역 좌표와 적재 용량은 바꾸지 않는다.
+const TRAY_DISPLAY_WIDTH_PX = getTrayShellHorizontalLayout(getZone('A')!).widthPx;
+const TRAY_DISPLAY_HEIGHT_PX = getZone('A')!.pitchYMm * PIXELS_PER_MM + 49 + 24;
+const SECTOR_C_EDGE_OFFSET_PX = holdShell.centerX - zoneCShell.centerX;
 const headerAlignment: CSSProperties = {
   marginLeft: `${((truckShell.leftX - WORKSPACE_VIEWBOX_LEFT) / WORKSPACE_VIEWBOX_WIDTH) * 100}%`,
-  marginRight: `${((WORKSPACE_VIEWBOX_LEFT + WORKSPACE_VIEWBOX_WIDTH - zoneCShell.leftX - zoneCShell.widthPx) / WORKSPACE_VIEWBOX_WIDTH) * 100}%`,
+  marginRight: `${((WORKSPACE_VIEWBOX_LEFT + WORKSPACE_VIEWBOX_WIDTH - holdShell.centerX - TRAY_DISPLAY_WIDTH_PX / 2) / WORKSPACE_VIEWBOX_WIDTH) * 100}%`,
 };
 
 type ZoneCounts = Partial<Record<ZoneId, number>>;
@@ -94,10 +97,8 @@ export interface WorkspaceViewData {
   robot: RobotStateSnapshot | null;
   boxTracks?: BoxTrackSample[];
   robotPose?: RobotPoseSample | null;
-  robotJoints?: RobotJointSample | null;
   boxMotion?: BoxMotionSample | null;
   isPoseFresh?: boolean;
-  isJointsFresh?: boolean;
   lastResult: SortResultSnapshot | null;
   zoneCounts: ZoneCounts | null;
   isStateFresh: boolean;
@@ -105,6 +106,9 @@ export interface WorkspaceViewData {
   isDemo?: boolean;
   voiceSignal?: VoiceSignal | null;
   voiceConnected?: boolean;
+  /** 트레이 '비움' 버튼. 없으면 읽기 전용. 팔레트 패널의 '트럭 짐칸 비움 확인'과 같은 reset_zone 명령이다. */
+  controlEnabled?: boolean;
+  onResetZone?: (zone: ZoneId) => void;
 }
 
 interface SessionApiResponse {
@@ -116,6 +120,10 @@ interface SessionApiResponse {
 interface TrayProps {
   zone: ZoneLayout;
   count: number | undefined;
+  /** '비움' 버튼 — reset_zone 은 PAUSED 에서만 접수된다. undefined 면 버튼을 그리지 않는다. */
+  onReset?: () => void;
+  resetEnabled?: boolean;
+  resetReason?: string;
 }
 
 const TRAY_COLORS: Record<ZoneId, string> = {
@@ -142,117 +150,164 @@ function normalizeCounts(byZone: Record<string, number> | undefined): ZoneCounts
   return counts;
 }
 
-/** 기존 적재함 윤곽 안에 현재 세션의 공식 처리 수량만 표시한다. */
-function Tray({ zone, count }: TrayProps) {
+/** 비움 확인 대화상자 — 칸 기록만 0 으로 되돌리므로 실물 비움은 작업자가 눈으로 확인한다 (팔레트 패널과 같은 규칙). */
+function confirmResetZone(zone: ZoneId, count: number | undefined, onResetZone: (zone: ZoneId) => void): void {
+  const shown = count ? ` (화면상 ${count}개)` : '';
+  const ok = window.confirm(
+    `${zone} 구역에 박스가 하나도 남아 있지 않은 것을 눈으로 확인했나요?\n`
+    + `확인하면 ${zone} 구역 칸 기록을 비웁니다${shown}. 로봇은 움직이지 않습니다.\n`
+    + '박스가 남아 있으면 \'취소\' 후 먼저 내리세요 — 남은 채 비우면 다음 적재가 그 칸에 겹쳐 놓습니다.',
+  );
+  if (ok) onResetZone(zone);
+}
+
+/** 기존 적재함 윤곽 안에 현재 세션의 공식 처리 수량만 표시한다. TRUCK 은 팔레트 적재 칸(DONE) 수. */
+function Tray({ zone, count, onReset, resetEnabled = false, resetReason = '' }: TrayProps) {
   const { y } = toScreen(zone.xMm, zone.yMm);
-  const pitchY = zone.pitchYMm * PIXELS_PER_MM;
-  const cellHeight = zone.rows === 1 ? 44 : 49;
   const trayShell = getTrayShellHorizontalLayout(zone);
-  const trayCenterX = trayShell.centerX;
-  const outerHeight = (zone.rows - 1) * pitchY + cellHeight + 24;
+  const visualOffsetX = zone.name === 'C' ? SECTOR_C_EDGE_OFFSET_PX
+    : zone.name === 'TRUCK' ? truckShell.leftX + TRAY_DISPLAY_WIDTH_PX / 2 - trayShell.centerX : 0;
+  const trayCenterX = trayShell.centerX + visualOffsetX;
   const countText = count === undefined ? '—' : `${count} BOX`;
   const color = TRAY_COLORS[zone.name];
 
   return (
     <g className="voss-ws__tray">
-      <text x={trayCenterX} y={y - outerHeight / 2 - 22} textAnchor="middle" className="voss-ws__zone-title">
-        {['A', 'B', 'C'].includes(zone.name) ? `TRUCK ${zone.name}` : zone.name}
+      <text x={trayCenterX} y={y - TRAY_DISPLAY_HEIGHT_PX / 2 - 22} textAnchor="middle" className="voss-ws__zone-title">
+        {['A', 'B', 'C'].includes(zone.name) ? `SECTOR ${zone.name}` : zone.name === 'TRUCK' ? 'TRUCK' : zone.name}
       </text>
       <rect
-        x={trayShell.leftX}
-        y={y - outerHeight / 2}
-        width={trayShell.widthPx}
-        height={outerHeight}
+        x={trayCenterX - TRAY_DISPLAY_WIDTH_PX / 2}
+        y={y - TRAY_DISPLAY_HEIGHT_PX / 2}
+        width={TRAY_DISPLAY_WIDTH_PX}
+        height={TRAY_DISPLAY_HEIGHT_PX}
         rx="16"
         className="voss-ws__tray-shell"
         stroke={color}
       />
-      {zone.name !== 'TRUCK' ? (
-        <text x={trayCenterX} y={y + 10} textAnchor="middle" className="voss-ws__zone-count">
-          {countText}
-        </text>
+      <text x={trayCenterX} y={y + 10} textAnchor="middle" className="voss-ws__zone-count">
+        {countText}
+      </text>
+      {zone.name !== 'TRUCK' && onReset ? (
+        <foreignObject x={trayCenterX - 60} y={y + TRAY_DISPLAY_HEIGHT_PX / 2 - 44} width="120" height="36">
+          <button type="button" className="voss-ws__tray-reset" disabled={!resetEnabled}
+            title={resetEnabled ? '실물을 비운 뒤 칸 기록을 0 으로 되돌린다 (로봇 동작 없음)' : resetReason}
+            onClick={onReset}>비움</button>
+        </foreignObject>
       ) : null}
     </g>
   );
 }
 
-/** URDF FK 결과만 팔 관절로 그린다. TCP는 별도 실측 스트림의 독립 마커다. */
-function Robot({ joints, jointsFresh, pose, poseFresh, isDemo, picking }: {
-  joints: readonly number[] | null; jointsFresh: boolean;
-  pose?: RobotPoseSample | null; poseFresh: boolean; isDemo: boolean; picking: boolean;
+/** 표현용 2링크 팔. 끝점은 회전각과 반경을 보간하므로 상태 변경 시 원호를 따라 움직인다. */
+function Robot({ phase, zone, pose, poseFresh, picking }: {
+  phase: IllustrationPhase; zone: ZoneId | undefined;
+  pose?: RobotPoseSample | null; poseFresh: boolean; picking: boolean;
 }) {
-  const [shown, setShown] = useState<readonly number[] | null>(null);
-  const shownRef = useRef<readonly number[] | null>(null);
-  const modeRef = useRef(isDemo);
+  const center = toScreen(ROBOT_BASE_MM.x, ROBOT_BASE_MM.y);
+  const target = illustrationTarget(phase, zone);
+  const dx = target.x - center.x;
+  const dy = target.y - center.y;
+  const targetAngle = Math.atan2(dy, dx);
+  const targetRadius = Math.max(80, Math.min(ARM_MAX_REACH_PX, Math.hypot(dx, dy)));
+  const [shown, setShown] = useState({ angle: targetAngle, radius: targetRadius });
+  const shownRef = useRef(shown);
+
   useEffect(() => {
-    const modeChanged = modeRef.current !== isDemo;
-    modeRef.current = isDemo;
-    if (!joints) {
-      shownRef.current = null;
-      setShown(null);
-      return;
-    }
-    if (!shownRef.current || modeChanged) {
-      shownRef.current = joints;
-      setShown(joints);
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const next = { angle: targetAngle, radius: targetRadius };
+      shownRef.current = next;
+      setShown(next);
       return;
     }
     let frame = 0;
     let previous = performance.now();
     function step(now: number) {
       const current = shownRef.current;
-      if (!current || !joints) return;
-      const fraction = Math.min(1, (now - previous) / 140);
+      const fraction = Math.min(1, (now - previous) / 190);
       previous = now;
-      const next = current.map((angle, index) => angle + (joints[index] - angle) * fraction);
+      const angleDelta = Math.atan2(Math.sin(targetAngle - current.angle), Math.cos(targetAngle - current.angle));
+      const radiusDelta = targetRadius - current.radius;
+      const next = {
+        angle: current.angle + angleDelta * fraction,
+        radius: current.radius + radiusDelta * fraction,
+      };
       shownRef.current = next;
       setShown(next);
-      if (next.some((angle, index) => Math.abs(angle - joints[index]) > 0.0002)) {
-        frame = requestAnimationFrame(step);
-      }
+      if (Math.abs(angleDelta) > .002 || Math.abs(radiusDelta) > .4) frame = requestAnimationFrame(step);
     }
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
-  }, [joints, isDemo]);
+  }, [targetAngle, targetRadius]);
 
-  const center = toScreen(ROBOT_BASE_MM.x, ROBOT_BASE_MM.y);
-  const fk = shown ? m0609Fk(shown) : null;
-  const points = fk?.joints.map(([x, y]) => toScreen(x * 1000, y * 1000));
+  const reach = shown.radius;
+  const elbowOffset = Math.acos(Math.max(-1, Math.min(1,
+    (ARM_UPPER_PX ** 2 + reach ** 2 - ARM_FOREARM_PX ** 2) / (2 * ARM_UPPER_PX * reach))));
+  const elbow = {
+    x: center.x + ARM_UPPER_PX * Math.cos(shown.angle + elbowOffset),
+    y: center.y + ARM_UPPER_PX * Math.sin(shown.angle + elbowOffset),
+  };
+  const tip = {
+    x: center.x + reach * Math.cos(shown.angle),
+    y: center.y + reach * Math.sin(shown.angle),
+  };
+  const gripperAngle = Math.atan2(tip.y - elbow.y, tip.x - elbow.x) * 180 / Math.PI;
   const tcp = pose ? toScreen(pose.position.x * 1000, pose.position.y * 1000) : null;
-  const tool0 = points?.[6];
+  const links = [[center, elbow], [elbow, tip]];
+
   return (
-    <g>
+    <g className="voss-ws__robot">
+      <defs>
+        <linearGradient id="vossRobotShell" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#f1f9fc" />
+          <stop offset=".45" stopColor="#a5c4cf" />
+          <stop offset="1" stopColor="#537d91" />
+        </linearGradient>
+        <radialGradient id="vossRobotJoint">
+          <stop offset="0" stopColor="#284c62" />
+          <stop offset=".72" stopColor="#17354a" />
+          <stop offset="1" stopColor="#0a2032" />
+        </radialGradient>
+      </defs>
       <circle cx={center.x} cy={center.y} r="57" className="voss-ws__robot-area" />
+      <circle cx={center.x} cy={center.y} r="48" className="voss-ws__robot-base-rim" />
       <circle cx={center.x} cy={center.y} r="34" className="voss-ws__robot-base" />
-      {points ? <g className={!isDemo && !jointsFresh ? 'voss-ws__robot-arm--stopped' : ''}>
-        {points.slice(1).map((point, index) => <g key={index}>
-          <line x1={points[index].x} y1={points[index].y + 8} x2={point.x} y2={point.y + 8} className="voss-ws__arm-shadow" />
-          <line x1={points[index].x} y1={points[index].y} x2={point.x} y2={point.y} className="voss-ws__arm-link" />
-          <circle cx={point.x} cy={point.y} r={index === 5 ? 7 : 9} className="voss-ws__arm-joint" />
-        </g>)}
-        {picking && tool0 ? <rect x={tool0.x - 12} y={tool0.y - 12} width="24" height="24" rx="4" className="voss-ws__grip-preview" /> : null}
-      </g> : null}
+      {links.map(([from, to], index) => <g key={index}>
+        <line x1={from.x} y1={from.y + 7} x2={to.x} y2={to.y + 7} className="voss-ws__arm-shadow" />
+        <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} className="voss-ws__arm-outline" />
+        <line x1={from.x} y1={from.y} x2={to.x} y2={to.y} className="voss-ws__arm-link" />
+        <line x1={from.x} y1={from.y - 3} x2={to.x} y2={to.y - 3} className="voss-ws__arm-highlight" />
+      </g>)}
+      <circle cx={elbow.x} cy={elbow.y} r="13" className="voss-ws__arm-joint" />
+      <circle cx={elbow.x} cy={elbow.y} r="6" className="voss-ws__arm-joint-core" />
+      <circle cx={tip.x} cy={tip.y} r="11" className="voss-ws__arm-joint" />
+      <circle cx={tip.x} cy={tip.y} r="5" className="voss-ws__arm-joint-core" />
+      <g className="voss-ws__gripper" transform={`translate(${tip.x} ${tip.y}) rotate(${gripperAngle})`}>
+        <rect x="-3" y="-12" width="19" height="24" rx="5" className="voss-ws__gripper-body" />
+        <path d="M 15 -9 H 30 V -4 M 15 9 H 30 V 4" className="voss-ws__gripper-fingers" />
+        <circle cx="5" cy="0" r="2.8" className="voss-ws__gripper-pin" />
+      </g>
+      {picking ? <rect x={tip.x - 12} y={tip.y - 12} width="24" height="24" rx="4" className="voss-ws__grip-preview" /> : null}
       {tcp ? <circle cx={tcp.x} cy={tcp.y} r="5" className={`voss-ws__tcp-point ${poseFresh ? '' : 'voss-ws__tcp-point--stale'}`}>
-        <title>실제 TCP 위치 — FK tool0와 별도 좌표</title>
+        <title>실제 TCP 위치 — 표현용 팔과 별도 좌표</title>
       </circle> : null}
-      <circle cx={center.x} cy={center.y} r="12" className="voss-ws__robot-hub" />
-      <text x={center.x} y={center.y - 80} textAnchor="middle" className="voss-ws__robot-title">
-        {fk ? `M0609 · ${isDemo ? 'DEMO FK' : jointsFresh ? '6축 FK' : '관절 갱신 중단'}` : 'M0609 · 관절 위치 미수신'}
-      </text>
-      {fk && tool0 ? <text x={tool0.x + 12} y={tool0.y - 12} className="voss-ws__robot-z">tool0 Z {Math.round(fk.tool0[2] * 1000)} mm</text> : null}
+      <circle cx={center.x} cy={center.y} r="17" className="voss-ws__robot-hub" />
+      <circle cx={center.x} cy={center.y} r="5" className="voss-ws__robot-hub-core" />
+      <text x={center.x} y={center.y - 80} textAnchor="middle" className="voss-ws__robot-title">M0609 · 모션 표현</text>
       {pose ? <text x={center.x} y={center.y + 103} textAnchor="middle" className="voss-ws__robot-z">TCP Z {Math.round(pose.position.z * 1000)} mm{poseFresh ? '' : ' · 갱신 중단'}</text> : null}
     </g>
   );
 }
 
 /** 순수 SVG이므로 브라우저에서만 표시되며 ROS나 MQTT 명령을 전송하지 않는다. */
-export function VossSortingWorkspace({ state, robot, boxTracks = [], robotPose = null, robotJoints = null, boxMotion = null, isPoseFresh = false, isJointsFresh = false, zoneCounts, isStateFresh, isRobotFresh = false, isDemo = false, voiceSignal = null, voiceConnected = true }: WorkspaceViewData) {
+export function VossSortingWorkspace({ state, boxTracks = [], robotPose = null, boxMotion = null, isPoseFresh = false, zoneCounts, isStateFresh, isDemo = false, voiceSignal = null, voiceConnected = true, lastResult, controlEnabled = false, onResetZone }: WorkspaceViewData) {
   const [flashZone, setFlashZone] = useState<ZoneId | undefined>(undefined);
   const [flightBoxId, setFlightBoxId] = useState('');
   const [demoActive, setDemoActive] = useState(false);
   const [demoPhase, setDemoPhase] = useState<DemoPhase>('RUNNING');
   const [demoIndex, setDemoIndex] = useState(0);
   const [demoCounts, setDemoCounts] = useState<ZoneCounts | null>(null);
+  const [recentPlacement, setRecentPlacement] = useState<ZoneId | undefined>();
   const [voiceIndicator, dispatchVoice] = useReducer(reduceVoiceIndicator, INITIAL_INDICATOR);
   const micTest = new URLSearchParams(window.location.search).get('micTest') === '1';
   const demoEnabled = ['localhost', '127.0.0.1'].includes(window.location.hostname)
@@ -294,6 +349,25 @@ export function VossSortingWorkspace({ state, robot, boxTracks = [], robotPose =
     }, delay);
     return () => window.clearTimeout(timer);
   }, [demoActive, demoPhase, demoIndex]);
+
+  useEffect(() => {
+    if (boxMotion?.phase !== 'RELEASED' || boxMotion.session_id !== state?.session_id) return;
+    const zone = getZone(boxMotion.zone);
+    if (!zone || zone.name === 'TRUCK') return;
+    setRecentPlacement(zone.name);
+    const timer = window.setTimeout(() => setRecentPlacement(undefined), 1800);
+    return () => window.clearTimeout(timer);
+  }, [boxMotion, state?.session_id]);
+
+  useEffect(() => {
+    if (!lastResult || lastResult.session_id !== state?.session_id
+      || !['PLACED', 'HELD'].includes(lastResult.outcome ?? '')) return;
+    const zone = getZone(lastResult.zone);
+    if (!zone || zone.name === 'TRUCK') return;
+    setRecentPlacement(zone.name);
+    const timer = window.setTimeout(() => setRecentPlacement(undefined), 1800);
+    return () => window.clearTimeout(timer);
+  }, [lastResult, state?.session_id]);
   function testMicColor(color: 'green' | 'yellow' | 'red') {
     dispatchVoice({ type: 'RESET' });
     if (color === 'green') return;
@@ -327,29 +401,38 @@ export function VossSortingWorkspace({ state, robot, boxTracks = [], robotPose =
     return () => window.clearTimeout(timeout);
   }, [voiceIndicator.color, voiceIndicator.activeUtteranceId]);
 
+  useEffect(() => {
+    if (voiceIndicator.color !== 'red') return;
+    const activeId = voiceIndicator.activeUtteranceId;
+    const timer = window.setTimeout(() => {
+      dispatchVoice({ type: 'UI_RECOVER', utteranceId: activeId });
+    }, VOICE_FAILURE_DISPLAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [voiceIndicator.color, voiceIndicator.activeUtteranceId]);
+
   const rawState = demoActive ? demoPhase : isStateFresh ? (state?.state ?? 'UNKNOWN') : 'UNKNOWN';
   // SortState.track_id는 좌표가 아니다. 위치 스트림 승인 전 LIVE 박스를 추정 생성하지 않는다.
   const previewBox = demoActive && rawState === 'RUNNING';
-  const demoJointPosition = useMemo(() => demoActive ? demoJoints(demoPhase, flashZone) : null, [demoActive, demoPhase, flashZone]);
+  const grasped = !demoActive && boxMotion?.phase === 'GRASPED'
+    && boxMotion.session_id === state?.session_id && Boolean(state?.session_id);
+  const illustrationPhase: IllustrationPhase = demoActive ? demoPhase
+    : recentPlacement ? 'PLACING' : grasped ? 'CARRYING' : rawState === 'PICKING' ? 'PICKING' : 'RUNNING';
+  const illustrationZone = demoActive ? flashZone : recentPlacement;
   const observedBox = demoActive ? null : boxTracks.find((track) => track.position_valid && track.position_base);
   const belt = getBeltLayout(observedBox?.position_base ? observedBox.position_base.y * 1000 : undefined);
   const beltCenterX = belt.leftX + belt.lengthPx / 2;
-  const robotIsConnected = demoActive || (isRobotFresh && robot?.connected === true);
-  const poseStatus = isPoseFresh ? 'TCP 실시간(근사)' : robotPose ? 'TCP 갱신 중단' : 'TCP 위치 미수신';
-  const grasped = !demoActive && boxMotion?.phase === 'GRASPED'
-    && boxMotion.session_id === state?.session_id && Boolean(state?.session_id);
   const carriedTop = grasped && robotPose && VERIFIED_BOX_OFFSET
     ? boxTopFromTcp(robotPose, VERIFIED_BOX_OFFSET) : null;
-  const jointsStatus = isJointsFresh ? '6축 관절 실시간' : robotJoints ? '관절 갱신 중단' : '관절 미수신';
-  const caption = `${rawState} · ${robotIsConnected ? '로봇 연결' : '로봇 미확인'} · ${poseStatus} · ${jointsStatus}`;
   const placementZone = demoActive && flightBoxId ? getZone(flashZone) : undefined;
+  // sort_manager 는 reset_zone 을 PAUSED 에서만 받는다 (voss_msgs.md Command).
+  const resetZoneEnabled = controlEnabled && !demoActive && rawState === 'PAUSED';
   const robotCenter = toScreen(ROBOT_BASE_MM.x, ROBOT_BASE_MM.y);
   const voiceWidgetLeft = `${((belt.leftX - WORKSPACE_VIEWBOX_LEFT) / WORKSPACE_VIEWBOX_WIDTH) * 100}%`;
-  const voiceWidgetTop = `${(robotCenter.y / WORKSPACE_VIEWBOX_HEIGHT) * 100}%`;
+  const voiceWidgetTop = `${((robotCenter.y - WORKSPACE_VIEWBOX_TOP) / WORKSPACE_VIEWBOX_HEIGHT) * 100}%`;
   const targetCenter = placementZone ? toScreen(placementZone.xMm, placementZone.yMm) : null;
-  const demoPickupPoint = toScreen(DEMO_PICKUP_TOOL0[0] * 1000, DEMO_PICKUP_TOOL0[1] * 1000);
-  const packageStartX = demoPickupPoint.x;
-  const packageStartY = demoPickupPoint.y;
+  if (targetCenter && placementZone?.name === 'C') targetCenter.x += SECTOR_C_EDGE_OFFSET_PX;
+  const packageStartX = DEMO_PICKUP_POINT.x;
+  const packageStartY = DEMO_PICKUP_POINT.y;
   const demoBoxStartX = belt.leftX + belt.activeBeltInsetPx + 8;
   const demoTravelPx = Math.max(0, packageStartX - BOX_WIDTH / 2 - demoBoxStartX);
   const packageMotion = targetCenter ? {
@@ -373,13 +456,13 @@ export function VossSortingWorkspace({ state, robot, boxTracks = [], robotPose =
           {demoEnabled ? <button type="button" className="voss-ws__demo-button" onClick={demoActive ? stopDemo : startDemo}>
             {demoActive ? 'DEMO MODE 종료' : 'DEMO MODE 시작'}
           </button> : null}
-          <span className={`voss-ws__status ${!demoActive && isStateFresh ? 'voss-ws__status--live' : ''}`}>
-            {demoActive ? 'DEMO / MOCK DATA' : isDemo ? 'DEMO' : caption}
-          </span>
+          {demoActive || isDemo ? <span className="voss-ws__status">
+            {demoActive ? 'DEMO / MOCK DATA' : 'DEMO'}
+          </span> : null}
         </div>
       </header>
       <div className="voss-ws__canvas">
-        <svg viewBox={`${WORKSPACE_VIEWBOX_LEFT} 0 ${WORKSPACE_VIEWBOX_WIDTH} ${WORKSPACE_VIEWBOX_HEIGHT}`} role="img" aria-label="로봇 베이스 기준 실제 X/Y 위치에 배치된 TRUCK, A, B, C, RECHECK, HOLD, 컨베이어 평면도" preserveAspectRatio="xMidYMid meet">
+        <svg viewBox={`${WORKSPACE_VIEWBOX_LEFT} ${WORKSPACE_VIEWBOX_TOP} ${WORKSPACE_VIEWBOX_WIDTH} ${WORKSPACE_VIEWBOX_HEIGHT}`} role="img" aria-label="로봇 베이스 기준 실제 X/Y 위치에 배치된 TRUCK, A, B, C, RECHECK, HOLD, 컨베이어 평면도" preserveAspectRatio="xMidYMid meet">
         <defs>
           <pattern id="vossWsGrid" width="52" height="52" patternUnits="userSpaceOnUse">
             <path d="M 52 0 L 0 0 0 52" fill="none" stroke="#19384c" strokeWidth="1" opacity=".40" />
@@ -389,7 +472,10 @@ export function VossSortingWorkspace({ state, robot, boxTracks = [], robotPose =
         <rect width="1550" height="1035" rx="20" fill="url(#vossWsGrid)" />
         {/* 제어 패널에서 mm의 동일 축척을 사용한다. 실제 벨트 외곽 좌표는 미계측이다. */}
         {ZONES.map((zone) => (
-          <Tray key={zone.name} zone={zone} count={demoActive ? demoCounts?.[zone.name] : zoneCounts?.[zone.name]} />
+          <Tray key={zone.name} zone={zone} count={demoActive ? demoCounts?.[zone.name] : zoneCounts?.[zone.name]}
+            onReset={onResetZone && !demoActive ? () => confirmResetZone(zone.name, zoneCounts?.[zone.name], onResetZone) : undefined}
+            resetEnabled={resetZoneEnabled}
+            resetReason={!controlEnabled ? '공용 PC 로컬 · MQTT 연결 중에만' : rawState !== 'PAUSED' ? '정지(PAUSED) 상태에서만 비울 수 있습니다' : ''} />
         ))}
         {/* 벨트 외곽 실측값은 없으므로 LIVE 중심선만 현재 관측 박스의 Y에 맞춘다. */}
         <g>
@@ -429,8 +515,7 @@ export function VossSortingWorkspace({ state, robot, boxTracks = [], robotPose =
             <title>{`파지 확인 ${boxMotion?.box_id}; 검증된 TCP→박스 오프셋 적용`}</title>
           </g>;
         })() : null}
-        <Robot joints={demoActive ? demoJointPosition : robotJoints?.position ?? null}
-          jointsFresh={demoActive || isJointsFresh} isDemo={demoActive}
+        <Robot phase={illustrationPhase} zone={illustrationZone}
           picking={demoActive && rawState === 'PICKING'}
           pose={demoActive ? null : robotPose} poseFresh={isPoseFresh} />
         {targetCenter && packageMotion ? (
@@ -479,7 +564,7 @@ export function VossSortingWorkspace({ state, robot, boxTracks = [], robotPose =
             {voiceIndicator.failure === 'timeout'
               ? '시간이 지났어요. 다시 “헬로 로키”라고 말해 주세요.'
               : '음성을 인식하지 못했어요. 다시 “헬로 로키”라고 말해 주세요.'}
-            <span>아이콘을 누르면 초록색으로 초기화됩니다.</span>
+            <span>3초 후 대기 상태로 돌아갑니다.</span>
           </div>
         ) : null}
       </div>
@@ -494,7 +579,6 @@ export function VossSortingWorkspaceLive() {
   const [robot, setRobot] = useState<RobotStateSnapshot | null>(null);
   const [boxTracks, setBoxTracks] = useState<Record<number, BoxTrackSample>>({});
   const [robotPose, setRobotPose] = useState<RobotPoseSample | null>(null);
-  const [robotJoints, setRobotJoints] = useState<RobotJointSample | null>(null);
   const [boxMotion, setBoxMotion] = useState<BoxMotionSample | null>(null);
   const [lastResult, setLastResult] = useState<SortResultSnapshot | null>(null);
   const [zoneCounts, setZoneCounts] = useState<ZoneCounts | null>(null);
@@ -576,12 +660,6 @@ export function VossSortingWorkspaceLive() {
         if (isMounted && sample) setRobotPose(sample);
       } catch (error) { console.error('[VOSS Workspace] robot_pose JSON 파싱 실패', error); }
     });
-    source.addEventListener('robot_joints', (event) => {
-      try {
-        const sample = parseRobotJoints(JSON.parse((event as MessageEvent).data));
-        if (isMounted && sample) setRobotJoints(sample);
-      } catch (error) { console.error('[VOSS Workspace] robot_joints JSON 파싱 실패', error); }
-    });
     source.addEventListener('box_motion', (event) => {
       try {
         const sample = parseBoxMotion(JSON.parse((event as MessageEvent).data));
@@ -642,10 +720,8 @@ export function VossSortingWorkspaceLive() {
       robot={robot}
       boxTracks={Object.values(boxTracks).filter((track) => now - track.receivedAt < TRACK_STALE_MS)}
       robotPose={robotPose}
-      robotJoints={robotJoints}
       boxMotion={boxMotion}
       isPoseFresh={robotPose !== null && now - robotPose.receivedAt < POSE_STALE_MS}
-      isJointsFresh={robotJoints !== null && now - robotJoints.receivedAt < JOINT_STALE_MS}
       lastResult={matchingResult}
       zoneCounts={sessionMatches ? zoneCounts : null}
       isRobotFresh={lastRobotAt > 0 && now - lastRobotAt < STATE_TIMEOUT_MS}

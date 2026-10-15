@@ -4,6 +4,8 @@
 
 ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React, `/api` → Spring Boot(127.0.0.1:8080) 로 넘어간다. **Nginx 는 `/ai` 를 넘기지 않는다** — FastAPI 는 음성 ROS 노드만 `http://127.0.0.1:8000` 으로 부른다(Wi-Fi 에서 OpenAI 사용량이 나가지 않게). 브라우저·Spring Boot 는 ROS 에 직접 붙지 않는다(ROS ↔ 웹은 MQTT, `mqtt.md`).
 
+카메라 화면은 같은 Nginx(80)의 `GET /camera/gripper/frame.jpg`와 `GET /camera/usb/frame.jpg`를 사용한다. 두 경로는 Web PC 로컬 브라우저(`127.0.0.1`/`::1`)에서만 허용하고, Nginx가 각각 Web PC 로컬 `127.0.0.1:8091`·`127.0.0.1:8092`로 프록시한다. Nodes PC 송출 노드는 loopback 바인드를 유지하고 Web PC에서 SSH `-L` 터널로 연결한다. 원격 브라우저의 카메라 요청은 거부한다.
+
 ## 공통
 - JSON, UTF-8. 시각은 ISO-8601 `+09:00` 문자열(공용 PC 시스템 시계).
 - 실패 응답: HTTP 4xx/5xx + `{"ok": false, "message": "<대문자 코드>", "detail": "<사람이 읽을 문구>"}`.
@@ -17,7 +19,7 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
   | 8080 Spring Boot (`server.address=127.0.0.1`) · 8000 FastAPI · 5432 PostgreSQL (`listen_addresses=localhost`) | 127.0.0.1 | ❌ |
 
   로봇망 `enp4s0` 에는 어떤 웹·MQTT 포트도 열지 않는다.
-- **로봇을 움직이는 명령의 접근 제한 (안전, #68 남현지 🔴):** `POST /api/commands` 의 `start`·`resume`·`priority`·`answer`·`reset_zone`·`palletize`(Sprint 2) 는 **공용 PC 로컬 접속(공용 PC 화면의 HMI)** 에서만 받는다. 그 밖은 `403 {"ok": false, "message": "FORBIDDEN_REMOTE"}`. **`stop` 은 어디서든 받는다**(멈추는 쪽은 막지 않는다). 조회(`GET`)·SSE 는 `wlo1` 허용.
+- **로봇을 움직이는 명령의 접근 제한 (안전, #68 남현지 🔴):** `POST /api/commands` 의 `start`·`resume`·`priority`·`answer`·`recheck`·`reset_zone`·`palletize`(Sprint 2) 는 **공용 PC 로컬 접속(공용 PC 화면의 HMI)** 에서만 받는다. Spring은 Nginx의 `X-Real-IP`와 실제 연결 피어(`getRemoteAddr`)가 모두 loopback일 때만 허용한다. 그 밖은 `403 {"ok": false, "message": "FORBIDDEN_REMOTE"}`. **`stop` 은 어디서든 받는다**(멈추는 쪽은 막지 않는다). 조회(`GET`)·SSE 는 `wlo1` 허용.
   - 원격 판정은 Nginx 가 넣는 `X-Real-IP $remote_addr` 로만 한다. 클라이언트가 보낸 `X-Forwarded-For` 는 믿지 않는다(Nginx 뒤에서는 모든 요청이 127.0.0.1 로 보이므로).
   - 판정은 Spring Boot 한 곳에서만 한다. hmi_bridge(ROS) 는 원격 여부를 다시 판단하지 않는다.
 - **Mosquitto ACL:** `voss/command` 쓰기는 Spring Boot 계정(`web`)만. 개인 PC 디버그 계정(`debug`)은 `voss/#` 읽기만. hmi_bridge 계정(`bridge`)은 `voss/command` 읽기와 bridge 출력 토픽만 쓰기(`voss/command` write 금지). 비밀번호는 Git에 넣지 않는다. 브로커는 공용 PC 호스트 1883이며 시연 때 `wlo1`의 1883은 닫는다. 상세는 #20 `mqtt.md`.
@@ -75,14 +77,25 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 - 행을 사후에 고르지 않는다. 필터는 받는 쪽에서 SQL·스프레드시트로 한다.
 
 ### `POST /api/commands` — HMI 버튼 → MQTT `voss/command`
-- 요청 `{"type": "start|stop|resume|priority|answer|reset_zone|palletize", "args": {...}, "raw_text": "HMI 버튼"}` (type·args 는 `Command` canonical 표, voss_msgs.md)
+- 요청 `{"type": "start|stop|resume|priority|answer|recheck|reset_zone|palletize", "args": {...}, "raw_text": "HMI 버튼"}` (type·args 는 `Command` canonical 표, voss_msgs.md). `recheck`의 `args`는 `{}`.
 - Spring Boot 가 `command_id`(UUID)·`sent_at` 을 붙여 MQTT 로 발행하고 **즉시** `202 {"ok": true, "command_id": "…"}` 를 준다. 이것은 "브로커 전달" 이지 manager 접수가 아니다.
 - manager 접수 결과는 SSE `command_ack` 이벤트로 온다(hmi_bridge 가 `/voss/sort/command` 응답을 `voss/command/ack` 로 회신). 완료는 `state`·`result` 이벤트로 본다.
 - 브로커 끊김: `503 {"ok": false, "message": "MQTT_DOWN"}`, HMI 버튼 비활성화.
 - 원격에서 움직이는 명령: `403 FORBIDDEN_REMOTE`(위 공통 절). `stop` 은 원격·로컬 모두 받는다.
 - **Sprint 2 인자 검사 (S2-T08, 발행 전에 Spring Boot 가 본다):**
   - `palletize` — `args` 는 `{"route": [...]}` 키 하나. `route` = 문자열 배열 1~3개·중복 없음·빈 문자열 없음(배송 순서, 첫 배송지부터). 형식이 틀리면 `400 INVALID_QUERY`, zone_map 정식 동 이름이 아니면(별칭 포함) `400 UNKNOWN_DONG`. MQTT `voss/command` 에는 `args` 를 그대로 싣는다(쉼표 문자열로 바꾸는 것은 hmi_bridge, mqtt.md). 시작 조건(처리 중 박스 없음·팔레트 칸 0·교시)은 manager 가 보고 `command_ack` 로 거부한다.
-  - `reset_zone` — `zone` 에 `PALLET` 추가(A/B/C/RECHECK/HOLD/PALLET).
+  - `reset_zone` — `zone` 에 `PALLET` 추가(A/B/C/RECHECK/HOLD/PALLET). manager 는 PALLET 비움 확인을 IDLE·PAUSED 에서만 받고, RUNNING 은 거부한다(PR #176 PL 안전 결정). 웹 화면은 먼저 정지 → 실물 비움 확인 → 비움 명령 → 재개 순서를 안내한다. 소프트웨어 stop 은 물리 안전정지를 대신하지 않는다.
+
+### `POST /api/voice/announce` — 로컬 HMI 버튼 음성 안내
+
+`{"action":"start|stop|resume|priority|answer|reset_zone|palletize|plan"}` 하나만 받는다. Nginx의 `X-Real-IP`와 실제 연결 피어(`getRemoteAddr`)가 모두 `127.0.0.1` 또는 `::1`일 때만 `202`와 `request_id`를 반환하고, 고정 문구 코드만 MQTT `voss/voice/request`로 보낸다. 브리지가 `/voss/voice/say`로 전달하고 Nodes PC의 `speech_out`이 재생한다. 응답은 MQTT 전송 접수이며 실제 스피커 출력이나 로봇 동작 완료를 보장하지 않는다.
+
+`scripts/web_pc_voice.sh`를 실행하면 Web PC에서도 `speech_out`이 동작한다. Web PC와 Nodes PC가 같은 ROS 도메인에서 둘 다 구독하면 같은 `/voss/voice/say`를 중복 재생할 수 있으므로 현장에서는 한쪽만 실행하고 실제 재생 위치를 확인한다. 질문 TTS의 SSE 폴백은 Web PC 로컬 발행이다.
+
+### `POST /api/voice/text` — 로컬 관제 화면 자연어 명령
+요청은 `{"request_id":"<UUID>","text":"역삼, 대치 순서로 팔레타이징 실행해"}`다. 텍스트는 1~240자이며 Web PC 로컬 `X-Real-IP`만 허용한다. `202`는 MQTT 전달 접수일 뿐이다. 텍스트는 `voss/voice/text` → Web PC 브리지 → 로컬 ROS `intent_parser`로 가서 음성과 같은 동·구역 검증을 받는다. Web PC의 intent_parser는 `GET /api/stream`의 `zone_map`·`state`로도 허용 동과 현재 질문을 갱신한다(PC 간 ROS 데이터 지연 대비). 해석 결과 문구는 MQTT `voss/voice/text/reply` → SSE `text_reply`로 반환한다. 실행 명령은 Web PC의 intent_parser가 로컬 `POST /api/commands`로 보내며, 거부·접속 오류 시 성공 안내를 하지 않는다. `"팔레타이징 실행해"`처럼 배송 순서가 없으면 실행하지 않고 순서를 묻는다. 실제 명령 접수·완료 여부는 별도 `command_ack`·로봇 상태로 확인한다.
+
+`recheck` 명령은 BRD v1.7 기본 시연 흐름에서는 사용하지 않지만 `defer_recheck: true` 운용의 보류 박스 재처리 폴백으로 유지한다.
 
 ### `GET /api/stream` — SSE (React 실시간 갱신)
 | event | data | 원천 |
@@ -95,16 +108,19 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 | `robot_pose` | `voss/robot_pose` JSON 그대로 | TCP base_link 좌표, 최대 20 Hz. 재전송 없음 |
 | `robot_joints` | `voss/robot_joints` JSON 그대로 | 기존 6축 JointState, rad, 최대 20 Hz. 저장·재전송 없음. [상세](robot_joints_fk_proposal.md) |
 | `voice_status` | `{"phase","event_id","utterance_id"}` | 음성 표시등. retained 거부·snapshot 없음. [상세](voice_status.md) |
+| `text_reply` | `{"request_id","message"}` | 텍스트 명령 해석 결과 안내. retained 거부·snapshot 없음 |
 | `box_motion` (제안) | `voss/box_motion` JSON 그대로 | BoxMotion GRASPED/RELEASED. 저장·재전송 없음. [제안](box_carry_proposal.md) |
 | `command_ack` | `voss/command/ack` JSON | Command 응답 |
 | `log_status` | `{"status": "OK|DB_ERROR|SPOOL_FULL|STARTING", "stamp": "…"}` | `/voss/log/status` (hmi_bridge 전달) |
 | `link` | `{"mqtt": "UP|DOWN"}` | Spring Boot 브로커 연결 |
 | `pallet_state` | `voss/pallet/state` JSON 그대로 | PalletState (Sprint 2 S2-T08 — 바뀔 때, retained. 계획 직후·첫 PICK 전 한 번 + 박스마다) |
 - 접속 직후 Spring Boot 가 마지막 `state`·`zone_map`·`robot`·`log_status`·`pallet_state` 를 한 번씩 보낸다(늦게 연 브라우저도 바로 표시).
+- Web PC `intent_parser`의 SSE 소비자는 스트림이 중간에 끊기거나 불완전하게 읽히면 재접속한다. 단절 때 SSE에서만 받은 `ASKING`·`box_id`와 `zone_map`은 무효화하고, ROS에서 별도로 받은 구역 지도는 유지한다. 재접속 후 새 snapshot을 받기 전에는 오래된 웹 질문에 답하지 않는다.
 - 3초 이상 `state` 가 없으면 HMI 는 `UNKNOWN` 으로 표시한다(값을 0·정상으로 위장하지 않음).
 - `state` 의 값은 voss_msgs.md SortState 그대로 받는다 — Sprint 2 `PALLETIZING` 포함. 목록에 없는 값은 버린다(그러면 3초 뒤 UNKNOWN).
 - `pallet_state` 는 바뀔 때만 와서 나이로 장애를 가르지 않는다. 마지막 배치도를 계속 보이되 `link` 가 DOWN 이거나 SSE 가 끊기면 "갱신 안 됨"으로 표시한다. `run_id == ""` 이면 실행 없음(빈 팔레트). 칸 배열 인덱스 = slot 0~15(voss_msgs.md PalletState).
-- 팔레타이징 이력(`pallet_log`) 조회 API 는 이번 스프린트에 두지 않는다. 배치도와 기록의 대조(NFR-14)는 DB 에서 `SELECT … FROM pallet_log WHERE run_id = …` 로 한다(docker/db/README.md).
+- `GET /api/pallet/placements/latest`는 `pallet_log`의 가장 최근 회차에서 `run_id`, `box_id`, `dong`, `route_index`, `pallet_slot`, `result`만 읽는다. `pallet_state`가 도착하지 않는 Web PC에서는 이 공식 기록으로 적재된 칸을 채우고 새 `DONE` 행마다 애니메이션을 보여준다. 화면에는 최근 DB 회차임을 표시하며, DB만으로 실물 비움 여부나 회차 종료를 단정하지 않는다.
+- `reset_zone PALLET` 접수 뒤 현재 브라우저 탭은 비운 `run_id`만 임시로 숨기고, 다른 `run_id`의 새 팔레트 상태나 DB 기록은 다시 표시한다. `pallet_log`는 삭제·수정하지 않는다. 서버에 비움 영속 기록이 없으므로 페이지를 새로 열면 과거 최신 DB 회차가 다시 보일 수 있다. 이 동작은 실제 트럭 비움의 영속 증거가 아니다.
 - HMI 반영 ≤ 1초 측정: manager 상태 변경 로그 → DOM(전체), hmi_bridge 수신 → DOM(부분) 둘 다 기록(#54 MC-031).
 
 ### 음성 상태 SSE (`voice_status`, 10/14 승인)
@@ -119,11 +135,13 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 ### `POST /ai/stt` — Whisper 전사
 - 요청: `multipart/form-data` `audio`(WAV 16 kHz mono) + `language=ko`
 - 응답: `{"ok": true, "text": "역삼동부터 분류해", "duration_ms": 1830, "stt_ms": 420, "model": "whisper-<크기>"}` — 모델 크기는 pending #6(10/08 동시 부하 시험 후)
+- Whisper가 `WHISPER_PROMPT` 전체 또는 거의 전체를 되읽은 것으로 판정되면 성공 응답의 `text`는 빈 문자열이다. 짧은 실제 명령(예: `정지`)은 프롬프트의 일부와 같다는 이유만으로 버리지 않는다. 프롬프트 메아리 판정은 녹음 없이 전사 문자열에만 적용한다.
 - 실패: `{"ok": false, "message": "STT_ERROR|AUDIO_INVALID"}` → voice_listener 는 "다시 말씀해 주세요"
 
 ### `POST /ai/intent` — 자연어 → intent JSON
 - 요청: `{"text": "역삼부터 해", "allowed": {"dongs": ["역삼동","대치동","청담동"], "aliases": {"역삼동": ["역삼"]}, "zones": ["A","B","C"]}}` — `allowed` 는 intent_parser 가 `/voss/sort/zone_map` 에서 만든다(FastAPI 는 YAML·ROS 를 모른다).
 - 응답: `{"ok": true, "intent": <intent_json.md 의 JSON>, "llm_ms": 640, "model": "<OpenAI 모델명>"}`
+- 지원하지 않는 요청은 `intent.type="unknown"` 으로 반환한다. `intent_parser` 는 이를 실행하지 않고 미지원 안내만 한다.
 - 실패: `{"ok": false, "message": "LLM_TIMEOUT|LLM_ERROR|PARSE_ERROR"}`, timeout 기본 3초.
 - **intent_parser 가 응답을 다시 검증**한다(허용 목록·필수 필드). FastAPI 응답을 그대로 믿지 않는다.
 
@@ -152,3 +170,5 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 - 2026-10-06: 초안 (#22, ADR-0006, SRD 상호확인 #52 MC-020·021·022·026·027, #54 MC-030·031). 제안 상태 — mqtt.md(10/08, #20) 확정 때 SSE `data` 형식을 함께 맞춘다.
 - 2026-10-13: (T13 #37) SSE `box_track`·`robot_pose` 추가. 제안: `robot_joints`·`box_motion`·`voice_status`(snapshot·replay 없음).
 - 2026-10-14: #37 PL 리뷰 — `robot_joints`·`voice_status` 승인, `box_motion` 제안 유지, SSE 표에 행 추가.
+
+- 2026-10-15: PR #176 PL 결정 — PALLET 비움의 manager 상태 제한(`IDLE`·`PAUSED`) 및 HMI의 정지→실물 비움→재개 안내 명시. REST 필드·오류 코드 추가 없음.

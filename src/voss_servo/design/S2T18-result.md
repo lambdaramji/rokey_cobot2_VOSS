@@ -81,3 +81,4 @@ ros2 launch voss_robot robot_gateway.launch.py dry_run:=false pose_source:=joint
 - 회전을 켠 채 **sort_manager 전체 흐름**(OCR 뒤 goal, 시연 기준 x −93~−52 mm) 회차는 아직 없다 — 단독 액션 시험만.
 - 운영 주의: HOLD 칸에 박스가 남아 있으면 PLACE 하강 중 접촉 → 두산 알람 2/5/7060·SAFE_STOP·RG2 안전 스위치 S1·S2 잠김(268 = 104) → Compute Box 전원 재투입으로 복구(약 15분).
 - 이 문서의 값은 공용 PC 단독 시험 기준이다. 에뮬레이터 E1~E8 결과는 별도로 붙으면 이 문서에 링크한다.
+- 덧붙임(10/15 저녁): 에뮬레이터 E0~E8 은 같은 날 개인 PC 에서 따로 수행했다 — [S2T18-run.md](S2T18-run.md) 2.5(실기 최종 설정 전 main 366eeb5 기준, 보조 근거). 결론은 이 문서와 같다(부호 +, 등록 TCP 기준 회전 — 미등록이면 플랜지 기준, 지연 41 ms). 설계 문서와의 차이는 run.md 9절.

@@ -14,13 +14,20 @@ from collections.abc import Callable
 
 from voss_voice.http_client import IntentParseError
 from voss_voice.intent_logic import (
+    SAY_PALLET_ORDER,
     SAY_RETRY,
+    SAY_ROUTE_COUNT,
+    SAY_ROUTE_DUP,
+    SAY_ROUTE_RETRY,
+    SAY_ROUTE_UNKNOWN,
     SayDeduper,
     ZoneMapView,
+    command_acknowledgement,
     decide,
     decide_bare_dong,
     decide_destination_answer,
     decide_hold_answer,
+    decide_pallet_route_answer,
     decide_palletize,
     decide_recheck_start,
     is_stop,
@@ -30,6 +37,15 @@ from voss_voice.intent_logic import (
 
 SAY_AI_DOWN = "음성 해석 서비스에 연결할 수 없습니다. 잠시 후 다시 말씀해 주세요."
 SAY_BUSY = "앞 지시를 처리하고 있습니다. 잠시 후 다시 말씀해 주세요."
+SAY_COMMAND_UNCONFIRMED = "명령 접수를 확인하지 못했습니다. 관제 화면의 상태를 확인해 주세요."
+PALLET_ROUTE_REPLY_WINDOW_S = 60.0
+PALLET_ROUTE_PROMPTS = {
+    SAY_PALLET_ORDER,
+    SAY_ROUTE_RETRY,
+    SAY_ROUTE_COUNT,
+    SAY_ROUTE_DUP,
+    SAY_ROUTE_UNKNOWN,
+}
 
 
 class TranscriptFlow:
@@ -53,8 +69,9 @@ class TranscriptFlow:
         self.view: ZoneMapView | None = None
         self.state = ""
         self.box_id = ""
+        self._pallet_route_until = 0.0
 
-    def handle(self, text: str) -> tuple[str, float]:
+    def handle(self, text: str, report: Callable[[str], None] | None = None) -> tuple[str, float]:
         """음성 문장 하나를 처리하고 결과 종류와 처리 시간을 반환한다."""
         text = text.strip()
 
@@ -63,25 +80,46 @@ class TranscriptFlow:
 
         t0 = self._clock()
 
+        def say(message: str) -> None:
+            if report is not None and message:
+                report(message)
+            self._say(message)
+
         # 발화 당시 로봇 상태와 박스 ID를 저장한다.
         state = self.state
         box_id = self.box_id
 
         # 1. 정지 명령은 LLM이나 잠금을 기다리지 않는다.
         if is_stop(text):
-            self._publish(stop_decision(text).intent)
+            self._pallet_route_until = 0.0
+            intent = stop_decision(text).intent
+            try:
+                self._publish(intent)
+            except CommandDeliveryError:
+                say(SAY_COMMAND_UNCONFIRMED)
+                return "delivery_error", 1000 * (self._clock() - t0)
+            say(command_acknowledgement(intent))
             return "stop", 1000 * (self._clock() - t0)
 
         # 2. 다른 지시를 처리 중이면 기다리지 않고 안내한다.
         if not self._llm_lock.acquire(blocking=False):
-            self._say(SAY_BUSY)
+            say(SAY_BUSY)
             return "busy", 1000 * (self._clock() - t0)
 
         try:
             view = self.view
 
-            # 3. 등록된 동 이름만 말했는지 먼저 확인한다.
-            d = decide_bare_dong(text, view, state, box_id)
+            # 팔레타이징 순서를 되물은 뒤에는 동 이름 목록만으로 답할 수 있다.
+            # 로봇이 ASKING 중이면 박스의 답변이 우선한다.
+            d = (
+                decide_pallet_route_answer(text, view)
+                if state != "ASKING" and t0 <= self._pallet_route_until
+                else None
+            )
+
+            # 3. 등록된 동 이름만 말했는지 확인한다.
+            if d is None:
+                d = decide_bare_dong(text, view, state, box_id)
 
             # 4. "역삼으로 보내"처럼 목적지를 답했는지 확인한다.
             if d is None:
@@ -103,20 +141,21 @@ class TranscriptFlow:
             if d is None:
                 llm = None
 
-                if view is not None:
-                    try:
-                        llm = self._post_intent(
-                            text,
-                            view.llm_allowed(),
-                        )
-                    except IntentParseError:
-                        # 계약: 파싱 실패 시 명령을 실행하지 않고 되묻는다.
-                        self._say(SAY_RETRY)
-                        return "say", 1000 * (self._clock() - t0)
+                try:
+                    llm = self._post_intent(
+                        text,
+                        view.llm_allowed()
+                        if view is not None
+                        else {"dongs": [], "aliases": {}, "zones": []},
+                    )
+                except IntentParseError:
+                    # 계약: 파싱 실패 시 명령을 실행하지 않고 되묻는다.
+                    say(SAY_RETRY)
+                    return "say", 1000 * (self._clock() - t0)
 
-                    if llm is None:
-                        self._say(SAY_AI_DOWN)
-                        return "say", 1000 * (self._clock() - t0)
+                if llm is None:
+                    say(SAY_AI_DOWN)
+                    return "say", 1000 * (self._clock() - t0)
 
                 d = decide(
                     llm,
@@ -129,10 +168,17 @@ class TranscriptFlow:
 
             # 6. 최종 판단 결과에 따라 발행하거나 답한다.
             if d.kind == "publish":
-                self._publish(d.intent)
+                self._pallet_route_until = 0.0
+                try:
+                    self._publish(d.intent)
+                except CommandDeliveryError:
+                    say(SAY_COMMAND_UNCONFIRMED)
+                    return "delivery_error", 1000 * (self._clock() - t0)
+                say(command_acknowledgement(d.intent))
 
             elif d.kind == "query":
-                self._say(
+                self._pallet_route_until = 0.0
+                say(
                     stats_sentence(
                         d.query,
                         self._get_stats(d.query),
@@ -140,7 +186,10 @@ class TranscriptFlow:
                 )
 
             else:
-                self._say(d.say)
+                self._pallet_route_until = (
+                    t0 + PALLET_ROUTE_REPLY_WINDOW_S if d.say in PALLET_ROUTE_PROMPTS else 0.0
+                )
+                say(d.say)
 
             return d.kind, 1000 * (self._clock() - t0)
 
@@ -151,3 +200,7 @@ class TranscriptFlow:
     def _say(self, text: str) -> None:
         if text and self._dedup.allow(text, self._clock()):
             self._say_raw(text)
+
+
+class CommandDeliveryError(Exception):
+    """명령 API가 접수를 확인하지 못했다."""

@@ -37,7 +37,8 @@ DESTINATION_ANSWER_RE = re.compile(r"(.+?)(?:으로|로)보내(?:줘|주세요|�
 # 질문 중 "읽을 수 없다" 답 → 보류. 공백·문장부호를 지운 뒤 전체 일치(10/12 시연 문형, LLM 없이)
 HOLD_ANSWER_RE = re.compile(
     r"(?:송장)?(?:확인|판독|인식)(?:이)?(?:불가|안돼|안됨|안됩니다|못해|못함)(?:입니다|이에요|예요|요)?"
-    r"|보류(?:해|해줘|해주세요|로보내|로보내줘|로보내주세요|입니다|요)?"
+    r"|보류(?:로)?(?:처리|보내)?"
+    r"(?:해|해줘|해주세요|해요|합니다|할게|할게요|줘|주세요|부탁해|부탁해요|부탁합니다|입니다|요)?"
 )
 # "재확인 시작" → 보관 중인 재확인 칸 박스 처리(type recheck, 10/12 시연, LLM 없이). 전체 일치
 RECHECK_START_RE = re.compile(
@@ -51,16 +52,17 @@ PALLETIZE_RE = re.compile(
     r"|(?:실어|싣|적재|태워|올려|옮겨).*(?:트럭|팔레트)"
     r"|순(?:서)?(?:대로|으로|로)?(?:실어|싣|적재)"
 )
-SAY_PALLET_ORDER = (
-    "싣는 순서를 동 이름으로 말씀해 주세요. 예를 들어 대치, 역삼, 청담 순서로 실어줘."
+PALLETIZE_START_RE = re.compile(
+    r"팔레타이징(?:을)?(?:실행|시작)(?:해|해줘|해주세요|하자|합니다|해요)?"
 )
+SAY_PALLET_ORDER = "동 이름을 순서대로 말씀해 주세요."
 
 # 정지 키워드: 공백·문장부호를 지운 뒤 포함 여부로 본다. 오인식으로 멈추는 쪽은 허용한다.
 STOP_KEYWORDS = ("멈춰", "멈추", "정지", "스톱", "스탑", "그만", "stop")
 # 정지처럼 보여도 정지가 아닌 표현 (예: "정지 해제", "멈추지 마")
 STOP_NEGATIONS = ("해제", "멈추지마", "멈추지말", "정지하지마")
 
-SAY_NOT_READY = "준비 중입니다. 잠시 후 다시 말씀해 주세요."
+SAY_NOT_READY = "로봇의 구역 정보를 받지 못했습니다. 연결 상태를 확인해 주세요."
 SAY_NO_QUESTION = "지금은 답할 질문이 없습니다."
 SAY_UNSUPPORTED = "지금은 지원하지 않는 명령입니다."
 SAY_RETRY = "잘 못 알아들었습니다. 다시 말씀해 주세요."
@@ -145,6 +147,31 @@ class Decision:
 
 def stop_decision(raw_text: str) -> Decision:
     return Decision("publish", intent=_intent("stop", raw_text=raw_text))
+
+
+def command_acknowledgement(intent: dict) -> str:
+    """접수한 명령만 안내한다. 로봇 동작 완료를 뜻하지 않는다."""
+    kind = intent["type"]
+    if kind == "start":
+        return "분류를 시작하겠습니다."
+    if kind == "stop":
+        # 음성이 마이크로 되돌아와도 호출어 없는 정지로 재인식되지 않도록 정지 동사를 피한다.
+        return "요청을 처리하겠습니다."
+    if kind == "resume":
+        return "분류를 재개하겠습니다."
+    if kind == "priority":
+        return f"{intent['dong']}을 우선 분류하겠습니다."
+    if kind == "answer":
+        return (
+            "보류로 처리하겠습니다."
+            if intent.get("zone") == HOLD
+            else f"{intent['dong']}으로 분류하겠습니다."
+        )
+    if kind == "recheck":
+        return "재확인을 시작하겠습니다."
+    if kind == "palletize":
+        return "말씀하신 순서로 적재하겠습니다."
+    return ""
 
 
 def _intent(
@@ -239,6 +266,8 @@ def decide_palletize(raw_text: str, view: ZoneMapView | None) -> Decision | None
     """'대치, 역삼, 청담 순서로 실어줘' → palletize, route = 말한 순서 [대치동, 역삼동, 청담동](배송 순서, BRD TR-PAL-01).
     동을 하나도 말하지 않거나 4곳 이상이면 되묻는다. 받을 수 있는 상태인지는 sort_manager 가 판단한다."""
     s = _squash(raw_text)
+    if PALLETIZE_START_RE.fullmatch(s):
+        return Decision("say", say=SAY_PALLET_ORDER if view is not None else SAY_NOT_READY)
     if PALLETIZE_RE.search(s) is None:
         return None
     if view is None:
@@ -254,6 +283,21 @@ def decide_palletize(raw_text: str, view: ZoneMapView | None) -> Decision | None
     if len(order) > MAX_ROUTE:
         return Decision("say", say=SAY_ROUTE_COUNT)
     return Decision("publish", intent=_intent("palletize", raw_text=raw_text, route=order))
+
+
+def decide_pallet_route_answer(raw_text: str, view: ZoneMapView | None) -> Decision | None:
+    """순서를 되물은 직후에는 동 이름 목록만으로도 팔레타이징 경로를 확정한다."""
+    if view is None:
+        return Decision("say", say=SAY_NOT_READY)
+    parts = re.split(r"\s*(?:,|→|->|/)\s*", raw_text.strip())
+    if len(parts) == 1:
+        parts = raw_text.split()
+    if not parts or not any(view.canonical_dong(part) for part in parts):
+        return None  # 다른 일반 명령은 기존 해석 경로로 보낸다.
+    route, error = check_route(parts, view)
+    if error:
+        return Decision("say", say=error)
+    return Decision("publish", intent=_intent("palletize", raw_text=raw_text, route=route))
 
 
 def decide_destination_answer(
@@ -305,6 +349,8 @@ def decide(
     """LLM 이 낸 intent JSON 을 검증해 할 일을 정한다. stop 키워드 판정은 이 함수보다 먼저 한다."""
     if is_stop(raw_text):
         return stop_decision(raw_text)
+    if isinstance(llm, dict) and llm.get("type") == "unknown":
+        return Decision("say", say=SAY_UNSUPPORTED)
     if view is None:
         return Decision("say", say=SAY_NOT_READY)
     if not isinstance(llm, dict):

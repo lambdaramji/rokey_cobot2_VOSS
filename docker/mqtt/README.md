@@ -37,6 +37,7 @@ write 범위와 기존 계정 ACL이 유지됐는지 확인한다.
 
 ```bash
 docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD/docker/mqtt/secrets:/secrets" eclipse-mosquitto:2 mosquitto_passwd /secrets/passwd voice_preview
+docker run --rm -it --user "$(id -u):$(id -g)" -v "$PWD/docker/mqtt/secrets:/secrets" eclipse-mosquitto:2 mosquitto_passwd /secrets/passwd voice_web
 ```
 
 ```bash
@@ -55,6 +56,9 @@ docker compose -f docker/mqtt/compose.yml logs --tail=30 broker
 ```
 
 `docker/web/.env`에는 `VOSS_MQTT_WEB_PASSWORD`와 `VOSS_MQTT_ENABLED=true`를 적용한다. 비-stop 웹 명령은 Spring Boot 가 공용 PC 로컬(Nginx X-Real-IP 127.0.0.1/::1)에서만 받는다(web_api.md). hmi_bridge 를 띄우는 터미널에는 `VOSS_MQTT_BRIDGE_PASSWORD`를 export 한다.
+
+Web PC의 `scripts/web_pc_voice.sh`를 쓰기 전에는 위 대화형 명령으로 `voice_web`을 생성하고, 변경된 `docker/mqtt/acl`을 런타임 `docker/mqtt/secrets/acl`에 다시 설치한 뒤 브로커를 재시작한다. 별도로 정한 암호를 Web PC의 `deploy/node/.env`의 `VOSS_MQTT_VOICE_WEB_PASSWORD`에 기록한다(파일은 커밋 금지). 운영 `bridge` 암호를 복사하지 않는다. 기존 `voice_preview`는 표시 전용 격리 시험에만 쓴다.
+이미 비밀번호 파일을 Mosquitto 사용자 소유로 바꾼 환경에서는 위에서 확인한 `MOSQUITTO_UID`·`MOSQUITTO_GID`로 `docker run --rm -it --user "$MOSQUITTO_UID:$MOSQUITTO_GID" -v "$PWD/docker/mqtt/secrets:/secrets" eclipse-mosquitto:2 mosquitto_passwd /secrets/passwd voice_web`을 실행한다. 실제 암호는 대화형으로 입력하고 명령 인수에 넣지 않는다.
 
 **보안:** 실제 비밀번호, `.env`, `secrets/` 파일은 Git 또는 채팅에 올리지 않는다. 시연 전 Nginx·Spring Boot의 비-stop 운전 명령 권한을 현장 안전 담당자가 검토해야 한다.
 

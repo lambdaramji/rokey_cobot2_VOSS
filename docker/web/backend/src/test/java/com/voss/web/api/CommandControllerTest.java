@@ -44,6 +44,17 @@ class CommandControllerTest {
         verify(publisher, never()).publish(anyMap());
     }
 
+    @Test
+    void testForgedLocalHeaderFromRemotePeerIsRejected() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("X-Real-IP", "127.0.0.1");
+        request.setRemoteAddr("192.0.2.20");
+        ApiException error = assertThrows(ApiException.class, () ->
+                controller.command(mapper.readTree("{\"type\":\"start\",\"args\":{}}"), request));
+        assertEquals("FORBIDDEN_REMOTE", error.code());
+        verify(publisher, never()).publish(anyMap());
+    }
+
     /** stop은 원격 요청이라도 발행 가능해야 한다. */
     @Test
     void testRemoteStopIsAllowed() throws Exception {
@@ -74,6 +85,16 @@ class CommandControllerTest {
                 mapper.readTree("{\"type\":\"start\",\"args\":{}}"), request);
         assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
         verify(publisher).publish(anyMap());
+    }
+
+    @Test
+    void testRecheckUsesEmptyArgsAndRejectsRemote() throws Exception {
+        var response = controller.command(
+                mapper.readTree("{\"type\":\"recheck\",\"args\":{}}"), local());
+        assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
+        ApiException error = assertThrows(ApiException.class, () -> controller.command(
+                mapper.readTree("{\"type\":\"recheck\",\"args\":{}}"), remote()));
+        assertEquals("FORBIDDEN_REMOTE", error.code());
     }
 
     /** 원격 운영자 IP는 기존 임시 설정과 무관하게 허용하지 않는다. */
@@ -190,6 +211,12 @@ class CommandControllerTest {
     private MockHttpServletRequest local() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("X-Real-IP", "127.0.0.1");
+        return request;
+    }
+
+    private MockHttpServletRequest remote() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("X-Real-IP", "192.0.2.11");
         return request;
     }
 

@@ -1,10 +1,13 @@
 import json
+from pathlib import Path
+from runpy import run_path
 from types import SimpleNamespace
 
 from voss_voice.listen_logic import WakeGate
 from voss_voice.voice_feedback import (
     TIMEOUT_SAY,
     VoiceFeedback,
+    is_ack_echo,
     is_timeout_prompt_echo,
     should_say_timeout,
     transcript_off_refused,
@@ -46,10 +49,67 @@ def test_timeout_prompt_echo_does_not_rearm_wake():
     flow, events = feedback()
     flow.on_text("헬로 로키", 0)
     flow.expire(5.1)
-    assert is_timeout_prompt_echo(TIMEOUT_SAY.replace("'", "“").replace("로키“", "로키”"))
+    assert is_timeout_prompt_echo(TIMEOUT_SAY.replace(". ", ", "))
+    assert "헬로" not in TIMEOUT_SAY and "로키" not in TIMEOUT_SAY  # 안내음이 호출어로 잡히지 않게
     assert flow.on_text(TIMEOUT_SAY, 6) is None
     assert [e["phase"] for e in events] == ["WAKE_DETECTED", "TIMED_OUT"]
     assert not flow.gate.armed
+
+
+def test_spoken_ack_is_not_accepted_as_another_command():
+    flow, events = feedback()
+    assert is_ack_echo("요청을 처리하겠습니다.")
+    assert flow.on_text("요청을 처리하겠습니다.", 0) is None
+    assert events == []
+
+
+def test_pallet_route_prompt_echo_cannot_start_another_command():
+    from voss_voice.intent_logic import SAY_PALLET_ORDER
+
+    flow, events = feedback()
+    flow.on_text("헬로 로키", 0)
+    assert is_ack_echo(SAY_PALLET_ORDER)
+    assert flow.on_text(SAY_PALLET_ORDER, 1) is None
+    assert [event["phase"] for event in events] == ["WAKE_DETECTED"]
+
+
+def test_stop_is_sent_even_when_ack_echo_is_detected():
+    for text in (
+        "멈춰 역삼동으로 분류하겠습니다",
+        "정지, 대치동을 우선 분류하겠습니다",
+    ):
+        flow, events = feedback()
+        assert is_ack_echo(text)
+        assert flow.on_text(text, 0.0) == text
+        assert events == []
+
+
+def test_web_button_announcements_do_not_reenter_voice_pipeline():
+    # Web 버튼 안내는 기존 ROS 음성 안내와 별개지만 마이크에 잡힐 수 있다.
+    phrases = (
+        "시작 명령을 전달했습니다.",
+        "요청을 전달했습니다.",
+        "재개 명령을 전달했습니다.",
+        "우선 분류 변경을 요청했습니다.",
+        "작업자 답변을 전달했습니다.",
+        "구역 초기화를 요청했습니다.",
+        "팔레트 적재 명령을 전달했습니다.",
+        "투입 예정 수량을 저장했습니다.",
+    )
+    for phrase in phrases:
+        flow, events = feedback()
+        assert is_ack_echo(phrase)
+        assert flow.on_text(phrase, 0.0) is None
+        assert events == []
+
+
+def test_web_button_phrases_stay_in_echo_filter():
+    # colcon tests each package in isolation; read the pure sibling module from source.
+    source = Path(__file__).resolve().parents[2] / "voss_hmi/voss_hmi/voice_request.py"
+    voice_phrases = run_path(str(source))["VOICE_PHRASES"]
+
+    for phrase in voice_phrases.values():
+        assert is_ack_echo(phrase), f"버튼 안내가 메아리 필터에서 빠짐: {phrase}"
 
 
 def listener_node(sort_state=""):
