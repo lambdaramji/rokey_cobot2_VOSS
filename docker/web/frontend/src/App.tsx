@@ -12,6 +12,7 @@ import type { CommandType, LinkStatus, PalletState, RobotState, SortResult, Sort
 import { VossSortingWorkspace } from './components/VossSortingWorkspace';
 import { parseBoxMotion, parseBoxTrack, parseRobotJoints, parseRobotPose, JOINT_STALE_MS, POSE_STALE_MS, TRACK_STALE_MS } from './lib/workspacePosition';
 import type { BoxMotionSample, BoxTrackSample, RobotJointSample, RobotPoseSample } from './lib/workspacePosition';
+import { GripperCameraPanel } from './components/GripperCameraPanel';
 import { UsbCameraPanel } from './components/UsbCameraPanel';
 import { parseVoiceSignal } from './lib/voiceIndicator';
 import type { VoiceSignal } from './lib/voiceIndicator';
@@ -64,6 +65,7 @@ export default function App() {
   const [clock,setClock] = useState(Date.now());
   const [voiceSignal,setVoiceSignal] = useState<VoiceSignal|null>(null);
   const isLocal = LOCAL_HOSTS.has(location.hostname);
+  const palletPreview = isLocal && new URLSearchParams(location.search).has('palletReplay');
   const displayState:DisplayState = sseConnected && stateReceivedAt !== null && clock-stateReceivedAt < TIMEOUT_MS ? (state?.state ?? 'UNKNOWN') : 'UNKNOWN';
   const robotFresh = sseConnected && mqtt === 'UP' && robotReceivedAt !== null && clock-robotReceivedAt < TIMEOUT_MS;
   const displayRobot = robotFresh ? robot : null;
@@ -72,6 +74,30 @@ export default function App() {
   const sessionId = state?.session_id ?? summary?.session_id ?? '';
   const dongs = useMemo(()=>zoneMap?.entries.map(entry=>entry.dong) ?? [],[zoneMap]);
   const controlEnabled = isLocal && mqtt === 'UP' && !busy;
+  useEffect(() => {
+    if (!palletPreview) return;
+    const slotDong = Array.from({length:16},(_,slot)=>slot<6?'청담동':slot<12?'대치동':'역삼동');
+    setPallet({
+      run_id:'PREVIEW',state:'RUNNING',route:['역삼동','대치동','청담동'],
+      dongs:['역삼동','대치동','청담동'],load:[4,6,6],overflow:[0,0,0],excluded:[0,0,0],
+      overflow_warning:false,total:16,done:0,failed:0,box_id:'',
+      slot_state:Array(16).fill('PLANNED'),slot_box_id:Array(16).fill(''),slot_dong:slotDong,
+    });
+    let slot = 0;
+    const timer = window.setInterval(() => {
+      const index = slot;
+      setPallet(current => {
+        const nextState = [...current.slot_state];
+        const nextBoxIds = [...current.slot_box_id];
+        nextState[index] = 'DONE';
+        nextBoxIds[index] = `PREVIEW-${String(index+1).padStart(2,'0')}`;
+        return {...current,state:index===15?'DONE':'RUNNING',done:index+1,slot_state:nextState,slot_box_id:nextBoxIds};
+      });
+      slot++;
+      if (slot===16) window.clearInterval(timer);
+    }, 950);
+    return () => window.clearInterval(timer);
+  }, [palletPreview]);
   // stop은 busy·연결 표시와 무관하게 언제든 시도한다 (web_api.md).
 
   /** 공식 통계/이력은 항상 REST DB에서 다시 읽으며 메모리 MQTT 수치로 대체하지 않는다. */
@@ -191,6 +217,7 @@ export default function App() {
       void refresh();
     });
     stream.addEventListener('pallet_state',(event)=>{
+      if (palletPreview) return;
       // 계약에 어긋나면 이전 배치도를 유지한다 (web_api.md pallet_state).
       const parsed = parsePalletState(JSON.parse((event as MessageEvent).data));
       if (parsed) setPallet(parsed);
@@ -256,7 +283,7 @@ export default function App() {
     </aside>
     <main className="workspace">
       <header className="top-bar"><div><div className="eyebrow">OPERATION CENTER / LIVE MONITORING</div><h1>{activePage==='cameras'?'카메라 모니터링':'물류 분류 관제'}</h1><p className="subhead">{activePage==='cameras'?'현장 카메라 영상을 확인하세요.':'로봇 동작, 박스 판독과 세션 기록을 한눈에 확인하세요.'}</p></div><div className="header-end"><span className="clock-label">{new Date(clock).toLocaleString('ko-KR')}</span><span className={`live-pill ${sseConnected?'connected':'disconnected'}`}>{sseConnected?'● LIVE':'● OFFLINE'}</span></div></header>
-      {activePage==='cameras' ? <div className="camera-page"><UsbCameraPanel /></div> : <>
+      {activePage==='cameras' ? <div className="camera-page"><UsbCameraPanel /><GripperCameraPanel /></div> : <>
       <div className="monitoring-grid">
       {/* 읽기 전용 2D 작업공간: 기존 App의 SSE/REST 상태 재사용. */}
       <VossSortingWorkspace
@@ -292,14 +319,14 @@ export default function App() {
             {state?.pending_question&&<p className="question">질문 대기 · {state.pending_question}</p>}
           </section>
           <section className="panel"><div className="section-heading"><div><span className="eyebrow">02 / DISTRIBUTION</span><h2>구역별 적재 현황</h2></div><span className="micro-note">PostgreSQL 공식 집계</span></div><div className="zone-grid">{ZONES.map(zone=><div key={zone} className="zone-tile"><span className={`zone-symbol zone-${zone.toLowerCase()}`}>{zone==='RECHECK'?'R':zone==='HOLD'?'H':zone}</span><div><strong>{zone}</strong><small>{zone==='HOLD'?'보류 구역':zone==='RECHECK'?'재확인 구역':'기본 적재 구역'}</small></div><b>{summary?String(summary.by_zone[zone]??0):'—'}<small>건</small></b></div>)}</div></section>
-          <section className="panel"><div className="section-heading"><div><span className="eyebrow">03 / HISTORY</span><h2>최근 분류 이력</h2></div><a className="text-link" href={`/api/export.csv?session_id=${encodeURIComponent(sessionId||'all')}`}>CSV 다운로드 ↗</a></div><div className="table-scroll"><table><thead><tr><th>박스 ID</th><th>동</th><th>분류</th><th>구역</th><th>시각</th></tr></thead><tbody>{items.length?items.map((item,index)=><tr key={`${item.box_id??'box'}-${index}`}><td>{item.box_id??'—'}</td><td>{item.dong??'—'}</td><td><span className={`chip ${item.result==='HELD'?'warning':''}`}>{String(item.result??item.outcome??'—')}</span></td><td>{item.zone??'—'}</td><td>{displayTime(item.finished_at)}</td></tr>):<tr><td colSpan={5} className="no-rows">{error ? "이력 조회 실패 — 서버 연결 확인 필요" : "표시할 이력이 없습니다."}</td></tr>}</tbody></table></div></section>
+          <section className="panel"><div className="section-heading"><div><span className="eyebrow">03 / HISTORY</span><h2>최근 분류 이력</h2></div><a className="text-link" href={`/api/export.csv?session_id=${encodeURIComponent(sessionId||'all')}`}>CSV 다운로드 ↗</a></div><div className="table-scroll"><table><thead><tr><th>박스 ID</th><th>동</th><th>분류</th><th>구역</th><th>시각</th></tr></thead><tbody>{items.length?items.map((item,index)=>{const result=String(item.result??item.outcome??'—');return <tr key={`${item.box_id??'box'}-${index}`}><td>{item.box_id??'—'}</td><td>{item.dong??'—'}</td><td><span className={`chip ${result==='FAILED'?'danger':result==='HELD'?'warning':''}`}>{result}</span></td><td>{item.zone??'—'}</td><td>{displayTime(item.finished_at)}</td></tr>;}):<tr><td colSpan={5} className="no-rows">{error ? "이력 조회 실패 — 서버 연결 확인 필요" : "표시할 이력이 없습니다."}</td></tr>}</tbody></table></div></section>
         </div>
         <div className="stack">
           <section className="panel"><div className="section-heading"><div><span className="eyebrow">OCR / LAST RESULT</span><h2>최근 판독 결과</h2></div><span className="micro-note">MQTT voss/result</span></div><div className="ocr-card"><small>최근 처리 박스</small><strong>{latestResult?.box_id??'아직 처리된 박스가 없습니다'}</strong><div className="ocr-line"><span>인식 동</span><b>{latestResult?.dong??'—'}</b></div><div className="ocr-line"><span>분류 구역</span><b>{latestResult?.zone??'—'}</b></div><div className="ocr-line"><span>분류 결과</span><b>{latestResult?.outcome??'—'}</b></div><div className="ocr-line"><span>인식 신뢰도</span><b>{typeof latestResult?.confidence==='number'?`${(latestResult.confidence*100).toFixed(1)}%`:'—'}</b></div><div className="ocr-line"><span>원문</span><b>{latestResult?.raw_text??'—'}</b></div></div></section>
           <section className="panel"><div className="section-heading"><div><span className="eyebrow">EXCEPTIONS / HOLD</span><h2>보류 목록</h2></div><span className="count-badge">{held.length}건 표시</span></div><div className="hold-list">{held.length?held.map((item,index)=><div className="hold-item" key={`${item.box_id??'held'}-${index}`}><div><strong>{item.box_id??'—'}</strong><small>{item.dong??item.reason??'동 판독 대기'}</small></div><span>{item.zone??'HOLD'}</span></div>):<p className="empty">{error ? "보류 목록 조회 실패 — 서버 연결 확인 필요" : "보류 중인 기록이 없습니다."}</p>}</div></section>
         </div>
       </div>
-      <PalletPanel pallet={pallet} sortState={displayState} stale={!sseConnected||displayMqtt!=='UP'} dongs={dongs} controlEnabled={controlEnabled} onCommand={(type,args)=>void command(type,args)}/>
+      <PalletPanel pallet={pallet} sortState={displayState} stale={!palletPreview&&(!sseConnected||displayMqtt!=='UP')} dongs={dongs} controlEnabled={controlEnabled&&!palletPreview} preview={palletPreview} onCommand={(type,args)=>void command(type,args)}/>
       {error&&<p className="error-banner" role="alert">DB / API 조회 실패: {error} — 정확하지 않은 합계는 표시하지 않습니다.</p>}
       </>}
       <footer className="footer"><span>VOSS C-3 · WEB HMI</span><span>세션: {sessionId||'NO_SESSION'}</span><span>조회 시각: {displayTime(summary?.as_of)}</span><span>{!isLocal?'원격 조회 모드 · STOP만 허용':'공용 PC 로컬 제어'}</span></footer>

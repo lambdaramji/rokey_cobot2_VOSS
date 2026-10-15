@@ -14,9 +14,8 @@ from voss_manager import pallet_gate as pg
 from voss_manager import pallet_plan as pp
 from voss_manager import sort_fsm as f
 
-REPO_CONFIG = os.path.join(
-    os.path.dirname(__file__), "..", "..", "..", "config", "voss_config.yaml"
-)
+# 로직 시험은 고정 설정(3×1)을 읽는다 — 레포 config 의 현장 값이 바뀌어도 기대값이 그대로다(S2-T21)
+TEST_CONFIG = os.path.join(os.path.dirname(__file__), "fixtures", "voss_config_3x1.yaml")
 SID, RUN = "20261013T170000-a1b2", "20261013T173000-c3d4"
 MS = 1_000_000
 T0 = 1_791_890_000.0  # 녹화 시각(epoch s) 기준
@@ -25,7 +24,7 @@ Y, D = "역삼동", "대치동"
 
 @pytest.fixture
 def cfg() -> f.Config:
-    with open(REPO_CONFIG, encoding="utf-8") as fh:
+    with open(TEST_CONFIG, encoding="utf-8") as fh:
         return replace(f.load_config(yaml.safe_load(fh)), pallet_ready=True)
 
 

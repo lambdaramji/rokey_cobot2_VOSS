@@ -18,6 +18,7 @@
 - 백엔드: `voss/pallet/state` 구독(QoS 1) → SSE `pallet_state`(접속 스냅샷 포함), `palletize` route 검사, `reset_zone PALLET`, SortState `PALLETIZING` 수용(빠지면 팔레타이징 중 3초 뒤 UNKNOWN).
 - 시험: `npm test`(Node 22 내장 `node --test`, `test/fixtures/pallet_s1.json` = 실제 pallet_fsm 이 만든 S1 + slot 4 실패·#37 당겨 놓기 PalletState 열 — 손으로 고치지 않는다), `./gradlew test`.
 - 공용 PC 재생·반영 ≤ 1초: `scripts/integration/README.md` "S2-T08".
+- 로컬 표시 시험: `http://localhost/?palletReplay=1`에서 16칸을 순서대로 재생한다. 이 모드는 시험 재생 표시와 함께 팔레트 조작을 끈다.
 
 ## 공용 PC에서 테스트
 
@@ -96,9 +97,21 @@ docker compose logs --tail=100 backend frontend
 
 영상은 해당 브라우저에서만 표시하며 서버 전송·녹화·마이크 수집을 하지 않습니다. 다른 PC에서 접속하면 그 PC의 카메라를 사용합니다. 연결 종료 또는 페이지 종료 시 카메라 사용을 해제합니다.
 
-### 그리퍼 카메라 (후속)
+### 그리퍼 카메라 (카메라 메뉴)
 
-그리퍼 카메라 미리보기 송출 노드(`voss_vision camera_preview`, 127.0.0.1:8091)는 아직 레포에 없고, `src/components/GripperCameraPanel.tsx` 는 화면에 연결하지 않았다. Nginx `/camera/gripper/` 와 Vite 프록시는 그 노드가 들어올 때를 위한 자리이며 127.0.0.1·::1 만 허용한다.
+Nodes PC에서 `voss_vision`을 빌드하고 송출 노드를 실행합니다. 기본 입력은 `/camera/color/image_raw`(rgb8 또는 bgr8)와 `/voss/vision/box`이며, 같은 촬영 시각의 박스 검출 결과를 영상에 표시합니다.
+
+```bash
+colcon build --packages-up-to voss_vision
+source install/setup.bash
+ros2 run voss_vision camera_preview
+```
+
+공용 PC 한 대에서 시연할 때는 그 PC에서 위 명령을 실행한 뒤 `http://localhost` → **카메라** → **그리퍼 카메라 · 영상 연결**로 확인합니다. 영상의 `T3` 같은 표시는 비전 트랙 번호이며 분류 이력의 BOX 번호와 다릅니다. 옆의 `92%` 같은 값은 그 박스 송장의 채움(윤곽 면적 ÷ 회전 사각형 면적, box_tracker 와 같은 `seg` 판정, `fill_min` 80% 이상 통과)이며 인식 신뢰도가 아닙니다. 같은 프레임에서 판정을 통과한 송장이 없으면 `-%` 입니다. 채움 % 는 송출 노드가 프레임을 보낼 때마다 판정을 한 번 더 돌립니다(1920×1080 기준 약 80 ms, 탭 하나당 약 5 Hz). 끄려면 `ros2 run voss_vision camera_preview --ros-args -p fill_percent:=false`. 판정 값은 `voss_vision` 설치 경로의 `config/box_tracker.yaml` 을 읽으며 다른 파일은 `-p seg_params_file:=<경로>` 로 지정합니다. 송출 노드의 `host` 기본값 `127.0.0.1`을 유지하고 `host:=0.0.0.0`으로 바꾸지 마세요. 그러면 카메라 영상이 Wi-Fi 쪽에 열립니다.
+
+송출 노드는 최근 원본 프레임 최대 10장만 보관하고 JPEG 전송 전에 최대 960×540으로 줄입니다. box_tracker·OCR·belt_servo와 함께 실행할 때의 실제 부하는 아직 측정하지 않았으므로 게이트 측정 중에는 송출 노드를 실행하지 않습니다.
+
+Web PC의 개발 서버(`npm run dev`)는 `/camera/gripper/frame.jpg`를 로컬 `127.0.0.1:8091`로 전달합니다. 따라서 개발 서버를 실행하는 PC에서 송출 노드의 `127.0.0.1:8091`에 닿아야 합니다. 카메라 메뉴의 **그리퍼 카메라 → 영상 연결**을 누르면 프레임을 요청합니다. 송출 노드가 실행되지 않았거나 입력 영상이 없으면 OFFLINE으로 표시됩니다. 배포 Nginx의 이 경로는 로컬 접속만 허용합니다.
 
 ### 실제 음성 인식과 마이크 표시등
 

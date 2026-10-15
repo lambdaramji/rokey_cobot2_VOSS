@@ -1,4 +1,4 @@
-"""config_params.py 시험: 레포 config/voss_config.yaml(10/06 실측)과 null 규칙."""
+"""config_params.py 시험: 레포 config/voss_config.yaml(10/06 실측, 구역 격자·팔레트는 10/12~13 실기)과 null 규칙."""
 
 from pathlib import Path
 
@@ -13,10 +13,15 @@ def test_repo_config_values():
     p = gateway_params(cfg, sha)
     assert p["tcp_offset_mm"] == pytest.approx([1.382, 2.684, 246.642])
     assert p["observe_pose"][:3] == pytest.approx([-11.51, -271.11, 450.16])
-    assert p["zones.A.grid"] == [3.0, 1.0, 60.0, 0.0]
+    # 3×2 × 2층, pitch_y 60 (10/12 실기 S2-T21)
+    assert p["zones.A.grid"] == [3.0, 2.0, 60.0, 0.0, 2.0, 27.0, 60.0]
     assert p["zones.HOLD.grid"] == [2.0, 1.0, 60.0, 0.0]  # config 키 hold → 대문자 HOLD
-    assert p["zones.C.grid"] == [3.0, 1.0, 50.0, -30.0]  # 10/08 칸 −80/−30/+20
+    assert p["zones.C.grid"] == [3.0, 2.0, 50.0, -30.0, 2.0, 27.0, 60.0]  # 10/08 칸 −80/−30/+20
+    assert p["zones.C.in_tray_tcp_z_mm"] == 40.0 and "zones.A.in_tray_tcp_z_mm" not in p
+    assert p["zones.PALLET.grid"] == [4.0, 2.0, 50.0, 0.0, 2.0, 27.0, 60.0]
+    assert p["zones.PALLET.pose"][:3] == pytest.approx([-158.82, 251.05, 258.27])
     assert p["gripper.force_n"] == 14.0
+    assert p["gripper.place_open_mm"] == 50.0 and p["gripper.pick_open_mm"] == 50.0
     assert len(p["config_sha256"]) == 12
 
 

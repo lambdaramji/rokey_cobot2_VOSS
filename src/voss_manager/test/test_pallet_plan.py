@@ -11,9 +11,8 @@ import yaml
 from voss_manager import pallet_plan as pp
 from voss_manager import sort_fsm as f
 
-REPO_CONFIG = os.path.join(
-    os.path.dirname(__file__), "..", "..", "..", "config", "voss_config.yaml"
-)
+# 로직 시험은 고정 설정(3×1)을 읽는다 — 레포 config 의 현장 값이 바뀌어도 기대값이 그대로다(S2-T21)
+TEST_CONFIG = os.path.join(os.path.dirname(__file__), "fixtures", "voss_config_3x1.yaml")
 SID = "20261012T090000-a1b2"
 Y, D, C = "역삼동", "대치동", "청담동"
 ZONE_OF = {Y: "A", D: "B", C: "C"}
@@ -287,7 +286,7 @@ def test_slot_cell_formula() -> None:
 
 
 def test_parse_route_with_aliases_and_errors() -> None:
-    with open(REPO_CONFIG, encoding="utf-8") as fh:
+    with open(TEST_CONFIG, encoding="utf-8") as fh:
         cfg = f.load_config(yaml.safe_load(fh))
     assert pp.parse_route("역삼, 대치동,청담", cfg.dong_of) == ALL3
     for arg, msg in [

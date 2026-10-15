@@ -10,7 +10,7 @@
   ```
   paddle 3.3 CPU 는 oneDNN 오류가 있어 도구가 `enable_mkldnn=False` 로 띄운다 (남현지)
 - `vision/eval_bag.py` — T17 녹화 bag 평가(ADR-0004): 분할 검출(`voss_vision.box_detect`) + 트래커 → 오검출·트랙·구간 검출률·지연(CPU 참고), 확인 시트, YOLO 자동 라벨 내보내기(`--export-yolo`, 음성은 앞뒤 2 s 안에 검출이 없는 프레임만). ROS Jazzy 환경에서 실행 (남현지)
-- `vision/box_overlay.py` — box_tracker 시각화(T21 #30, 하강 LOST 원인 찾기). 카메라 화면에 송장 후보·**버린 이유**(면적·가장자리·비율·채움, `box_detect.detect_candidates` = box_tracker 와 같은 판정)·발행된 BoxTrack·OCR 결과·단계·TCP 높이(윗면 기준)를 덧그린다. 구독·읽기만 한다(장비 무관):
+- `vision/box_overlay.py` — box_tracker 시각화(T21 #30, 하강 LOST 원인 찾기). 카메라 화면에 송장 후보·**버린 이유**(면적·가장자리·비율·채움, `box_detect.detect_candidates` = box_tracker 와 같은 판정)·발행된 BoxTrack·OCR 결과·단계·TCP 높이(윗면 기준)를 덧그린다. 발행된 bbox 는 초록, 위 가운데에 `BOX<번호> <채움 %>` — 번호는 sort_manager box_id 끝 순번(`/voss/sort/state`·`/voss/sort/result` 로 track_id 와 짝지음, 발급 전에는 번호 없이 `BOX`, 세션이 바뀌거나 트랙이 새로 나타나면 — box_tracker 재시작으로 track_id 가 다시 쓰여도 — 앞 번호를 버림. 시험 `python3 -m pytest tools/vision`), 채움 % 는 짝지은 송장 후보의 윤곽 면적 / 회전 사각형(fill_min 80 % 이상만 통과 — 학습 신뢰도 아님), 각도는 노랑 `yaw +45°`(yaw 필드가 있는 v15 빌드면 숫자, 송장 긴 축 선은 항상). 짝지은 후보가 없으면 `-%`. 실시간에서 % 가 필요 없으면 `--no-score`(% 를 아예 안 씀). 구독·읽기만 한다(장비 무관):
   ```bash
   source /opt/ros/jazzy/setup.bash && source ~/voss_ws/install/setup.bash   # voss_msgs 필요
   python3 tools/vision/box_overlay.py <G1 bag> [--start 12 --end 30] [--out a.mp4] [--csv a.csv] [--show]   # 끝에 "발행 끊김" 목록
