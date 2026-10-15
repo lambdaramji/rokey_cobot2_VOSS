@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   boxShape, CAPACITY, cellSlot, deckShape, dongColor, drawOrder, emptyPallet, overflowWarning, palletKey,
-  GENERAL_RESET_ZONES, palletFromPlacements, parsePalletState, progress, resetPalletAllowed, resetPalletPrompt, routeFromPicks, routePreview, slotCell, summaryRows,
+  GENERAL_RESET_ZONES, palletAfterClear, palletFromPlacements, parsePalletState, progress, resetPalletAllowed, resetPalletPrompt, routeFromPicks, routePreview, slotCell, summaryRows,
   topViewRows, VIEW_BOX,
 } from '../src/pallet.ts';
 
@@ -27,6 +27,17 @@ test('DB 적재 기록은 실제 pallet_slot만 채우고 경로 제외는 칸�
   assert.deepEqual(state.route,['대치동','청담동']);
   assert.deepEqual(state.overflow,[1,0]);
   assert.equal(state.slot_box_id[0],'box-1');
+});
+
+test('비운 run_id만 현재 탭에서 숨기고 새 DB 회차는 표시한다', () => {
+  const oldRun = palletFromPlacements({run_id:'run-old',items:[
+    {box_id:'old-1',dong:'역삼동',route_index:0,pallet_slot:0,result:'DONE'},
+  ]});
+  const newRun = palletFromPlacements({run_id:'run-new',items:[
+    {box_id:'new-1',dong:'대치동',route_index:0,pallet_slot:1,result:'DONE'},
+  ]});
+  assert.equal(palletAfterClear(oldRun,'run-old').done,0);
+  assert.deepEqual(palletAfterClear(newRun,'run-old'),newRun);
 });
 
 test('slot ↔ 열·층·줄은 slot = (열−1)×4 + (층−1)×2 + (줄−1) 이다 (D2)', () => {

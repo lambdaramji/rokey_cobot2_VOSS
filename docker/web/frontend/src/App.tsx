@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { announceVoice, getLatestPalletPlacements, getResults, getSummary, issueCommand, putPlan, RequestFailure } from './api';
 import type { CommandArgs } from './api';
 import PalletPanel from './PalletPanel';
-import { emptyPallet, GENERAL_RESET_ZONES, palletFromPlacements, parsePalletState } from './pallet';
+import { emptyPallet, GENERAL_RESET_ZONES, palletAfterClear, palletFromPlacements, parsePalletState } from './pallet';
 import type { CommandType, LinkStatus, PalletState, RobotState, SortResult, SortState, Summary, ZoneMap } from './types';
 import { VossSortingWorkspace } from './components/VossSortingWorkspace';
 import { parseBoxMotion, parseBoxTrack, parseRobotPose, POSE_STALE_MS, TRACK_STALE_MS } from './lib/workspacePosition';
@@ -49,6 +49,9 @@ export default function App() {
   const [pallet,setPallet] = useState<PalletState>(emptyPallet);
   const [palletSource,setPalletSource] = useState<'none'|'db'|'live'>('none');
   const palletFromSse = useRef(false);
+  const palletRef = useRef(pallet);
+  const clearedPalletRunId = useRef('');
+  useEffect(()=>{palletRef.current=pallet;},[pallet]);
   // 워크스페이스 트레이 '비움': reset_zone 접수(ack '<구역> 비움') 시점의 DB 세션 집계를 기준점으로 두고 그 뒤 증가분만 보인다.
   // DB 집계(세션 누적 처리 수)는 줄지 않으므로 화면에서만 뺀다. 세션이 바뀌면 기준점을 버린다.
   const [zoneClearBase,setZoneClearBase] = useState<{session:string; counts:Record<string,number>}|null>(null);
@@ -233,7 +236,12 @@ export default function App() {
       if (palletPreview) return;
       // 계약에 어긋나면 이전 배치도를 유지한다 (web_api.md pallet_state).
       const parsed = parsePalletState(JSON.parse((event as MessageEvent).data));
-      if (parsed) {palletFromSse.current=true;setPalletSource('live');setPallet(parsed);}
+      if (parsed) {
+        const visible = palletAfterClear(parsed,clearedPalletRunId.current);
+        palletFromSse.current=Boolean(visible.run_id);
+        setPalletSource(visible.run_id?'live':'none');
+        setPallet(visible);
+      }
     });
     stream.addEventListener('log_status',(event)=>setLogStatus(JSON.parse((event as MessageEvent).data).status ?? 'UNKNOWN'));
     stream.addEventListener('link',(event)=>{
@@ -269,8 +277,9 @@ export default function App() {
         setZoneClearBase(base => ({ session, counts: { ...(base?.session === session ? base.counts : {}), [zone]: latest?.by_zone?.[zone] ?? 0 } }));
       }
       if (ack.ok && ack.message === 'PALLET 비움' && !palletPreview) {
-        palletFromSse.current = true;
-        setPalletSource('live');
+        clearedPalletRunId.current = palletRef.current.run_id;
+        palletFromSse.current = false;
+        setPalletSource('none');
         setPallet(emptyPallet());
       }
       void refresh();
@@ -288,8 +297,9 @@ export default function App() {
       try {
         const snapshot = await getLatestPalletPlacements();
         if (active && !palletFromSse.current) {
-          setPallet(palletFromPlacements(snapshot));
-          setPalletSource(snapshot.run_id ? 'db' : 'none');
+          const visible = palletAfterClear(palletFromPlacements(snapshot),clearedPalletRunId.current);
+          setPallet(visible);
+          setPalletSource(visible.run_id ? 'db' : 'none');
         }
       } catch (failure) {
         console.error('[VOSS HMI] pallet_log 조회 실패',failure);

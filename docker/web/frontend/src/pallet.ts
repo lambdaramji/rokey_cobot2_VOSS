@@ -27,6 +27,11 @@ const EMPTY_STATE:PalletState = {
 
 export function emptyPallet():PalletState { return structuredClone(EMPTY_STATE); }
 
+/** 현재 탭에서 비운 회차만 숨긴다. 새 run_id는 바로 다시 표시한다. */
+export function palletAfterClear(state:PalletState, clearedRunId:string):PalletState {
+  return clearedRunId && state.run_id===clearedRunId ? emptyPallet() : state;
+}
+
 /** pallet_state 가 아직 없는 Web PC에서 공식 pallet_log의 확정 결과로 배치도를 채운다. */
 export function palletFromPlacements(snapshot:PalletPlacements):PalletState {
   const state = emptyPallet();
