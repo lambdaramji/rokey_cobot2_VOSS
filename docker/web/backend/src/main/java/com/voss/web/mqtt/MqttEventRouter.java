@@ -21,7 +21,8 @@ public class MqttEventRouter {
     private static final Set<String> INPUT_TOPICS = Set.of(
             "voss/state", "voss/result", "voss/zone_map", "voss/robot",
             "voss/command/ack", "voss/log_status", "voss/pallet/state", "voss/voice_status",
-            "voss/box_track", "voss/robot_pose", "voss/box_motion", "voss/robot_joints");
+            "voss/box_track", "voss/robot_pose", "voss/box_motion", "voss/robot_joints",
+            "voss/voice/text/reply");
 
     private final VoiceStatusFilter voiceStatuses = new VoiceStatusFilter();
     private final ObjectMapper mapper;
@@ -54,6 +55,7 @@ public class MqttEventRouter {
         try {
             JsonNode json = mapper.readTree(payload);
             if (json == null || !json.isObject()) { return; }
+            if ("voss/voice/text/reply".equals(topic) && retained) { return; }
             if ("voss/voice_status".equals(topic) && !voiceStatuses.accept(json, retained)) { return; }
             if ("voss/state".equals(topic)) {
                 handleState(payload, json);
@@ -104,6 +106,7 @@ public class MqttEventRouter {
     private String toEventName(String topic) {
         if ("voss/command/ack".equals(topic)) { return "command_ack"; }
         if ("voss/pallet/state".equals(topic)) { return "pallet_state"; }
+        if ("voss/voice/text/reply".equals(topic)) { return "text_reply"; }
         return topic.substring("voss/".length());
     }
 }

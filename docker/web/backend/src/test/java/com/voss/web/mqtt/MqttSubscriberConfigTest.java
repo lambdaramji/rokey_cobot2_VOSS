@@ -74,8 +74,9 @@ class MqttSubscriberConfigTest {
                 config.mqttStateAdapter(factory, new DirectChannel());
         assertArrayEquals(new String[]{"voss/state", "voss/result", "voss/zone_map",
                 "voss/robot", "voss/command/ack", "voss/log_status", "voss/pallet/state", "voss/voice_status",
-                "voss/box_track", "voss/robot_pose", "voss/box_motion", "voss/robot_joints"}, adapter.getTopic());
-        assertArrayEquals(new int[]{1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0}, adapter.getQos());
+                "voss/box_track", "voss/robot_pose", "voss/box_motion", "voss/robot_joints",
+                "voss/voice/text/reply"}, adapter.getTopic());
+        assertArrayEquals(new int[]{1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1}, adapter.getQos());
     }
 
     /** 수신 채널은 토픽 헤더를 라우터로 전달한다. */

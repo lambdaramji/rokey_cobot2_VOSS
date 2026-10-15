@@ -76,6 +76,16 @@ class CommandControllerTest {
         verify(publisher).publish(anyMap());
     }
 
+    @Test
+    void testRecheckUsesEmptyArgsAndRejectsRemote() throws Exception {
+        var response = controller.command(
+                mapper.readTree("{\"type\":\"recheck\",\"args\":{}}"), local());
+        assertEquals(HttpStatus.ACCEPTED, response.getStatusCode());
+        ApiException error = assertThrows(ApiException.class, () -> controller.command(
+                mapper.readTree("{\"type\":\"recheck\",\"args\":{}}"), remote()));
+        assertEquals("FORBIDDEN_REMOTE", error.code());
+    }
+
     /** 원격 운영자 IP는 기존 임시 설정과 무관하게 허용하지 않는다. */
     @Test
     void testRemoteOperatorIpCannotEnableStart() throws Exception {
@@ -190,6 +200,12 @@ class CommandControllerTest {
     private MockHttpServletRequest local() {
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader("X-Real-IP", "127.0.0.1");
+        return request;
+    }
+
+    private MockHttpServletRequest remote() {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("X-Real-IP", "192.0.2.11");
         return request;
     }
 

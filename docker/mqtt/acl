@@ -2,9 +2,13 @@
 user web
 topic read voss/#
 topic write voss/command
+topic write voss/voice/request
+topic write voss/voice/text
 
 user bridge
 topic read voss/command
+topic read voss/voice/request
+topic read voss/voice/text
 topic write voss/state
 topic write voss/result
 topic write voss/zone_map
@@ -14,6 +18,7 @@ topic write voss/box_motion
 topic write voss/robot_pose
 topic write voss/robot_joints
 topic write voss/voice_status
+topic write voss/voice/text/reply
 topic write voss/command/ack
 topic write voss/log_status
 topic write voss/pallet/state

@@ -28,8 +28,9 @@ public class MqttSubscriberConfig {
     private static final String[] INPUT_TOPICS = {
             "voss/state", "voss/result", "voss/zone_map", "voss/robot",
             "voss/command/ack", "voss/log_status", "voss/pallet/state", "voss/voice_status",
-            "voss/box_track", "voss/robot_pose", "voss/box_motion", "voss/robot_joints"};
-    private static final int[] INPUT_QOS = {1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0};
+            "voss/box_track", "voss/robot_pose", "voss/box_motion", "voss/robot_joints",
+            "voss/voice/text/reply"};
+    private static final int[] INPUT_QOS = {1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1};
 
     MqttPahoClientFactory mqttClientFactory(String password) {
         return mqttClientFactory(password, MQTT_BROKER_URL);
@@ -94,6 +95,38 @@ public class MqttSubscriberConfig {
         MqttPahoMessageHandler handler = new MqttPahoMessageHandler(
                 "voss-web-command-" + UUID.randomUUID(), clientFactory);
         handler.setDefaultTopic("voss/command");
+        handler.setDefaultQos(1);
+        handler.setDefaultRetained(false);
+        handler.setAsync(false);
+        return handler;
+    }
+
+    /** 버튼 음성 요청은 로봇 명령과 별도 토픽으로 보낸다. */
+    @Bean
+    public MessageChannel mqttVoiceChannel() { return new DirectChannel(); }
+
+    @Bean
+    @ServiceActivator(inputChannel = "mqttVoiceChannel")
+    public MessageHandler mqttVoiceConsumer(MqttPahoClientFactory clientFactory) {
+        MqttPahoMessageHandler handler = new MqttPahoMessageHandler(
+                "voss-web-voice-" + UUID.randomUUID(), clientFactory);
+        handler.setDefaultTopic("voss/voice/request");
+        handler.setDefaultQos(1);
+        handler.setDefaultRetained(false);
+        handler.setAsync(false);
+        return handler;
+    }
+
+    /** 자연어 입력은 고정 안내 요청과 분리해 ROS intent_parser로 보낸다. */
+    @Bean
+    public MessageChannel mqttTextChannel() { return new DirectChannel(); }
+
+    @Bean
+    @ServiceActivator(inputChannel = "mqttTextChannel")
+    public MessageHandler mqttTextConsumer(MqttPahoClientFactory clientFactory) {
+        MqttPahoMessageHandler handler = new MqttPahoMessageHandler(
+                "voss-web-text-" + UUID.randomUUID(), clientFactory);
+        handler.setDefaultTopic("voss/voice/text");
         handler.setDefaultQos(1);
         handler.setDefaultRetained(false);
         handler.setAsync(false);
