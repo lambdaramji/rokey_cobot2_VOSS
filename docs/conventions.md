@@ -2,7 +2,7 @@
 
 ## 브랜치·커밋·PR
 - `main`: 항상 빌드 통과. 직접 푸시 금지 (브랜치 보호).
-- **임시 규칙(10/13~시연, ADR-0015 — 아래 규칙보다 우선)**: 레포는 `rokeyhak/rokey_cobot2_VOSS_2`. 이슈 번호 대신 작업 ID — 브랜치 `feat/T22-vision-container`, 커밋 `feat(voss_vision): … (T22)`. `@claude` 자동 리뷰는 꺼져 있다(리뷰 = 동료 1명). PL 승인은 김학민이 대행한다. 남현지 작업은 김학민이 번들로 받아 올리므로 그 PR 은 박병후(또는 정의석)가 승인한다. 이슈는 손으로만 만든다.
+- **임시 규칙 종료(10/15, ADR-0015)**: 10/13~15 에 쓴 `rokeyhak/rokey_cobot2_VOSS_2` 는 보관(읽기 전용)으로 남기고 레포는 `lambdaramji/rokey_cobot2_VOSS` 로 돌아왔다. 그 기간 커밋 메시지의 `#번호`·`(T22)` 같은 작업 ID 는 `_2` 기준이다(ADR-0015 결과 절의 대응표). 아래 규칙이 다시 그대로 적용된다.
 - 브랜치: `<type>/<이슈번호>-<패키지>-<설명>` 예) `feat/12-servo-feedforward`, `fix/31-ocr-fuzzy`
 - type: feat, fix, docs, refactor, test, chore
 - 커밋: `<type>(<패키지>): <요약> (#이슈)` 예) `feat(voss_servo): add belt speed feedforward (#12)`
