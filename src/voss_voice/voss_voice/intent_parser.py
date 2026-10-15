@@ -24,6 +24,7 @@ from std_msgs.msg import String
 
 from voss_msgs.msg import Intent, SortState, ZoneMap
 from voss_voice import http_client
+from voss_voice.command_delivery import attempt_stop
 from voss_voice.intent_logic import ZoneMapView
 from voss_voice.transcript_flow import CommandDeliveryError, TranscriptFlow
 
@@ -224,9 +225,22 @@ class IntentParserNode(Node):
 
     def _publish(self, fields: dict) -> None:
         if self._command_transport == "web_api":
+            if fields["type"] == "stop":
+                ros_sent, web_accepted = attempt_stop(
+                    lambda: self._publish_ros(fields),
+                    lambda: http_client.post_command(fields, base=self._api_base),
+                )
+                if not ros_sent:
+                    self.get_logger().error("ROS stop 발행 실패; 웹 경로는 별도로 시도함")
+                if not web_accepted:
+                    raise CommandDeliveryError("stop web API acceptance unconfirmed")
+                return
             if not http_client.post_command(fields, base=self._api_base):
                 raise CommandDeliveryError("POST /api/commands was not accepted")
             return
+        self._publish_ros(fields)
+
+    def _publish_ros(self, fields: dict) -> None:
         m = Intent()
         m.type, m.dong, m.zone = fields["type"], fields["dong"], fields["zone"]
         m.count, m.raw_text, m.box_id = fields["count"], fields["raw_text"], fields["box_id"]

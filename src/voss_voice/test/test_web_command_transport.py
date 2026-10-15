@@ -4,6 +4,8 @@ import http.client
 import threading
 from types import SimpleNamespace
 
+import pytest
+from voss_voice.command_delivery import attempt_stop
 from voss_voice.http_client import command_request
 from voss_voice.intent_logic import ZoneMapView
 from voss_voice.intent_parser import IntentParserNode
@@ -25,6 +27,58 @@ def test_priority_and_recheck_use_existing_command_contract() -> None:
         "raw_text": "역삼동 먼저 분류해",
     }
     assert recheck["args"] == {}
+
+
+def test_stop_attempts_ros_before_web_even_if_web_fails() -> None:
+    calls = []
+    assert attempt_stop(lambda: calls.append("ros"), lambda: calls.append("web") or False) == (
+        True, False
+    )
+    assert calls == ["ros", "web"]
+
+
+def test_stop_attempts_web_after_ros_exception() -> None:
+    calls = []
+
+    def fail_ros():
+        calls.append("ros")
+        raise RuntimeError("DDS unavailable")
+
+    assert attempt_stop(fail_ros, lambda: calls.append("web") or True) == (False, True)
+    assert calls == ["ros", "web"]
+
+
+def test_web_timeout_after_ros_stop_does_not_claim_acceptance(monkeypatch) -> None:
+    sent = []
+    node = SimpleNamespace(
+        _command_transport="web_api",
+        _api_base="http://127.0.0.1:8080",
+        _publish_ros=lambda fields: sent.append(fields["type"]),
+        get_logger=lambda: SimpleNamespace(error=lambda *_: None),
+    )
+
+    def timeout(*_args, **_kwargs):
+        raise TimeoutError("web unavailable")
+
+    monkeypatch.setattr("voss_voice.intent_parser.http_client.post_command", timeout)
+    with pytest.raises(CommandDeliveryError):
+        IntentParserNode._publish(node, {"type": "stop"})
+    assert sent == ["stop"]
+
+
+def test_non_stop_web_transport_does_not_publish_ros(monkeypatch) -> None:
+    sent = []
+    node = SimpleNamespace(
+        _command_transport="web_api",
+        _api_base="http://127.0.0.1:8080",
+        _publish_ros=lambda fields: sent.append(("ros", fields["type"])),
+    )
+    monkeypatch.setattr(
+        "voss_voice.intent_parser.http_client.post_command",
+        lambda fields, **_: sent.append(("web", fields["type"])) or True,
+    )
+    IntentParserNode._publish(node, {"type": "start"})
+    assert sent == [("web", "start")]
 
 
 def test_delivery_failure_does_not_claim_command_was_accepted() -> None:
