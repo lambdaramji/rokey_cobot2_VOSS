@@ -374,7 +374,11 @@ def test_reset_pallet_before_next_run(cfg) -> None:
     assert out.ctx.state == f.PAUSED and pf.pallet_state(out.ctx)["state"] == ""
     resumed = pf.step(out.ctx, cmd("resume"))
     assert resumed.reply[0] and resumed.ctx.state == f.RUNNING
-    assert pf.step(resumed.ctx, palletize("청담동")).reply[0]
+    # resume 의 OBSERVE 복귀가 끝나야 다음 실행을 받을 수 있다.
+    assert resumed.ctx.phase == f.PH_HOME
+    ready = pf.step(resumed.ctx, f.MoveDone(True, "OK", 0, 9000 * MS)).ctx
+    assert ready.phase == f.PH_NONE
+    assert pf.step(ready, palletize("청담동")).reply[0]
 
 
 def test_pallet_state_during_run(cfg) -> None:
