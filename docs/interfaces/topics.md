@@ -65,3 +65,4 @@
   `/voss/voice/text` 및 `/voss/voice/text/reply` 추가.
   Web PC hmi_bridge와 intent_parser 간 요청·응답 연결.
   MQTT·REST 상세 계약은 mqtt.md·web_api.md 참조.
+- 2026-10-15: S2-T18 실기(U14, voss_servo/design/S2T18-result.md) — robot_gateway `servo_yaw_limit_deg` 를 launch 인자로도(비우면 노드 기본 100), J6 운용값 130. 회전 기준점 = 컨트롤러 등록 TCP 확인(회전 중 TCP xy ≤ 0.2 mm, 펜던트 TCP 등록 상태) → 선속도 보정 불필요. 토픽·타입·메시지 변경 없음.

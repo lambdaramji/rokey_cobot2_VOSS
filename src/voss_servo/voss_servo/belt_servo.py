@@ -699,6 +699,31 @@ class BeltServoNode(Node):
             self._hold_until = None
             self._busy = False
 
+    # 손목이 돌고 있거나 돌아간 채 박스를 따라가는 상태 — 카메라가 박스를 비스듬히 봐 짧게 놓칠 수 있다
+    _ROT_LOST_STATES = (
+        rotate.ROTATING,
+        rotate.SETTLING,
+        rotate.DONE,
+        rotate.STOPPING,
+        rotate.FALLBACK,
+    )
+
+    def _lost_timeout(self, ctx: GoalCtx) -> float:
+        """LOST 판정 시간. 회전을 쓴 goal 의 PREPARE·TRACK 에서만 rotate.lost_timeout_s(있으면), 그 밖은 input 값.
+
+        10/15 U14 실기: + 회전 60° 이상에서 송장 판정이 0.5~0.6 s 끊겨 LOST. 끊긴 동안은 마지막 관측 + FF 예측으로 따라간다.
+        """
+        base = self._p("input.lost_timeout_s")
+        rot_lost = self.values.get("rotate.lost_timeout_s") if self._rot_on else None
+        if (
+            rot_lost is not None
+            and ctx.rot is not None
+            and ctx.rot.state in self._ROT_LOST_STATES
+            and ctx.state.phase in ("PREPARE", "TRACK")
+        ):
+            return float(rot_lost)
+        return base
+
     def _build_event(self, ctx: GoalCtx, now: float) -> fsm.TickEvent:
         """이번 틱의 사실들을 모은다: 보정 TCP → 사각 → 입력 끊김 → 기하·전환 플래그 → 그리퍼."""
         cfg = self._ctrl
@@ -729,7 +754,7 @@ class BeltServoNode(Node):
             ctx.start,
             ctx.vision_since,
             blind,
-            self._p("input.lost_timeout_s"),
+            self._lost_timeout(ctx),
             self._p("input.stale_timeout_s"),
         )
         self._check_source(ctx, obs)
@@ -860,7 +885,7 @@ class BeltServoNode(Node):
         )
 
     def _rot_values(self, ctx: GoalCtx, terminal: bool) -> dict[str, Any]:
-        """틱 로그의 회전 키 12개 (회전 off 면 전부 None)."""
+        """틱 로그의 회전 키 13개 (회전 off 면 전부 None)."""
         if not self._rot_on or ctx.rot is None:
             return dict.fromkeys(ls.ROT_KEYS)
         psi_raw, psi_est, w_meas = ctx.rot_io
