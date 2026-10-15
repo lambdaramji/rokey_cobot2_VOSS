@@ -28,8 +28,8 @@ from std_msgs.msg import String
 
 from voss_hmi.mqtt_logic import CommandError, pallet_state_payload, parse_command_json
 from voss_hmi.text_request import parse_text_reply, parse_text_request
-from voss_hmi.voice_status import forward_voice_status
 from voss_hmi.voice_request import parse_voice_request
+from voss_hmi.voice_status import forward_voice_status
 from voss_msgs.msg import BoxTrack, PalletState, RobotState, SortResult, SortState, ZoneMap
 from voss_msgs.srv import Command
 
@@ -260,7 +260,7 @@ class HmiBridgeNode(Node):
                       self._text_queue if message.topic == MQTT_TEXT_TOPIC else self._command_queue)
             target.put_nowait(payload)
         except queue.Full:
-            self.get_logger().error("MQTT queue full: %s" % message.topic)
+            self.get_logger().error(f"MQTT queue full: {message.topic}")
 
     def _on_state(self, message: SortState) -> None:
         """SortState를 voss/state JSON으로 발행한다."""

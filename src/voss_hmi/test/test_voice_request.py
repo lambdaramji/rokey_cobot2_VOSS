@@ -5,12 +5,13 @@ from datetime import datetime, timedelta, timezone
 
 from voss_hmi.voice_request import VOICE_PHRASES, parse_voice_request
 
-
 NOW = datetime(2026, 10, 14, 20, 0, tzinfo=timezone(timedelta(hours=9)))
 REQUEST_ID = "7fd11fb1-160c-4d47-98b2-5462a6789a5a"
 
 
-def payload(action="start", sent_at=NOW.isoformat(), **extra):
+def payload(action="start", sent_at=None, **extra):
+    if sent_at is None:
+        sent_at = NOW.isoformat()
     return json.dumps({"request_id": REQUEST_ID, "action": action, "sent_at": sent_at, **extra})
 
 

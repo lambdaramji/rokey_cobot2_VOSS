@@ -2,12 +2,11 @@
 
 import json
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from voss_hmi.text_request import parse_text_reply, parse_text_request
 
-
-NOW = datetime(2026, 10, 15, tzinfo=timezone.utc)
+NOW = datetime(2026, 10, 15, tzinfo=UTC)
 REQUEST_ID = str(uuid.uuid4())
 
 
