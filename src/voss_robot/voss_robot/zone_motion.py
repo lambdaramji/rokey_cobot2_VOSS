@@ -12,7 +12,8 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
+from typing import NamedTuple
 
 from voss_robot.geometry import zyz_to_matrix
 
@@ -56,6 +57,24 @@ def row_stage_slot(grid: Sequence[float], slot: int) -> int:
     """트레이 안 이동의 출입구 칸 = slot 과 같은 Y 줄의 −X 끝 칸(1층). C 칸 2 → 0, 칸 5 → 3 (10/12 실기 요청)."""
     cols, rows = int(grid[0]), int(grid[1])
     return (slot % (cols * rows)) // cols * cols
+
+
+class SlotRoute(NamedTuple):
+    """구역 칸 하나의 MoveToZone 경로 입력: 칸 자세, 출입구 칸 번호·자세, 트레이 안 최저 TCP z(None = 공통 값)."""
+
+    target: list[float]
+    via: int
+    stage: list[float]
+    in_tray_z: float | None
+
+
+def slot_route(zone: Mapping, slot: int) -> SlotRoute:
+    """gateway 구역 설정({pose, grid, in_tray}) 의 칸 → SlotRoute. MoveToZone 과 기동 때 이동 높이 미리 계산이
+    같이 쓴다 — 출입구 칸·하한이 다르면 이동 높이 캐시 키가 어긋나 C 칸 2·5 첫 이동 때 처음부터 찾는다(#147 회귀).
+    2층 칸은 1층과 x·y·출입구·하한이 같아(row_stage_slot = 1층 칸) 캐시가 그대로 맞는다. 범위 밖이면 ValueError."""
+    pose, grid = zone["pose"], zone["grid"]
+    via = row_stage_slot(grid, slot)
+    return SlotRoute(slot_pose(pose, grid, slot), via, slot_pose(pose, grid, via), zone["in_tray"])
 
 
 def pick_pose(slot_flange: Sequence[float], dz_mm: float) -> list[float]:
