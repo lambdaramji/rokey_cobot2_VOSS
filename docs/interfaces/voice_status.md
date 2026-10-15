@@ -6,11 +6,11 @@
 
 - `voice_listener`의 `/voss/voice/status`: `std_msgs/String` JSON. ROS reliable/volatile, depth 10 (topics.md `/voss/voice/*` 행). main 에는 없던 토픽이며 `voice_feedback.py` 와 함께 들어온다.
 - phase는 `WAKE_DETECTED`, `COMMAND_ACCEPTED`, `RECOGNITION_FAILED`, `TIMED_OUT` 네 가지다. `RECOGNITION_FAILED` 는 호출어 뒤 STT **호출 실패**일 때만 낸다 — 잡음 구간의 빈 전사는 기존 WakeGate 처럼 무시하고 호출 대기를 유지한다(10/14 #40 리뷰).
-- `TIMED_OUT` 때 voice_listener 는 `/voss/voice/say` 로 안내 한 줄("시간이 지났어요. 다시 '헬로 로키'라고 말해 주세요.")을 낸다. 단 SortState 가 `PICKING`·`RECHECK`·`PALLETIZING`(로봇 동작 중)이면 말하지 않고(작업자의 "정지"와 겹치거나 manager 안내를 speech_out FIFO 뒤로 밀지 않게), 그 밖에도 `timeout_say_min_interval_s`(기본 30 s)에 한 번만 말한다. 표시 이벤트 `TIMED_OUT` 은 항상 보낸다(10/14 #40 리뷰, 박병후).
+- `TIMED_OUT` 때 voice_listener 는 `/voss/voice/say` 로 안내 한 줄("시간이 지났어요. 호출어를 다시 말해 주세요.")을 낸다. 안내문에 호출어 자체를 넣지 않는다 — 스피커 소리가 마이크로 돌아와 호출어로 잡힌 사례(10/15). 단 SortState 가 `PICKING`·`RECHECK`·`PALLETIZING`(로봇 동작 중)이면 말하지 않고(작업자의 "정지"와 겹치거나 manager 안내를 speech_out FIFO 뒤로 밀지 않게), 그 밖에도 `timeout_say_min_interval_s`(기본 30 s)에 한 번만 말한다. 표시 이벤트 `TIMED_OUT` 은 항상 보낸다(10/14 #40 리뷰, 박병후).
 - `publish_transcript:=false`(표시등만 시험)에서도 상태 이벤트는 나간다 — 이때는 transcript 가 안 나가 음성 명령·정지가 무효이므로 기동 때 WARN 을 남기고, **ROS_DOMAIN_ID 30(운용 도메인)에서는 기동을 거부한다**.
 - 필드는 `phase`, `event_id`, `utterance_id`뿐이다. timestamp는 없다. UUID를 시각순으로 비교하지 않는다.
 - `COMMAND_ACCEPTED`는 WakeGate를 통과한 **전사 텍스트 수락**이다. intent_parser의 허용 목록 검증, manager 접수, 로봇 동작 완료가 아니다.
-- ADR-0007의 호출어 창은 5초다. 웹의 8초 상수는 ROS 시간 초과 이벤트가 오지 않을 때의 별도 UI 대기 한도다. 정상 경로에서는 ROS의 5초 이벤트가 먼저 올 수 있다.
+- `voice_listener` 기본 호출어 창은 5초다. Web PC 실행 스크립트는 팔레타이징 순서 답변 등을 위해 `wake_window_s:=10`을 설정한다. 웹의 13초 상수는 ROS 시간 초과 이벤트가 오지 않을 때의 별도 UI 대기 한도다.
 - 실제 SSE 주소는 문서·StreamController·App.tsx 모두 **`GET /api/stream`**이다. `/api/events`를 새로 만들지 않는다.
 
 ## 변경 전/후
@@ -23,7 +23,7 @@
 | Spring SSE | 기존 이벤트(web_api.md 표) | 같은 `/api/stream`에 `voice_status` 추가; payload 3개 필드 검증 |
 | React | 시험 버튼/상태 reducer | 실제 이벤트, 중복/지난 발화 억제, 연결 종료 시 진행 중 발화 무효화 |
 
-MQTT QoS 0 이유: 이 이벤트는 잠깐의 화면 상태이며, 끊긴 동안 쌓인 호출어를 재접속 후 다시 노랑으로 표시하면 안 된다. **ROS reliable QoS는 그대로** 유지한다. MQTT publish는 연결 중에만 수행하고 QoS 1의 재전송 큐를 사용하지 않는다. 누락된 종료 이벤트는 UI 8초 타임아웃으로 처리한다.
+MQTT QoS 0 이유: 이 이벤트는 잠깐의 화면 상태이며, 끊긴 동안 쌓인 호출어를 재접속 후 다시 노랑으로 표시하면 안 된다. **ROS reliable QoS는 그대로** 유지한다. MQTT publish는 연결 중에만 수행하고 QoS 1의 재전송 큐를 사용하지 않는다. Web PC의 누락된 종료 이벤트는 UI 13초 타임아웃으로 처리한다.
 
 ## payload와 상태
 
@@ -33,11 +33,12 @@ MQTT QoS 0 이유: 이 이벤트는 잠깐의 화면 상태이며, 끊긴 동안
 
 ID는 공백만인 값·앞뒤 공백·128자 초과를 거부한다. 추가 필드는 ROS→MQTT 경계에서 제거한다. 원문·오디오는 웹으로 보내지 않는다.
 
-- 실제 호출어 인식: 노랑. 호출어 없는 stop/텍스트 폴백을 통과시키기 위해 가짜 `WAKE_DETECTED`를 만들지 않는다. stop의 transcript 처리는 그대로 유지한다.
+- 실제 호출어 인식: 노랑. `WAKE_DETECTED`는 음성 구간 종료와 STT 전사 후에 발행된다. voice_listener의 기본 종료 무음은 350 ms이며, 실시간 키워드 검출 이벤트는 아니다. 호출어 없는 stop/텍스트 폴백을 통과시키기 위해 가짜 `WAKE_DETECTED`를 만들지 않는다. stop의 transcript 처리는 그대로 유지한다.
 - 같은 발화의 `COMMAND_ACCEPTED`: 초록.
 - 같은 발화의 `RECOGNITION_FAILED` 또는 `TIMED_OUT`: 빨강 및 안내.
-- 호출 후 이벤트가 없으면 `VOICE_COMMAND_TIMEOUT_MS=8000`: 빨강.
-- 아이콘 클릭: UI만 초록으로 초기화. 해당 발화의 늦은 결과는 무시한다.
+- 호출 후 이벤트가 없으면 Web PC에서 `VOICE_COMMAND_TIMEOUT_MS=13000`: 빨강.
+- 빨강은 3초 표시한 뒤 UI만 초록으로 자동 복귀한다. 해당 발화의 늦은 결과는 무시한다.
+- 아이콘 클릭: 기다리지 않고 UI만 초록으로 초기화. 해당 발화의 늦은 결과는 무시한다.
 - 초기 초록은 대기 기본값이지 마이크 연결 확인이 아니다.
 
 ## 중복·지연·연결 끊김
@@ -55,7 +56,7 @@ ID는 공백만인 값·앞뒤 공백·128자 초과를 거부한다. 추가 필
 |---|---|---|
 | 토픽, QoS 0, ACL, SSE 이벤트 | 10/14 승인 | 정의석, 남현지(PL), 김학민(인터페이스 승인, ADR-0015) |
 | 초록의 의미 | 전사 수락; 명령 완료로 표시하지 않음 | 정의석, 남현지, 김학민 |
-| 8초 UI vs 5초 호출어 창, TIMED_OUT 음성 안내 | 각각 유지. 안내 문구·오탐 때 반복 여부는 K14(음성 되묻기) 때 확정 | 정의석, 남현지, 김학민 |
+| Web PC의 13초 UI 예비 타임아웃 vs 10초 호출어 창, TIMED_OUT 음성 안내 | UI는 ROS 이벤트가 없을 때만 사용. 다른 실행의 기본 호출어 창은 5초 | 정의석 |
 | 다중 발행기 순서 필드 | 이번 범위 제외 | 정의석 |
 | 실제 음성→웹 전체 검증 | 로컬 실마이크 시험에서 별도 기록 | Web PC 작업자 |
 

@@ -14,10 +14,12 @@
 - **확정:** Mosquitto 는 공용 PC **호스트**에서 1883/TCP 로 실행한다(ADR-0006, #55 MC-026, #20). Spring Boot 와 hmi_bridge 는 모두 `127.0.0.1:1883` 로 연결한다.
 - Mosquitto listener 자체는 `0.0.0.0:1883` 을 사용하되 방화벽으로 노출을 제한한다. `enp4s0`(로봇망)은 항상 차단한다. `wlo1` 은 개발 중 개인 PC의 읽기 전용 디버깅이 필요할 때만 임시로 열고, **시연 때는 1883/wlo1 을 닫는다**. HMI는 공용 PC의 Spring Boot가 로컬로 붙으므로 시연 기능에는 영향이 없다.
 - `allow_anonymous false`. 비밀번호 파일과 실제 비밀번호는 Git에 넣지 않고 공용 PC에서 생성한다(`.env`/로컬 파일만). ACL은 아래처럼 고정한다.
-  - `web`: `voss/command` write, `voss/#` read
-  - `bridge`: `voss/command` read. write는 #20 확정 6개(`voss/state`·`voss/result`·`voss/zone_map`·`voss/robot`·`voss/command/ack`·`voss/log_status`)와 10/14 승인 표시 토픽 `voss/box_track`·`voss/robot_pose`·`voss/robot_joints`·`voss/voice_status`, Sprint 2 `voss/pallet/state`, 제안 `voss/box_motion`(발행자 생기기 전엔 쓰지 않음)만 허용한다 (`voss/command` write 금지). 템플릿 = `docker/mqtt/acl`
+  - `web`: `voss/command`·`voss/voice/request`·`voss/voice/text` write, `voss/#` read
+  - `bridge`: `voss/command`·`voss/voice/request`·`voss/voice/text` read. write는 #20 확정 6개(`voss/state`·`voss/result`·`voss/zone_map`·`voss/robot`·`voss/command/ack`·`voss/log_status`)와 10/14 승인 표시 토픽 `voss/box_track`·`voss/robot_pose`·`voss/robot_joints`·`voss/voice_status`, Sprint 2 `voss/pallet/state`, 텍스트 응답 `voss/voice/text/reply`, 제안 `voss/box_motion`(발행자 생기기 전엔 쓰지 않음)만 허용한다 (`voss/command` write 금지). 템플릿 = `docker/mqtt/acl`
   - `debug`: `voss/#` read only
   - `voice_preview`: `voss/voice_status` write 하나만 (격리 음성 시험 전용, 아래 "음성 표시등 이벤트")
+
+웹 텍스트 명령: `web`은 `voss/voice/text`에 QoS 1·retain false로 `{request_id,text,sent_at}`를 보낸다. Web PC 브리지(`voice_status_only:=true`, `local_text_enabled:=true`, bridge 계정)는 30초 이내 UUID 요청만 로컬 `/voss/voice/text`로 전달하고 중복 ID를 버린다. `intent_parser`는 음성과 같은 검증을 거쳐 로컬 `/voss/voice/text/reply`로 `{request_id,message}`를 보낸다. Web PC 브리지는 이를 `voss/voice/text/reply`로 발행하고 웹은 SSE `text_reply`로 표시한다. 실행 명령은 Web PC의 intent_parser가 로컬 `/api/commands`로 보내고, Nodes PC의 운영 bridge가 기존 `voss/command`를 실행한다. 운영 bridge의 종전 텍스트 구독 경로에서 같은 요청이 다시 도착해도 Web PC intent_parser는 `request_id`로 10분간 중복 실행을 막는다. `voice_preview` 계정은 이 토픽들에 접근하지 않는다.
 - 런타임 계정의 비밀번호는 환경 변수로 주입한다. hmi_bridge 는 `VOSS_MQTT_BRIDGE_PASSWORD`, Spring Boot 는 웹 컨테이너의 MQTT 비밀번호 변수를 사용한다.
 
 ## 토픽
@@ -33,6 +35,7 @@
 | `voss/voice_status` | ROS → 웹 | 0 | false | `{"phase","event_id","utterance_id"}` — `/voss/voice/status` 검증·필드 최소화 후 연결 중에만 전달, SSE `voice_status`(retained 거부). 아래 "음성 표시등 이벤트" |
 | `voss/box_motion` (제안) | ROS → 웹 | 1 | false | `{"session_id","box_id","track_id","phase":"GRASPED|RELEASED","stamp","zone"}` — BoxMotion IDL 생긴 뒤. SSE `box_motion` |
 | `voss/command` | 웹 → ROS | 1 | false | `{"command_id", "type", "args", "raw_text", "sent_at"}` — Spring Boot 가 `command_id`(UUID)·`sent_at` 을 붙인다(web_api.md `POST /api/commands`) |
+| `voss/voice/request` | 웹 → ROS | 1 | false | `{"request_id","action","sent_at"}` — 로컬 HMI 버튼 처리 뒤 별도 발행. bridge가 허용된 action을 고정 안내 문구로 바꾸어 `/voss/voice/say`에 발행한다. 로봇 명령 접수·동작 완료를 뜻하지 않는다. 임의 문구·retained·오래된 요청은 거부한다 |
 | `voss/command/ack` | ROS → 웹 | 1 | false | `{"command_id", "ok", "message", "acked_at"}` — `/voss/sort/command` 응답(= manager **접수**, 완료 아님) |
 | `voss/log_status` | ROS → 웹 | 1 | **true** | `{"status":"STARTING|OK|DB_ERROR|SPOOL_FULL","stamp":"…"}` — `/voss/log/status` 값을 hmi_bridge 가 전달. Spring Boot 재기동 직후에도 마지막 logger 상태를 받기 위해 retained |
 | `voss/pallet/state` | ROS → 웹 | 1 | **true** | **Sprint 2.** PalletState 필드 이름 그대로: `run_id`, `state`, `route`, `dongs`, `load`, `overflow`, `excluded`, `overflow_warning`, `total`, `done`, `failed`, `box_id`, `slot_state`, `slot_box_id`, `slot_dong`(voss_msgs.md, 칸 배열 16 = slot 0~15). 3D 팔레트·진행률·구역별 실을 수/초과/경로 제외·"배송 물량 남음" 경고(TR-PAL-10, BRD v1.5). Spring Boot 재기동 직후에도 마지막 배치도를 받기 위해 retained |
@@ -57,7 +60,7 @@
 - 승인: 남현지(BoxTrack), 김학민(TCP 상태·관절), 정의석(웹·MQTT). 관절 상세는 [robot_joints_fk_proposal.md](robot_joints_fk_proposal.md).
 
 - 시각은 모두 ISO-8601 `+09:00` 문자열(공용 PC 시스템 시계). ROS Time 은 hmi_bridge 가 바꾼다.
-- `type` 은 Command canonical 명령(voss_msgs.md): `start`·`stop`·`resume`·`priority`·`answer`·`reset_zone`·`palletize`(Sprint 2). 다른 문자열은 실행하지 않는다.
+- `type` 은 Command canonical 명령(voss_msgs.md): `start`·`stop`·`resume`·`priority`·`answer`·`recheck`·`reset_zone`·`palletize`(Sprint 2). 다른 문자열은 실행하지 않는다.
 - `voss/result` 의 SortResult 필드에는 Sprint 2 의 `slot`(놓은 칸, 없으면 -1)이 끝에 붙는다.
 
 ### `voss/command.args` → `Command.arg` 변환표
@@ -69,6 +72,7 @@
 | `resume` | `{}` | `""` |
 | `priority` | `{"dong":"역삼동"}` | 정식 동 이름, 예 `"역삼동"` |
 | `answer` | `{"box_id":"<현재 질문 box_id>","dong":"역삼동"}` **또는** `{"box_id":"…","zone":"HOLD"}` | `"<box_id>|<동 또는 HOLD>"` |
+| `recheck` | `{}` | `""` |
 | `reset_zone` | `{"zone":"A"}` | `"A"` (A/B/C/RECHECK/HOLD, Sprint 2 `PALLET`) |
 | `palletize` | `{"route":["역삼동","대치동","청담동"]}` | `"역삼동,대치동,청담동"` — 배송 순서(첫 배송지부터) 정식 동 이름을 쉼표로 (Sprint 2) |
 

@@ -68,7 +68,7 @@ LLM(FastAPI `/intent`, OpenAI structured output — ADR-0006)의 출력은 반�
 LLM·TTS·zone_map·상태 확인 없이 즉시 발행하고 `/voss/voice/say` 는 내지 않는다(transcript_flow.py).
 sort_manager 도 stop 결과를 음성으로 안내하지 않는다(로그만).
 **제안:** 접수 시점 안내("정지 요청을 전달했습니다.")는 계속 내지 않고, 최종 안내의 유일한 발행자는
-`sort_manager`이며 기존 `/voss/voice/say`와 `speech_out`을 사용한다.
+`sort_manager`이며 기존 `/voss/voice/say`와 `speech_out`을 사용한다. Web PC에서 `speech_out`을 실행할 때에는 기존 웹 SSE `state.pending_question`을 받아 ASKING 진입당 한 번 같은 문장을 로컬 `/voss/voice/say`로 전달한다. PC 간 ROS 음성 토픽이 도착하지 않아도 질문을 읽기 위한 경로이며, 로봇 명령이나 새 MQTT 토픽은 만들지 않는다.
 새 토픽·메시지 필드는 제안하지 않는다. manager의 stop 작업 토큰으로 음성 요청과
 `/voss/robot/stop` 응답을 연결하고, 요청 이후 새 RobotState를 추가 확인한다.
 `SortState=PAUSED`와 Command 접수 응답만으로 완료를 판정하지 않는다.
