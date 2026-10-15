@@ -128,3 +128,14 @@ def test_cut_scenarios_send_nothing_when_cut(scenario) -> None:
 def test_cut_negative_height_raises() -> None:
     with pytest.raises(ValueError):
         cfg("descend_cut", cut_above_top_mm=-1.0)
+
+
+def test_box_yaw_relative_to_belt_and_folded() -> None:
+    """S2-T18: yaw_deg 는 벨트 방향 기준, (−90°, 90°] 로 접힌다. 기본 0 = 벨트와 나란 (지금 장면)."""
+    from voss_servo.fake_box import box_yaw
+
+    belt = math.degrees(math.atan2(DIRECTION[1], DIRECTION[0]))  # ≈ −0.74°
+    assert math.degrees(cfg().yaw) == pytest.approx(belt)
+    assert math.degrees(cfg(yaw_deg=30.0).yaw) == pytest.approx(belt + 30.0)
+    assert math.degrees(box_yaw([0.0, 1.0, 0.0], 30.0)) == pytest.approx(-60.0)  # 120° → 접힘
+    assert math.degrees(box_yaw([1.0, 0.0, 0.0], 90.0)) == pytest.approx(90.0)  # 경계는 + 쪽

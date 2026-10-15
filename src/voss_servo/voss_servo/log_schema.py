@@ -92,9 +92,38 @@ TICK_FIELDS: tuple[str, ...] = (
     "phase_t_verify_s",
     "gripper",  # null | 그리퍼 호출 기록 dict (키 목록은 grip.call_record, design/U5-dd.md 4절)
     "z_profile",  # "p" | "trapezoid" — 이 시도의 z 속도 프로파일 (S2-T14)
+    # --- S2-T18 J6 회전 파지 (rotate.ROT_LOG_KEYS 와 같은 순서, 회전 off 면 null) ---
+    "rot_state",  # 회전 하위 상태 (COLLECT·ROTATING·SETTLING·DONE·SKIP·STOPPING·FALLBACK·RETURNING·RETURNED)
+    "rot_cause",  # 회전 원인 (SMALL·STALL·TIMEOUT·RETURN_INCOMPLETE 등)
+    "yaw_target_deg",  # 결정한 박스 yaw (베이스)
+    "rot_delta_deg",  # 벨트 기준 상대각 Δ = 돌릴 양
+    "tool_yaw_deg",  # pose 의 공구 yaw (외삽 전)
+    "tool_yaw_est_deg",  # 지금으로 외삽한 공구 yaw
+    "rot_err_deg",  # 지금 목표(회전 = target, 되돌리기 = home) − 공구 yaw
+    "wz_cmd_dps",  # 발행한 베이스 Z 각속도
+    "wz_meas_dps",  # pose 로 잰 각속도
+    "rot_n",  # 결정에 쓴 yaw 프레임 수
+    "rot_rbar",  # 결정 때 흩어짐 (2θ 평균 벡터 길이)
+    "rot_time_s",  # 회전 시작 → DONE·FALLBACK
     "config_version",
     "config_sha256",
     "params_sha256",
+)
+
+# 회전 키 (스냅샷 경로가 같은 목록을 쓴다, S2-T18 r1-1)
+ROT_KEYS: tuple[str, ...] = (
+    "rot_state",
+    "rot_cause",
+    "yaw_target_deg",
+    "rot_delta_deg",
+    "tool_yaw_deg",
+    "tool_yaw_est_deg",
+    "rot_err_deg",
+    "wz_cmd_dps",
+    "wz_meas_dps",
+    "rot_n",
+    "rot_rbar",
+    "rot_time_s",
 )
 
 # 시도 레코드 키 (틱 키의 부분집합)
@@ -131,6 +160,10 @@ ATTEMPT_FIELDS: tuple[str, ...] = (
     "position_source",
     "calib_version",
     "z_profile",
+    "rot_state",  # S2-T18
+    "rot_cause",
+    "rot_delta_deg",
+    "rot_time_s",
     "config_version",
     "config_sha256",
     "params_sha256",
@@ -217,3 +250,6 @@ class JsonlWriter:
         if self._file is not None:
             self._file.close()
             self._file = None
+
+
+assert set(ROT_KEYS) <= set(TICK_FIELDS), "ROT_KEYS 는 TICK_FIELDS 의 부분집합"

@@ -37,7 +37,7 @@ from std_srvs.srv import Trigger
 from voss_msgs.action import TrackAndGrasp
 from voss_msgs.msg import BoxTrack
 from voss_msgs.srv import Gripper
-from voss_servo import control, diagnose, fsm, grip
+from voss_servo import control, diagnose, fsm, grip, rotate
 from voss_servo import log_schema as ls
 from voss_servo.params import (
     BLIND_DWELL_MARGIN_S,
@@ -46,6 +46,9 @@ from voss_servo.params import (
     check_params,
     params_digest,
     ready_log_line,
+    rot_cfg_from_values,
+    rotate_line,
+    rotate_on,
 )
 
 # QoS (topics.md QoS 표). box 구독 depth 5 는 소비자 재량: 박스마다 메시지가 따로 와서
@@ -204,6 +207,20 @@ class GoalCtx:
     phase_seen: str = ""  # 지난 틱에 단계 시각을 기록한 phase
     diag: dict[str, Any] = field(default_factory=dict)  # 이번 틱 진단 값 (로그용)
     diag_failed: bool = False  # 진단 예외를 이미 로그했나 (goal 당 1회)
+    # --- S2-T18 J6 회전 (회전 off 면 rot 은 None, 나머지는 쓰이지 않음) ---
+    rot: Any = None  # rotate.RotState — 회전 하위 상태
+    wz: float = 0.0  # 이번 틱에 발행할 베이스 Z 각속도 rad/s
+    rot_floor: float | None = None  # 이번 틱 z 하한 m (회전 중 시야 보험)
+    rot_warn: str | None = None  # 이번 틱 회전 경고 원인 (로그)
+    rot_io: tuple[Any, Any, Any] = (
+        None,
+        None,
+        None,
+    )  # (공구 yaw 원값, 외삽값, 측정 각속도) — 로그용
+    rot_dead: bool = False  # 회전 계산 예외로 이 goal 의 회전을 껐나
+    rot_still_n: int = 0  # rot_dead 일 때 정지 확인 연속 틱
+    rot_dead_move_t: float | None = None  # rot_dead 중 마지막으로 돈다고 잰 시각 (처음엔 된 시각)
+    rot_dead_capped: bool = False  # 상한으로 정지 확인 없이 넘어갔나 (경고 1회)
 
 
 class BeltServoNode(Node):
@@ -233,6 +250,7 @@ class BeltServoNode(Node):
         self._blind_max_s = self._blind_dwell_max() if self.ready else None  # 사각 체류 상한 (U9a)
         self._retry_need_s = self._retry_need() if self.ready else None  # 재시도 x 여유 시간 (U9b)
         self._lift_max_s = self._lift_max() if self.ready else None  # 후퇴 체류 상한 (U9b)
+        self._setup_rotate()  # S2-T18 J6 회전 (off 면 값만 None 으로)
         self._setup_logs()
         self._setup_ros()
 
@@ -285,6 +303,23 @@ class BeltServoNode(Node):
             )
         head = f"z 프로파일: p — 모든 phase P(kp_z {cfg.kp_z:g})."
         return f"{head} {times} (켜기: z.profile: trapezoid)"
+
+    def _setup_rotate(self) -> None:
+        """J6 회전 파지 상태 준비 (S2-T18). off 면 _rot_on 이 False 라 어떤 경로도 회전을 쓰지 않는다."""
+        self._rot_on = bool(self.ready and rotate_on(self.values))  # 회전을 켰나
+        cfg = rot_cfg_from_values(self.values, self._ctrl.belt_dir_xy) if self._rot_on else None
+        self._rot_cfg = cfg
+        self._yaw_hist: dict[int, deque] = {}  # track_id → (촬영 stamp, yaw) 최근 프레임
+        self._yaw_field: bool | None = None  # BoxTrack 에 yaw 필드가 있나 (None = 아직 모름)
+        self._yaw_value: tuple[float, float] | None = None  # (공구 yaw, 그 값이 처음 온 stamp)
+        self._yaw_prev: tuple[float, float] | None = None  # 그 직전 값 (측정 각속도)
+        self._tilt: float | None = None  # 공구 z 축 기울기
+        self._home_ref = cfg.home_fixed if cfg else None  # 기준 공구 yaw (없으면 첫 goal 에서)
+        # 이 노드가 한 번이라도 돌았나 — 돈 뒤에는 기준을 새로 잡지 않는다 (돌아간 손목을 기준 삼기 방지)
+        self._rot_ever = False
+        self._last_wz = 0.0  # 마지막 발행 각속도 (외삽·변화 제한 입력)
+        if self.ready:
+            self.get_logger().info(rotate_line(self.values))
 
     def _grasp_room_need(self) -> float:
         """정렬 뒤 하강 + 닫힘에 걸릴 시간 (s). x 여유 검사(HLD D6)에 쓴다."""
@@ -388,6 +423,9 @@ class BeltServoNode(Node):
             last_valid = msg if valid else (prev.last_valid if prev else None)
             last_valid_rx = now if valid else (prev.last_valid_rx if prev else None)
             self._boxes[msg.track_id] = BoxEntry(msg, now, not valid, last_valid, last_valid_rx)
+            self._yaw_field = hasattr(msg, "yaw_valid")  # S2-T16 yaw 필드가 있는 빌드인가
+            if self._rot_on:
+                self._push_yaw(msg, valid)  # 목표 각 결정용 프레임 (S2-T18)
             ctx = self._ctx
             if ctx is not None and msg.track_id != ctx.track_id:
                 ctx.other_rx = now  # goal 중 다른 트랙 수신 (LOST 원인 판정, U9-c)
@@ -401,6 +439,33 @@ class BeltServoNode(Node):
         old = [t for t, e in self._boxes.items() if t != keep and now - e.rx > BOX_PRUNE_S]
         for t in old:
             del self._boxes[t]
+            self._yaw_hist.pop(t, None)  # 같은 트랙의 yaw 프레임도 (S2-T18)
+
+    def _push_yaw(self, msg: BoxTrack, valid: bool) -> None:
+        """yaw_valid 이고 position 도 valid 인 프레임만 트랙별 버퍼에 (stamp 가 앞으로 갈 때만)."""
+        if not (valid and getattr(msg, "yaw_valid", False)):
+            return
+        yaw = float(msg.yaw_base)  # rad, 접힌 값
+        if not math.isfinite(yaw):
+            return
+        st = stamp_s(msg.stamp)  # 촬영 시각
+        hist = self._yaw_hist.setdefault(msg.track_id, deque(maxlen=self._rot_cfg.buffer_n))
+        if hist and st <= hist[-1][0]:
+            return  # 같은 메시지 반복이거나 시각이 뒤로 감
+        hist.append((st, yaw))
+
+    def _update_yaw(self, msg: PoseStamped, stamp: float) -> None:
+        """pose 쿼터니언 → 공구 yaw. 같은 값이면 처음 stamp 를 유지 (위치 값과 같은 규칙)."""
+        o = msg.pose.orientation
+        r = rotate.tool_yaw((o.x, o.y, o.z, o.w))
+        if r is None:
+            self._tilt = None  # 자세를 모른다 → pose_ok 거짓
+            return
+        yaw, self._tilt = r
+        cur = self._yaw_value
+        if cur is not None and abs(rotate.wrap_pi(yaw - cur[0])) < rotate.YAW_SAME:
+            return  # 값 그대로
+        self._yaw_prev, self._yaw_value = cur, (yaw, stamp)
 
     def _on_pose(self, msg: PoseStamped) -> None:
         """최신 TCP pose 와 받은 시각, 그리고 위치 값이 바뀐 첫 stamp 를 보관한다."""
@@ -414,6 +479,8 @@ class BeltServoNode(Node):
                 # 값이 바뀜 → 직전 값 보관 (측정 속도, U9-c)
                 self._pose_prev_value = self._pose_value
             self._pose_value = value
+            if self._rot_on:
+                self._update_yaw(msg, stamp)  # S2-T18 공구 yaw
         except Exception as exc:
             self.get_logger().error(f"_on_pose 예외: {exc!r}")
 
@@ -453,6 +520,8 @@ class BeltServoNode(Node):
                 phase_t={state.phase: now},  # 첫 PREPARE 진입 = goal 시작 (U9-c)
                 phase_seen=state.phase,
             )
+            if self._rot_on:
+                self._start_rotate(ctx, now)  # S2-T18 회전 하위 상태 시작
             self._ctx = ctx
             self._handle_actions(ctx, actions, now)
             self._send_feedback(ctx)
@@ -466,6 +535,34 @@ class BeltServoNode(Node):
             return self._result(grasped, reason, attempts)
         finally:
             self._execute_cleanup(ctx)
+
+    def _start_rotate(self, ctx: GoalCtx, now: float) -> None:
+        """기준 공구 yaw 를 정할 수 있으면 정하고(노드 기동 뒤 첫 goal), COLLECT 로."""
+        self._try_home_ref(now)
+        ctx.rot = rotate.RotState(rotate.COLLECT, t_goal=now)
+
+    def _pose_ok(self, now: float) -> bool:
+        """공구 자세가 유효하고 신선한가: 값 있음 · 기울기 ≤ 5° · 마지막 수신이 외삽 상한 안."""
+        rx_age = now - self._pose[1] if self._pose else math.inf
+        return (
+            self._yaw_value is not None
+            and self._tilt is not None
+            and self._tilt <= rotate.TILT_MAX
+            and rx_age <= self._rot_cfg.extrap_max_s
+        )
+
+    def _try_home_ref(self, now: float) -> None:
+        """기준 공구 yaw 가 없고, 이 노드가 아직 한 번도 돌지 않았고, 자세가 유효할 때만 지금 공구 yaw 로.
+
+        돈 뒤(되돌리기 실패로 손목이 돌아간 채일 수 있음)에는 새로 잡지 않는다 → 그 goal 들은
+        rotate.pre_checks 가 NO_POSE_YAW 로 돌리지 않는다 (주관 검수 a).
+        """
+        if self._home_ref is not None or self._rot_ever or not self._pose_ok(now):
+            return
+        self._home_ref = self._yaw_value[0]
+        self.get_logger().info(
+            f"회전 기준 공구 yaw = {math.degrees(self._home_ref):.2f}° (노드 기동 뒤 첫 goal)"
+        )
 
     def _execute_cleanup(self, ctx: GoalCtx | None) -> None:
         """비정상으로 빠져나왔을 때 busy 가 영구히 남지 않게 한다."""
@@ -523,6 +620,8 @@ class BeltServoNode(Node):
             self._p("retry.max_attempts"),
         )
         tr = self._diagnose(ctx, tr, now)  # U9-c: 로그 값 + LOST 세부 원인 (전이·제어 불변)
+        if tr.terminal or tr.state.stopping:
+            ctx.wz = 0.0  # 끝·취소면 각속도 즉시 0 (S2-T18)
         self._note_retreat(ctx, ev, tr, now)  # U9b: 재시도 여유·후퇴 끝 기록, 정상 들기 경고
         ctx.state = tr.state
         self._handle_actions(ctx, tr.actions, now)
@@ -540,9 +639,10 @@ class BeltServoNode(Node):
             cfg,
             retreat=fsm.is_retreat(tr.state),  # 안전 후퇴면 xy 는 retreat_xy (U9b)
             hold_z=tr.state.hold_z,  # 개방 기다리는 동안 높이 유지
+            z_floor=ctx.rot_floor,  # 회전 중 z 하한 (S2-T18, off 면 None)
         )
         vel = tuple(float(x) for x in ctx.cmd.vel)
-        t_pub = self._publish(vel)
+        t_pub = self._publish(vel, ctx.wz)
         self._send_feedback(ctx)
         tick = ls.make_tick(**self._tick_values(ctx, ev, tr, now, t_pub, vel))
         self._write_log(self._tick_log, tick)
@@ -644,7 +744,9 @@ class BeltServoNode(Node):
         gripper = None
         if not ctx.state.stopping:  # 취소 뒤에는 보지도, 재요청하지도 않는다 (U5 DD E2)
             gripper = self._poll_gripper(ctx, now)
+        rot_ready = self._rot_tick(ctx, geo, now)  # S2-T18: 회전 한 틱 (off 면 True)
         return fsm.TickEvent(
+            rot_ready=rot_ready,
             cancel_requested=bool(ctx.handle.is_cancel_requested),
             stop_result=self._poll_stop(ctx, now),
             box_lost=box_lost,
@@ -661,6 +763,110 @@ class BeltServoNode(Node):
             retry_room=self._retry_room(geo),
             hold_expired=self._hold_expired(ctx, geo, now),
             lift_overstay=fsm.lift_overstay(ctx.lift_since, now, self._lift_max_s),
+        )
+
+    def _rot_tick(self, ctx: GoalCtx, geo: control.Geometry | None, now: float) -> bool:
+        """회전 하위 상태 한 틱 → 정렬 허용 여부. 예외면 이 goal 의 회전을 끄고 정지 확인 뒤 허용."""
+        ctx.rot_floor, ctx.rot_warn = None, None
+        if not self._rot_on or ctx.rot is None:
+            return True  # 회전 off — 지금과 같다
+        if ctx.rot_dead:  # 예외로 끈 goal: _rot_inputs 를 거치지 않는다 (예외 반복에도 진행)
+            return self._rot_dead_tick(ctx, now)
+        try:
+            if ctx.rot.state == rotate.COLLECT:
+                self._try_home_ref(now)  # goal 수락 때 pose 가 없었으면 첫 틱들에서 (돌기 전에만)
+            inp = self._rot_inputs(ctx, geo, now)
+            ctx.rot_io = (inp.psi_raw, inp.psi_est, inp.w_meas)
+            out = rotate.rot_step(ctx.rot, inp, self._rot_cfg)
+        except Exception as exc:  # 회전 계산이 goal 을 끊지 않게 (DD 12절)
+            if not ctx.rot_dead:
+                self.get_logger().error(
+                    f"회전 예외 — 이 goal 의 회전을 끄고 정지 확인 뒤 진행: {exc!r}"
+                )
+            ctx.rot_dead, ctx.wz = True, 0.0
+            if ctx.rot_dead_move_t is None:
+                ctx.rot_dead_move_t = now
+            ctx.rot = replace(ctx.rot, cause=rotate.INTERNAL)
+            return False
+        ctx.rot, ctx.wz, ctx.rot_floor, ctx.rot_warn = out.state, out.wz, out.z_floor, out.warn
+        if out.state.state == rotate.ROTATING:
+            self._rot_ever = True  # 이제부터 기준을 새로 잡지 않는다
+        if out.warn == rotate.STOP_UNCONFIRMED:
+            self.get_logger().warning(
+                f"회전 정지 확인 상한 {rotate.STOP_CAP:g} s — 측정 각속도 없이 진행 "
+                "(pose 주기·rotate.pose_fresh_s 확인)"
+            )
+        if out.warn == rotate.ACC_MISMATCH:
+            a = math.degrees(out.state.alpha_eff)
+            self.get_logger().warning(
+                f"회전 가속이 설정보다 느림 — 측정 {a:.0f}°/s² 로 제동 "
+                "(gateway servo_acc[1] ≥ rotate.alpha_dps2 확인)"
+            )
+        return out.ready
+
+    def _rot_dead_tick(self, ctx: GoalCtx, now: float) -> bool:
+        """예외로 끈 goal 의 한 틱: 각속도 0, 측정 각속도로 정지가 2틱 이어지면 정렬 허용."""
+        ctx.wz = 0.0
+        cur = self._yaw_value
+        rx_age = now - self._pose[1] if self._pose else math.inf  # 마지막 pose 수신 나이
+        w = rotate.omega_meas(self._yaw_prev, cur, now, rx_age, self._rot_cfg.pose_fresh_s)
+        ctx.rot_io = (cur[0] if cur else None, None, w)
+        still = w is not None and abs(w) < self._rot_cfg.still
+        ctx.rot_still_n = ctx.rot_still_n + 1 if still else 0
+        if ctx.rot_still_n >= rotate.STILL_TICKS or ctx.rot_dead_capped:
+            return True
+        if ctx.rot_dead_move_t is None or (w is not None and abs(w) >= self._rot_cfg.still):
+            ctx.rot_dead_move_t = now  # 아직 돈다 → 기다림 (rotate._stopping 과 같은 규칙, 재리뷰)
+        if now - ctx.rot_dead_move_t < rotate.STOP_CAP:
+            return False
+        ctx.rot_dead_capped, ctx.rot_warn = True, rotate.STOP_UNCONFIRMED  # 상한 (학민 #54 리뷰 4)
+        self.get_logger().warning("회전 예외 뒤 정지 확인 상한 — 측정 각속도 없이 진행")
+        return True
+
+    def _rot_inputs(
+        self, ctx: GoalCtx, geo: control.Geometry | None, now: float
+    ) -> rotate.RotInputs:
+        """회전 한 틱에 넘길 사실들 (pseudo r2 8절). geo 가 없으면 기하 값은 None."""
+        cfg = self._rot_cfg
+        hist = self._yaw_hist.get(ctx.track_id) if ctx.rot.state == rotate.COLLECT else None
+        yaws = [y for _, y in hist] if hist else []  # 결정용 프레임 (COLLECT 일 때만)
+        cur = self._yaw_value
+        psi_raw = cur[0] if cur else None
+        psi_est = None
+        if cur is not None:  # 지금으로 외삽 (TCP 위치 외삽과 같은 규칙)
+            psi_est = rotate.yaw_estimate(
+                cur[0], cur[1], cfg.lag_s, self._last_wz, now, cfg.extrap_max_s
+            )
+        rx_age = now - self._pose[1] if self._pose else math.inf  # 마지막 pose 수신 나이
+        pose_ok = self._pose_ok(now)
+        return rotate.RotInputs(
+            now=now,
+            phase=ctx.state.phase,
+            retreat=fsm.is_retreat(ctx.state),
+            hold_z=ctx.state.hold_z,
+            yaws=yaws,
+            has_field=self._yaw_field,
+            home_ref=self._home_ref,
+            psi_raw=psi_raw,
+            psi_est=psi_est,
+            tilt=self._tilt,
+            pose_ok=pose_ok,
+            w_meas=rotate.omega_meas(self._yaw_prev, cur, now, rx_age, cfg.pose_fresh_s),
+            wz_prev=self._last_wz,
+            dt=control.effective_dt(ctx.last_calc, now, self._ctrl.dt_nominal),  # 이번 틱 dt
+            err_along=_as_float(geo.err_along) if geo else None,
+            tcp_z=float(geo.tcp[2]) if geo else None,
+            top_z=_as_float(geo.top_z) if geo else None,
+        )
+
+    def _rot_values(self, ctx: GoalCtx, terminal: bool) -> dict[str, Any]:
+        """틱 로그의 회전 키 12개 (회전 off 면 전부 None)."""
+        if not self._rot_on or ctx.rot is None:
+            return dict.fromkeys(ls.ROT_KEYS)
+        psi_raw, psi_est, w_meas = ctx.rot_io
+        wz = 0.0 if terminal else ctx.wz
+        return rotate.log_values(
+            ctx.rot, wz, w_meas, psi_raw, psi_est, terminal, ctx.rot_warn, self._rot_cfg.tol
         )
 
     def _retry_room(self, geo: control.Geometry | None) -> bool:
@@ -1027,6 +1233,7 @@ class BeltServoNode(Node):
             "gripper": ctx.grip_log,  # 마지막 그리퍼 호출 기록 (GOAL_END 스냅샷에도)
             "phase_t": dict(ctx.phase_t),  # 마지막 시도의 단계 시각 (스냅샷 행에도, U9-c)
             "retreat": self._retreat_values(ctx, ctx.state),  # 후퇴·재시도 4키 (스냅샷 행에도, U9b)
+            "rot": self._rot_values(ctx, True),  # 회전 키 (스냅샷 행에도, S2-T18 r1-1)
         }
         # 진행 중 그리퍼 호출은 취소하지 않고 내려놓는다 → 응답이 오면 버린다 (HLD D7, 자동 개방 금지)
         self._orphan_gripper(ctx)
@@ -1045,13 +1252,18 @@ class BeltServoNode(Node):
 
     # ------------------------------------------------------------------ 발행·로그
 
-    def _publish(self, vel: tuple[float, float, float]) -> float:
-        """TwistStamped 발행 (TCP 선속도 m/s, base_link, 각속도 0). 발행 시각을 돌려준다."""
+    def _publish(self, vel: tuple[float, float, float], wz: float = 0.0) -> float:
+        """TwistStamped 발행 (TCP 선속도 m/s, 베이스 Z 각속도 rad/s, base_link). 발행 시각을 돌려준다.
+
+        wz 는 J6 회전 틱만 넘긴다 (S2-T18). 0 유지·예외·종료 경로는 인자 없이 불러 각속도 0.
+        """
         msg = TwistStamped()
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.header.frame_id = "base_link"
         msg.twist.linear.x, msg.twist.linear.y, msg.twist.linear.z = vel
-        self._cmd_pub.publish(msg)  # 각속도는 기본값 0
+        msg.twist.angular.z = float(wz)  # x·y 는 늘 0
+        self._last_wz = float(wz)
+        self._cmd_pub.publish(msg)
         self._last_cmd = np.array(vel, dtype=float)  # 0 유지·예외 경로 포함 모든 발행을 기억
         return stamp_s(msg.header.stamp)
 
@@ -1151,6 +1363,7 @@ class BeltServoNode(Node):
             **self._diag_values(ctx, now),
             **self._retreat_values(ctx, tr.state),
             **self._phase_t_values(ctx.phase_t),
+            **self._rot_values(ctx, tr.terminal),  # S2-T18 회전 키
             **self._control_values(ctx, ev),
             **self._input_values(ctx.track_id),
             **self._common_values(),
@@ -1238,6 +1451,7 @@ class BeltServoNode(Node):
             **{k: None for k in DIAG_KEYS},  # 진단 값은 fsm 틱에만 (cause_fsm 도 null, 재검 F8)
             **{k: (g.get("retreat") or {}).get(k) for k in RETREAT_KEYS},  # goal 끝 때 값 (U9b)
             **self._phase_t_values(g.get("phase_t") or {}),
+            **{k: (g.get("rot") or {}).get(k) for k in ls.ROT_KEYS},  # goal 끝 때 회전 값 (S2-T18)
             **self._input_values(g.get("track_id")),
             **self._common_values(),
         }

@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import math
 import sys
 import time
 from dataclasses import dataclass
@@ -25,6 +26,7 @@ from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy
 
 from voss_msgs.msg import BoxTrack
+from voss_servo import rotate
 
 # 높이로 끊는 시나리오 → 끊는 높이 기본값 (윗면 기준 mm). 회전 박스 실측 이탈 최대 +36.7 / 접근 높이 +40 위
 CUT_DEFAULT_MM = {"descend_cut": 37.0, "approach_cut": 45.0}
@@ -63,6 +65,7 @@ class FakeBoxConfig:
     second_track_id: int
     second_offset: tuple[float, float, float]  # 둘째 박스 = 첫째 + 이만큼 (m)
     cut_above_top_m: float = 0.0  # cut 시나리오: TCP 가 윗면 + 이 값 아래로 오면 끊는다 (m)
+    yaw: float = 0.0  # 박스 yaw_base (rad, 베이스, 접힌 값) — S2-T18 회전 sim
 
 
 def belt_velocity(speed_cmps: float, direction) -> tuple[float, float, float]:
@@ -73,6 +76,12 @@ def belt_velocity(speed_cmps: float, direction) -> tuple[float, float, float]:
         raise ValueError(f"direction_base 가 길이 3 의 0 아닌 벡터가 아님: {list(direction)}")
     v = float(speed_cmps) / 100.0 * d / n  # cm/s → m/s, 단위 방향
     return (float(v[0]), float(v[1]), float(v[2]))
+
+
+def box_yaw(direction, yaw_deg: float) -> float:
+    """벨트 방향 기준으로 yaw_deg 돌아간 박스의 yaw_base (rad, (−π/2, π/2] 로 접음, S2-T18)."""
+    belt = math.atan2(float(direction[1]), float(direction[0]))  # 벨트 진행 방향 각
+    return rotate.fold_half(belt + math.radians(float(yaw_deg)))
 
 
 def position_at(start, vel, t: float) -> tuple[float, float, float]:
@@ -92,6 +101,7 @@ def make_config(
     second_track_id: int,
     second_offset,
     cut_above_top_mm: float | None = None,
+    yaw_deg: float = 0.0,
 ) -> FakeBoxConfig:
     """파라미터 → FakeBoxConfig. 모르는 시나리오·잘못된 방향·음수 끊는 높이면 ValueError."""
     if scenario not in SCENARIOS:
@@ -112,6 +122,7 @@ def make_config(
         second_track_id=int(second_track_id),
         second_offset=tuple(float(x) for x in second_offset),
         cut_above_top_m=cut_mm / 1000.0,  # mm → m
+        yaw=box_yaw(direction, yaw_deg),  # 0 이면 벨트와 나란한 박스 (지금과 같은 장면)
     )
 
 
@@ -155,6 +166,7 @@ class FakeBoxNode(Node):
         second_id = p("second_track_id", 2).value
         second_offset = p("second_offset_m", list(DEFAULT_SECOND_OFFSET_M)).value
         cut_mm = p("cut_above_top_mm", None, free).value  # 없으면 시나리오 기본값 (U9a)
+        yaw_deg = float(p("yaw_deg", 0.0, free).value)  # 벨트 기준 박스 각 (S2-T18)
         if speed is None or direction is None:
             raise ValueError("speed_cmps·direction_base 필수 (sim.launch 가 voss_config 에서 넘김)")
         self.cfg = make_config(
@@ -168,6 +180,7 @@ class FakeBoxNode(Node):
             second_id,
             second_offset,
             cut_mm,
+            yaw_deg,
         )  # 틀리면 ValueError → main 이 종료 코드 1
         self.pub = self.create_publisher(BoxTrack, "/voss/vision/box", QOS_BOX_PUB)
         self._tcp_z: float | None = None  # 가짜 로봇 TCP z (m) — cut 시나리오만 씀
@@ -183,7 +196,7 @@ class FakeBoxNode(Node):
             f"start_mm={[round(x * 1000, 1) for x in c.start]} "
             f"vel_mm_s={[round(x * 1000, 2) for x in c.vel]} rate={rate:g} Hz "
             f"invalid_after={c.invalid_after_s:g}s lost_after={c.lost_after_s:g}s "
-            f"cut_above_top={c.cut_above_top_m * 1000:g}mm"
+            f"cut_above_top={c.cut_above_top_m * 1000:g}mm yaw_deg={yaw_deg:g}"
         )
 
     def _on_pose(self, msg: PoseStamped) -> None:
@@ -206,6 +219,9 @@ class FakeBoxNode(Node):
             msg.position_valid = s.valid
             msg.position_source = BoxTrack.SOURCE_HAND_EYE
             msg.calib_version = "fake"  # u·v·bbox 는 기본값 0
+            if hasattr(msg, "yaw_valid"):  # S2-T16 yaw 필드가 있는 빌드 (S2-T18)
+                msg.yaw_base = self.cfg.yaw
+                msg.yaw_valid = s.valid  # 좌표가 유효할 때만 yaw 도 유효 (계약)
             self.pub.publish(msg)
 
 

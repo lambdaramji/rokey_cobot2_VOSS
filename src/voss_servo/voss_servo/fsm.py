@@ -111,6 +111,7 @@ class TickEvent:
     retry_room: bool = False
     hold_expired: bool = False  # 개방 대기가 상한을 넘었거나 TCP x 가 x_max 에 닿았나 (U9b)
     lift_overstay: bool = False  # LIFT 상승 체류가 상한을 넘었나 (U9b)
+    rot_ready: bool = True  # J6 회전이 끝났거나 안 돌리나 (S2-T18). 기본 = 회전 없음과 같다
 
 
 @dataclass(frozen=True)
@@ -336,7 +337,7 @@ def _advance(
     phase = state.phase
     if phase == PREPARE and ev.gripper is not None:
         return Transition(state=replace(state, phase=TRACK))  # 개방 완료 (실패는 5번에서 끝남)
-    if phase == TRACK and ev.aligned:
+    if phase == TRACK and ev.aligned and ev.rot_ready:  # 회전 중이면 정렬돼도 기다린다 (S2-T18)
         if not ev.grasp_room:  # 내려가 닫는 동안 x 끝에 닿는다 → 들어가지 않는다 (11b)
             return _end(state, OUT_OF_REACH, REACH_GRASP_ROOM)
         return Transition(state=replace(state, phase=DESCEND))
