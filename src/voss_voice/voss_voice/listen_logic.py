@@ -90,8 +90,8 @@ class VadConfig:
     sample_rate: int = 16000
     frame_ms: int = 30
     threshold_db: float = -40.0  # 1 m 내장 마이크 실측(measurements #10)으로 조정
-    min_speech_ms: int = 300  # 이보다 짧은 소리는 버림 (클릭·기침)
-    end_silence_ms: int = 700  # 이만큼 조용하면 구간 끝
+    min_speech_ms: int = 150  # 이보다 짧은 소리는 버림 (클릭·기침). "보류" 가 통과하게 150 (10/15)
+    end_silence_ms: int = 350  # 이만큼 조용하면 구간 끝
     max_segment_s: float = 8.0  # 이보다 길면 강제로 끊음
     pre_roll_ms: int = 200  # 말 시작 직전 소리 포함
 

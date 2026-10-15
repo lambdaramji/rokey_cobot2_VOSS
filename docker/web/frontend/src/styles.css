@@ -18,24 +18,29 @@
 .dong-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}.warn-text{color:#f6c48d;font-weight:700}.pallet-note{text-align:left;margin-top:12px}
 @media(max-width:1200px){.pallet-tables{grid-template-columns:1fr}}@media(max-width:700px){.route-picker{grid-template-columns:1fr}}
 
-/* 작업공간 옆에 세션 요약을 배치한다. */
-.monitoring-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:19px;align-items:stretch;margin-bottom:20px}
-.monitoring-grid>.voss-ws{min-width:0;margin-bottom:0}
-.monitoring-grid>.summary-grid{grid-template-columns:minmax(0,1fr);margin-bottom:0}
-@media(max-width:1000px){.monitoring-grid{grid-template-columns:minmax(0,1fr)}.monitoring-grid>.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+/* 두 열을 독립적으로 쌓아 짧은 패널 아래에도 큰 공백이 생기지 않게 한다. */
+.dashboard-columns{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px;align-items:start;margin-bottom:16px}
+.dashboard-column{display:flex;flex-direction:column;gap:16px;min-width:0}
+.dashboard-column>.voss-ws{margin-bottom:0}
+.dashboard-column>.summary-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:0}
+.dashboard-column>.summary-grid>.robot-status-panel{grid-column:1 / -1}
+.dashboard-column>.summary-grid>.metric{min-height:108px;padding:15px 17px}
+.dashboard-column>.pallet-panel{min-width:0;margin-top:0}
+.dashboard-column .pallet-tables{grid-template-columns:minmax(0,1fr);gap:12px}
+@media(max-width:1200px){.dashboard-columns{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:700px){.dashboard-column>.summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:450px){.dashboard-column>.summary-grid{grid-template-columns:minmax(0,1fr)}}
+
+@media(min-width:701px){.workspace{padding-top:28px;padding-right:clamp(18px,2vw,34px);padding-left:clamp(18px,2vw,34px)}.top-bar{margin-bottom:20px}}
 
 .robot-status-panel>.section-heading{flex-wrap:wrap;gap:10px;margin-bottom:18px}
 .operation-status{padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid #243949}
 .robot-status-panel .robot-visual>div:last-child{min-width:0;overflow-wrap:anywhere}
-@media(max-width:1000px){.monitoring-grid>.summary-grid>.robot-status-panel{grid-column:1 / -1}}
 
 .camera-preview{position:relative;aspect-ratio:16/9;background:#08121e;border:1px solid #243949;border-radius:10px;overflow:hidden}
 .camera-preview video{display:block;width:100%;height:100%;object-fit:contain}
 .camera-preview>span{position:absolute;inset:0;display:grid;place-items:center;color:#829bad;font-size:12px}
-.camera-controls{margin-top:18px}
-.camera-controls .inline-input{flex-wrap:wrap}
-.camera-controls select{flex-basis:100%}
-.camera-controls button{min-height:39px}
+.camera-device-field{margin-top:16px}
 
 .navigation>button{padding:13px 15px;border:0;border-radius:9px;background:transparent;color:inherit;font:inherit;text-align:left}
 .navigation>button:focus-visible{outline:2px solid #66e4d9;outline-offset:2px}
@@ -44,10 +49,46 @@
 @media(max-width:700px){.sidebar{flex-wrap:wrap;gap:12px}.navigation{display:flex;flex-direction:row;order:3;width:100%}.navigation>button{flex:1}}
 
 .camera-preview>img{width:100%;height:100%;object-fit:contain}
-.camera-connect{margin-top:18px;padding:0 16px}
 
 /* 기존 제어 패널 스타일은 유지하고 투입 수량 증감 조작만 분리한다. */
 .plan-stepper{display:flex;flex:1;min-width:0;gap:5px}
 .plan-stepper input{text-align:center;appearance:textfield;-moz-appearance:textfield}
 .plan-stepper input::-webkit-inner-spin-button,.plan-stepper input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .plan-stepper button{min-width:31px;padding:0 8px;font-size:18px;line-height:1}
+
+.text-command-history{display:flex;flex-direction:column;gap:12px;max-height:245px;min-height:80px;overflow:auto;margin:14px 0}
+.text-command-turn{display:flex;flex-direction:column;gap:7px}.text-command-turn p{margin:0;padding:9px 12px;border-radius:10px;font-size:12px;overflow-wrap:anywhere}
+.text-command-user{align-self:flex-end;background:#17434c;color:#d5faf5;max-width:85%}
+.text-command-reply{align-self:flex-start;background:#0c1a29;border:1px solid #284153;color:#bcd5e2;max-width:90%}
+.text-command-form{display:flex;gap:8px}.text-command-form input{min-width:0;flex:1;background:#0b1b2a;border:1px solid #2a4557;border-radius:8px;color:#e5eefb;padding:10px 12px}
+.text-command-form button{background:#2bb7ad;border:0;border-radius:8px;color:#06252b;font-weight:800;padding:0 17px}
+.text-command-question{align-self:stretch;margin:0;padding:10px 11px;border:1px solid #706044;border-left:3px solid #e9b66d;border-radius:9px;background:#292419;color:#f2d5a3;font-size:11px;line-height:1.5;white-space:pre-line;overflow-wrap:anywhere}
+
+/* 화면을 바꿔도 대화가 남는 사이드바 채팅과 연결 상태. */
+.sidebar{width:308px;height:100dvh;padding:22px 16px 16px;overflow-y:auto}
+.sidebar .brand{margin-bottom:22px}
+.sidebar .navigation{margin-bottom:16px}
+.sidebar .text-command-panel{display:flex;flex:1;flex-direction:column;min-height:180px;padding:16px 13px;box-shadow:none}
+.sidebar .text-command-panel .section-heading{display:block;margin-bottom:0}
+.sidebar .text-command-panel .section-heading h2{font-size:15px}
+.sidebar .text-command-panel .section-heading .micro-note{display:block;margin-top:6px;text-align:left}
+.sidebar .text-command-history{flex:1;min-height:0;max-height:none;margin:12px -3px;padding:3px;overflow-y:auto}
+.sidebar .text-command-history .empty{padding:18px 5px;line-height:1.6}
+.sidebar .text-command-turn p{font-size:11px;line-height:1.5}
+.sidebar .text-command-form{flex-shrink:0;gap:5px}
+.sidebar .text-command-form input{padding:9px 8px;font-size:11px}
+.sidebar .text-command-form button{padding:0 10px;font-size:11px}
+.sidebar .text-command-panel>.micro-note{margin:8px 0 0;text-align:left}
+.sidebar-bottom{flex-shrink:0;margin-top:12px;padding:13px 14px}
+.sidebar-bottom p{margin:9px 0;font-size:11px}
+.sidebar-status-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sidebar-status-heading .live-pill{padding:5px 8px;font-size:10px}
+@media(max-width:1200px) and (min-width:701px){.sidebar{width:270px}}
+@media(max-width:700px){
+  .sidebar{width:100%;height:auto;overflow:visible;display:flex;flex-direction:column;align-items:stretch;gap:12px}
+  .sidebar .brand,.sidebar .navigation{margin:0}
+  .sidebar .navigation{order:0;width:100%}
+  .sidebar .text-command-panel{order:1;flex:none;width:100%;height:320px}
+  .sidebar-bottom{order:2;width:100%;margin:0;background:#101f2d;border:1px solid #203445}
+  .sidebar-bottom p,.sidebar-bottom .eyebrow,.sidebar-bottom .muted{display:block}
+}

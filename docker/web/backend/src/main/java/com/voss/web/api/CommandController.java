@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class CommandController {
     private static final Set<String> COMMAND_TYPES =
-            Set.of("start", "stop", "resume", "priority", "answer", "reset_zone", "palletize");
+            Set.of("start", "stop", "resume", "priority", "answer", "recheck", "reset_zone", "palletize");
     private static final Set<String> RESET_ZONES = Set.of("A", "B", "C", "RECHECK", "HOLD", "PALLET");
     private static final int MAX_ROUTE = 3;
     private final MqttCommandPublisher publisher;
@@ -71,15 +71,17 @@ public class CommandController {
         return ResponseEntity.accepted().body(Map.of("ok", true, "command_id", commandId));
     }
 
-    /** 비-stop 명령은 공용 PC의 로컬 Nginx 헤더에서만 허용한다 (web_api.md #68). */
+    /** 비-stop 명령은 로컬 Nginx 연결과 원래 접속자 주소가 모두 로컬일 때만 허용한다. */
     private boolean isOperator(HttpServletRequest request) {
         String realIp = request.getHeader("X-Real-IP");
-        return "127.0.0.1".equals(realIp) || "::1".equals(realIp);
+        String peerIp = request.getRemoteAddr();
+        return ("127.0.0.1".equals(realIp) || "::1".equals(realIp))
+                && ("127.0.0.1".equals(peerIp) || "::1".equals(peerIp));
     }
 
     /** 명령별 허용 인자 외에는 ROS로 전달하지 않는다. */
     private void validate(String type, JsonNode args) {
-        if (Set.of("start", "stop", "resume").contains(type)) {
+        if (Set.of("start", "stop", "resume", "recheck").contains(type)) {
             if (args.size() != 0) { throw invalid(); }
             return;
         }

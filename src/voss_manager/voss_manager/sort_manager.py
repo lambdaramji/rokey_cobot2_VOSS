@@ -486,6 +486,10 @@ class SortManagerNode(Node):
         self._post(pallet_fsm.ListDone(r.ok, r.message, places, self._now_ns()))
 
     def _call_stop(self) -> None:
+        if self.stop_op is not None:
+            # ROS와 MQTT의 중복 stop이 겹치면 진행 중 서비스 작업을 공유한다.
+            # 완료/실패 후 stop_op가 비면 다음 요청은 재시도할 수 있다.
+            return
         if not self.stop_cli.service_is_ready():
             self._post(fsm.StopDone(False, "NO_SERVICE", self._now_ns()))
             return

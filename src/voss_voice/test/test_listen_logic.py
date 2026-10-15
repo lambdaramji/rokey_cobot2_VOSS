@@ -154,3 +154,12 @@ def test_full_queue_drops_oldest_keeps_newest():
     assert [put_drop_oldest(q, i) for i in range(3)] == [False, False, False]
     assert put_drop_oldest(q, "멈춰") is True
     assert [q.get_nowait() for _ in range(3)] == [1, 2, "멈춰"]
+
+
+def test_short_word_passes_with_default_min_speech():
+    """'보류' 두 음절(약 200 ms)이 기본 설정에서 버려지지 않는다 (10/15 음성 보류 실패)."""
+    seg = Segmenter(VadConfig(end_silence_ms=300))
+    assert VadConfig().min_speech_ms <= 200
+    frames = [SILENCE] * 5 + [_tone(-20)] * 7 + [SILENCE] * 15
+    out = [s for f in frames if (s := seg.feed(f)) is not None]
+    assert len(out) == 1

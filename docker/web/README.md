@@ -6,7 +6,7 @@
 ## 구현 범위
 
 - React/TypeScript/Vite: 운전(시작·정지·재개), 동 우선·HOLD 답변·구역 초기화, 투입 예정 수량, 최신 상태·OCR·로봇 상태·구역별 집계·보류·이력, CSV.
-- Spring Boot: `GET /api/stream` SSE(state·result·zone_map·robot·command_ack·log_status·pallet_state·link, 실시간 전용 voice_status·box_track·robot_pose·robot_joints·box_motion), `POST /api/commands`, `GET /api/stats`, `GET /api/sessions/current`, `PUT /api/sessions/current/plan`, `GET /api/results`, `GET /api/export.csv`.
+- Spring Boot: `GET /api/stream` SSE(state·result·zone_map·robot·command_ack·log_status·pallet_state·link, 실시간 전용 voice_status·box_track·robot_pose·robot_joints·box_motion), `POST /api/commands`, `GET /api/stats`, `GET /api/sessions/current`, `PUT /api/sessions/current/plan`, `GET /api/results`, `GET /api/pallet/placements/latest`, `GET /api/export.csv`.
 - MQTT: 구독 12개 `voss/state`, `voss/result`, `voss/zone_map`, `voss/robot`, `voss/command/ack`, `voss/log_status`, `voss/pallet/state`, `voss/voice_status`, `voss/box_track`, `voss/robot_pose`, `voss/box_motion`, `voss/robot_joints`(QoS 1/1/1/0/1/1/1/0/0/0/1/0); `voss/command` 발행(QoS 1). 접속 스냅샷은 state·zone_map·robot·log_status·pallet_state 만 — 위치·음성 이벤트는 재생하지 않는다. retained는 브로커 토픽 계약에 따름.
 - SQL: `sort_log`는 조회 전용 연결만 사용하고, 투입 수량은 별도 `session_plan` 테이블에서 관리.
 - 원격 접근: `stop` 이외 명령은 Nginx가 덮어쓴 `X-Real-IP`가 localhost일 때만 허용. `X-Forwarded-For`는 무시. **단, SSH가 127.0.0.1:8080에 직접 연결되면 Nginx를 거치지 않으므로 이 헤더만으로 원격 접속자를 인증할 수 없다.**
@@ -93,9 +93,10 @@ docker compose logs --tail=100 backend frontend
 
 ### USB 카메라 (카메라 메뉴)
 
-대시보드를 `http://localhost`(개발 서버는 `http://localhost:5173`) 또는 HTTPS로 열고, USB 카메라 패널에서 **카메라 연결**을 눌러 브라우저 권한을 허용합니다. 카메라가 여러 개면 권한 허용 후 목록에서 USB 카메라를 선택하고 **카메라 변경**을 누릅니다. 일반 HTTP LAN IP 주소에서는 브라우저 카메라 접근이 제한됩니다.
+Nodes PC에 연결한 C270을 `usb_camera_preview.py`로 송출합니다. Web PC에서 Nodes PC의 8092로 SSH `-L 127.0.0.1:8092:127.0.0.1:8092` 터널을 열면 Nginx의 `/camera/usb/frame.jpg`가 영상을 전달합니다. 관제 화면은 C270을 기본 선택하고 카메라 메뉴 진입 시 자동 연결합니다. 브라우저의 카메라·마이크 권한은 사용하지 않습니다.
 
-영상은 해당 브라우저에서만 표시하며 서버 전송·녹화·마이크 수집을 하지 않습니다. 다른 PC에서 접속하면 그 PC의 카메라를 사용합니다. 연결 종료 또는 페이지 종료 시 카메라 사용을 해제합니다.
+- C270은 손목 D435i와 가능하면 다른 USB 컨트롤러에 연결합니다. 실제 포트·컨트롤러 배치는 현장 담당자가 확인합니다. 송출기는 Nodes PC의 loopback `8092`만 열고 Web PC까지는 SSH 터널을 사용합니다.
+- 현장 성능 확인: USB 송출기를 켠 상태에서 `belt_servo` 30 Hz 틱 간격의 중앙값·p99·최댓값, `box_tracker` 5초 로그 주기(25 Hz 미만 WARN), C270 분리·재접속을 기록합니다. 2~3명 동시 시청 부하 측정은 LAN 열람 정책의 PL 승인 후 수행합니다.
 
 ### 그리퍼 카메라 (카메라 메뉴)
 
@@ -107,11 +108,20 @@ source install/setup.bash
 ros2 run voss_vision camera_preview
 ```
 
-공용 PC 한 대에서 시연할 때는 그 PC에서 위 명령을 실행한 뒤 `http://localhost` → **카메라** → **그리퍼 카메라 · 영상 연결**로 확인합니다. 영상의 `T3` 같은 표시는 비전 트랙 번호이며 분류 이력의 BOX 번호와 다릅니다. 옆의 `92%` 같은 값은 그 박스 송장의 채움(윤곽 면적 ÷ 회전 사각형 면적, box_tracker 와 같은 `seg` 판정, `fill_min` 80% 이상 통과)이며 인식 신뢰도가 아닙니다. 같은 프레임에서 판정을 통과한 송장이 없으면 `-%` 입니다. 채움 % 는 송출 노드가 프레임을 보낼 때마다 판정을 한 번 더 돌립니다(1920×1080 기준 약 80 ms, 탭 하나당 약 5 Hz). 끄려면 `ros2 run voss_vision camera_preview --ros-args -p fill_percent:=false`. 판정 값은 `voss_vision` 설치 경로의 `config/box_tracker.yaml` 을 읽으며 다른 파일은 `-p seg_params_file:=<경로>` 로 지정합니다. 송출 노드의 `host` 기본값 `127.0.0.1`을 유지하고 `host:=0.0.0.0`으로 바꾸지 마세요. 그러면 카메라 영상이 Wi-Fi 쪽에 열립니다.
+관제 화면의 카메라 메뉴를 열면 그리퍼 영상을 자동 조회합니다. 영상의 `T3` 같은 표시는 비전 트랙 번호이며 분류 이력의 BOX 번호와 다릅니다. 옆의 `92%` 같은 값은 그 박스 송장의 채움(윤곽 면적 ÷ 회전 사각형 면적, box_tracker 와 같은 `seg` 판정, `fill_min` 80% 이상 통과)이며 인식 신뢰도가 아닙니다. 같은 프레임에서 판정을 통과한 송장이 없으면 `-%` 입니다. 채움 % 는 송출 노드가 프레임을 보낼 때마다 판정을 한 번 더 돌립니다(1920×1080 기준 약 80 ms, 탭 하나당 약 5 Hz). 끄려면 `ros2 run voss_vision camera_preview --ros-args -p fill_percent:=false`. 판정 값은 `voss_vision` 설치 경로의 `config/box_tracker.yaml` 을 읽으며 다른 파일은 `-p seg_params_file:=<경로>` 로 지정합니다. 송출 노드의 `host` 기본값 `127.0.0.1`을 유지하고 Web PC에서 SSH `-L 127.0.0.1:8091:127.0.0.1:8091` 터널로 연결합니다.
 
 송출 노드는 최근 원본 프레임 최대 10장만 보관하고 JPEG 전송 전에 최대 960×540으로 줄입니다. box_tracker·OCR·belt_servo와 함께 실행할 때의 실제 부하는 아직 측정하지 않았으므로 게이트 측정 중에는 송출 노드를 실행하지 않습니다.
 
-Web PC의 개발 서버(`npm run dev`)는 `/camera/gripper/frame.jpg`를 로컬 `127.0.0.1:8091`로 전달합니다. 따라서 개발 서버를 실행하는 PC에서 송출 노드의 `127.0.0.1:8091`에 닿아야 합니다. 카메라 메뉴의 **그리퍼 카메라 → 영상 연결**을 누르면 프레임을 요청합니다. 송출 노드가 실행되지 않았거나 입력 영상이 없으면 OFFLINE으로 표시됩니다. 배포 Nginx의 이 경로는 로컬 접속만 허용합니다.
+Web PC의 개발 서버(`npm run dev`)와 배포 Nginx는 `/camera/gripper/frame.jpg`를 로컬 `127.0.0.1:8091`로 전달합니다. 송출 노드가 실행되지 않았거나 입력 영상이 없으면 OFFLINE으로 표시됩니다. 배포 Nginx의 그리퍼·USB 영상 경로는 Web PC 로컬 브라우저에만 허용합니다. 원격 관제 브라우저는 영상을 볼 수 없습니다.
+
+### 제어 버튼 음성 안내 (Nodes PC)
+
+Web PC에서 `scripts/web_pc_voice.sh`를 사용할 때에는 실행 전에 `VOSS_NODES_PC_IP`를 현장 Nodes PC 주소로 설정합니다. 스크립트에는 개인 PC 주소를 기본값으로 두지 않으며 값이 없으면 시작하지 않습니다.
+Web PC 음성 브리지는 전용 MQTT `voice_web` 계정을 사용합니다. 계정 생성·ACL 적용은 [MQTT 실행 안내](../mqtt/README.md)를 따릅니다. 비밀번호는 Git에 넣지 않습니다.
+
+로컬 HMI의 시작·정지·재개·우선 분류·답변·구역 초기화·팔레트 적재·계획 저장이 API에 접수되면 Web 백엔드가 `voss/voice/request`를 보냅니다. Nodes PC의 일반 `hmi_bridge`가 이를 검증해 고정 문구를 `/voss/voice/say`로 발행하고 `speech_out`이 재생합니다. `hmi_bridge voice_status_only:=true`는 이 요청을 받지 않습니다. TTS 문구의 "전달"은 로봇 동작 완료가 아닙니다.
+
+적용하려면 Web 이미지를 재빌드하고, MQTT ACL 템플릿 `docker/mqtt/acl`의 새 read/write 규칙을 실제 `docker/mqtt/secrets/acl`에 반영한 뒤 브로커를 재시작합니다. Nodes PC에서는 `voss_hmi`를 빌드하고 일반 `hmi_bridge`와 `speech_out`을 재시작합니다. `speech_out`에는 기존 Nodes PC의 `127.0.0.1:8000` AI TTS 경로가 필요합니다.
 
 ### 실제 음성 인식과 마이크 표시등
 

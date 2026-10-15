@@ -46,7 +46,8 @@ class VoiceListenerNode(Node):
         p("stt_timeout_s", 5.0)
         p("device", "")  # sounddevice 장치 이름·번호, "" = 기본
         p("vad_threshold_db", -40.0)
-        p("end_silence_ms", 700)
+        p("end_silence_ms", 350)
+        p("min_speech_ms", 150)  # 이보다 짧은 소리는 STT 로 보내지 않음 ("보류" 가 걸리지 않게)
         p("timeout_say_min_interval_s", 30.0)  # TIMED_OUT 음성 안내 최소 간격
 
         publish_transcript = bool(self.get_parameter("publish_transcript").value)
@@ -102,6 +103,7 @@ class VoiceListenerNode(Node):
         cfg = VadConfig(
             threshold_db=float(self.get_parameter("vad_threshold_db").value),
             end_silence_ms=int(self.get_parameter("end_silence_ms").value),
+            min_speech_ms=int(self.get_parameter("min_speech_ms").value),
         )
         self._cfg = cfg
         self._seg = Segmenter(cfg)

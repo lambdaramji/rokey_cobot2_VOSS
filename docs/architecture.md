@@ -39,6 +39,8 @@ flowchart LR
 ```
 웹·AI·DB 스택과 경계: ADR-0006. 브라우저·Spring Boot 는 ROS 에 직접 붙지 않고 MQTT 로만 연결한다.
 
+**Web PC 시연 배치(PR #176):** 브라우저 밖의 Web PC ROS `voice_listener`·`intent_parser`·`speech_out`은 별도로 실행한다. `intent_parser(command_transport=web_api)`의 음성·텍스트 명령은 Web PC REST `POST /api/commands` → Spring Boot → MQTT `voss/command` → Nodes PC `hmi_bridge` → sort_manager로 전달된다. 기본 `command_transport=ros`의 `/voss/voice/intent` 경로는 유지된다. Web PC ROS의 Nodes PC 도달 여부는 DDS 설정·현장 측정에 달려 있으며, stop 이중 경로는 [ADR-0016 제안](adr/0016-web-pc-voice-routing-proposal.md)에서 PL 결정 대기 중이다.
+
 ## 배포 구성
 | 위치 | 구성요소 | 이유 |
 |---|---|---|

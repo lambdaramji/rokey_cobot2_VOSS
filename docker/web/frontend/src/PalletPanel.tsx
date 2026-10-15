@@ -17,12 +17,13 @@ type Props = {
   dongs:string[];
   controlEnabled:boolean;
   preview?:boolean;
+  recorded?:boolean;
   onCommand:(type:CommandType,args?:CommandArgs)=>void;
 };
 
 const STATE_TEXT:Record<string,string> = { EMPTY:'빈 칸', PLANNED:'계획', MOVING:'옮기는 중', DONE:'적재', FAILED:'실패' };
 
-export default function PalletPanel({pallet,sortState,stale,dongs,controlEnabled,preview=false,onCommand}:Props) {
+export default function PalletPanel({pallet,sortState,stale,dongs,controlEnabled,preview=false,recorded=false,onCommand}:Props) {
   const [picks,setPicks] = useState<string[]>(Array(MAX_ROUTE).fill(''));
   const [loadedSlots,setLoadedSlots] = useState<Set<number>>(() => new Set());
   const previousPallet = useRef<PalletState | null>(null);
@@ -52,12 +53,12 @@ export default function PalletPanel({pallet,sortState,stale,dongs,controlEnabled
   const warning = overflowWarning(pallet);
   const rows = summaryRows(pallet);
   const color = (dong:string) => dongColor(dong,dongs,pallet.dongs);
-  const running = pallet.state === 'RUNNING';
+  const running = pallet.state === 'RUNNING' || sortState === 'PALLETIZING';
   const reset = resetPalletAllowed(sortState,pallet.state);
 
   return <section className="panel pallet-panel" data-testid="pallet-panel" data-pallet-key={palletKey(pallet)}>
     <div className="section-heading"><div><span className="eyebrow">04 / PALLETIZING</span><h2>팔레트 적재 (트럭 짐칸)</h2></div>
-      <span className={`chip ${stale||pallet.state==='PAUSED'?'warning':''}`}>{preview?'시험 재생 · ':''}{stale?'갱신 안 됨 · 마지막 배치도':RUN_STATE_TEXT[pallet.state] ?? pallet.state}</span></div>
+      <span className={`chip ${stale||pallet.state==='PAUSED'?'warning':''}`}>{preview?'시험 재생 · ':''}{recorded?'최근 회차 DB 기록 · 자동 갱신':stale?'갱신 안 됨 · 마지막 배치도':RUN_STATE_TEXT[pallet.state] ?? pallet.state}</span></div>
 
     <div className="route-picker">
       {picks.map((pick,i)=><div className="field" key={i}><label htmlFor={`route-${i}`}>{i+1}번째 배송지{i===0?' (문 쪽)':''}</label>
@@ -71,9 +72,10 @@ export default function PalletPanel({pallet,sortState,stale,dongs,controlEnabled
         onClick={()=>{ if (window.confirm(resetPalletPrompt(pallet))) onCommand('reset_zone',{zone:'PALLET'}); }}>트럭 짐칸 비움 확인</button>
     </div>
 
+    {!reset.ok && sortState === 'RUNNING' && <p className="micro-note" role="status">분류를 멈춘 뒤 비워 주세요. 안전을 확인하고 실물 비움 → 비움 확인 → 재개 순서로 진행하세요.</p>}
     {warning&&<p className="pallet-warning" role="alert">⚠ {warning}</p>}
 
-    <div className="pallet-progress" data-testid="pallet-progress"><div className="progress-text"><strong>{prog.text}</strong>{pallet.box_id&&<small>옮기는 박스 {pallet.box_id}</small>}</div>
+    <div className="pallet-progress" data-testid="pallet-progress"><div className="progress-text"><strong>{recorded?`${pallet.done} / 16칸 적재 기록`:prog.text}</strong>{pallet.box_id&&<small>옮기는 박스 {pallet.box_id}</small>}</div>
       <div className="progress-bar"><span className="progress-done" style={{width:`${prog.donePct}%`}}/><span className="progress-failed" style={{width:`${prog.failedPct}%`}}/></div></div>
 
     <svg className="pallet-3d" viewBox={VIEW_BOX} role="img" aria-label={`팔레트 3D 배치도 — ${prog.text}`}>

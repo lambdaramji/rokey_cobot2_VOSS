@@ -44,7 +44,7 @@ type:
 - answer: 로봇이 물은 박스가 어느 동인지 답함. 동 이름이면 dong, "보류"면 zone="HOLD"
 - query_history: 기록 질문. 동별 처리 수=count_by_dong(dong 필수), 보류 수=held_count, 남은 수=remaining_count
 - update_zone_map: 동의 구역을 바꿈 (dong, zone 필수)
-- palletize: 분류가 끝난 박스를 배송 순서대로 팔레트에 실음("역삼, 대치, 청담 순서로 실어줘"). route = 말한 순서 그대로 동 이름 배열(첫 배송지부터, dong=null). 허용 목록의 동은 정식 이름으로 바꾸고, 목록에 없는 동이나 같은 동을 두 번 말했으면 빼거나 합치지 말고 들은 그대로 적는다(검증은 로봇 쪽이 한다)
+- palletize: 분류가 끝난 박스를 배송 순서대로 팔레트에 실음("역삼, 대치, 청담 순서로 실어줘", "역삼, 대치 순서로 팔레타이징 실행해"). route = 말한 순서 그대로 동 이름 배열(첫 배송지부터, dong=null). "팔레타이징 실행해"처럼 순서가 없으면 route=[]로 적어 순서를 되묻게 한다. 허용 목록의 동은 정식 이름으로 바꾸고, 목록에 없는 동이나 같은 동을 두 번 말했으면 빼거나 합치지 말고 들은 그대로 적는다(검증은 로봇 쪽이 한다)
 - unknown: 위에 해당하지 않음
 dong 은 반드시 허용 목록의 정식 이름으로 적는다(별칭이면 정식 이름으로 바꾼다). 목록에 없으면 null.
 zone 은 허용 구역 또는 "HOLD" 만. count 는 항상 0. route 는 palletize 가 아니면 null. raw_text 는 입력 원문 그대로."""
@@ -62,13 +62,13 @@ def build_messages(text: str, allowed: dict) -> list[dict]:
 
 
 def normalize(raw: str | dict, text: str) -> dict | None:
-    """LLM 출력 → intent JSON. 파싱 실패·unknown 이면 None (intent_parser 가 되묻는다)."""
+    """LLM 출력 → intent JSON. unknown 은 그대로 전달하고 파싱 실패만 None."""
     try:
         d = json.loads(raw) if isinstance(raw, str) else dict(raw)
     except (ValueError, TypeError):
         return None
     t = d.get("type")
-    if t not in TYPES:
+    if t not in TYPES and t != "unknown":
         return None
     zone = d.get("zone")
     route = d.get("route")  # 문자열 배열일 때만 넘긴다(허용 동·개수·중복 검증은 intent_parser)

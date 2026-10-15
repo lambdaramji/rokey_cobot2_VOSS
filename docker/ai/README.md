@@ -20,6 +20,7 @@ curl -s http://127.0.0.1:8000/ai/health
 ```
 - Whisper 가중치는 첫 `/ai/stt` 호출 때 내려받아 `whisper-cache` 볼륨에 둔다(레포·이미지에 넣지 않음).
 - 모델 크기 `WHISPER_MODEL` 은 pending #6 — 10/08 비전과 동시 부하 시험(`nvidia-smi`) 후 확정. GPU 가 모자라면 `WHISPER_DEVICE=cpu`, `WHISPER_COMPUTE=int8`.
+- 운영자가 `docker/ai/.env`의 `WHISPER_PROMPT`를 확인한다. 예전 제어 단어가 포함되어 있으면 `.env.example`의 호출어·동 이름 중심 값으로 직접 갱신하고 AI 컨테이너를 다시 생성한다. 실제 `.env` 값은 로그나 Git에 복사하지 않는다.
 
 ## 단독 확인
 ```bash

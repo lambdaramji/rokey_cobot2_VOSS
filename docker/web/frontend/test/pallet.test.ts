@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   boxShape, CAPACITY, cellSlot, deckShape, dongColor, drawOrder, emptyPallet, overflowWarning, palletKey,
-  GENERAL_RESET_ZONES, parsePalletState, progress, resetPalletAllowed, resetPalletPrompt, routeFromPicks, routePreview, slotCell, summaryRows,
+  GENERAL_RESET_ZONES, palletAfterClear, palletFromPlacements, parsePalletState, progress, resetPalletAllowed, resetPalletPrompt, routeFromPicks, routePreview, slotCell, summaryRows,
   topViewRows, VIEW_BOX,
 } from '../src/pallet.ts';
 
@@ -15,6 +15,30 @@ const states = fixture.states.map((s:unknown)=>parsePalletState(s));
 const planned = states.find((s:any)=>s.dongs.length > 0);
 const final = states[states.length - 1];
 const SHORT:Record<string,string> = { '청담동':'청담', '역삼동':'역삼', '대치동':'대치' };
+
+test('DB 적재 기록은 실제 pallet_slot만 채우고 경로 제외는 칸을 차지하지 않는다', () => {
+  const state = palletFromPlacements({run_id:'run-1',items:[
+    {box_id:'overflow',dong:'대치동',route_index:1,pallet_slot:null,result:'OVERFLOW'},
+    {box_id:'box-1',dong:'청담동',route_index:2,pallet_slot:0,result:'DONE'},
+    {box_id:'box-2',dong:'대치동',route_index:1,pallet_slot:3,result:'DONE'},
+  ]});
+  assert.equal(state.done,2);
+  assert.deepEqual(state.slot_state.slice(0,4),['DONE','EMPTY','EMPTY','DONE']);
+  assert.deepEqual(state.route,['대치동','청담동']);
+  assert.deepEqual(state.overflow,[1,0]);
+  assert.equal(state.slot_box_id[0],'box-1');
+});
+
+test('비운 run_id만 현재 탭에서 숨기고 새 DB 회차는 표시한다', () => {
+  const oldRun = palletFromPlacements({run_id:'run-old',items:[
+    {box_id:'old-1',dong:'역삼동',route_index:0,pallet_slot:0,result:'DONE'},
+  ]});
+  const newRun = palletFromPlacements({run_id:'run-new',items:[
+    {box_id:'new-1',dong:'대치동',route_index:0,pallet_slot:1,result:'DONE'},
+  ]});
+  assert.equal(palletAfterClear(oldRun,'run-old').done,0);
+  assert.deepEqual(palletAfterClear(newRun,'run-old'),newRun);
+});
 
 test('slot ↔ 열·층·줄은 slot = (열−1)×4 + (층−1)×2 + (줄−1) 이다 (D2)', () => {
   assert.deepEqual(slotCell(0), {col:1, layer:1, lane:1});
@@ -130,10 +154,12 @@ test('지연 관측 키는 박스마다 바뀐다', () => {
   for (let i = 1; i < keys.length; i++) assert.notEqual(keys[i], keys[i - 1]);
 });
 
-test('짐칸 비움 확인은 manager 와 같은 조건(분류 IDLE·PAUSED, 진행·멈춘 팔레타이징 없음)에서만 보낸다', () => {
+test('짐칸 비움 확인은 IDLE·PAUSED 만 허용하고 RUNNING 중에는 멈춤을 안내한다', () => {
   assert.equal(resetPalletAllowed('IDLE','').ok, true);
   assert.equal(resetPalletAllowed('PAUSED','DONE').ok, true);
+  assert.equal(resetPalletAllowed('RUNNING','DONE').ok, false);
   assert.equal(resetPalletAllowed('RUNNING','').ok, false);
+  assert.match(resetPalletAllowed('RUNNING','DONE').reason, /분류를 멈춘 뒤 비워 주세요/);
   assert.equal(resetPalletAllowed('PALLETIZING','RUNNING').ok, false);
   assert.equal(resetPalletAllowed('PAUSED','PAUSED').ok, false);
   assert.equal(resetPalletAllowed('UNKNOWN','').ok, false);

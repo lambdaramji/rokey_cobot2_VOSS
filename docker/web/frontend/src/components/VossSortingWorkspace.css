@@ -21,7 +21,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 17px 0 9px;
+  padding: 12px 0 6px;
 }
 .voss-ws__header h2 {
   margin: 4px 0 0;
@@ -51,24 +51,28 @@
 .voss-ws__tray-shell { fill: rgba(23, 45, 63, .80); stroke-width: 2.5; }
 .voss-ws__zone-title { fill: #a6e3e2; font-size: 27px; font-weight: 650; letter-spacing: .03em; }
 .voss-ws__zone-count { fill: #e8f6f8; font-size: 29px; font-weight: 800; letter-spacing: .02em; }
-.voss-ws__robot-area { fill: rgba(43, 83, 102, .25); stroke: #2e6e7e; stroke-width: 1.7; }
-.voss-ws__robot-base { fill: #143a47; stroke: #61d4c9; stroke-width: 6; }
-.voss-ws__robot-arm {
-  transform-origin: 600px 540px;
-  transform: rotate(var(--robot-turn)) scaleX(var(--robot-reach, 1));
-  transition: transform 900ms cubic-bezier(.3,.7,.3,1);
-}
-.voss-ws__robot-arm--tcp { transition: transform 100ms linear; }
-.voss-ws__robot-arm--stopped { opacity: .63; }
+.voss-ws__tray-reset { display: block; width: 100%; height: 100%; padding: 0; border: 1px solid #68b8c5; border-radius: 8px; background: #173446; color: #dceef5; cursor: pointer; font: inherit; font-size: 17px; font-weight: 600; }
+.voss-ws__tray-reset:disabled { opacity: .35; cursor: not-allowed; }
+.voss-ws__robot-area { fill: rgba(43, 83, 102, .18); stroke: #366578; stroke-width: 1.7; stroke-dasharray: 5 7; }
+.voss-ws__robot-base-rim { fill: #0e2637; stroke: #466e81; stroke-width: 4; }
+.voss-ws__robot-base { fill: url(#vossRobotJoint); stroke: #95b5c4; stroke-width: 5; }
 .voss-ws__tcp-point { fill: #fff2a9; }
 .voss-ws__tcp-point--stale { opacity: .45; }
 .voss-ws__robot-z { fill: #9bbdc9; font-size: 15px; }
 .voss-ws__tracked-box { transition: transform 100ms linear; }
 .voss-ws__tracked-box rect { fill: #cc9453; stroke: #ffce83; stroke-width: 4; }
-.voss-ws__arm-link { stroke: #65dfd0; stroke-width: 15; stroke-linecap: round; }
-.voss-ws__arm-shadow { stroke: rgba(2, 10, 18, .65); stroke-width: 18; stroke-linecap: round; }
-.voss-ws__arm-joint { fill: #d5f8ef; stroke: #30b5b2; stroke-width: 2; }
-.voss-ws__robot-hub { fill: #77e4d8; stroke: #cafff2; stroke-width: 2.5; }
+.voss-ws__arm-shadow { stroke: rgba(0, 8, 16, .62); stroke-width: 27; stroke-linecap: round; filter: blur(3px); }
+.voss-ws__arm-outline { stroke: #24465a; stroke-width: 25; stroke-linecap: round; }
+.voss-ws__arm-link { stroke: url(#vossRobotShell); stroke-width: 19; stroke-linecap: round; }
+.voss-ws__arm-highlight { stroke: rgba(246, 255, 255, .7); stroke-width: 2; stroke-linecap: round; }
+.voss-ws__arm-joint { fill: url(#vossRobotJoint); stroke: #78a9bd; stroke-width: 3; }
+.voss-ws__arm-joint-core { fill: #6bc7d6; stroke: #c4f7f7; stroke-width: 1.5; }
+.voss-ws__gripper { filter: drop-shadow(1px 4px 2px rgba(0, 8, 16, .6)); }
+.voss-ws__gripper-body { fill: #214458; stroke: #a1c4d1; stroke-width: 2.5; }
+.voss-ws__gripper-fingers { fill: none; stroke: #bed5db; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+.voss-ws__gripper-pin { fill: #f6bb70; }
+.voss-ws__robot-hub { fill: #17384d; stroke: #91c0d0; stroke-width: 3; }
+.voss-ws__robot-hub-core { fill: #79d8e0; }
 .voss-ws__robot-title { fill: #b6dce3; font-size: 23px; font-weight: 500; letter-spacing: .03em; }
 .voss-ws__belt { fill: #304559; stroke: #6b8ba0; stroke-width: 3; }
 .voss-ws__belt-line { stroke: #65879b; stroke-width: 3; opacity: .60; }
@@ -133,7 +137,6 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .voss-ws__belt-box--moving { animation: none; }
-  .voss-ws__robot-arm { transition: none; }
   .voss-ws__voice-button--yellow { animation: none; }
 }
 

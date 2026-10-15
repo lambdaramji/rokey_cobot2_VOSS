@@ -22,6 +22,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from app.intent_prompt import INTENT_SCHEMA, build_messages, normalize
+from app.stt_filter import is_prompt_echo as _is_prompt_echo
 from app.tts_service import iter_tts_pcm
 
 app = FastAPI(title="VOSS AI", docs_url=None, redoc_url=None)
@@ -29,13 +30,18 @@ app = FastAPI(title="VOSS AI", docs_url=None, redoc_url=None)
 # 도메인 단어를 앞에 주면 고유명사 전사가 안정적이다
 STT_PROMPT = os.getenv(
     "WHISPER_PROMPT",
-    "헬로 로키. 역삼동, 대치동, 청담동. 분류, 보류, 멈춰, 다시 시작, 몇 개 남았어.",
+    "헬로우 로키. 헬로 로키. 역삼동, 대치동, 청담동.",
 )
 # LLM 출력 형식. OpenAI strict JSON Schema 로 보내 스키마 밖의 키·값을 처음부터 막는다.
 INTENT_RESPONSE_FORMAT = {"name": "intent", "schema": INTENT_SCHEMA, "strict": True}
 
 _whisper = None
 _intent_chain = None
+
+
+def is_prompt_echo(text: str, prompt: str | None = None) -> bool:
+    """잡음 구간에서 Whisper가 긴 initial_prompt를 되읽은 결과를 버린다."""
+    return _is_prompt_echo(text, prompt if prompt is not None else STT_PROMPT)
 
 
 def _err(code: int, message: str, detail: str = "") -> JSONResponse:
@@ -118,6 +124,9 @@ def stt(audio: Annotated[UploadFile, File()], language: Annotated[str, Form()] =
             io.BytesIO(data), language=language, beam_size=1, initial_prompt=STT_PROMPT
         )
         text = " ".join(s.text.strip() for s in segments).strip()
+        if is_prompt_echo(text):
+            logging.warning("STT initial_prompt 재출력 감지: 전사 결과 무시")
+            text = ""
     except Exception as e:  # noqa: BLE001 — 모델·장치 오류를 코드로 돌려준다
         return _err(500, "STT_ERROR", type(e).__name__)
     return {
