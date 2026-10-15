@@ -8,7 +8,7 @@ from datetime import datetime
 
 VOICE_PHRASES = {
     "start": "시작 명령을 전달했습니다.",
-    "stop": "정지 명령을 전달했습니다.",
+    "stop": "요청을 전달했습니다.",
     "resume": "재개 명령을 전달했습니다.",
     "priority": "우선 분류 변경을 요청했습니다.",
     "answer": "작업자 답변을 전달했습니다.",

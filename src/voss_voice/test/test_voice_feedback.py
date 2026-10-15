@@ -61,6 +61,36 @@ def test_spoken_ack_is_not_accepted_as_another_command():
     assert events == []
 
 
+def test_stop_is_sent_even_when_ack_echo_is_detected():
+    for text in (
+        "멈춰 역삼동으로 분류하겠습니다",
+        "정지, 대치동을 우선 분류하겠습니다",
+    ):
+        flow, events = feedback()
+        assert is_ack_echo(text)
+        assert flow.on_text(text, 0.0) == text
+        assert events == []
+
+
+def test_web_button_announcements_do_not_reenter_voice_pipeline():
+    # Web 버튼 안내는 기존 ROS 음성 안내와 별개지만 마이크에 잡힐 수 있다.
+    phrases = (
+        "시작 명령을 전달했습니다.",
+        "요청을 전달했습니다.",
+        "재개 명령을 전달했습니다.",
+        "우선 분류 변경을 요청했습니다.",
+        "작업자 답변을 전달했습니다.",
+        "구역 초기화를 요청했습니다.",
+        "팔레트 적재 명령을 전달했습니다.",
+        "투입 예정 수량을 저장했습니다.",
+    )
+    for phrase in phrases:
+        flow, events = feedback()
+        assert is_ack_echo(phrase)
+        assert flow.on_text(phrase, 0.0) is None
+        assert events == []
+
+
 def listener_node(sort_state=""):
     statuses, spoken = [], []
     node = SimpleNamespace(

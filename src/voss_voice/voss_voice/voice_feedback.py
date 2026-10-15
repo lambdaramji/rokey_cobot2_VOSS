@@ -4,11 +4,21 @@ import re
 import threading
 import uuid
 
+from voss_voice.intent_logic import is_stop
 from voss_voice.listen_logic import split_wake
 
 SPOKEN_ACKS = frozenset(
     {
         "분류를시작하겠습니다",
+        # 이 문구들은 voss_hmi.voice_request.VOICE_PHRASES 와 동일해야 한다.
+        "시작명령을전달했습니다",
+        "요청을전달했습니다",
+        "재개명령을전달했습니다",
+        "우선분류변경을요청했습니다",
+        "작업자답변을전달했습니다",
+        "구역초기화를요청했습니다",
+        "팔레트적재명령을전달했습니다",
+        "투입예정수량을저장했습니다",
         "요청을처리하겠습니다",
         "분류를재개하겠습니다",
         "보류로처리하겠습니다",
@@ -91,7 +101,8 @@ class VoiceFeedback:
         """기존 WakeGate 결과를 그대로 반환하고 실제 호출어에만 표시 이벤트를 붙인다."""
         with self.lock:
             self.expire(now)
-            if is_timeout_prompt_echo(text) or is_ack_echo(text):
+            # 실제 정지는 TTS 메아리 필터보다 먼저 통과시킨다 (intent_json.md stop 예외).
+            if not is_stop(text) and (is_timeout_prompt_echo(text) or is_ack_echo(text)):
                 return None
             if not text.strip():
                 # 잡음 구간의 빈 STT: 기존 WakeGate 처럼 무시하고 호출 대기를 유지한다
