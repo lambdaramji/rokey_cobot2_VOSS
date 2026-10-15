@@ -68,6 +68,9 @@ def _gateway(context):
         params["zone_acc"] = [float(zone_acc), 90.0]
     if LaunchConfiguration("servo_angular").perform(context).lower() == "true":
         params["servo_angular_enable"] = True  # S2-T17. 비우면 노드 기본 false(각속도 자름)
+    yaw_limit = LaunchConfiguration("servo_yaw_limit_deg").perform(context)
+    if yaw_limit:  # S2-T18 실기: 관측 자세 공구 yaw ± 이 각 밖으로 가는 각속도를 자른다. 비우면 노드 기본 100
+        params["servo_yaw_limit_deg"] = float(yaw_limit)
     return [
         Node(
             package="voss_robot",
@@ -89,6 +92,7 @@ def generate_launch_description() -> LaunchDescription:
             DeclareLaunchArgument("zone_acc_mm_s2", default_value="900"),
             DeclareLaunchArgument("zone_blend_mm", default_value="30"),
             DeclareLaunchArgument("servo_angular", default_value=""),
+            DeclareLaunchArgument("servo_yaw_limit_deg", default_value=""),
             DeclareLaunchArgument("pose_source", default_value=""),
             DeclareLaunchArgument("dry_run_object_mm", default_value=""),
             DeclareLaunchArgument("rg2_dry_run", default_value="false"),
