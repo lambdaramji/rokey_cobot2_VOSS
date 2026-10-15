@@ -111,6 +111,7 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 | `link` | `{"mqtt": "UP|DOWN"}` | Spring Boot 브로커 연결 |
 | `pallet_state` | `voss/pallet/state` JSON 그대로 | PalletState (Sprint 2 S2-T08 — 바뀔 때, retained. 계획 직후·첫 PICK 전 한 번 + 박스마다) |
 - 접속 직후 Spring Boot 가 마지막 `state`·`zone_map`·`robot`·`log_status`·`pallet_state` 를 한 번씩 보낸다(늦게 연 브라우저도 바로 표시).
+- Web PC `intent_parser`의 SSE 소비자는 스트림이 중간에 끊기거나 불완전하게 읽히면 재접속한다. 단절 때 SSE에서만 받은 `ASKING`·`box_id`와 `zone_map`은 무효화하고, ROS에서 별도로 받은 구역 지도는 유지한다. 재접속 후 새 snapshot을 받기 전에는 오래된 웹 질문에 답하지 않는다.
 - 3초 이상 `state` 가 없으면 HMI 는 `UNKNOWN` 으로 표시한다(값을 0·정상으로 위장하지 않음).
 - `state` 의 값은 voss_msgs.md SortState 그대로 받는다 — Sprint 2 `PALLETIZING` 포함. 목록에 없는 값은 버린다(그러면 3초 뒤 UNKNOWN).
 - `pallet_state` 는 바뀔 때만 와서 나이로 장애를 가르지 않는다. 마지막 배치도를 계속 보이되 `link` 가 DOWN 이거나 SSE 가 끊기면 "갱신 안 됨"으로 표시한다. `run_id == ""` 이면 실행 없음(빈 팔레트). 칸 배열 인덱스 = slot 0~15(voss_msgs.md PalletState).
