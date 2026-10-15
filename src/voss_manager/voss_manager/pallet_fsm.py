@@ -279,8 +279,10 @@ def _on_palletize(ctx: f.Ctx, ev: f.Command) -> f.Out:
 
 
 def _on_reset_pallet(ctx: f.Ctx) -> f.Out:
-    if ctx.state not in (f.IDLE, f.PAUSED):
-        return _reject(ctx, "reset_zone PALLET 은 IDLE·PAUSED 에서만")
+    # 적재가 끝나 분류 상태로 돌아온 뒤에도 실물 비움 확인을 받을 수 있다.
+    # 진행 중이거나 멈춘 팔레타이징에서는 칸을 지우지 않는다.
+    if ctx.state not in (f.IDLE, f.PAUSED, f.RUNNING):
+        return _reject(ctx, "reset_zone PALLET 은 IDLE·PAUSED·RUNNING 에서만")
     if _paused_run(ctx):
         return _reject(ctx, "멈춘 팔레타이징이 있음 — resume 으로 끝낸 뒤 비운다")
     return f.Out(
