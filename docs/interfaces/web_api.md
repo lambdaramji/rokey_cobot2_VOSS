@@ -19,7 +19,7 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
   | 8080 Spring Boot (`server.address=127.0.0.1`) · 8000 FastAPI · 5432 PostgreSQL (`listen_addresses=localhost`) | 127.0.0.1 | ❌ |
 
   로봇망 `enp4s0` 에는 어떤 웹·MQTT 포트도 열지 않는다.
-- **로봇을 움직이는 명령의 접근 제한 (안전, #68 남현지 🔴):** `POST /api/commands` 의 `start`·`resume`·`priority`·`answer`·`recheck`·`reset_zone`·`palletize`(Sprint 2) 는 **공용 PC 로컬 접속(공용 PC 화면의 HMI)** 에서만 받는다. 그 밖은 `403 {"ok": false, "message": "FORBIDDEN_REMOTE"}`. **`stop` 은 어디서든 받는다**(멈추는 쪽은 막지 않는다). 조회(`GET`)·SSE 는 `wlo1` 허용.
+- **로봇을 움직이는 명령의 접근 제한 (안전, #68 남현지 🔴):** `POST /api/commands` 의 `start`·`resume`·`priority`·`answer`·`recheck`·`reset_zone`·`palletize`(Sprint 2) 는 **공용 PC 로컬 접속(공용 PC 화면의 HMI)** 에서만 받는다. Spring은 Nginx의 `X-Real-IP`와 실제 연결 피어(`getRemoteAddr`)가 모두 loopback일 때만 허용한다. 그 밖은 `403 {"ok": false, "message": "FORBIDDEN_REMOTE"}`. **`stop` 은 어디서든 받는다**(멈추는 쪽은 막지 않는다). 조회(`GET`)·SSE 는 `wlo1` 허용.
   - 원격 판정은 Nginx 가 넣는 `X-Real-IP $remote_addr` 로만 한다. 클라이언트가 보낸 `X-Forwarded-For` 는 믿지 않는다(Nginx 뒤에서는 모든 요청이 127.0.0.1 로 보이므로).
   - 판정은 Spring Boot 한 곳에서만 한다. hmi_bridge(ROS) 는 원격 여부를 다시 판단하지 않는다.
 - **Mosquitto ACL:** `voss/command` 쓰기는 Spring Boot 계정(`web`)만. 개인 PC 디버그 계정(`debug`)은 `voss/#` 읽기만. hmi_bridge 계정(`bridge`)은 `voss/command` 읽기와 bridge 출력 토픽만 쓰기(`voss/command` write 금지). 비밀번호는 Git에 넣지 않는다. 브로커는 공용 PC 호스트 1883이며 시연 때 `wlo1`의 1883은 닫는다. 상세는 #20 `mqtt.md`.
@@ -88,7 +88,7 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 
 ### `POST /api/voice/announce` — 로컬 HMI 버튼 음성 안내
 
-`{"action":"start|stop|resume|priority|answer|reset_zone|palletize|plan"}` 하나만 받는다. 로컬 Nginx의 `X-Real-IP`가 `127.0.0.1` 또는 `::1`일 때만 `202`와 `request_id`를 반환하고, 고정 문구 코드만 MQTT `voss/voice/request`로 보낸다. 브리지가 `/voss/voice/say`로 전달하고 Nodes PC의 `speech_out`이 재생한다. 응답은 MQTT 전송 접수이며 실제 스피커 출력이나 로봇 동작 완료를 보장하지 않는다.
+`{"action":"start|stop|resume|priority|answer|reset_zone|palletize|plan"}` 하나만 받는다. Nginx의 `X-Real-IP`와 실제 연결 피어(`getRemoteAddr`)가 모두 `127.0.0.1` 또는 `::1`일 때만 `202`와 `request_id`를 반환하고, 고정 문구 코드만 MQTT `voss/voice/request`로 보낸다. 브리지가 `/voss/voice/say`로 전달하고 Nodes PC의 `speech_out`이 재생한다. 응답은 MQTT 전송 접수이며 실제 스피커 출력이나 로봇 동작 완료를 보장하지 않는다.
 
 `scripts/web_pc_voice.sh`를 실행하면 Web PC에서도 `speech_out`이 동작한다. Web PC와 Nodes PC가 같은 ROS 도메인에서 둘 다 구독하면 같은 `/voss/voice/say`를 중복 재생할 수 있으므로 현장에서는 한쪽만 실행하고 실제 재생 위치를 확인한다. 질문 TTS의 SSE 폴백은 Web PC 로컬 발행이다.
 
