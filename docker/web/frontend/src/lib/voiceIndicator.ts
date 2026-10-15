@@ -4,7 +4,8 @@
  * 출력: 대기/듣는 중/실패 화면 상태.
  * 관련: docs/interfaces/voice_status.md (현재 인터페이스 제안).
  */
-export const VOICE_COMMAND_TIMEOUT_MS = 8000; // UI 제안값: 팀 합의 필요
+export const VOICE_COMMAND_TIMEOUT_MS = 13000; // Web PC 호출어 창 10초보다 긴 예비 타임아웃
+export const VOICE_FAILURE_DISPLAY_MS = 3000;
 
 export type VoicePhase = 'WAKE_DETECTED' | 'COMMAND_ACCEPTED' | 'RECOGNITION_FAILED' | 'TIMED_OUT';
 export type IndicatorColor = 'green' | 'yellow' | 'red';
@@ -29,6 +30,7 @@ export interface IndicatorState {
 export type IndicatorAction =
   | { type: 'VOICE_EVENT'; signal: VoiceSignal }
   | { type: 'UI_TIMEOUT'; utteranceId: string }
+  | { type: 'UI_RECOVER'; utteranceId: string }
   | { type: 'RESET' };
 
 export const INITIAL_INDICATOR: IndicatorState = {
@@ -57,6 +59,11 @@ export function reduceVoiceIndicator(state: IndicatorState, action: IndicatorAct
   if (action.type === 'UI_TIMEOUT') {
     if (state.color !== 'yellow' || state.activeUtteranceId !== action.utteranceId) return state;
     return { ...state, color: 'red', failure: 'timeout' };
+  }
+  if (action.type === 'UI_RECOVER') {
+    if (state.color !== 'red' || state.activeUtteranceId !== action.utteranceId) return state;
+    return { ...state, color: 'green', activeUtteranceId: '', failure: null,
+      ignoredUtteranceId: action.utteranceId };
   }
   const signal = parseVoiceSignal(action.signal);
   if (!signal || state.seenEventIds.includes(signal.event_id)) return state;
