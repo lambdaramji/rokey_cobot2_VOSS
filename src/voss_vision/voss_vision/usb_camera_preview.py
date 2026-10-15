@@ -35,6 +35,7 @@ class Frames:
 
 
 def capture(device: str, frames: Frames, stop: threading.Event) -> None:
+    cv2.setNumThreads(1)  # Nodes PC의 서보·비전 작업과 CPU 스레드를 경쟁하지 않게 한다.
     while not stop.is_set():
         camera = cv2.VideoCapture(device, cv2.CAP_V4L2)
         if not camera.isOpened():
@@ -44,15 +45,19 @@ def capture(device: str, frames: Frames, stop: threading.Event) -> None:
         camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
         camera.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
         camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        camera.set(cv2.CAP_PROP_FPS, 10)  # 장치가 거부해도 grab/retrieve로 디코딩을 10 Hz 이하로 제한한다.
         next_encode = 0.0
         try:
             while not stop.is_set():
-                ok, frame = camera.read()
+                ok = camera.grab()
                 if not ok:
                     break
                 now = time.monotonic()
                 if now < next_encode:
                     continue
+                ok, frame = camera.retrieve()
+                if not ok:
+                    break
                 next_encode = now + 0.1
                 encoded, jpeg = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 78])
                 if encoded:
