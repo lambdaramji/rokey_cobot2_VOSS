@@ -70,3 +70,12 @@ def test_forget_clears_old_tracks() -> None:
     p.take()
     assert p.forget(31.0, 30.0) == 1
     assert p.offer(1, 50.0, "again", 31.0) == s2.KEPT  # 기록이 지워져 상한도 처음부터
+
+
+def test_publish_only_when_enough_agree() -> None:
+    # #171 리뷰: sort_manager 는 확실한 2단계 한 번에 구역을 바꾼다 → 1장(같은 동 1) 은 내지 않는다
+    assert not s2.publishable("대치동", 1.0, 1, 0.6, 2)
+    assert s2.publishable("대치동", 0.9, 2, 0.6, 2)
+    assert not s2.publishable("대치동", 0.5, 3, 0.6, 2)  # 엇갈려 신뢰도가 낮다
+    assert not s2.publishable("", 0.0, 0, 0.6, 2)
+    assert s2.publishable("대치동", 0.7, 1, 0.6, 1)  # min_agree 1 이면 1장으로도
