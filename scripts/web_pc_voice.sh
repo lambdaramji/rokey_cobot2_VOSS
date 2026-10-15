@@ -59,7 +59,7 @@ import pathlib
 import sys
 
 for line in pathlib.Path(sys.argv[1]).read_text().splitlines():
-    if line.startswith("VOSS_MQTT_BRIDGE_PASSWORD="):
+    if line.startswith("VOSS_MQTT_VOICE_WEB_PASSWORD="):
         value = line.split("=", 1)[1].strip()
         if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
             value = value[1:-1]
@@ -68,12 +68,11 @@ for line in pathlib.Path(sys.argv[1]).read_text().splitlines():
 PY
 )"
   if [ -z "$password" ]; then
-    echo 'deploy/node/.env에 VOSS_MQTT_BRIDGE_PASSWORD가 없습니다.' >&2
+    echo 'deploy/node/.env에 VOSS_MQTT_VOICE_WEB_PASSWORD가 없습니다.' >&2
     exit 1
   fi
   (
-    export VOSS_MQTT_PREVIEW_USERNAME=bridge
-    export VOSS_MQTT_PREVIEW_PASSWORD="$password"
+    export VOSS_MQTT_VOICE_WEB_PASSWORD="$password"
     exec "$(ros2 pkg prefix voss_hmi)/lib/voss_hmi/hmi_bridge" --ros-args \
       -r __node:=web_voice_status_bridge -p voice_status_only:=true \
       -p local_text_enabled:=true

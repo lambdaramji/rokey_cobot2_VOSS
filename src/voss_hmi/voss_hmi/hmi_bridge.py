@@ -46,6 +46,7 @@ MQTT_USERNAME = "bridge"
 MQTT_PASSWORD_ENV = "VOSS_MQTT_BRIDGE_PASSWORD"
 MQTT_PREVIEW_USERNAME_ENV = "VOSS_MQTT_PREVIEW_USERNAME"
 MQTT_PREVIEW_PASSWORD_ENV = "VOSS_MQTT_PREVIEW_PASSWORD"
+MQTT_VOICE_WEB_PASSWORD_ENV = "VOSS_MQTT_VOICE_WEB_PASSWORD"
 MQTT_COMMAND_TOPIC = "voss/command"
 MQTT_ACK_TOPIC = "voss/command/ack"
 MQTT_VOICE_REQUEST_TOPIC = "voss/voice/request"
@@ -204,7 +205,10 @@ class HmiBridgeNode(Node):
     def _create_mqtt_client(self) -> mqtt.Client:
         """표시 전용 시험에는 별도 계정, 일반 모드에는 기존 bridge 계정을 쓴다."""
 
-        if self._voice_status_only:
+        if self._voice_status_only and self._local_text_enabled:
+            username = "voice_web"
+            password_env = MQTT_VOICE_WEB_PASSWORD_ENV
+        elif self._voice_status_only:
             username = os.environ.get(MQTT_PREVIEW_USERNAME_ENV)
             password_env = MQTT_PREVIEW_PASSWORD_ENV
             if not username:
@@ -218,7 +222,11 @@ class HmiBridgeNode(Node):
             raise RuntimeError(f"{password_env} is required")
 
         # 시험용 실행이 기존 운영 bridge의 MQTT 연결을 밀어내지 않도록 ID만 분리한다.
-        client_id = "voss-hmi-voice-preview" if self._voice_status_only else "voss-hmi-bridge"
+        client_id = (
+            "voss-hmi-voice-web" if self._voice_status_only and self._local_text_enabled
+            else "voss-hmi-voice-preview" if self._voice_status_only
+            else "voss-hmi-bridge"
+        )
         client = mqtt.Client(client_id=client_id, protocol=mqtt.MQTTv311)
         client.username_pw_set(username, password)
         client.on_connect = self._on_mqtt_connect

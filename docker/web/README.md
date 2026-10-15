@@ -117,6 +117,7 @@ Web PC의 개발 서버(`npm run dev`)와 배포 Nginx는 `/camera/gripper/frame
 ### 제어 버튼 음성 안내 (Nodes PC)
 
 Web PC에서 `scripts/web_pc_voice.sh`를 사용할 때에는 실행 전에 `VOSS_NODES_PC_IP`를 현장 Nodes PC 주소로 설정합니다. 스크립트에는 개인 PC 주소를 기본값으로 두지 않으며 값이 없으면 시작하지 않습니다.
+Web PC 음성 브리지는 전용 MQTT `voice_web` 계정을 사용합니다. 계정 생성·ACL 적용은 [MQTT 실행 안내](../mqtt/README.md)를 따릅니다. 비밀번호는 Git에 넣지 않습니다.
 
 로컬 HMI의 시작·정지·재개·우선 분류·답변·구역 초기화·팔레트 적재·계획 저장이 API에 접수되면 Web 백엔드가 `voss/voice/request`를 보냅니다. Nodes PC의 일반 `hmi_bridge`가 이를 검증해 고정 문구를 `/voss/voice/say`로 발행하고 `speech_out`이 재생합니다. `hmi_bridge voice_status_only:=true`는 이 요청을 받지 않습니다. TTS 문구의 "전달"은 로봇 동작 완료가 아닙니다.
 
