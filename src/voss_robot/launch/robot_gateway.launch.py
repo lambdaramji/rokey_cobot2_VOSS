@@ -70,9 +70,8 @@ def _gateway(context):
     if LaunchConfiguration("servo_angular").perform(context).lower() == "true":
         params["servo_angular_enable"] = True  # S2-T17. 비우면 노드 기본 false(각속도 자름)
     yaw_limit = LaunchConfiguration("servo_yaw_limit_deg").perform(context)
-    if (
-        yaw_limit
-    ):  # S2-T18 실기: 관측 자세 공구 yaw ± 이 각 밖으로 가는 각속도를 자른다. 비우면 노드 기본 100
+    # S2-T18 실기: 관측 자세 공구 yaw ± 이 각 밖으로 가는 각속도를 자른다. 비우면 노드 기본 100
+    if yaw_limit:
         params["servo_yaw_limit_deg"] = float(yaw_limit)
     return [
         Node(
