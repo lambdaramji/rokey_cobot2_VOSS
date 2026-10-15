@@ -31,7 +31,11 @@ def parse_voice_request(payload: str, now: datetime) -> tuple[str, str] | None:
     request_id = data["request_id"]
     action = data["action"]
     sent_at = data["sent_at"]
-    if not isinstance(request_id, str) or not isinstance(action, str) or not isinstance(sent_at, str):
+    if (
+        not isinstance(request_id, str)
+        or not isinstance(action, str)
+        or not isinstance(sent_at, str)
+    ):
         return None
     try:
         uuid.UUID(request_id)

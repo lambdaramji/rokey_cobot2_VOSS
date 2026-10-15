@@ -135,17 +135,22 @@ class IntentParserNode(Node):
                 return
             if event == "zone_map":
                 entries = parsed["entries"]
-                view = ZoneMapView.from_entries([
-                    (e["dong"], e["zone"], e["aliases"]) for e in entries
-                ], str(parsed.get("version", "")))
+                view = ZoneMapView.from_entries(
+                    [(e["dong"], e["zone"], e["aliases"]) for e in entries],
+                    str(parsed.get("version", "")),
+                )
                 if view.dongs:
                     self._flow.view = view
             elif isinstance(parsed.get("state"), str) and isinstance(parsed.get("box_id"), str):
                 self._flow.state, self._flow.box_id = parsed["state"], parsed["box_id"]
                 self._last_state_at = time.monotonic()
                 question = parsed.get("pending_question")
-                if (parsed["state"] == "ASKING" and parsed["box_id"]
-                        and isinstance(question, str) and 0 < len(question.strip()) <= 512):
+                if (
+                    parsed["state"] == "ASKING"
+                    and parsed["box_id"]
+                    and isinstance(question, str)
+                    and 0 < len(question.strip()) <= 512
+                ):
                     key = (str(parsed.get("session_id", "")), parsed["box_id"], question)
                     if key != self._last_spoken_question:
                         self._last_spoken_question = key
@@ -169,8 +174,12 @@ class IntentParserNode(Node):
             data = json.loads(msg.data)
             request_id = data["request_id"]
             text = data["text"]
-            if (not isinstance(request_id, str) or str(uuid.UUID(request_id)) != request_id
-                    or not isinstance(text, str) or not 1 <= len(text.strip()) <= 240):
+            if (
+                not isinstance(request_id, str)
+                or str(uuid.UUID(request_id)) != request_id
+                or not isinstance(text, str)
+                or not 1 <= len(text.strip()) <= 240
+            ):
                 return
         except (ValueError, KeyError, TypeError):
             return
@@ -178,8 +187,9 @@ class IntentParserNode(Node):
         # 운영/웹 브리지 양쪽에서 같은 MQTT 요청이 전달돼도 한 번만 실행한다.
         with self._text_seen_lock:
             now = time.monotonic()
-            self._text_seen = {key: stamp for key, stamp in self._text_seen.items()
-                               if now - stamp < 600.0}
+            self._text_seen = {
+                key: stamp for key, stamp in self._text_seen.items() if now - stamp < 600.0
+            }
             if request_id in self._text_seen:
                 return
             self._text_seen[request_id] = now

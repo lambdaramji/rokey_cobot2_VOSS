@@ -42,8 +42,12 @@ _intent_chain = None
 def is_prompt_echo(text: str, prompt: str | None = None) -> bool:
     """잡음 구간에서 Whisper가 긴 initial_prompt를 되읽은 결과를 버린다."""
     heard = "".join(ch.casefold() for ch in text if ch.isalnum())
-    seed = "".join(ch.casefold() for ch in (prompt if prompt is not None else STT_PROMPT) if ch.isalnum())
-    return len(heard) >= 20 and len(seed) >= 20 and SequenceMatcher(None, heard, seed).ratio() >= 0.82
+    seed = "".join(
+        ch.casefold() for ch in (prompt if prompt is not None else STT_PROMPT) if ch.isalnum()
+    )
+    return (
+        len(heard) >= 20 and len(seed) >= 20 and SequenceMatcher(None, heard, seed).ratio() >= 0.82
+    )
 
 
 def _err(code: int, message: str, detail: str = "") -> JSONResponse:

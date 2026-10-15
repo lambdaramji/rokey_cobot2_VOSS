@@ -52,7 +52,9 @@ PALLETIZE_RE = re.compile(
     r"|(?:실어|싣|적재|태워|올려|옮겨).*(?:트럭|팔레트)"
     r"|순(?:서)?(?:대로|으로|로)?(?:실어|싣|적재)"
 )
-PALLETIZE_START_RE = re.compile(r"팔레타이징(?:을)?(?:실행|시작)(?:해|해줘|해주세요|하자|합니다|해요)?")
+PALLETIZE_START_RE = re.compile(
+    r"팔레타이징(?:을)?(?:실행|시작)(?:해|해줘|해주세요|하자|합니다|해요)?"
+)
 SAY_PALLET_ORDER = (
     "싣는 순서를 동 이름으로 말씀해 주세요. 예를 들어 대치, 역삼, 청담 순서로 실어줘."
 )
@@ -162,7 +164,11 @@ def command_acknowledgement(intent: dict) -> str:
     if kind == "priority":
         return f"{intent['dong']}을 우선 분류하겠습니다."
     if kind == "answer":
-        return "보류로 처리하겠습니다." if intent.get("zone") == HOLD else f"{intent['dong']}으로 분류하겠습니다."
+        return (
+            "보류로 처리하겠습니다."
+            if intent.get("zone") == HOLD
+            else f"{intent['dong']}으로 분류하겠습니다."
+        )
     if kind == "recheck":
         return "재확인을 시작하겠습니다."
     if kind == "palletize":

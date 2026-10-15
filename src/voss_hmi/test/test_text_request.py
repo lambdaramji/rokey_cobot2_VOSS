@@ -11,20 +11,30 @@ REQUEST_ID = str(uuid.uuid4())
 
 
 def request(text="팔레타이징 실행해", sent_at=None):
-    return json.dumps({"request_id": REQUEST_ID, "text": text,
-                       "sent_at": (sent_at or NOW).isoformat()}, ensure_ascii=False)
+    return json.dumps(
+        {"request_id": REQUEST_ID, "text": text, "sent_at": (sent_at or NOW).isoformat()},
+        ensure_ascii=False,
+    )
 
 
 def test_valid_text_and_reply():
     assert parse_text_request(request(), NOW) == (REQUEST_ID, "팔레타이징 실행해")
-    assert parse_text_reply(json.dumps({"request_id": REQUEST_ID,
-                                        "message": "싣는 순서를 동 이름으로 말씀해 주세요."}))
+    assert parse_text_reply(
+        json.dumps({"request_id": REQUEST_ID, "message": "싣는 순서를 동 이름으로 말씀해 주세요."})
+    )
 
 
 def test_rejects_stale_invalid_and_unexpected_fields():
     assert parse_text_request(request(sent_at=NOW - timedelta(seconds=31)), NOW) is None
     assert parse_text_request(request(text=" "), NOW) is None
     assert parse_text_request(request(text="정지\x00"), NOW) is None
-    assert parse_text_request(json.dumps({"request_id": REQUEST_ID, "text": "시작",
-                                          "sent_at": NOW.isoformat(), "extra": "x"}), NOW) is None
+    assert (
+        parse_text_request(
+            json.dumps(
+                {"request_id": REQUEST_ID, "text": "시작", "sent_at": NOW.isoformat(), "extra": "x"}
+            ),
+            NOW,
+        )
+        is None
+    )
     assert parse_text_reply(json.dumps({"request_id": "wrong", "message": "ok"})) is None

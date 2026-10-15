@@ -104,7 +104,9 @@ class HmiBridgeNode(Node):
         self._command_client = self.create_client(Command, "/voss/sort/command")
         self._say_publisher = self.create_publisher(String, "/voss/voice/say", QOS_RELIABLE_10)
         self._text_publisher = self.create_publisher(String, "/voss/voice/text", QOS_RELIABLE_10)
-        self.create_subscription(String, "/voss/voice/text/reply", self._on_text_reply, QOS_RELIABLE_10)
+        self.create_subscription(
+            String, "/voss/voice/text/reply", self._on_text_reply, QOS_RELIABLE_10
+        )
 
         self.create_subscription(
             SortState,
@@ -168,8 +170,12 @@ class HmiBridgeNode(Node):
         if self._local_text_enabled:
             self._text_queue = queue.Queue(maxsize=COMMAND_QUEUE_MAX)
             self._text_cache = OrderedDict()
-            self._text_publisher = self.create_publisher(String, "/voss/voice/text", QOS_RELIABLE_10)
-            self.create_subscription(String, "/voss/voice/text/reply", self._on_text_reply, QOS_RELIABLE_10)
+            self._text_publisher = self.create_publisher(
+                String, "/voss/voice/text", QOS_RELIABLE_10
+            )
+            self.create_subscription(
+                String, "/voss/voice/text/reply", self._on_text_reply, QOS_RELIABLE_10
+            )
         self._mqtt = self._create_mqtt_client()
         self.create_subscription(
             String, "/voss/voice/status", self._on_voice_status, QOS_RELIABLE_10
@@ -180,8 +186,10 @@ class HmiBridgeNode(Node):
         self._mqtt.loop_start()
         if self._local_text_enabled:
             self.create_timer(COMMAND_DRAIN_PERIOD_S, self._drain_text_requests)
-        self.get_logger().info("hmi_bridge: voice status%s (no robot command subscription)" % (
-            " and local text" if self._local_text_enabled else ""))
+        self.get_logger().info(
+            "hmi_bridge: voice status%s (no robot command subscription)"
+            % (" and local text" if self._local_text_enabled else "")
+        )
 
     def destroy_node(self) -> bool:
         """MQTT 루프를 먼저 끝낸 뒤 ROS 노드를 정리한다."""
@@ -256,8 +264,13 @@ class HmiBridgeNode(Node):
             return
 
         try:
-            target = (self._voice_request_queue if message.topic == MQTT_VOICE_REQUEST_TOPIC else
-                      self._text_queue if message.topic == MQTT_TEXT_TOPIC else self._command_queue)
+            target = (
+                self._voice_request_queue
+                if message.topic == MQTT_VOICE_REQUEST_TOPIC
+                else self._text_queue
+                if message.topic == MQTT_TEXT_TOPIC
+                else self._command_queue
+            )
             target.put_nowait(payload)
         except queue.Full:
             self.get_logger().error(f"MQTT queue full: {message.topic}")
@@ -508,8 +521,11 @@ class HmiBridgeNode(Node):
             if request_id in self._text_cache:
                 continue
             self._text_cache[request_id] = time.monotonic()
-            self._text_publisher.publish(String(data=json.dumps(
-                {"request_id": request_id, "text": text}, ensure_ascii=False)))
+            self._text_publisher.publish(
+                String(
+                    data=json.dumps({"request_id": request_id, "text": text}, ensure_ascii=False)
+                )
+            )
 
     def _drain_voice_requests(self) -> None:
         """허용된 버튼 문구만 speech_out으로 넘기며 QoS 재전송은 중복 발화하지 않는다."""

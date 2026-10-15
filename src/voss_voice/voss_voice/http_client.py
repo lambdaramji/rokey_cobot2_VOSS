@@ -85,8 +85,10 @@ def post_command(intent: dict, base: str = API_BASE, timeout_s: float = 2.0) -> 
     """Web PC 로컬 명령 API의 202 접수 여부만 확인한다. 실행 완료는 ack로 판단한다."""
     body = json.dumps(command_request(intent), ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(
-        f"{base}/api/commands", data=body,
-        headers={"Content-Type": "application/json", "X-Real-IP": "127.0.0.1"}, method="POST",
+        f"{base}/api/commands",
+        data=body,
+        headers={"Content-Type": "application/json", "X-Real-IP": "127.0.0.1"},
+        method="POST",
     )
     # 시스템 HTTP 프록시를 통해 로컬 명령이 나가지 않도록 한다.
     try:
@@ -94,8 +96,10 @@ def post_command(intent: dict, base: str = API_BASE, timeout_s: float = 2.0) -> 
             req, timeout=timeout_s
         ) as response:
             data = json.loads(response.read().decode("utf-8"))
-            return response.status == 202 and data.get("ok") is True and bool(
-                uuid.UUID(data["command_id"])
+            return (
+                response.status == 202
+                and data.get("ok") is True
+                and bool(uuid.UUID(data["command_id"]))
             )
     except (urllib.error.URLError, TimeoutError, ValueError, KeyError, OSError):
         return False

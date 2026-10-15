@@ -136,9 +136,16 @@ def test_stt_ignores_prompt_echo_but_keeps_short_stop(client, monkeypatch):
     assert main.is_prompt_echo(prompt.replace("일시 정지", "정지"), prompt)
     assert not main.is_prompt_echo("정지", prompt)
     monkeypatch.setattr(main, "STT_PROMPT", prompt)
-    monkeypatch.setattr(main, "_get_whisper", lambda: SimpleNamespace(
-        transcribe=lambda *a, **k: ([SimpleNamespace(text=prompt)], SimpleNamespace(duration=1.5))
-    ))
+    monkeypatch.setattr(
+        main,
+        "_get_whisper",
+        lambda: SimpleNamespace(
+            transcribe=lambda *a, **k: (
+                [SimpleNamespace(text=prompt)],
+                SimpleNamespace(duration=1.5),
+            )
+        ),
+    )
     response = client.post("/ai/stt", files={"audio": ("seg.wav", _wav(), "audio/wav")})
     assert response.status_code == 200 and response.json()["text"] == ""
 

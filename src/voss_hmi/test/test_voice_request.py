@@ -23,6 +23,10 @@ def test_each_allowed_action_maps_to_a_fixed_phrase():
 def test_free_text_and_stale_requests_are_rejected():
     assert parse_voice_request(payload(text="임의 문장"), NOW) is None
     assert parse_voice_request(payload("not_allowed"), NOW) is None
-    assert parse_voice_request(payload(sent_at=(NOW - timedelta(seconds=31)).isoformat()), NOW) is None
-    assert parse_voice_request(payload(sent_at=(NOW + timedelta(seconds=6)).isoformat()), NOW) is None
+    assert (
+        parse_voice_request(payload(sent_at=(NOW - timedelta(seconds=31)).isoformat()), NOW) is None
+    )
+    assert (
+        parse_voice_request(payload(sent_at=(NOW + timedelta(seconds=6)).isoformat()), NOW) is None
+    )
     assert parse_voice_request("not json", NOW) is None

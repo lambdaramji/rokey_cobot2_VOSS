@@ -106,7 +106,9 @@ def test_stop_works_even_when_ai_down_and_no_zone_map():
 
 def test_unknown_command_without_zone_map_is_unsupported():
     allowed_seen = []
-    f, published, said = _flow(lambda _, allowed: allowed_seen.append(allowed) or {"type": "unknown"})
+    f, published, said = _flow(
+        lambda _, allowed: allowed_seen.append(allowed) or {"type": "unknown"}
+    )
     f.view = None
 
     assert f.handle("날씨 알려줘")[0] == "say"
@@ -347,7 +349,9 @@ def test_palletize_route_is_published_in_spoken_order():
 
 
 def test_palletize_order_question_accepts_bare_route_reply():
-    flow, published, said = _flow(lambda text, allowed: (_ for _ in ()).throw(AssertionError("LLM 불필요")))
+    flow, published, said = _flow(
+        lambda text, allowed: (_ for _ in ()).throw(AssertionError("LLM 불필요"))
+    )
 
     assert flow.handle("팔레타이징 실행해")[0] == "say"
     assert "싣는 순서" in said[-1]
@@ -357,7 +361,9 @@ def test_palletize_order_question_accepts_bare_route_reply():
 
 
 def test_palletize_order_question_rejects_duplicate_then_accepts_correction():
-    flow, published, said = _flow(lambda text, allowed: (_ for _ in ()).throw(AssertionError("LLM 불필요")))
+    flow, published, said = _flow(
+        lambda text, allowed: (_ for _ in ()).throw(AssertionError("LLM 불필요"))
+    )
     flow.handle("팔레타이징 실행해")
 
     assert flow.handle("역삼, 역삼")[0] == "say"
@@ -367,7 +373,9 @@ def test_palletize_order_question_rejects_duplicate_then_accepts_correction():
 
 
 def test_robot_question_takes_priority_over_pallet_route_reply():
-    flow, published, _ = _flow(lambda text, allowed: (_ for _ in ()).throw(AssertionError("LLM 불필요")))
+    flow, published, _ = _flow(
+        lambda text, allowed: (_ for _ in ()).throw(AssertionError("LLM 불필요"))
+    )
     flow.handle("팔레타이징 실행해")
     flow.state, flow.box_id = "ASKING", "box-13"
 

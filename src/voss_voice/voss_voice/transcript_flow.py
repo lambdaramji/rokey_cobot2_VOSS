@@ -40,7 +40,11 @@ SAY_BUSY = "앞 지시를 처리하고 있습니다. 잠시 후 다시 말씀해
 SAY_COMMAND_UNCONFIRMED = "명령 접수를 확인하지 못했습니다. 관제 화면의 상태를 확인해 주세요."
 PALLET_ROUTE_REPLY_WINDOW_S = 60.0
 PALLET_ROUTE_PROMPTS = {
-    SAY_PALLET_ORDER, SAY_ROUTE_RETRY, SAY_ROUTE_COUNT, SAY_ROUTE_DUP, SAY_ROUTE_UNKNOWN
+    SAY_PALLET_ORDER,
+    SAY_ROUTE_RETRY,
+    SAY_ROUTE_COUNT,
+    SAY_ROUTE_DUP,
+    SAY_ROUTE_UNKNOWN,
 }
 
 
@@ -75,6 +79,7 @@ class TranscriptFlow:
             return "empty", 0.0
 
         t0 = self._clock()
+
         def say(message: str) -> None:
             if report is not None and message:
                 report(message)
@@ -106,8 +111,11 @@ class TranscriptFlow:
 
             # 팔레타이징 순서를 되물은 뒤에는 동 이름 목록만으로 답할 수 있다.
             # 로봇이 ASKING 중이면 박스의 답변이 우선한다.
-            d = (decide_pallet_route_answer(text, view)
-                 if state != "ASKING" and t0 <= self._pallet_route_until else None)
+            d = (
+                decide_pallet_route_answer(text, view)
+                if state != "ASKING" and t0 <= self._pallet_route_until
+                else None
+            )
 
             # 3. 등록된 동 이름만 말했는지 확인한다.
             if d is None:
@@ -136,7 +144,9 @@ class TranscriptFlow:
                 try:
                     llm = self._post_intent(
                         text,
-                        view.llm_allowed() if view is not None else {"dongs": [], "aliases": {}, "zones": []},
+                        view.llm_allowed()
+                        if view is not None
+                        else {"dongs": [], "aliases": {}, "zones": []},
                     )
                 except IntentParseError:
                     # 계약: 파싱 실패 시 명령을 실행하지 않고 되묻는다.
@@ -176,8 +186,9 @@ class TranscriptFlow:
                 )
 
             else:
-                self._pallet_route_until = (t0 + PALLET_ROUTE_REPLY_WINDOW_S
-                                            if d.say in PALLET_ROUTE_PROMPTS else 0.0)
+                self._pallet_route_until = (
+                    t0 + PALLET_ROUTE_REPLY_WINDOW_S if d.say in PALLET_ROUTE_PROMPTS else 0.0
+                )
                 say(d.say)
 
             return d.kind, 1000 * (self._clock() - t0)
