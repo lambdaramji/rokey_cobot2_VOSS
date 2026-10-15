@@ -5,10 +5,10 @@ from types import SimpleNamespace
 
 from test_rotate import D, cfg, inputs
 from test_rotate_hooks import invalid_keys, on_values
-
-from voss_servo import rotate as rt
 from voss_servo.belt_servo import BeltServoNode
 from voss_servo.params import params_digest, rot_cfg_from_values, rotate_line
+
+from voss_servo import rotate as rt
 
 
 def _decide(box_deg: float, **kw) -> tuple[str, float | None]:
@@ -60,11 +60,17 @@ def test_flip_rotation_goes_minus_and_returns() -> None:
 
 
 def test_params_flip_allows_max_up_to_180_minus_flip() -> None:
-    assert "rotate.min_deg" in invalid_keys(on_values(**{"rotate.max_deg": 110}))  # flip 없으면 ≤ 90
+    assert "rotate.min_deg" in invalid_keys(
+        on_values(**{"rotate.max_deg": 110})
+    )  # flip 없으면 ≤ 90
     ok = on_values(**{"rotate.max_deg": 110, "rotate.flip_above_deg": 70})
     assert invalid_keys(ok) == []
-    assert "rotate.min_deg" in invalid_keys(on_values(**{"rotate.max_deg": 111, "rotate.flip_above_deg": 70}))
-    assert "rotate.flip_above_deg" in invalid_keys(on_values(**{"rotate.flip_above_deg": 8}))  # ≤ min 10
+    assert "rotate.min_deg" in invalid_keys(
+        on_values(**{"rotate.max_deg": 111, "rotate.flip_above_deg": 70})
+    )
+    assert "rotate.flip_above_deg" in invalid_keys(
+        on_values(**{"rotate.flip_above_deg": 8})
+    )  # ≤ min 10
     assert "rotate.flip_above_deg" in invalid_keys(on_values(**{"rotate.flip_above_deg": 95}))
 
 
@@ -76,7 +82,9 @@ def test_params_rotate_lost_timeout_not_below_input() -> None:
 
 
 def test_params_new_keys_cfg_line_and_sha() -> None:
-    v = on_values(**{"rotate.max_deg": 110, "rotate.flip_above_deg": 70, "rotate.lost_timeout_s": 1.2})
+    v = on_values(
+        **{"rotate.max_deg": 110, "rotate.flip_above_deg": 70, "rotate.lost_timeout_s": 1.2}
+    )
     c = rot_cfg_from_values(v, (1.0, 0.0, 0.0))
     assert math.isclose(c.flip_above, D(70))
     assert rot_cfg_from_values(on_values(), (1.0, 0.0, 0.0)).flip_above is None

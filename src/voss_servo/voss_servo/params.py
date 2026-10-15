@@ -485,7 +485,9 @@ def rot_cfg_from_values(values: dict[str, Any], belt_dir_xy: Any) -> rotate.RotC
         lag_s=float(v["input.pose_lag_ms"]) / 1000.0,
         extrap_max_s=float(v["input.pose_extrap_max_ms"]) / 1000.0,
         pose_fresh_s=float(v["rotate.pose_fresh_s"]),
-        flip_above=None if v.get("rotate.flip_above_deg") is None else rad(v["rotate.flip_above_deg"]),
+        flip_above=None
+        if v.get("rotate.flip_above_deg") is None
+        else rad(v["rotate.flip_above_deg"]),
     )
 
 
@@ -499,6 +501,14 @@ def rotate_line(values: dict[str, Any]) -> str:
         f"rotate on · deadband {v['rotate.deadband_deg']:g} · min {v['rotate.min_deg']:g} · "
         f"max {v['rotate.max_deg']:g} · ω {v['rotate.omega_max_dps']:g} · "
         f"α {v['rotate.alpha_dps2']:g} · home {'goal' if home is None else f'{home:g}'}"
-        + (f" · flip >{v['rotate.flip_above_deg']:g} → −" if v.get("rotate.flip_above_deg") is not None else "")
-        + (f" · lost(회전) {v['rotate.lost_timeout_s']:g} s" if v.get("rotate.lost_timeout_s") is not None else "")
+        + (
+            f" · flip >{v['rotate.flip_above_deg']:g} → −"
+            if v.get("rotate.flip_above_deg") is not None
+            else ""
+        )
+        + (
+            f" · lost(회전) {v['rotate.lost_timeout_s']:g} s"
+            if v.get("rotate.lost_timeout_s") is not None
+            else ""
+        )
     )

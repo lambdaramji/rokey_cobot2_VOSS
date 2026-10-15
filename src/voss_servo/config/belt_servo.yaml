@@ -80,5 +80,7 @@ belt_servo:
       still_dps:                  null  # 제안 2 — 이 각속도 아래면 멈춘 것
       return_min_dz_mm:           null  # 제안 10 — LIFT·VERIFY 되돌리기는 TCP 가 윗면 + 10 위일 때만
       pose_fresh_s:               null  # 제안 0.05 — pose 주기의 2배 이상(joint_states 50 Hz → 0.05). 이보다 최근에 pose 가 왔는데 값이 그대로면 정지
+      flip_above_deg:             null  # 10/15 실기 70 — + Δ 가 이보다 크면 Δ − 180 으로 반대(−) 회전(+ 회전 67° 이상 시야 LOST). 있으면 max_deg ≤ 180 − 이 값
+      lost_timeout_s:             null  # 10/15 실기 1.2 — 회전을 쓴 goal 의 PREPARE·TRACK 에서만 LOST 기준(그 밖은 input.lost_timeout_s)
     log:
       dir: data/servo               # 상대 경로는 실행 위치 기준. launch 는 절대 경로를 넘긴다

@@ -103,7 +103,9 @@ class RotCfg:
     lag_s: float  # pose stamp 지연 (input.pose_lag_ms)
     extrap_max_s: float  # 외삽 지평 상한 (input.pose_extrap_max_ms)
     pose_fresh_s: float = POSE_FRESH_FOR_ZERO  # "값 그대로 = 정지" 를 믿는 pose 수신 나이 상한
-    flip_above: float | None = None  # + Δ 가 이보다 크면 Δ − π 로 반대 방향 회전 (10/15 U14 실기: + 회전 시야 나쁨). None = 끔
+    flip_above: float | None = (
+        None  # + Δ 가 이보다 크면 Δ − π 로 반대 방향 회전 (10/15 U14 실기: + 회전 시야 나쁨). None = 끔
+    )
 
 
 @dataclass(frozen=True)

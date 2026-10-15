@@ -700,7 +700,13 @@ class BeltServoNode(Node):
             self._busy = False
 
     # 손목이 돌고 있거나 돌아간 채 박스를 따라가는 상태 — 카메라가 박스를 비스듬히 봐 짧게 놓칠 수 있다
-    _ROT_LOST_STATES = (rotate.ROTATING, rotate.SETTLING, rotate.DONE, rotate.STOPPING, rotate.FALLBACK)
+    _ROT_LOST_STATES = (
+        rotate.ROTATING,
+        rotate.SETTLING,
+        rotate.DONE,
+        rotate.STOPPING,
+        rotate.FALLBACK,
+    )
 
     def _lost_timeout(self, ctx: GoalCtx) -> float:
         """LOST 판정 시간. 회전을 쓴 goal 의 PREPARE·TRACK 에서만 rotate.lost_timeout_s(있으면), 그 밖은 input 값.

@@ -2,7 +2,8 @@
 
 개인 PC (두산 없이):  ros2 launch voss_robot robot_gateway.launch.py [dry_run_object_mm:=40.5]
 실기 (사람이 비상정지 옆에서, 브링업 뒤):  ... dry_run:=false [servo_z_min_mm:=<TCP z 하한 mm>]
-J6 회전(S2-T18) 시험만:  ... servo_angular:=true — servo_cmd angular.z 를 speedl 로 넘긴다(기본 off, 시연 라인 금지).
+J6 회전(S2-T18):  ... servo_angular:=true servo_yaw_limit_deg:=130 pose_source:=joint_states
+    — servo_cmd angular.z 를 speedl 로 넘긴다(기본 off). 130 = belt_servo 최종 max 110 + 0.2 s × 60 °/s + 여유(design/S2T18-result.md).
 config 기본 = ~/voss_ws/config/voss_config.yaml (레포 config/ 를 복사한 호스트 사본).
 MoveToZone 기본 = 300 mm/s · 900 mm/s² · 위 모서리 블렌딩 30 mm (S2-T17). 450 은 A 칸 → OBSERVE 직선이
     J1 축 74 mm 옆을 지나 J1 이 150 deg/s 에 걸렸다가 급감속 → 두산 9015 충돌 감지(10/14 3/3). 350 은 10/10 OK → 여유 두고 300.
@@ -69,7 +70,9 @@ def _gateway(context):
     if LaunchConfiguration("servo_angular").perform(context).lower() == "true":
         params["servo_angular_enable"] = True  # S2-T17. 비우면 노드 기본 false(각속도 자름)
     yaw_limit = LaunchConfiguration("servo_yaw_limit_deg").perform(context)
-    if yaw_limit:  # S2-T18 실기: 관측 자세 공구 yaw ± 이 각 밖으로 가는 각속도를 자른다. 비우면 노드 기본 100
+    if (
+        yaw_limit
+    ):  # S2-T18 실기: 관측 자세 공구 yaw ± 이 각 밖으로 가는 각속도를 자른다. 비우면 노드 기본 100
         params["servo_yaw_limit_deg"] = float(yaw_limit)
     return [
         Node(

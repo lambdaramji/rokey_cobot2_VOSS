@@ -61,3 +61,4 @@
 - 2026-10-14: servo_cmd `angular.z` 의미 확정(S2-T18 J6 회전, 박병후). 기본은 그대로 0(G0 계약 유지). belt_servo `rotate.enable` 일 때만 베이스 Z 각속도를 PREPARE·TRACK·LIFT·VERIFY·안전 후퇴에서 낸다. gateway 쪽 통과 조건은 S2-T17(김학민). 설계: src/voss_servo/design/S2T18-hld.md D0·D2·D9·D10.
 - 2026-10-14: robot_gateway servo_cmd 각속도 통과 조건(S2-T17, 김학민 — 제안). 파라미터 `servo_angular_enable`(기본 false — 지금처럼 자름)·`servo_max_ang_dps` 60·`servo_yaw_limit_deg` 100·`servo_ang_acc_dps2` 90(켤 때만 speedl acc[1]). 0 경로 전부 각속도 0. 토픽·타입 변경 없음.
 - 2026-10-15: #164 리뷰(남현지·박병후) — 끈 상태의 `servo_acc` 기본 [100, 10] 유지(켤 때만 각가속 90), yaw 감속 각에 지금 각속도·watchdog 동안 도는 각 포함, 회전 중심 TCP 보정은 E3 결과에 따라 gateway 몫, 켜는 조건(E2·E3·케이블 각).
+- 2026-10-15: S2-T18 실기(U14, voss_servo/design/S2T18-result.md) — robot_gateway `servo_yaw_limit_deg` 를 launch 인자로도(비우면 노드 기본 100), J6 운용값 130. 회전 기준점 = 컨트롤러 등록 TCP 확인(회전 중 TCP xy ≤ 0.2 mm, 펜던트 TCP 등록 상태) → 선속도 보정 불필요. 토픽·타입·메시지 변경 없음.
