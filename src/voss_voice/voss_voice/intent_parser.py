@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import http.client
 import json
 import threading
 import time
@@ -49,6 +50,9 @@ class IntentParserNode(Node):
         self._text_seen: dict[str, float] = {}
         self._text_seen_lock = threading.Lock()
         self._last_state_at = 0.0
+        self._state_source = ""
+        self._zone_map_source = ""
+        self._ros_view = None
         self._last_spoken_question: tuple[str, str, str] | None = None
         self._context_stop = threading.Event()
 
@@ -91,10 +95,13 @@ class IntentParserNode(Node):
         self._flow.view = ZoneMapView.from_entries(
             [(e.dong, e.zone, list(e.aliases)) for e in msg.entries], msg.version
         )
+        self._ros_view = self._flow.view
         self.get_logger().info(f"zone_map v{msg.version}: {', '.join(self._flow.view.dongs)}")
+        self._zone_map_source = "ros"
 
     def _on_state(self, msg: SortState) -> None:
         self._flow.state, self._flow.box_id = msg.state, msg.box_id
+        self._state_source = "ros"
         self._last_state_at = time.monotonic()
 
     def _expire_state(self) -> None:
@@ -122,9 +129,21 @@ class IntentParserNode(Node):
                         elif not line:
                             self._on_web_context_event(event, data)
                             event, data = "", ""
-            except (urllib.error.URLError, TimeoutError, OSError, ValueError):
-                pass
+            except (urllib.error.URLError, http.client.HTTPException, TimeoutError, OSError, ValueError) as error:
+                self.get_logger().warn(f"웹 문맥 스트림 끊김 ({type(error).__name__}); 재연결")
+            self._invalidate_web_context()
             self._context_stop.wait(1.0)
+
+    def _invalidate_web_context(self) -> None:
+        """SSE 단절 뒤 웹에서만 받은 질문·구역 지도를 재사용하지 않는다."""
+        if getattr(self, "_state_source", "") == "web":
+            self._flow.state, self._flow.box_id = "", ""
+            self._last_state_at = 0.0
+            self._last_spoken_question = None
+            self._state_source = ""
+        if getattr(self, "_zone_map_source", "") == "web":
+            self._flow.view = getattr(self, "_ros_view", None)
+            self._zone_map_source = ""
 
     def _on_web_context_event(self, event: str, data: str) -> None:
         if event not in ("zone_map", "state") or len(data) > 65536:
@@ -141,8 +160,10 @@ class IntentParserNode(Node):
                 )
                 if view.dongs:
                     self._flow.view = view
+                    self._zone_map_source = "web"
             elif isinstance(parsed.get("state"), str) and isinstance(parsed.get("box_id"), str):
                 self._flow.state, self._flow.box_id = parsed["state"], parsed["box_id"]
+                self._state_source = "web"
                 self._last_state_at = time.monotonic()
                 question = parsed.get("pending_question")
                 if (

@@ -1,5 +1,7 @@
 """Web PC 음성/채팅에서 기존 명령 API로 보내는 형식과 실패 안내."""
 
+import http.client
+import threading
 from types import SimpleNamespace
 
 from voss_voice.http_client import command_request
@@ -75,3 +77,81 @@ def test_web_sse_question_is_spoken_once_per_asking_entry() -> None:
     IntentParserNode._on_web_context_event(node, "state", '{"state":"RUNNING","box_id":""}')
     IntentParserNode._on_web_context_event(node, "state", asking)
     assert len(spoken) == 2  # 정지·재개 뒤 같은 박스를 다시 물으면 다시 읽는다.
+
+
+def test_web_sse_reconnects_after_incomplete_read(monkeypatch) -> None:
+    flow = SimpleNamespace(view=None, state="", box_id="")
+    stopped = threading.Event()
+    warnings, seen, opens = [], [], []
+    node = SimpleNamespace(
+        _flow=flow,
+        _api_base="http://127.0.0.1:8080",
+        _context_stop=stopped,
+        _last_state_at=0.0,
+        _last_spoken_question=None,
+        _pub_say=SimpleNamespace(publish=lambda _: None),
+        get_logger=lambda: SimpleNamespace(warn=warnings.append),
+    )
+    node._invalidate_web_context = lambda: IntentParserNode._invalidate_web_context(node)
+
+    def on_event(event, data):
+        IntentParserNode._on_web_context_event(node, event, data)
+        if event == "state" and flow.state == "ASKING":
+            seen.append(flow.box_id)
+            if len(seen) == 2:
+                stopped.set()
+
+    node._on_web_context_event = on_event
+
+    class Stream:
+        def __init__(self, first):
+            self.first = first
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_):
+            return False
+
+        def __iter__(self):
+            if self.first:
+                yield b"event: state\n"
+                yield b'data: {"state":"ASKING","box_id":"box-1"}\n\n'
+                yield b"\n"
+                raise http.client.IncompleteRead(b"partial")
+            yield b"event: zone_map\n"
+            yield b"data: malformed\n"
+            yield b"\n"
+            yield b"event: state\n"
+            yield b'data: {"state":"ASKING","box_id":"box-2"}\n'
+            yield b"\n"
+
+    def open_stream(*_args, **_kwargs):
+        opens.append(flow.state)
+        return Stream(len(opens) == 1)
+
+    monkeypatch.setattr(
+        "voss_voice.intent_parser.urllib.request.build_opener",
+        lambda *_: SimpleNamespace(open=open_stream),
+    )
+    IntentParserNode._stream_web_context(node)
+    assert seen == ["box-1", "box-2"]
+    assert opens == ["", ""]  # 단절된 첫 질문은 재접속 전에 무효화
+    assert flow.state == ""
+    assert any("IncompleteRead" in warning for warning in warnings)
+
+
+def test_web_disconnect_preserves_ros_context() -> None:
+    flow = SimpleNamespace(view=object(), state="ASKING", box_id="box-ros")
+    node = SimpleNamespace(_flow=flow, _state_source="ros", _zone_map_source="ros")
+    IntentParserNode._invalidate_web_context(node)
+    assert flow.state == "ASKING" and flow.box_id == "box-ros"
+    assert flow.view is not None
+
+
+def test_web_disconnect_restores_last_ros_zone_map() -> None:
+    ros_view = object()
+    flow = SimpleNamespace(view=object(), state="", box_id="")
+    node = SimpleNamespace(_flow=flow, _zone_map_source="web", _ros_view=ros_view)
+    IntentParserNode._invalidate_web_context(node)
+    assert flow.view is ros_view
