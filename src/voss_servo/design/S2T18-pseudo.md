@@ -481,3 +481,21 @@ test_action_e2e.py:
 - goal 전에 버퍼가 n_min 이상 차 있으면 goal 첫 틱에 결정하므로 틱 로그에 COLLECT 가 남지 않을 수 있다(A 안의 기대 동작) — sim_check J-rot·e2e 는 COLLECT 를 있어도 없어도 되게 본다.
 - 기준 공구 yaw(home_ref)는 goal 수락 때 노드가 정한다(고정값이 없으면 그 goal 의 공구 yaw, 기울기 ≤ 5° 일 때만). rot_step 의 `rs.home` 은 그 값을 받는다.
 - 회전 로그 키 12개는 `rotate.ROT_LOG_KEYS` 와 `log_schema.ROT_KEYS` 가 같은 순서(시험으로 고정).
+
+## 14. 실기 반영 코드 메모 (10/15, #179 — 실기 우선)
+```
+decide(agg, inp, cfg):
+    ...                                  # 기존 순서(필드·자세·시작 자세·하류)
+    Δ ← fold_half(agg.target − belt_yaw)
+    만약 cfg.flip_above 있고 Δ > cfg.flip_above:   # +70° 초과 → 반대쪽 (−110~−90°)
+        Δ ← Δ − π
+    |Δ| ≤ max(deadband, min) → SMALL / |Δ| > max(=110) → OUT_OF_RANGE / 아니면 ROTATING(target = home + Δ)
+
+belt_servo._lost_timeout(ctx):
+    회전 켬 · rotate.lost_timeout_s 있음 · ctx.rot.state ∈ {ROTATING, SETTLING, DONE, STOPPING, FALLBACK}
+        · phase ∈ {PREPARE, TRACK}  → rotate.lost_timeout_s (1.2)
+    아니면 → input.lost_timeout_s (0.5)
+
+log_values(..., terminal):
+    rot_end_left_deg ← terminal 이고 psi_raw·home 있으면 deg(wrap(psi_raw − home)) 아니면 None
+```
