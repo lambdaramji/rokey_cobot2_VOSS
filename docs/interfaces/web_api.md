@@ -82,7 +82,7 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 - 원격에서 움직이는 명령: `403 FORBIDDEN_REMOTE`(위 공통 절). `stop` 은 원격·로컬 모두 받는다.
 - **Sprint 2 인자 검사 (S2-T08, 발행 전에 Spring Boot 가 본다):**
   - `palletize` — `args` 는 `{"route": [...]}` 키 하나. `route` = 문자열 배열 1~3개·중복 없음·빈 문자열 없음(배송 순서, 첫 배송지부터). 형식이 틀리면 `400 INVALID_QUERY`, zone_map 정식 동 이름이 아니면(별칭 포함) `400 UNKNOWN_DONG`. MQTT `voss/command` 에는 `args` 를 그대로 싣는다(쉼표 문자열로 바꾸는 것은 hmi_bridge, mqtt.md). 시작 조건(처리 중 박스 없음·팔레트 칸 0·교시)은 manager 가 보고 `command_ack` 로 거부한다.
-  - `reset_zone` — `zone` 에 `PALLET` 추가(A/B/C/RECHECK/HOLD/PALLET).
+  - `reset_zone` — `zone` 에 `PALLET` 추가(A/B/C/RECHECK/HOLD/PALLET). manager 는 PALLET 비움 확인을 IDLE·PAUSED 에서만 받고, RUNNING 은 거부한다(PR #176 PL 안전 결정). 웹 화면은 먼저 정지 → 실물 비움 확인 → 비움 명령 → 재개 순서를 안내한다. 소프트웨어 stop 은 물리 안전정지를 대신하지 않는다.
 
 ### `POST /api/voice/announce` — 로컬 HMI 버튼 음성 안내
 
@@ -161,3 +161,5 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 - 2026-10-06: 초안 (#22, ADR-0006, SRD 상호확인 #52 MC-020·021·022·026·027, #54 MC-030·031). 제안 상태 — mqtt.md(10/08, #20) 확정 때 SSE `data` 형식을 함께 맞춘다.
 - 2026-10-13: (T13 #37) SSE `box_track`·`robot_pose` 추가. 제안: `robot_joints`·`box_motion`·`voice_status`(snapshot·replay 없음).
 - 2026-10-14: #37 PL 리뷰 — `robot_joints`·`voice_status` 승인, `box_motion` 제안 유지, SSE 표에 행 추가.
+
+- 2026-10-15: PR #176 PL 결정 — PALLET 비움의 manager 상태 제한(`IDLE`·`PAUSED`) 및 HMI의 정지→실물 비움→재개 안내 명시. REST 필드·오류 코드 추가 없음.
