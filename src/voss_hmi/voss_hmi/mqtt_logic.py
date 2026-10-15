@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 COMMAND_MAX_AGE_S = 30.0
-ALLOWED_TYPES = {"start", "stop", "resume", "priority", "answer", "reset_zone", "palletize"}
+ALLOWED_TYPES = {"start", "stop", "resume", "priority", "answer", "recheck", "reset_zone", "palletize"}
 RESETTABLE_ZONES = {"A", "B", "C", "RECHECK", "HOLD", "PALLET"}  # PALLET: Sprint 2 팔레트 비움
 MAX_ROUTE = 3  # palletize 경로 동 1~3개 (mqtt.md, TR-PAL-01)
 
@@ -122,7 +122,7 @@ def _command_arg(command_type: str, args: dict[str, object]) -> str:
         _require_exact_keys(args, set())
         return "ALL"
 
-    if command_type in {"stop", "resume"}:
+    if command_type in {"stop", "resume", "recheck"}:
         _require_exact_keys(args, set())
         return ""
 

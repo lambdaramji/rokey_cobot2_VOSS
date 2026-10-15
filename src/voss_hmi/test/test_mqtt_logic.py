@@ -27,6 +27,7 @@ def _payload(command_type: str, args: dict, sent_at: datetime | None = None) -> 
         ("start", {}, "ALL"),
         ("stop", {}, ""),
         ("resume", {}, ""),
+        ("recheck", {}, ""),
         ("priority", {"dong": "역삼동"}, "역삼동"),
         ("answer", {"box_id": "b-01", "dong": "대치동"}, "b-01|대치동"),
         ("answer", {"box_id": "b-02", "zone": "HOLD"}, "b-02|HOLD"),
@@ -58,6 +59,7 @@ def test_stop_is_accepted_even_when_old():
     "command_type,args",
     [
         ("start", {"unexpected": 1}),
+        ("recheck", {"unexpected": 1}),
         ("priority", {}),
         ("priority", {"dong": ""}),
         ("answer", {"box_id": "b-01", "dong": "역삼동", "zone": "HOLD"}),
