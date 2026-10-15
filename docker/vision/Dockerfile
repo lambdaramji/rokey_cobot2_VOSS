@@ -45,10 +45,18 @@ RUN source /opt/ros/jazzy/setup.bash \
     && colcon build --packages-select voss_msgs voss_vision --event-handlers console_direct- \
     && rm -rf build log
 
-# 빌드 때 바로 확인: 두 노드가 쓰는 모듈이 각자의 python 에서 import 된다
+# 빌드 때 바로 확인: 두 노드가 쓰는 모듈이 각자의 python 에서 import 된다.
+# GPU 이미지는 빌드 때 paddle 을 import 하지 않는다 — paddlepaddle-gpu 는 libcuda.so.1(실행할 때 nvidia 런타임이 넣는
+# 드라이버)이 없으면 import 가 실패한다(10/15 공용 PC 첫 GPU 빌드, 김학민). 설치 판만 보고, paddle·GPU 는 실행 첫 로그
+# "OCR 엔진 준비 gpu:0 N s" 로 확인한다(README). label_reader 는 paddle 을 엔진을 만들 때만 불러와 import 해도 된다.
 RUN source /opt/ros/jazzy/setup.bash && source install/setup.bash \
     && python3 -c "import voss_vision.box_tracker, voss_vision.box_detect; from voss_msgs.msg import BoxTrack; print('box_tracker import OK')" \
-    && /opt/voss_ocr/bin/python -c "import paddle, paddleocr, voss_vision.label_reader; print('label_reader import OK, paddle', paddle.__version__, 'cuda', paddle.device.is_compiled_with_cuda())"
+    && if [ "${OCR_DEVICE}" = "gpu" ]; then \
+         /opt/voss_ocr/bin/pip show paddlepaddle-gpu paddleocr | grep -E '^(Name|Version):' \
+         && /opt/voss_ocr/bin/python -c "import voss_vision.label_reader; print('label_reader import OK (gpu 이미지: paddle 은 실행 첫 로그로 확인)')"; \
+       else \
+         /opt/voss_ocr/bin/python -c "import paddle, paddleocr, voss_vision.label_reader; print('label_reader import OK, paddle', paddle.__version__, 'cuda', paddle.device.is_compiled_with_cuda())"; \
+       fi
 
 COPY docker/vision/entrypoint.sh /entrypoint.sh
 # config/ 는 읽기 전용 마운트(compose), OCR 은 venv python 으로(label_reader.launch.py 의 python 인자 기본값)
