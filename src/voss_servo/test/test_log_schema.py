@@ -49,8 +49,11 @@ def test_u9c_keys_present_and_counts() -> None:
     assert U9C_ATTEMPT_KEYS <= set(ls.ATTEMPT_FIELDS) and len(U9C_ATTEMPT_KEYS) == 12
     assert "obs_age_s" in ls.TICK_FIELDS
     # U9b 후퇴 4키 + S2-T14 z_profile·z_v_cmd_mps (시도는 z_profile 만) + S2-T18 yaw 관측 2키 (틱만)
-    # + S2-T18 회전 12키 (시도는 4키)
-    assert (len(ls.TICK_FIELDS), len(ls.ATTEMPT_FIELDS)) == (90, 39)
+    # + S2-T18 회전 13키 (시도는 5키, rot_end_left_deg 10/15 U14)
+    assert (len(ls.TICK_FIELDS), len(ls.ATTEMPT_FIELDS)) == (
+        91,
+        40,
+    )  # +rot_end_left_deg (10/15 U14)
     assert len(set(ls.TICK_FIELDS)) == len(ls.TICK_FIELDS)  # 중복 키 없음
     assert list(ls.PHASE_T_KEYS) == ["PREPARE", "TRACK", "DESCEND", "GRASP", "LIFT", "VERIFY"]
 
@@ -100,10 +103,10 @@ def test_s2t14_z_keys() -> None:
 
 
 def test_rot_keys_match_rotate_module_and_attempt_subset() -> None:
-    """S2-T18: 회전 로그 키는 rotate.ROT_LOG_KEYS 와 같은 이름·순서, 시도 4키는 그 부분집합."""
+    """S2-T18: 회전 로그 키는 rotate.ROT_LOG_KEYS 와 같은 이름·순서, 시도 5키는 그 부분집합."""
     from voss_servo import rotate
 
     assert ls.ROT_KEYS == rotate.ROT_LOG_KEYS
     assert set(ls.ROT_KEYS) <= set(ls.TICK_FIELDS)
-    attempt_rot = {"rot_state", "rot_cause", "rot_delta_deg", "rot_time_s"}
+    attempt_rot = {"rot_state", "rot_cause", "rot_delta_deg", "rot_time_s", "rot_end_left_deg"}
     assert attempt_rot <= set(ls.ATTEMPT_FIELDS) and attempt_rot <= set(ls.ROT_KEYS)
