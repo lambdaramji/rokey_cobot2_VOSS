@@ -95,6 +95,9 @@ docker compose logs --tail=100 backend frontend
 
 Nodes PC에 연결한 C270을 `usb_camera_preview.py`로 송출합니다. Web PC에서 Nodes PC의 8092로 SSH `-L 127.0.0.1:8092:127.0.0.1:8092` 터널을 열면 Nginx의 `/camera/usb/frame.jpg`가 영상을 전달합니다. 관제 화면은 C270을 기본 선택하고 카메라 메뉴 진입 시 자동 연결합니다. 브라우저의 카메라·마이크 권한은 사용하지 않습니다.
 
+- C270은 손목 D435i와 가능하면 다른 USB 컨트롤러에 연결합니다. 실제 포트·컨트롤러 배치는 현장 담당자가 확인합니다. 송출기는 Nodes PC의 loopback `8092`만 열고 Web PC까지는 SSH 터널을 사용합니다.
+- 현장 성능 확인: USB 송출기를 켠 상태에서 `belt_servo` 30 Hz 틱 간격의 중앙값·p99·최댓값, `box_tracker` 5초 로그 주기(25 Hz 미만 WARN), C270 분리·재접속을 기록합니다. 2~3명 동시 시청 부하 측정은 LAN 열람 정책의 PL 승인 후 수행합니다.
+
 ### 그리퍼 카메라 (카메라 메뉴)
 
 Nodes PC에서 `voss_vision`을 빌드하고 송출 노드를 실행합니다. 기본 입력은 `/camera/color/image_raw`(rgb8 또는 bgr8)와 `/voss/vision/box`이며, 같은 촬영 시각의 박스 검출 결과를 영상에 표시합니다.
