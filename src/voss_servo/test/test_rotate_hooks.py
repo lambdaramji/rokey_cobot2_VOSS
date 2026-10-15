@@ -246,7 +246,12 @@ def test_rot_dead_tick_needs_two_still_ticks() -> None:
     """예외로 끈 goal: 각속도 0, 측정 정지가 2틱 이어져야 진행 · 움직이면 다시 센다 (M12, 권장 2)."""
     n = _Node()
     ctx = SimpleNamespace(
-        wz=0.3, rot_still_n=0, rot_io=None, rot_dead_since=1.0, rot_dead_capped=False, rot_warn=None
+        wz=0.3,
+        rot_still_n=0,
+        rot_io=None,
+        rot_dead_move_t=1.0,
+        rot_dead_capped=False,
+        rot_warn=None,
     )
     n._yaw_prev, n._yaw_value = (0.00, 1.00), (0.02, 1.02)  # 1 rad/s 로 도는 중
     n._pose = (None, 1.02)
@@ -264,9 +269,34 @@ def test_rot_dead_tick_cap_without_motion_info() -> None:
     """예외로 끈 goal 이 측정 각속도를 계속 모르면 STOP_CAP 뒤 진행 (학민 #54 리뷰 4)."""
     n = _Node()
     ctx = SimpleNamespace(
-        wz=0.0, rot_still_n=0, rot_io=None, rot_dead_since=5.0, rot_dead_capped=False, rot_warn=None
+        wz=0.0,
+        rot_still_n=0,
+        rot_io=None,
+        rot_dead_move_t=5.0,
+        rot_dead_capped=False,
+        rot_warn=None,
     )
     n._pose = None  # pose 가 끊김 → 측정 각속도 모름
     assert n._rot_dead_tick(ctx, 5.0 + rt.STOP_CAP - 0.01) is False
     assert n._rot_dead_tick(ctx, 5.0 + rt.STOP_CAP) is True and ctx.rot_warn == rt.STOP_UNCONFIRMED
     assert n._rot_dead_tick(ctx, 5.0 + rt.STOP_CAP + 0.03) is True  # 한 번 넘기면 계속 허용
+
+
+def test_rot_dead_tick_waits_while_measured_moving() -> None:
+    """예외로 끈 goal 도 측정이 "아직 돈다"면 상한이 지나도 진행하지 않는다 (재리뷰)."""
+    n = _Node()
+    ctx = SimpleNamespace(
+        wz=0.0,
+        rot_still_n=0,
+        rot_io=None,
+        rot_dead_move_t=5.0,
+        rot_dead_capped=False,
+        rot_warn=None,
+    )
+    t = 5.0
+    for k in range(60):  # 2 s 동안 0.35 rad/s(20°/s)로 돈다고 잰다
+        t = 5.0 + 0.033 * (k + 1)
+        n._yaw_prev, n._yaw_value = (0.35 * (t - 0.02), t - 0.02), (0.35 * t, t)
+        n._pose = (None, t)
+        assert n._rot_dead_tick(ctx, t) is False and ctx.wz == 0.0
+    assert not ctx.rot_dead_capped

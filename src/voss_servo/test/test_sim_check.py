@@ -445,6 +445,8 @@ def test_gateway_angular_lines_and_rotate_ok() -> None:
     assert sc.judge_rotation("rotate_ok", rows, _c(), None).status == "UNKNOWN"  # S2-T17 전 gateway
     bad = [dict(r, rot_err_deg=-2.0) if r.get("phase") == "DESCEND" else r for r in rows]
     assert sc.judge_rotation("rotate_ok", bad, _c(), True).status == "FAIL"  # 남은 각 > tol
+    zero = [dict(r, rot_err_deg=0.0) if r.get("phase") == "DESCEND" else r for r in rows]
+    assert sc.judge_rotation("rotate_ok", zero, _c(), True).status == "PASS"  # 0.0 도 값 (재리뷰)
     line = "[INFO] [2.0] [belt_servo]: rotate on · deadband 4 · min 10 · max 45 · ω 60 · α 90 · home goal"
     assert sc.parse_servo_rotate([line]) == (60.0, 90.0)
     assert sc.judge_gw_limits((60.0, 90.0), (60.0, 90.0)).status == "PASS"

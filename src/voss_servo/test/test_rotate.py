@@ -386,7 +386,31 @@ def test_stopping_cap_when_motion_unknown() -> None:
         rs, t = out.state, t + DT
     out = rt.rot_step(rs, inputs(now=rt.STOP_CAP + 0.001, w_meas=None), c)
     assert out.state.state == rt.FALLBACK and out.warn == rt.STOP_UNCONFIRMED and out.ready
-    assert out.state.cause == rt.STALL and out.state.stop_since is None  # 원래 원인은 그대로
+    assert out.state.cause == rt.STALL and out.state.stop_move_t is None  # 원래 원인은 그대로
+
+
+def test_stopping_never_proceeds_while_measured_moving() -> None:
+    """측정이 "아직 돈다"(20°/s)면 상한이 지나도 진행하지 않고 0 유지 — 서면 정지 2틱 뒤 FALLBACK (재리뷰)."""
+    c = cfg()
+    rs = rt.RotState(rt.STOPPING, home=HOME, cause=rt.TIMEOUT, t_start=0.0)
+    t = 0.0
+    while t < 3 * rt.STOP_CAP:  # 각가속이 느린 손목: 오래 돈다
+        out = rt.rot_step(rs, inputs(now=t, w_meas=D(20)), c)
+        assert (
+            out.state.state == rt.STOPPING and out.wz == 0.0 and not out.ready and out.warn is None
+        )
+        assert out.z_floor is not None  # 그동안 z 하한(윗면 +50)도 유지
+        rs, t = out.state, t + DT
+    out = rt.rot_step(rs, inputs(now=t, w_meas=0.0), c)
+    out = rt.rot_step(out.state, inputs(now=t + DT, w_meas=0.0), c)
+    assert out.state.state == rt.FALLBACK and out.warn is None and out.ready  # 정상 정지 확인
+    # 돌다가 측정이 끊기면: 마지막으로 돈다고 잰 뒤 STOP_CAP 이 지나야 진행
+    rs = rt.RotState(rt.STOPPING, home=HOME, cause=rt.TIMEOUT, t_start=0.0)
+    rs = rt.rot_step(rs, inputs(now=0.5, w_meas=D(20)), c).state
+    held = rt.rot_step(rs, inputs(now=0.5 + rt.STOP_CAP - 0.01, w_meas=None), c)
+    assert held.state.state == rt.STOPPING
+    went = rt.rot_step(held.state, inputs(now=0.5 + rt.STOP_CAP, w_meas=None), c)
+    assert went.state.state == rt.FALLBACK and went.warn == rt.STOP_UNCONFIRMED
 
 
 def test_stopping_waits_for_inertia() -> None:

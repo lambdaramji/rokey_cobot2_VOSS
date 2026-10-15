@@ -582,7 +582,8 @@ def judge_rotation(
             )
         seq = ["ROTATING", "SETTLING", "DONE", "RETURNING", "RETURNED"]
         first = next((r for r in rows if r.get("phase") == "DESCEND"), None)
-        err = abs(first.get("rot_err_deg") or 99.0) if first else 99.0
+        raw = first.get("rot_err_deg") if first else None
+        err = abs(raw) if raw is not None else 99.0  # 0.0 도 값이다 (재리뷰)
         ok = states == seq and err <= 1.5 and clamps["ang_speed"] == 0 and clamps["yaw_limit"] == 0
         return _v("J-rot", "회전 성공", ok, want, f"{got} · 첫 DESCEND |rot_err| {err:.2f}°")
     if case_name == "rotate_stall":  # gateway 끔이어야 성립하는 기대

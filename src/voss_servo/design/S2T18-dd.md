@@ -221,7 +221,7 @@ Opus 독립 재검(필수 10·권장 12)을 세션이 코드로 확인한 뒤 �
 
 ## 15. #54 리뷰 반영 (김학민 10/14 — 14절보다 우선)
 세션이 각 지적을 코드·S2-T17 브랜치(#56 `33d62c9`)로 확인한 뒤 반영했다.
-- **STOPPING 상한 `STOP_CAP` 1.0 s** (리뷰 4): 측정 각속도를 모르는 채(pose 지터·끊김) 상한이 지나면 FALLBACK + 경고 `STOP_UNCONFIRMED`(원래 원인은 유지). 예외로 끈 goal(`_rot_dead_tick`)도 같은 상한. 1.0 s = 60°/s 를 α 90 으로 세우는 0.67 s + pose 정지 판정 여유. 그동안 각속도는 계속 0 이다.
+- **STOPPING 상한 `STOP_CAP` 1.0 s** (리뷰 4, 재리뷰로 정정): **마지막으로 "돈다"고 잰 뒤(처음엔 들어온 뒤) 측정 없이** 1.0 s 가 지나면 FALLBACK + 경고 `STOP_UNCONFIRMED`(원래 원인은 유지). 측정이 계속 "돈다"면(예: gateway α 가 느려 늦게 섬) 진행하지 않고 각속도 0·z 하한을 유지한 채 정지 2틱을 기다린다 — 그동안 박스가 흘러가면 x 끝·LOST 가 goal 을 끝낸다. goal 을 끝내는 안은 TrackAndGrasp 종료 사유(인터페이스 어휘)를 새로 만들어야 해 택하지 않았다. 예외로 끈 goal(`_rot_dead_tick`)도 같은 규칙. 1.0 s = 60°/s 를 α 90 으로 세우는 0.67 s + pose 정지 판정 여유.
 - **STALL 이동 창** (리뷰 5): 시작 각 기준(1° 이상 돈 뒤 멈추면 TIMEOUT 까지 모름) → "계속 돌라고 했는데(|지령| ≥ ω 바닥) 최근 stall_s 동안 1° 미만" 으로. 1° 움직이거나 거의 0 을 지령하면 기준을 지금으로 옮긴다. ROTATING·RETURNING 같은 함수(`_stall_window`), `ret_psi_start` 필드는 없앴다.
 - **sim_check** (리뷰 2·3·7): 케이스마다 gateway 각속도 켬/끔(`gw_angular`, sim.launch `gw_angular:=true` → gateway `servo_angular:=true`). `rotate_stall` 은 끔이어야 성립(켬 기동 줄이면 FAIL), 새 `rotate_ok`(프로필 `rotate_gw`, S2-T17 gateway 필요 — 없으면 UNKNOWN) = ROTATING→SETTLING→DONE→RETURNING→RETURNED·첫 DESCEND |rot_err| ≤ 1.5°·`ang_speed`·`yaw_limit` 0. 자름은 `angular`·`ang_speed`·`yaw_limit` 키별로 센다. J-ang 은 gateway 끔 + 셋 다 0. 켬이면 J-gw: belt_servo ω·α ≤ gateway 기동 줄 ω·α.
 - **문서만** (리뷰 6·8·9·run.md): 기준 각은 `home_tool_yaw_deg` null 유지(같은 값을 두 곳에 두지 않음) + run.md ⑮ 로그 대조. 되돌리기 판정은 run.md 4.2 에 start_tol 기준. yaml α 주석. run.md ①②③ 확인 줄, ⑩ USB 고정 ❌, E2 부호 실측.

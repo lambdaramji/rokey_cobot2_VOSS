@@ -47,7 +47,7 @@ INTERNAL = "INTERNAL"  # 회전 계산 예외 (노드가 기록)
 SETTLE_DRIFT = "SETTLE_DRIFT"  # 정착 중 목표에서 tol 밖으로 밀림 (쫓지 않음)
 SETTLE_TIMEOUT = "SETTLE_TIMEOUT"  # 정착이 상한까지 안 됨
 ACC_MISMATCH = "ACC_MISMATCH"  # 실제 회전 가속이 설정보다 느림 (경고)
-STOP_UNCONFIRMED = "STOP_UNCONFIRMED"  # STOPPING 상한까지 정지를 확인 못 함 (경고, 그대로 진행)
+STOP_UNCONFIRMED = "STOP_UNCONFIRMED"  # 측정 각속도가 STOP_CAP 동안 없어 정지 확인 없이 진행 (경고)
 RETURN_STALL = "RETURN_STALL"  # 되돌리기 중 STALL
 RETURN_TIMEOUT = "RETURN_TIMEOUT"  # 되돌리기 중 TIMEOUT
 RETURN_INCOMPLETE = "RETURN_INCOMPLETE"  # goal 이 끝날 때 원래 각으로 못 돌아옴
@@ -66,7 +66,8 @@ TIMEOUT_ADD = 0.5
 STILL_TICKS = 2  # 정지 확인에 필요한 연속 틱
 YAW_HOLD_MAX = 0.15  # yaw 값이 이보다 오래 그대로면 정지로 본다 s (service 갱신 0.1 s 보다 길게)
 SETTLE_CAP = 1.0  # SETTLING 상한 s
-# STOPPING(정지 확인) 상한 s — 60°/s 를 α 90 으로 세우는 0.67 s + pose 정지 판정 여유
+# STOPPING: 마지막으로 "돈다"고 잰 뒤(또는 들어온 뒤) 측정 없이 이만큼 지나면 진행 s
+# — 60°/s 를 α 90 으로 세우는 0.67 s + pose 정지 판정 여유. 돈다고 재는 동안은 끝없이 기다린다
 STOP_CAP = 1.0
 POSE_FRESH_FOR_ZERO = (
     0.05  # 기본값 — 실제 값은 rotate.pose_fresh_s (pose 주기의 2배 이상, 주관 검수 c)
@@ -128,7 +129,7 @@ class RotState:
     still_since: float | None = None  # 멈춰 있기 시작한 시각 (SETTLING)
     settle_start: float | None = None  # SETTLING 진입 시각
     still_n: int = 0  # 정지 확인 연속 틱 (STOPPING)
-    stop_since: float | None = None  # STOPPING 들어온 시각 (상한 STOP_CAP)
+    stop_move_t: float | None = None  # STOPPING 중 마지막으로 돈다고 잰 시각 (처음엔 들어온 시각)
     stall_psi: float | None = None  # STALL 이동 창 기준 공구 yaw (마지막으로 1° 움직인 자리)
     stall_t: float | None = None  # STALL 이동 창 기준 시각
     settle_drift: bool = False  # 정착 중 밀렸나
@@ -450,21 +451,25 @@ def _settling(rs: RotState, inp: RotInputs, cfg: RotCfg) -> Step:
 def _stopping(rs: RotState, inp: RotInputs, cfg: RotCfg) -> Step:
     """STOPPING: 각속도 0 을 내고 실제로 멈춘 것이 2틱 이어지면 FALLBACK.
 
-    측정 각속도를 모르는 채(pose 지터·끊김) STOP_CAP 이 지나면 경고와 함께 FALLBACK — TRACK 에
-    묶여 박스를 흘려보내지 않게 (학민 #54 리뷰 4). 그동안 각속도는 계속 0 이었다.
+    측정 각속도가 STOP_CAP 동안 없으면(pose 지터·끊김) 경고와 함께 FALLBACK — TRACK 에 묶여 박스를
+    흘려보내지 않게 (학민 #54 리뷰 4). "아직 돈다"고 재는 동안은 진행하지 않고 0 을 유지한 채 기다린다
+    — 각가속이 느려 늦게 서는 손목으로 DESCEND 하지 않게 (재리뷰). 그동안 박스가 흘러가면 x 끝·LOST 가 끝낸다.
     """
-    since = rs.stop_since if rs.stop_since is not None else inp.now
+    move_t = rs.stop_move_t if rs.stop_move_t is not None else inp.now  # 처음 = 들어온 시각
+    moving = inp.w_meas is not None and abs(inp.w_meas) >= cfg.still
+    if moving:
+        move_t = inp.now  # 아직 돈다 → 상한 시계를 다시
     still = inp.w_meas is not None and abs(inp.w_meas) < cfg.still
     n = rs.still_n + 1 if still else 0
     warn = None
     if n < STILL_TICKS:
-        if inp.now - since < STOP_CAP:
-            return replace(rs, still_n=n, stop_since=since), None, None
-        warn = STOP_UNCONFIRMED  # 상한 — 정지 확인 없이 진행
+        if inp.now - move_t < STOP_CAP:
+            return replace(rs, still_n=n, stop_move_t=move_t), None, None
+        warn = STOP_UNCONFIRMED  # 측정 없이 상한 — 정지 확인 없이 진행
     t_done = rs.t_done
     if t_done is None and rs.t_start is not None:
         t_done = inp.now  # 앞 회전이 끝난 시각 (되돌리기 실패는 덮지 않는다)
-    return replace(rs, state=FALLBACK, still_n=n, t_done=t_done, stop_since=None), None, warn
+    return replace(rs, state=FALLBACK, still_n=n, t_done=t_done, stop_move_t=None), None, warn
 
 
 def return_ok(inp: RotInputs, cfg: RotCfg) -> bool:

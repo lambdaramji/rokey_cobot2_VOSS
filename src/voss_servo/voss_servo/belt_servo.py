@@ -219,7 +219,7 @@ class GoalCtx:
     )  # (공구 yaw 원값, 외삽값, 측정 각속도) — 로그용
     rot_dead: bool = False  # 회전 계산 예외로 이 goal 의 회전을 껐나
     rot_still_n: int = 0  # rot_dead 일 때 정지 확인 연속 틱
-    rot_dead_since: float | None = None  # rot_dead 가 된 시각 (정지 확인 상한 STOP_CAP)
+    rot_dead_move_t: float | None = None  # rot_dead 중 마지막으로 돈다고 잰 시각 (처음엔 된 시각)
     rot_dead_capped: bool = False  # 상한으로 정지 확인 없이 넘어갔나 (경고 1회)
 
 
@@ -784,8 +784,8 @@ class BeltServoNode(Node):
                     f"회전 예외 — 이 goal 의 회전을 끄고 정지 확인 뒤 진행: {exc!r}"
                 )
             ctx.rot_dead, ctx.wz = True, 0.0
-            if ctx.rot_dead_since is None:
-                ctx.rot_dead_since = now
+            if ctx.rot_dead_move_t is None:
+                ctx.rot_dead_move_t = now
             ctx.rot = replace(ctx.rot, cause=rotate.INTERNAL)
             return False
         ctx.rot, ctx.wz, ctx.rot_floor, ctx.rot_warn = out.state, out.wz, out.z_floor, out.warn
@@ -815,8 +815,9 @@ class BeltServoNode(Node):
         ctx.rot_still_n = ctx.rot_still_n + 1 if still else 0
         if ctx.rot_still_n >= rotate.STILL_TICKS or ctx.rot_dead_capped:
             return True
-        since = ctx.rot_dead_since if ctx.rot_dead_since is not None else now
-        if now - since < rotate.STOP_CAP:
+        if ctx.rot_dead_move_t is None or (w is not None and abs(w) >= self._rot_cfg.still):
+            ctx.rot_dead_move_t = now  # 아직 돈다 → 기다림 (rotate._stopping 과 같은 규칙, 재리뷰)
+        if now - ctx.rot_dead_move_t < rotate.STOP_CAP:
             return False
         ctx.rot_dead_capped, ctx.rot_warn = True, rotate.STOP_UNCONFIRMED  # 상한 (학민 #54 리뷰 4)
         self.get_logger().warning("회전 예외 뒤 정지 확인 상한 — 측정 각속도 없이 진행")
