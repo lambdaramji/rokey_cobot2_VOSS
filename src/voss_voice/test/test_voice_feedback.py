@@ -61,6 +61,16 @@ def test_spoken_ack_is_not_accepted_as_another_command():
     assert events == []
 
 
+def test_pallet_route_prompt_echo_cannot_start_another_command():
+    from voss_voice.intent_logic import SAY_PALLET_ORDER
+
+    flow, events = feedback()
+    flow.on_text("헬로 로키", 0)
+    assert is_ack_echo(SAY_PALLET_ORDER)
+    assert flow.on_text(SAY_PALLET_ORDER, 1) is None
+    assert [event["phase"] for event in events] == ["WAKE_DETECTED"]
+
+
 def test_stop_is_sent_even_when_ack_echo_is_detected():
     for text in (
         "멈춰 역삼동으로 분류하겠습니다",

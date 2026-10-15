@@ -354,10 +354,17 @@ def test_palletize_order_question_accepts_bare_route_reply():
     )
 
     assert flow.handle("팔레타이징 실행해")[0] == "say"
-    assert "싣는 순서" in said[-1]
+    assert "순서대로" in said[-1]
     assert flow.handle("역삼, 대치")[0] == "publish"
     assert published[0]["type"] == "palletize"
     assert published[0]["route"] == ["역삼동", "대치동"]
+
+
+def test_pallet_route_prompt_has_no_executable_example():
+    from voss_voice.intent_logic import SAY_PALLET_ORDER, decide_palletize
+
+    assert SAY_PALLET_ORDER == "동 이름을 순서대로 말씀해 주세요."
+    assert decide_palletize(SAY_PALLET_ORDER, VIEW) is None
 
 
 def test_palletize_order_question_rejects_duplicate_then_accepts_correction():
