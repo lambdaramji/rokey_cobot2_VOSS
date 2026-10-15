@@ -590,7 +590,7 @@ def log_values(
     warn: str | None,
     tol: float,
 ) -> dict[str, Any]:
-    """틱 로그의 회전 키 12개 (log_schema.ROT_KEYS 와 같은 이름). 회전이 꺼져 있으면 전부 None."""
+    """틱 로그의 회전 키 13개 (log_schema.ROT_KEYS 와 같은 이름). 회전이 꺼져 있으면 전부 None."""
     if rs is None:
         return dict.fromkeys(ROT_LOG_KEYS)
     if terminal:
@@ -600,6 +600,13 @@ def log_values(
     goal = rs.home if rs.state in (RETURNING, RETURNED) else rs.target  # 지금 따르는 목표
     err = wrap_pi(goal - psi_raw) if goal is not None and psi_raw is not None else None
     t_rot = rs.t_done - rs.t_start if rs.t_done is not None and rs.t_start is not None else None
+    # goal 끝 틱만: 손목이 기준 각에서 남은 각(공구 yaw − 기준, +·−). 되돌림 창(LIFT~VERIFY ≈ 0.8 s)보다 큰
+    # 회전은 RETURN_INCOMPLETE 가 정상으로 찍히므로, 실제로 얼마나 남았는지는 이 값으로 본다 (10/15 U14 실기)
+    left = (
+        wrap_pi(psi_raw - rs.home)
+        if terminal and psi_raw is not None and rs.home is not None
+        else None
+    )
     return {
         "rot_state": rs.state,
         "rot_cause": cause or None,
@@ -613,6 +620,7 @@ def log_values(
         "rot_n": rs.n,
         "rot_rbar": rs.rbar,
         "rot_time_s": t_rot,
+        "rot_end_left_deg": _deg(left),
     }
 
 
@@ -629,4 +637,5 @@ ROT_LOG_KEYS = (
     "rot_n",
     "rot_rbar",
     "rot_time_s",
+    "rot_end_left_deg",
 )

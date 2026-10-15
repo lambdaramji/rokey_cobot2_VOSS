@@ -51,11 +51,11 @@ ros2 launch voss_robot robot_gateway.launch.py dry_run:=false pose_source:=joint
 - `servo_max_ang_dps` 60·`servo_ang_acc_dps2` 90 는 노드 기본. 한계 130 = − 쪽 최대 110 + 0.2 s × 60 °/s(12) + 여유.
 - 펜던트 TCP 는 voss_config `tcp_offset_mm` 로 등록(기동 줄 `컨트롤러 TCP 등록 voss_config 와 같음`).
 
-**belt_servo** (`config/belt_servo_real.yaml.example` 의 rotate 블록 = 최종값, `enable` 만 실기 yaml 에서 true)
+**belt_servo** (`config/belt_servo_real.yaml.example` 의 rotate 블록 = 최종값, `enable: true`·`input.pose_lag_ms: 0` — 현장 joint_states 운용과 같게)
 
 | 키 | 값 | 키 | 값 |
 |---|---|---|---|
-| enable | **true**(실기 yaml) | input.pose_lag_ms | **0** (joint_states) |
+| enable | **true** | input.pose_lag_ms | **0** (gateway `pose_source:=joint_states` 짝 — service(노드 기본)면 60 이고 회전은 READY 거부) |
 | deadband_deg | 4 | min_deg | 10 |
 | max_deg | **110** | flip_above_deg | **70** |
 | lost_timeout_s | **1.2** | omega_max_dps | 60 |
@@ -75,7 +75,7 @@ ros2 launch voss_robot robot_gateway.launch.py dry_run:=false pose_source:=joint
 - **등록 TCP 확인 오판** — joint_states 운용 중 2 s 마다 TCP·플랜지 posx 를 차례로 읽어 비교하는데, MoveToZone(300 mm/s) 중에는 두 값이 30 mm 어긋나 TCP 를 "모름"으로 보고 pose_source 를 service(10 Hz)로 **영구 전환**했다(10/12~10/15 시연·통합 로그에도 여러 번). MoveToZone 중에는 확인하지 않도록 수정 — 그 뒤 HOLD MoveToZone 수십 회에도 joint_states 유지.
 
 ## 6. 알려진 한계·남은 일
-- **RETURN_INCOMPLETE**: 되돌림 창(LIFT z ≥ 윗면 + 10 ~ VERIFY 끝)이 약 0.8 s 라 약 14° 넘는 회전은 goal 끝에 손목이 돌아간 채(끝 지령 0 → 감속분만큼 더 돌아옴). 다음 MoveToZone(PLACE·OBSERVE)이 자세를 맞춘다(HOLD PLACE 모두 ok). 로그 의미 정리 또는 VERIFY 연장은 후속.
+- **RETURN_INCOMPLETE 는 큰 회전에서 정상**: 되돌림 창(LIFT z ≥ 윗면 + 10 ~ VERIFY 끝)이 약 0.8 s 라 약 30° 이상 회전하면 대개 goal 끝에 손목이 돌아간 채 끝나고 `rot_cause` 가 RETURN_INCOMPLETE 로 찍힌다(끝 지령 0 → 감속분만큼 더 돌아옴). 다음 MoveToZone(PLACE·OBSERVE)이 절대 자세로 맞추므로 동작상 문제는 없다(HOLD PLACE 30회+ 모두 ok, 다음 goal START_ROTATED 0). **로그 정리(이 PR)**: 틱·시도 로그에 `rot_end_left_deg`(goal 끝 틱의 공구 yaw − 기준, 부호 포함)를 더해 실제로 얼마나 남았는지 본다 — 6단계 14회 goal 끝 틱 기준 |남은 각| 30~71°(≈ |Δ| − 39°; 1단계 30° 회전은 약 5°). VERIFY 를 늘려 끝까지 되돌리는 것은 사이클을 약 1 s 늘리므로 하지 않았다. 회전 중 LOST·취소로 끝난 goal 도 RETURN_INCOMPLETE 로 찍히므로 원인은 goal `reason` 을 같이 본다.
 - + 방향 60~70° 는 시야 여유가 작다(6단계 68~70° 3/3, 그중 1회 0.5 s 끊김). 회전 중 xy 목표를 카메라가 박스를 보는 쪽으로 옮기는 대책(③)은 미적용.
 - 회전을 켠 채 **sort_manager 전체 흐름**(OCR 뒤 goal, 시연 기준 x −93~−52 mm) 회차는 아직 없다 — 단독 액션 시험만.
 - 운영 주의: HOLD 칸에 박스가 남아 있으면 PLACE 하강 중 접촉 → 두산 알람 2/5/7060·SAFE_STOP·RG2 안전 스위치 S1·S2 잠김(268 = 104) → Compute Box 전원 재투입으로 복구(약 15분).

@@ -885,7 +885,7 @@ class BeltServoNode(Node):
         )
 
     def _rot_values(self, ctx: GoalCtx, terminal: bool) -> dict[str, Any]:
-        """틱 로그의 회전 키 12개 (회전 off 면 전부 None)."""
+        """틱 로그의 회전 키 13개 (회전 off 면 전부 None)."""
         if not self._rot_on or ctx.rot is None:
             return dict.fromkeys(ls.ROT_KEYS)
         psi_raw, psi_est, w_meas = ctx.rot_io
