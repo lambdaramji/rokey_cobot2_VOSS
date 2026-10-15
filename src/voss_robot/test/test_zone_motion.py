@@ -12,6 +12,7 @@ from voss_robot.zone_motion import (
     search_travel_z,
     slot_offset,
     slot_pose,
+    slot_route,
 )
 
 A = [213.49, 165.23, 258.27, 35.36, -180.0, -54.64]  # voss_config zones.A (플랜지)
@@ -259,3 +260,52 @@ def test_search_call_error_is_not_kept():
     # 저장한 None 을 확인하다 호출 실패 → 처음부터
     ik = FakeIk(reach=426.6, error={396.6})
     assert search_travel_z(LADDER, ik, (True, None)) == (426.6, True)
+
+
+# voss_config zones.C (10/13~): 3×2 × 2층, offset −30, 트레이 안 TCP 40 — gateway self.zones 형태
+C_ZONE = {
+    "pose": [675.14, 158.69, 260.94, 159.7, -180.0, 70.28],
+    "grid": [3, 2, 50, -30, 2, 27, 60],
+    "in_tray": 40.0,
+}
+HOLD_ZONE = {
+    "pose": [674.12, -71.37, 262.65, 168.88, -180.0, 78.38],
+    "grid": [2, 1, 60],
+    "in_tray": None,
+}
+
+
+def test_slot_route_gate_is_row_minus_x_end_and_zone_floor():
+    """MoveToZone 의 출입구 칸·하한(C 칸 2 → 0, 칸 5 → 3, 트레이 안 TCP 40)."""
+    r = slot_route(C_ZONE, 2)
+    assert r.target == slot_pose(C_ZONE["pose"], C_ZONE["grid"], 2)
+    assert (r.via, r.in_tray_z) == (0, 40.0)
+    assert r.stage == slot_pose(C_ZONE["pose"], C_ZONE["grid"], 0)
+    assert slot_route(C_ZONE, 5)[1:3] == (3, slot_pose(C_ZONE["pose"], C_ZONE["grid"], 3))
+    assert slot_route(HOLD_ZONE, 1)[1:] == (0, slot_pose(HOLD_ZONE["pose"], [2, 1, 60], 0), None)
+    with pytest.raises(ValueError):
+        slot_route(C_ZONE, 12)
+
+
+def test_prewarm_first_layer_routes_hit_cache_for_every_slot():
+    """#147 회귀(10/13~ C 칸 2 경로 계산 ikin 32회): 미리 계산이 칸 0·공통 하한 60 으로 저장해 C 칸 2·5
+    (하한 40, 칸 5 출입구 = 칸 3)가 캐시에 안 맞았다. 1층 칸을 slot_route 로 저장하면 2층까지 모두 맞는다."""
+    common = 60.0  # zone_min_in_tray_tcp_z_mm
+
+    def floor(r):
+        return common if r.in_tray_z is None else r.in_tray_z
+
+    per = 6
+    c = TravelCache()
+    for k in range(per):  # gateway _prewarm_travel 과 같이 1층만
+        r = slot_route(C_ZONE, k)
+        c.put(r.target, 2, floor(r), OFF, 300.0)  # 칸 위 트레이 안 높이
+        c.put(r.stage, 2, 120.0, OFF, 400.0)  # 출입구 칸 위 이동 높이
+    for k in range(per * 2):
+        r = slot_route(C_ZONE, k)
+        assert c.get(r.target, 2, floor(r), OFF) == (True, 300.0), k
+        assert c.get(r.stage, 2, 120.0, OFF) == (True, 400.0), k
+    # 예전 미리 계산(하한 60)으로는 C 칸 2 의 하한 40 이 맞지 않았다
+    old = TravelCache()
+    old.put(slot_route(C_ZONE, 2).target, 2, common, OFF, 300.0)
+    assert not old.get(slot_route(C_ZONE, 2).target, 2, 40.0, OFF)[0]

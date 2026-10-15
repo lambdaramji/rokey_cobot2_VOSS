@@ -1,10 +1,14 @@
 """label_reader — 송장 판독. LabelCrop → 송장 찾기·펴기 → PaddleOCR → 퍼지 매칭 → 트랙별 다수결 → /voss/vision/label.
 
 T19 1차(G0): stage 1(입구 관측). T23: stage 3(재확인 구역 정지 재판독, 서비스 `/voss/vision/read_label`).
-stage 2(추종 중)는 T19 2차.
+T19 2차: stage 2(추종 중) — `stage2.enable`(기본 off). 선명한 크롭 골라 트랙당 max_ocr 장, 선명도 가중 다수결,
+1단계가 모두 확실했던 트랙은 읽지 않는다(sort_manager 는 재확인으로 가려던 박스에만 2단계를 쓴다). 2단계 발행은 같은 동
+stage2.min_agree 장 + confidence_min + 반대표 없음일 때만 한 번(1장·갈린 판독으로 구역이 바뀌지 않게, voss_msgs.md
+LabelRead 발행 시점). label_stage2.py.
 - 후보(동·코드·별칭)는 `/voss/sort/zone_map` 에서만 받는다(규칙 5). 받기 전 크롭은 버린다.
-- OCR 은 작업 스레드 하나에서 돈다. 트랙마다 가장 최근 크롭 한 장만 기다리게 하고(오래된 크롭은 교체),
-  이미 확실해진 트랙의 크롭은 더 읽지 않는다 → OCR 이 느려도 밀리지 않는다. 재판독 요청은 크롭보다 먼저 읽는다.
+- OCR 은 작업 스레드 하나에서 돈다. 트랙마다 가장 최근 크롭 한 장만 기다리게 하고(오래된 크롭은 교체 — 2단계는
+  가장 선명한 크롭), 이미 확실해진 트랙의 크롭은 더 읽지 않는다 → OCR 이 느려도 밀리지 않는다.
+  순서: 재판독 요청 → 2단계(goal 이 끝나기 전에 내야 한다) → 1단계.
 - `/voss/vision/label` 발행자와 `read_label` 서비스는 엔진 예열과 zone_map 수신이 끝난 뒤에 만든다. sort_manager 는
   발행자 존재로 OCR 준비를 보고, 서비스가 없으면 NO_SERVICE 로 질문 경로에 간다 → 모델을 읽는 몇 초 동안
   준비로 잘못 보이지 않는다.
@@ -41,6 +45,7 @@ from voss_msgs.msg import LabelCrop, LabelRead, ZoneMap
 from voss_msgs.srv import ReadLabel
 from voss_vision.label_match import Candidate, Match
 from voss_vision.label_preprocess import crop_upright, find_label_in_crop
+from voss_vision.label_stage2 import KEPT, REPLACED, Stage2Params, Stage2Picker, publishable
 from voss_vision.label_view import ViewResult, parse_slot_rois, read_view
 from voss_vision.label_vote import Read, TrackReads, Vote
 from voss_vision.ocr_engine import read_label
@@ -50,6 +55,7 @@ DEFAULT_CONFIG_PATH = os.path.join(
     "voss_config.yaml",
 )
 STAGE_OBSERVE = 1
+STAGE_TRACK = 2
 STAGE_RECHECK = 3
 
 
@@ -86,6 +92,7 @@ class Stats:
         self.no_text = 0  # OCR·매칭 결과 없음 (180° 다시 읽기 뒤에도)
         self.flipped = 0  # 180° 돌려 읽어서 판정됨 (박스를 거꾸로 올림)
         self.ocr_ms: list[float] = []
+        self.s2: dict[str, int] = {}  # 2단계 크롭 처리 (label_stage2 offer 결과별)
 
     def summary(self, pending: int) -> str:
         def pct(q: float) -> str:
@@ -96,6 +103,7 @@ class Stats:
             f"(송장 못 찾음 {self.no_label}, 글자 없음 {self.no_text}, 180° {self.flipped}), 교체 {self.superseded}, "
             f"확실해서 건너뜀 {self.enough}, 준비 전 버림 {self.not_ready}, "
             f"OCR 중앙값 {pct(50)}·p95 {pct(95)} ms, 대기 {pending}"
+            + (f", s2 {self.s2}" if self.s2 else "")
         )
 
 
@@ -148,6 +156,17 @@ class LabelReaderNode(Node):
         # 거꾸로 올린 박스는 재확인 칸 3단계에서 읽는다 (10/12 로컬 시험 브랜치)
         self.stage1_flip = p("stage1_flip_retry", False).value
         self.forget_s = p("track_forget_s", 30.0).value
+        # 2단계(추종 중, T19 2차). 기본 off — 실기(서보 주기·추종 중 판독률) 확인 뒤 켠다
+        self.s2 = Stage2Picker(
+            Stage2Params(
+                enable=bool(p("stage2.enable", False).value),
+                max_ocr=int(p("stage2.max_ocr", 3).value),
+                min_sharpness=float(p("stage2.min_sharpness", 0.0).value),
+                skip_confident_stage1=bool(p("stage2.skip_confident_stage1", True).value),
+            )
+        )
+        self.s2_min_agree = p("stage2.min_agree", 2).value
+        self.s2_flip = p("stage2.flip_retry", True).value
         self.save_dir = p("debug_save_dir", "").value
         stats_period_s = p("stats_period_s", 5.0).value
         # 재판독(stage 3). 송장 크기(px)·영역은 재확인 VIEW 자세 사진으로 정한다 — 그 전엔 넓게
@@ -190,7 +209,14 @@ class LabelReaderNode(Node):
         self.get_logger().info(
             f"voss_config {self.config_path} version {cfg.get('version')} "
             f"sha256 {hashlib.sha256(raw).hexdigest()[:12]}, confidence_min {self.conf_min}, "
-            f"OCR {self.device}, stage1_enough {self.enough_agree}"
+            f"OCR {self.device}, stage1_enough {self.enough_agree}, "
+            + (
+                f"stage2 on (트랙당 {self.s2.p.max_ocr}장, 같은 동 {self.s2_min_agree}장이면 그만, "
+                f"선명도 ≥ {self.s2.p.min_sharpness:g}, 1단계 확실하면 건너뜀 {self.s2.p.skip_confident_stage1}, "
+                f"180° {self.s2_flip})"
+                if self.s2.p.enable
+                else "stage2 off"
+            )
         )
         if self.save_dir:
             os.makedirs(self.save_dir, exist_ok=True)
@@ -201,7 +227,7 @@ class LabelReaderNode(Node):
             OrderedDict()
         )  # track_id → 가장 최근 stage 1 크롭
         self.cands: list[Candidate] = []
-        self.tracks = TrackReads()
+        self.tracks = TrackReads(weighted_stages=frozenset({STAGE_TRACK}))
         self.stats = Stats()
         self.engine = None
         self.pub = None
@@ -246,8 +272,11 @@ class LabelReaderNode(Node):
         with self.cv:
             st = self.stats
             st.crops[msg.stage] = st.crops.get(msg.stage, 0) + 1
+            if msg.stage == STAGE_TRACK:
+                self._on_track_crop(msg)
+                return
             if msg.stage != STAGE_OBSERVE:
-                return  # 2단계(추종 중)는 T19 2차, 3단계(재확인)는 T23
+                return  # 3단계(재확인)는 서비스로 받는다(T23)
             if self.pub is None:
                 st.not_ready += 1
                 return
@@ -257,6 +286,22 @@ class LabelReaderNode(Node):
             if msg.track_id in self.pending:
                 st.superseded += 1
             self.pending[msg.track_id] = msg  # 이미 있으면 자리는 그대로, 크롭만 최신으로
+            self.cv.notify()
+
+    def _on_track_crop(self, msg: LabelCrop) -> None:
+        """2단계 크롭 (self.cv 안에서 부른다)."""
+        st = self.stats
+        if not self.s2.p.enable:
+            return
+        if self.pub is None:
+            st.not_ready += 1
+            return
+        if self.tracks.enough(msg.track_id, STAGE_TRACK, self.conf_min, self.s2_min_agree):
+            st.enough += 1
+            return
+        r = self.s2.offer(msg.track_id, float(msg.sharpness), msg, time.monotonic())
+        st.s2[r] = st.s2.get(r, 0) + 1
+        if r in (KEPT, REPLACED):
             self.cv.notify()
 
     def _maybe_create_pub(self) -> None:
@@ -285,6 +330,7 @@ class LabelReaderNode(Node):
             text = self.stats.summary(len(self.pending))
             self.stats.reset()
             gone = self.tracks.forget(time.monotonic(), self.forget_s)
+            self.s2.forget(time.monotonic(), self.forget_s)
         if gone:
             text += f", 지운 트랙 {gone}"
         self.get_logger().info(text)
@@ -397,15 +443,20 @@ class LabelReaderNode(Node):
             self.engine = eng
         while True:
             with self.cv:
-                while not self.pending and not self.jobs and not self.stopping:
+                while (
+                    not self.pending and not self.jobs and not self.s2.pending and not self.stopping
+                ):
                     self.cv.wait(0.5)
                 if self.stopping:
                     return
                 cands = list(self.cands)
                 job = self.jobs.popleft() if self.jobs else None
                 if job is None:
-                    track_id, msg = self.pending.popitem(last=False)
-                    if self.tracks.enough(track_id, msg.stage, self.conf_min, self.enough_agree):
+                    # 2단계 먼저 — goal 이 끝나기 전에 내야 sort_manager 가 목적 구역을 바꿀 수 있다
+                    got = self.s2.take()
+                    track_id, msg = got if got is not None else self.pending.popitem(last=False)
+                    agree = self.s2_min_agree if msg.stage == STAGE_TRACK else self.enough_agree
+                    if self.tracks.enough(track_id, msg.stage, self.conf_min, agree):
                         self.stats.enough += 1  # 기다리는 사이 앞 판독으로 확실해졌다
                         continue
             if job is not None:
@@ -426,7 +477,7 @@ class LabelReaderNode(Node):
             m = Match("", "", 0.0, reason="NO_LABEL")
         else:
             up = crop_upright(img, rect, scale=self.scale)
-            flip = msg.stage != 1 or self.stage1_flip
+            flip = self.s2_flip if msg.stage == STAGE_TRACK else self.stage1_flip
             m, ocr_ms, flipped = read_label(eng, up, cands, flip_retry=flip)
             if self.save_dir:
                 cv2.imwrite(
@@ -444,10 +495,29 @@ class LabelReaderNode(Node):
             st.flipped += flipped
             if ocr_ms is not None:
                 st.ocr_ms.append(ocr_ms)
-        self._publish(track_id, msg.stage, v)
+            if msg.stage == STAGE_OBSERVE:
+                self.s2.note_stage1(
+                    track_id, v.match.dong, v.match.confidence, self.conf_min, time.monotonic()
+                )
+            send = msg.stage != STAGE_TRACK or publishable(v, self.conf_min, self.s2_min_agree)
+            if msg.stage == STAGE_TRACK:
+                if send:
+                    self.s2.drop(track_id)  # 확실해졌다 — 기다리던 크롭은 버린다
+                else:
+                    st.s2["held"] = st.s2.get("held", 0) + 1  # 같은 동이 덜 모여 아직 안 냄
+        if send:
+            self._publish(track_id, msg.stage, v)
         self.get_logger().info(
             f"track {track_id} s{msg.stage}: {m.code or '-'} {m.dong or '-'} {m.confidence:.2f} {m.reason}"
             + (" (180° 뒤집힘)" if flipped else "")
+            + (f", 선명도 {msg.sharpness:.0f}" if msg.stage == STAGE_TRACK else "")
+            + (
+                ""
+                if send
+                else f" — 발행 보류(같은 동 {v.agree}/{self.s2_min_agree}"
+                + (f", 반대표 {v.picked - v.agree}" if v.picked > v.agree else "")
+                + ")"
+            )
             + f" → 투표 {v.match.dong or '-'} {v.match.confidence:.2f} ({v.agree}/{v.picked}, 처리 {v.total})"
             + (f", OCR {ocr_ms:.0f} ms" if ocr_ms is not None else "")
         )
