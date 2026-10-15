@@ -4,7 +4,7 @@
 
 ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React, `/api` → Spring Boot(127.0.0.1:8080) 로 넘어간다. **Nginx 는 `/ai` 를 넘기지 않는다** — FastAPI 는 음성 ROS 노드만 `http://127.0.0.1:8000` 으로 부른다(Wi-Fi 에서 OpenAI 사용량이 나가지 않게). 브라우저·Spring Boot 는 ROS 에 직접 붙지 않는다(ROS ↔ 웹은 MQTT, `mqtt.md`).
 
-카메라 화면은 같은 Nginx(80)의 `GET /camera/gripper/frame.jpg`와 `GET /camera/usb/frame.jpg`를 사용한다. Web PC Nginx가 각각 Web PC 로컬 `127.0.0.1:8091`·`127.0.0.1:8092`로 프록시하며, 80번 포트에 접속 가능한 원격 관제 브라우저에서도 조회할 수 있다. Nodes PC 송출 노드는 loopback 바인드를 유지하고 Web PC에서 SSH `-L` 터널로 연결한다. 로봇 운전 명령의 로컬 제한은 아래 `/api/commands`에 계속 적용한다.
+카메라 화면은 같은 Nginx(80)의 `GET /camera/gripper/frame.jpg`와 `GET /camera/usb/frame.jpg`를 사용한다. 두 경로는 Web PC 로컬 브라우저(`127.0.0.1`/`::1`)에서만 허용하고, Nginx가 각각 Web PC 로컬 `127.0.0.1:8091`·`127.0.0.1:8092`로 프록시한다. Nodes PC 송출 노드는 loopback 바인드를 유지하고 Web PC에서 SSH `-L` 터널로 연결한다. 원격 브라우저의 카메라 요청은 거부한다.
 
 ## 공통
 - JSON, UTF-8. 시각은 ISO-8601 `+09:00` 문자열(공용 PC 시스템 시계).

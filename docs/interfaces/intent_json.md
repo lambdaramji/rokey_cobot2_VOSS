@@ -64,7 +64,7 @@ LLM(FastAPI `/intent`, OpenAI structured output — ADR-0006)의 출력은 반�
 
 ## 음성 stop 최종 안내 — 인터페이스 변경 제안 (승인 전, `interface` PR)
 
-**현재 PR 구현:** `intent_parser` 는 정지 키워드를 LLM·zone_map·다른 발화 대기보다 먼저 판정한다. 기본 `ros` 모드는 `/voss/voice/intent`의 `stop`을 발행하고, Web PC `web_api` 모드는 `POST /api/commands`로 접수를 시도한다(단일 경로의 한계는 PR #176 P0 검토 중). 현재 `/voss/voice/say`의 "요청을 처리하겠습니다."는 전달 시도에 대한 안내이며 정지 완료 확인이 아니다. sort_manager는 stop 결과를 아직 음성으로 안내하지 않는다(로그만).
+**PR #176 선택 계약:** `intent_parser` 는 정지 키워드를 LLM·zone_map·다른 발화 대기보다 먼저 판정한다. 기본 `ros` 모드는 `/voss/voice/intent`의 `stop`을 발행한다. Web PC `web_api` 모드의 stop은 ROS `/voss/voice/intent` 발행을 먼저 시도하고 REST `POST /api/commands`도 시도한다. REST 거부·timeout이어도 ROS 시도를 생략하지 않으며, 다른 명령은 기존 단일 경로를 유지한다. 같은 시점에 도착한 stop 서비스 호출은 manager의 진행 중 작업에 합치되, 실패·timeout 뒤 새 stop은 재시도한다. 두 경로가 시간차로 도착하면 gateway의 멱등 stop이 다시 호출될 수 있다. Web PC DDS가 Nodes PC에 연결되지 않으면 ROS 발행만으로 전달을 보장할 수 없다. 현재 `/voss/voice/say`의 "요청을 처리하겠습니다."는 전달 시도에 대한 안내이며 정지 완료 확인이 아니다. sort_manager는 stop 결과를 아직 음성으로 안내하지 않는다(로그만).
 **제안:** 접수 시점 안내("정지 요청을 전달했습니다.")는 계속 내지 않고, 최종 안내의 유일한 발행자는
 `sort_manager`이며 기존 `/voss/voice/say`와 `speech_out`을 사용한다. Web PC에서 `speech_out`을 실행할 때에는 기존 웹 SSE `state.pending_question`을 받아 ASKING 진입당 한 번 같은 문장을 로컬 `/voss/voice/say`로 전달한다. PC 간 ROS 음성 토픽이 도착하지 않아도 질문을 읽기 위한 경로이며, 로봇 명령이나 새 MQTT 토픽은 만들지 않는다.
 새 토픽·메시지 필드는 제안하지 않는다. manager의 stop 작업 토큰으로 음성 요청과
