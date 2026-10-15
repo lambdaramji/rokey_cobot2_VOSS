@@ -129,6 +129,7 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 ### `POST /ai/stt` — Whisper 전사
 - 요청: `multipart/form-data` `audio`(WAV 16 kHz mono) + `language=ko`
 - 응답: `{"ok": true, "text": "역삼동부터 분류해", "duration_ms": 1830, "stt_ms": 420, "model": "whisper-<크기>"}` — 모델 크기는 pending #6(10/08 동시 부하 시험 후)
+- Whisper가 `WHISPER_PROMPT` 전체 또는 거의 전체를 되읽은 것으로 판정되면 성공 응답의 `text`는 빈 문자열이다. 짧은 실제 명령(예: `정지`)은 프롬프트의 일부와 같다는 이유만으로 버리지 않는다. 프롬프트 메아리 판정은 녹음 없이 전사 문자열에만 적용한다.
 - 실패: `{"ok": false, "message": "STT_ERROR|AUDIO_INVALID"}` → voice_listener 는 "다시 말씀해 주세요"
 
 ### `POST /ai/intent` — 자연어 → intent JSON
