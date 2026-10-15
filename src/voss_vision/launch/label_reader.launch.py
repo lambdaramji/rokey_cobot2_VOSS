@@ -2,12 +2,12 @@
 
   ros2 launch voss_vision label_reader.launch.py python:=$HOME/.venvs/voss_ocr/bin/python   # 호스트 venv
   ros2 launch voss_vision label_reader.launch.py ocr_device:=gpu:0                         # GPU (T22)
-  ros2 launch voss_vision label_reader.launch.py ... stage2:=true                          # 추종 중 2차 판독 (T19 2차)
+  ros2 launch voss_vision label_reader.launch.py ... stage2:=false                         # 추종 중 2차 판독 끄기 (T19 2차, 기본 켬)
 
 python: PaddleOCR 가 시스템 python 에 없으면 그 venv 의 python 으로 노드를 띄운다(기본: 환경 변수 VOSS_OCR_PYTHON,
 없으면 시스템 python). venv 는 --system-site-packages 로 만들어 rclpy 를 같이 쓴다.
 voss_config.yaml 은 config_dir(기본: VOSS_CONFIG_DIR, 없으면 레포 config/)에서 읽는다.
-stage2: 비우면 label_reader.yaml 의 stage2.enable(기본 false), true·false 면 그 값으로 덮는다.
+stage2: 비우면 label_reader.yaml 의 stage2.enable(10/15 부터 기본 true), true·false 면 그 값으로 덮는다.
 """
 
 import os

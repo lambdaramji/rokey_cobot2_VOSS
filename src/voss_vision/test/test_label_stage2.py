@@ -1,4 +1,5 @@
-"""label_stage2 — 2단계(추종 중) 크롭 고르기: 끔·1단계 확실하면 건너뜀·가장 선명한 한 장·트랙당 상한·잊기."""
+"""label_stage2 — 2단계(추종 중) 크롭 고르기: 끔·1단계 확실하면 건너뜀·가장 선명한 한 장·트랙당 상한·잊기,
+집으러 간 트랙의 1단계 그만·발행 뒤 미루기·180° 먼저(10/15 실기 뒤)."""
 
 from voss_vision.label_match import Match
 from voss_vision.label_vote import Read, Vote, vote
@@ -11,8 +12,16 @@ def picker(**kw) -> s2.Stage2Picker:
 
 
 def test_off_reads_nothing() -> None:
-    p = s2.Stage2Picker(s2.Stage2Params())
+    p = s2.Stage2Picker(s2.Stage2Params(enable=False))
     assert p.offer(1, 50.0, "a", 0.0) == s2.OFF and p.take() is None
+    # 꺼져 있으면 1단계 흐름도 그대로 — 미루지도, 집는 중으로 표시하지도 않는다
+    p.note_stage1(1, "", 0.0, 0.6, 0.0)
+    assert not p.start_picking(1, 0.1) and not p.held(1, 0.1)
+
+
+def test_on_by_default() -> None:
+    # 10/15 T19 실기(김학민): 틀린 구역 0 → 기본 켬 (ADR-0008)
+    assert s2.Stage2Params().enable
 
 
 def test_skips_track_whose_stage1_was_always_confident() -> None:
@@ -109,3 +118,57 @@ def test_unreadable_crop_is_not_dissent() -> None:
     # 글자를 못 읽은 크롭(NONE)은 반대표가 아니다
     v = votes(("대치동", 0.9, 50), ("", 0.0, 80), ("대치동", 0.9, 60))
     assert (v.agree, v.picked, v.total) == (2, 2, 3) and s2.publishable(v, 0.6, 2)
+
+
+def test_stage1_read_is_held_after_publish_then_released() -> None:
+    # 실기: 1단계 발행 직후 같은 트랙의 다음 1단계 크롭(2.5 s)이 2단계보다 먼저 OCR 을 잡았다 → 잠깐 미룬다
+    p = picker(stage1_hold_s=0.5)
+    p.note_stage1(1, "", 0.0, 0.6, 10.0)
+    assert p.held(1, 10.1) and not p.held(2, 10.1)
+    assert abs(p.hold_left([1, 2], 10.1) - 0.4) < 1e-9
+    # 2단계 크롭이 안 오면(다른 박스를 집는 중 등) 미룬 만큼만 늦게 읽는다
+    assert not p.held(1, 10.6)
+    assert p.hold_left([1, 2], 10.6) is None
+    q = picker(stage1_hold_s=0.0)
+    q.note_stage1(1, "", 0.0, 0.6, 10.0)
+    assert not q.held(1, 10.0)
+
+
+def test_picking_track_never_reads_stage1_again() -> None:
+    # 2단계 크롭이 왔다 = sort_manager 가 이 트랙을 집으러 갔다(1단계 첫 발행으로 이미 정함)
+    p = picker()
+    p.note_stage1(1, "", 0.0, 0.6, 10.0)
+    assert p.start_picking(1, 10.05)  # 첫 2단계 크롭 → 노드가 1단계 대기 크롭을 버린다
+    assert not p.start_picking(1, 10.25)  # 두 번째부터는 False
+    # 미루기가 아니라 그만 — 기다리지 않는다
+    assert p.held(1, 99.0) and p.hold_left([1], 99.0) is None
+    p.note_stage1(1, "", 0.0, 0.6, 11.0)  # 이미 집는 중이면 미루기를 다시 걸지 않는다
+    assert 1 not in p.hold_until
+
+
+def test_flip_first_when_stage1_found_label_but_no_text() -> None:
+    p = picker()
+    p.note_read(1, 1, True, "", False)  # 송장은 찾았는데 글자 없음 → 거꾸로 올렸을 가능성
+    p.note_read(2, 1, False, "", False)  # 송장을 못 찾음 → 방향을 모른다
+    p.note_read(3, 1, True, "대치동", False)  # 바로 선 쪽으로 읽힘
+    assert p.flip_first(1) and not p.flip_first(2) and not p.flip_first(3)
+    assert not p.flip_first(4)  # 1단계 기록 없음
+    p.note_read(1, 2, True, "대치동", False)  # 2단계에서 바로 선 쪽으로 판정 → 그 방향을 기억
+    assert not p.flip_first(1)
+    p.note_read(2, 2, True, "역삼동", True)  # 180° 에서 판정 → 다음 크롭도 180° 먼저
+    assert p.flip_first(2)
+    p.note_read(5, 2, True, "", False)  # 2단계에서 글자 없음은 방향 단서로 쓰지 않는다
+    assert not p.flip_first(5)
+    q = picker(flip_first=False)
+    q.note_read(1, 1, True, "", False)
+    assert not q.flip_first(1)
+
+
+def test_forget_clears_picking_hold_and_orientation() -> None:
+    p = picker()
+    p.note_stage1(1, "", 0.0, 0.6, 0.0)
+    p.note_read(1, 1, True, "", False)
+    p.start_picking(1, 0.1)
+    p.note_read(1, 2, True, "대치동", True)
+    assert p.forget(31.0, 30.0) == 1
+    assert not p.held(1, 31.0) and not p.flip_first(1) and 1 not in p.picking

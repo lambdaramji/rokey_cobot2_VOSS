@@ -1,10 +1,11 @@
 """label_reader — 송장 판독. LabelCrop → 송장 찾기·펴기 → PaddleOCR → 퍼지 매칭 → 트랙별 다수결 → /voss/vision/label.
 
 T19 1차(G0): stage 1(입구 관측). T23: stage 3(재확인 구역 정지 재판독, 서비스 `/voss/vision/read_label`).
-T19 2차: stage 2(추종 중) — `stage2.enable`(기본 off). 선명한 크롭 골라 트랙당 max_ocr 장, 선명도 가중 다수결,
-1단계가 모두 확실했던 트랙은 읽지 않는다(sort_manager 는 재확인으로 가려던 박스에만 2단계를 쓴다). 2단계 발행은 같은 동
-stage2.min_agree 장 + confidence_min + 반대표 없음일 때만 한 번(1장·갈린 판독으로 구역이 바뀌지 않게, voss_msgs.md
-LabelRead 발행 시점). label_stage2.py.
+T19 2차: stage 2(추종 중) — `stage2.enable`(10/15 실기 뒤 기본 켬, ADR-0008). 선명한 크롭 골라 트랙당 max_ocr 장,
+선명도 가중 다수결, 1단계가 모두 확실했던 트랙은 읽지 않는다(sort_manager 는 재확인으로 가려던 박스에만 2단계를 쓴다).
+2단계 발행은 같은 동 stage2.min_agree 장 + confidence_min + 반대표 없음일 때만 한 번(1장·갈린 판독으로 구역이 바뀌지
+않게, voss_msgs.md LabelRead 발행 시점). 집으러 간 트랙(2단계 크롭이 온 트랙)의 1단계 크롭은 읽지 않고, 1단계를 발행한
+트랙의 다음 1단계 읽기는 stage2.stage1_hold_s 만큼 미룬다. 1단계가 글자를 못 읽은 트랙은 2단계를 180° 먼저. label_stage2.py.
 - 후보(동·코드·별칭)는 `/voss/sort/zone_map` 에서만 받는다(규칙 5). 받기 전 크롭은 버린다.
 - OCR 은 작업 스레드 하나에서 돈다. 트랙마다 가장 최근 크롭 한 장만 기다리게 하고(오래된 크롭은 교체 — 2단계는
   가장 선명한 크롭), 이미 확실해진 트랙의 크롭은 더 읽지 않는다 → OCR 이 느려도 밀리지 않는다.
@@ -156,13 +157,15 @@ class LabelReaderNode(Node):
         # 거꾸로 올린 박스는 재확인 칸 3단계에서 읽는다 (10/12 로컬 시험 브랜치)
         self.stage1_flip = p("stage1_flip_retry", False).value
         self.forget_s = p("track_forget_s", 30.0).value
-        # 2단계(추종 중, T19 2차). 기본 off — 실기(서보 주기·추종 중 판독률) 확인 뒤 켠다
+        # 2단계(추종 중, T19 2차). 10/15 실기(안전 확인) 뒤 기본 켬 — 끄기: launch stage2:=false
         self.s2 = Stage2Picker(
             Stage2Params(
-                enable=bool(p("stage2.enable", False).value),
+                enable=bool(p("stage2.enable", True).value),
                 max_ocr=int(p("stage2.max_ocr", 3).value),
                 min_sharpness=float(p("stage2.min_sharpness", 0.0).value),
                 skip_confident_stage1=bool(p("stage2.skip_confident_stage1", True).value),
+                stage1_hold_s=float(p("stage2.stage1_hold_s", 0.5).value),
+                flip_first=bool(p("stage2.flip_first", True).value),
             )
         )
         self.s2_min_agree = p("stage2.min_agree", 2).value
@@ -213,7 +216,8 @@ class LabelReaderNode(Node):
             + (
                 f"stage2 on (트랙당 {self.s2.p.max_ocr}장, 같은 동 {self.s2_min_agree}장이면 그만, "
                 f"선명도 ≥ {self.s2.p.min_sharpness:g}, 1단계 확실하면 건너뜀 {self.s2.p.skip_confident_stage1}, "
-                f"180° {self.s2_flip})"
+                f"180° {self.s2_flip}, 1단계 글자 없으면 180° 먼저 {self.s2.p.flip_first}, "
+                f"1단계 발행 뒤 다음 읽기 {self.s2.p.stage1_hold_s:g} s 미룸)"
                 if self.s2.p.enable
                 else "stage2 off"
             )
@@ -280,6 +284,9 @@ class LabelReaderNode(Node):
             if self.pub is None:
                 st.not_ready += 1
                 return
+            if msg.track_id in self.s2.picking:
+                self._count_s2("s1_drop")  # 집으러 간 트랙 — sort_manager 가 이미 정했다
+                return
             if self.tracks.enough(msg.track_id, msg.stage, self.conf_min, self.enough_agree):
                 st.enough += 1
                 return
@@ -293,6 +300,10 @@ class LabelReaderNode(Node):
         st = self.stats
         if not self.s2.p.enable:
             return
+        # 첫 2단계 크롭 = sort_manager 가 이 트랙을 집으러 갔다 → 1단계 대기 크롭은 쓰일 데가 없다(OCR 을 2단계에 비운다)
+        first = self.s2.start_picking(msg.track_id, time.monotonic())
+        if first and self.pending.pop(msg.track_id, None) is not None:
+            self._count_s2("s1_drop")
         if self.pub is None:
             st.not_ready += 1
             return
@@ -303,6 +314,17 @@ class LabelReaderNode(Node):
         st.s2[r] = st.s2.get(r, 0) + 1
         if r in (KEPT, REPLACED):
             self.cv.notify()
+
+    def _count_s2(self, key: str) -> None:
+        """2단계 통계 (lock 안에서 부른다)."""
+        self.stats.s2[key] = self.stats.s2.get(key, 0) + 1
+
+    def _next_stage1(self, now: float) -> int | None:
+        """읽을 1단계 트랙(먼저 온 순서, lock 안). 집으러 간 트랙의 크롭은 버리고, 미루는 중인 트랙은 건너뛴다."""
+        for t in [t for t in self.pending if t in self.s2.picking]:
+            del self.pending[t]
+            self._count_s2("s1_drop")
+        return next((t for t in self.pending if not self.s2.held(t, now)), None)
 
     def _maybe_create_pub(self) -> None:
         if self.pub is not None:
@@ -443,32 +465,39 @@ class LabelReaderNode(Node):
             self.engine = eng
         while True:
             with self.cv:
-                while (
-                    not self.pending and not self.jobs and not self.s2.pending and not self.stopping
-                ):
-                    self.cv.wait(0.5)
-                if self.stopping:
-                    return
+                while True:
+                    if self.stopping:
+                        return
+                    now = time.monotonic()
+                    s1 = self._next_stage1(now)
+                    if self.jobs or self.s2.pending or s1 is not None:
+                        break
+                    # 1단계가 모두 미루는 중이면 가장 빠른 것이 풀릴 때까지(새 크롭이 오면 notify 로 먼저 깬다)
+                    left = self.s2.hold_left(self.pending, now)
+                    self.cv.wait(0.5 if left is None else min(0.5, max(0.01, left)))
                 cands = list(self.cands)
                 job = self.jobs.popleft() if self.jobs else None
                 if job is None:
                     # 2단계 먼저 — goal 이 끝나기 전에 내야 sort_manager 가 목적 구역을 바꿀 수 있다
                     got = self.s2.take()
-                    track_id, msg = got if got is not None else self.pending.popitem(last=False)
+                    track_id, msg = got if got is not None else (s1, self.pending.pop(s1))
                     agree = self.s2_min_agree if msg.stage == STAGE_TRACK else self.enough_agree
                     if self.tracks.enough(track_id, msg.stage, self.conf_min, agree):
                         self.stats.enough += 1  # 기다리는 사이 앞 판독으로 확실해졌다
                         continue
+                    first180 = msg.stage == STAGE_TRACK and self.s2.flip_first(track_id)
             if job is not None:
                 if not job.cancelled:
                     self._run_view(eng, job, cands)
                 continue
             try:
-                self._read_one(eng, track_id, msg, cands)
+                self._read_one(eng, track_id, msg, cands, first180)
             except Exception as e:  # 크롭 하나의 실패로 스레드가 죽지 않게
                 self.get_logger().error(f"track {track_id} 판독 실패: {e}")
 
-    def _read_one(self, eng, track_id: int, msg: LabelCrop, cands: list[Candidate]) -> None:
+    def _read_one(
+        self, eng, track_id: int, msg: LabelCrop, cands: list[Candidate], first180: bool = False
+    ) -> None:
         stamp = _ns(msg.header.stamp)
         img = image_to_bgr(msg.image)
         rect = find_label_in_crop(img, self.v_min, self.s_max, self.close_px)
@@ -478,7 +507,7 @@ class LabelReaderNode(Node):
         else:
             up = crop_upright(img, rect, scale=self.scale)
             flip = self.s2_flip if msg.stage == STAGE_TRACK else self.stage1_flip
-            m, ocr_ms, flipped = read_label(eng, up, cands, flip_retry=flip)
+            m, ocr_ms, flipped = read_label(eng, up, cands, flip_retry=flip, flip_first=first180)
             if self.save_dir:
                 cv2.imwrite(
                     os.path.join(self.save_dir, f"t{track_id:05d}_s{msg.stage}_{stamp}.png"), up
@@ -495,6 +524,9 @@ class LabelReaderNode(Node):
             st.flipped += flipped
             if ocr_ms is not None:
                 st.ocr_ms.append(ocr_ms)
+            self.s2.note_read(track_id, msg.stage, rect is not None, m.dong, flipped)
+            if first180 and rect is not None:
+                self._count_s2("first180")
             if msg.stage == STAGE_OBSERVE:
                 self.s2.note_stage1(
                     track_id, v.match.dong, v.match.confidence, self.conf_min, time.monotonic()
@@ -510,6 +542,7 @@ class LabelReaderNode(Node):
         self.get_logger().info(
             f"track {track_id} s{msg.stage}: {m.code or '-'} {m.dong or '-'} {m.confidence:.2f} {m.reason}"
             + (" (180° 뒤집힘)" if flipped else "")
+            + (" (180° 먼저)" if first180 and rect is not None else "")
             + (f", 선명도 {msg.sharpness:.0f}" if msg.stage == STAGE_TRACK else "")
             + (
                 ""
