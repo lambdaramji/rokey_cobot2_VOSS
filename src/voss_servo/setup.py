@@ -30,6 +30,7 @@ setup(
             "sim_check = voss_servo.sim_check:main",  # sim 전용 (U3)
             "gate_summary = voss_servo.gate_summary:main",  # G1 게이트 집계 (U6)
             "z_compare = voss_servo.z_compare:main",  # z 프로파일 비교표 (S2-T14)
+            "emu_rot = voss_servo.emu_rot:main",  # 에뮬레이터 전용 각속도 직접 시험 (S2-T18 E3′·E5·E8)
         ],
     },
 )
