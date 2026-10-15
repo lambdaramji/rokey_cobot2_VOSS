@@ -7,7 +7,11 @@ source "$repo_dir/install/setup.bash"
 set -u
 export ROS_DOMAIN_ID=30
 export ROS_AUTOMATIC_DISCOVERY_RANGE=SUBNET
-nodes_pc_ip="${VOSS_NODES_PC_IP:-172.24.3.240}"
+nodes_pc_ip="${VOSS_NODES_PC_IP:-}"
+if [ -z "$nodes_pc_ip" ]; then
+  echo 'VOSS_NODES_PC_IP를 현장 Nodes PC 주소로 설정하세요.' >&2
+  exit 1
+fi
 if [[ ! "$nodes_pc_ip" =~ ^[0-9.]+$ ]]; then
   echo 'VOSS_NODES_PC_IP는 IPv4 주소여야 합니다.' >&2
   exit 1
