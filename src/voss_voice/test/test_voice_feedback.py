@@ -1,4 +1,6 @@
 import json
+from pathlib import Path
+from runpy import run_path
 from types import SimpleNamespace
 
 from voss_voice.listen_logic import WakeGate
@@ -102,9 +104,11 @@ def test_web_button_announcements_do_not_reenter_voice_pipeline():
 
 
 def test_web_button_phrases_stay_in_echo_filter():
-    from voss_hmi.voice_request import VOICE_PHRASES
+    # colcon tests each package in isolation; read the pure sibling module from source.
+    source = Path(__file__).resolve().parents[2] / "voss_hmi/voss_hmi/voice_request.py"
+    voice_phrases = run_path(str(source))["VOICE_PHRASES"]
 
-    for phrase in VOICE_PHRASES.values():
+    for phrase in voice_phrases.values():
         assert is_ack_echo(phrase), f"버튼 안내가 메아리 필터에서 빠짐: {phrase}"
 
 
