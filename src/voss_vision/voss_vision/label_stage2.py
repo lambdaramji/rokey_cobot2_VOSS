@@ -7,14 +7,18 @@
   구역으로 바꿈). 그래서 1단계 발행이 모두 확실했던 트랙은 읽지 않는다(`skip_confident_stage1`). sort_manager 가 어느
   1단계 발행으로 정했는지 label_reader 는 모르므로, 불확실한 발행이 한 번이라도 있었거나 1단계 발행이 없었으면 읽는다.
 - 같은 트랙 2단계가 이미 확실하면(같은 동 min_agree 장 + confidence_min) 노드가 더 넘기지 않는다(`drop`).
-- **발행도 그때만 한다**(`publishable`, #171 리뷰 박병후). sort_manager 는 확실한 2단계 발행 **한 번**에 목적 구역을
-  바꾸므로, 1장 오판이면 재확인(안전한 쪽) 대신 틀린 구역으로 간다. 모이기 전에 goal 이 끝나면 원래대로 재확인으로 간다.
+- **발행도 그때만, 반대표가 없을 때만 한다**(`publishable`, #171 리뷰 박병후·김학민·정의석). sort_manager 는 확실한
+  2단계 발행 **한 번**에 목적 구역을 바꾸므로, 1장 오판이나 갈린 판독(대치·대치·역삼)이면 재확인(안전한 쪽) 대신
+  틀린 구역으로 간다. 1단계에서 이미 불확실했던 박스가 또 갈렸다는 것은 그 자체로 위험 신호다. 조건이 안 되면 내지
+  않고, goal 이 끝나면 원래대로 재확인으로 간다(voss_msgs.md LabelRead 발행 시점).
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
+
+from voss_vision.label_vote import Vote
 
 # offer 결과 (노드 통계 키)
 OFF = "off"  # 2단계 꺼짐
@@ -26,9 +30,13 @@ REPLACED = "replaced"  # 기다리던 크롭보다 선명해 바꿨다
 DULLER = "duller"  # 기다리던 크롭보다 흐려 버렸다
 
 
-def publishable(dong: str, confidence: float, agree: int, conf_min: float, min_agree: int) -> bool:
-    """2단계 투표를 /voss/vision/label 로 낼지 — 같은 동 min_agree 장 이상 + confidence_min 이상일 때만."""
-    return bool(dong) and confidence >= conf_min and agree >= min_agree
+def publishable(v: Vote, conf_min: float, min_agree: int) -> bool:
+    """2단계 투표를 /voss/vision/label 로 낼지 — 같은 동 min_agree 장 이상 + confidence_min 이상 + 반대표 없음.
+    반대표 = 다른 동을 읽은 크롭(`agree < picked`). 글자를 못 읽은 크롭(NONE)은 증거가 아니라 반대표도 아니다."""
+    m = v.match
+    return (
+        bool(m.dong) and m.confidence >= conf_min and v.agree >= min_agree and v.agree == v.picked
+    )
 
 
 @dataclass(frozen=True)

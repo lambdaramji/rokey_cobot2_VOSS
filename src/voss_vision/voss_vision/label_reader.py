@@ -3,7 +3,8 @@
 T19 1차(G0): stage 1(입구 관측). T23: stage 3(재확인 구역 정지 재판독, 서비스 `/voss/vision/read_label`).
 T19 2차: stage 2(추종 중) — `stage2.enable`(기본 off). 선명한 크롭 골라 트랙당 max_ocr 장, 선명도 가중 다수결,
 1단계가 모두 확실했던 트랙은 읽지 않는다(sort_manager 는 재확인으로 가려던 박스에만 2단계를 쓴다). 2단계 발행은 같은 동
-stage2.min_agree 장 + confidence_min 이 모였을 때만(1장으로 구역이 바뀌지 않게). label_stage2.py.
+stage2.min_agree 장 + confidence_min + 반대표 없음일 때만 한 번(1장·갈린 판독으로 구역이 바뀌지 않게, voss_msgs.md
+LabelRead 발행 시점). label_stage2.py.
 - 후보(동·코드·별칭)는 `/voss/sort/zone_map` 에서만 받는다(규칙 5). 받기 전 크롭은 버린다.
 - OCR 은 작업 스레드 하나에서 돈다. 트랙마다 가장 최근 크롭 한 장만 기다리게 하고(오래된 크롭은 교체 — 2단계는
   가장 선명한 크롭), 이미 확실해진 트랙의 크롭은 더 읽지 않는다 → OCR 이 느려도 밀리지 않는다.
@@ -498,9 +499,7 @@ class LabelReaderNode(Node):
                 self.s2.note_stage1(
                     track_id, v.match.dong, v.match.confidence, self.conf_min, time.monotonic()
                 )
-            send = msg.stage != STAGE_TRACK or publishable(
-                v.match.dong, v.match.confidence, v.agree, self.conf_min, self.s2_min_agree
-            )
+            send = msg.stage != STAGE_TRACK or publishable(v, self.conf_min, self.s2_min_agree)
             if msg.stage == STAGE_TRACK:
                 if send:
                     self.s2.drop(track_id)  # 확실해졌다 — 기다리던 크롭은 버린다
@@ -512,7 +511,13 @@ class LabelReaderNode(Node):
             f"track {track_id} s{msg.stage}: {m.code or '-'} {m.dong or '-'} {m.confidence:.2f} {m.reason}"
             + (" (180° 뒤집힘)" if flipped else "")
             + (f", 선명도 {msg.sharpness:.0f}" if msg.stage == STAGE_TRACK else "")
-            + ("" if send else f" — 발행 보류(같은 동 {v.agree}/{self.s2_min_agree})")
+            + (
+                ""
+                if send
+                else f" — 발행 보류(같은 동 {v.agree}/{self.s2_min_agree}"
+                + (f", 반대표 {v.picked - v.agree}" if v.picked > v.agree else "")
+                + ")"
+            )
             + f" → 투표 {v.match.dong or '-'} {v.match.confidence:.2f} ({v.agree}/{v.picked}, 처리 {v.total})"
             + (f", OCR {ocr_ms:.0f} ms" if ocr_ms is not None else "")
         )

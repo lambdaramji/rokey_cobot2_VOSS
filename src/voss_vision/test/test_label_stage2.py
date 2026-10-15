@@ -1,5 +1,8 @@
 """label_stage2 — 2단계(추종 중) 크롭 고르기: 끔·1단계 확실하면 건너뜀·가장 선명한 한 장·트랙당 상한·잊기."""
 
+from voss_vision.label_match import Match
+from voss_vision.label_vote import Read, Vote, vote
+
 from voss_vision import label_stage2 as s2
 
 
@@ -72,10 +75,37 @@ def test_forget_clears_old_tracks() -> None:
     assert p.offer(1, 50.0, "again", 31.0) == s2.KEPT  # 기록이 지워져 상한도 처음부터
 
 
+def votes(*reads: tuple[str, float, float]) -> Vote:
+    """(동, 신뢰도, 선명도) 크롭들 → 2단계 투표(선명도 가중)."""
+    codes = {"역삼동": "S07-01", "대치동": "S07-02", "청담동": "S07-03"}
+    rs = [
+        Read(Match(codes.get(d, ""), d, c, reason="AGREE" if d else "NONE"), i, sh)
+        for i, (d, c, sh) in enumerate(reads)
+    ]
+    return vote(rs, weighted=True)
+
+
 def test_publish_only_when_enough_agree() -> None:
     # #171 리뷰: sort_manager 는 확실한 2단계 한 번에 구역을 바꾼다 → 1장(같은 동 1) 은 내지 않는다
-    assert not s2.publishable("대치동", 1.0, 1, 0.6, 2)
-    assert s2.publishable("대치동", 0.9, 2, 0.6, 2)
-    assert not s2.publishable("대치동", 0.5, 3, 0.6, 2)  # 엇갈려 신뢰도가 낮다
-    assert not s2.publishable("", 0.0, 0, 0.6, 2)
-    assert s2.publishable("대치동", 0.7, 1, 0.6, 1)  # min_agree 1 이면 1장으로도
+    assert not s2.publishable(votes(("대치동", 1.0, 50)), 0.6, 2)
+    assert s2.publishable(votes(("대치동", 0.9, 50), ("대치동", 0.8, 60)), 0.6, 2)
+    assert not s2.publishable(
+        votes(("대치동", 0.5, 50), ("대치동", 0.5, 50)), 0.6, 2
+    )  # 신뢰도 미달
+    assert not s2.publishable(votes(("", 0.0, 50)), 0.6, 2)
+    assert s2.publishable(votes(("대치동", 0.7, 50)), 0.6, 1)  # min_agree 1 이면 1장으로도
+
+
+def test_dissent_is_never_published() -> None:
+    # #171 리뷰(김학민·정의석): 2:1 로 갈리면 신뢰도가 0.6 을 넘어도 내지 않는다 — 재확인으로
+    flat = votes(("대치동", 1.0, 50), ("대치동", 1.0, 50), ("역삼동", 1.0, 50))
+    sharp = votes(("역삼동", 1.0, 30), ("대치동", 1.0, 100), ("대치동", 1.0, 100))
+    for v in (flat, sharp):
+        assert v.match.dong == "대치동" and v.match.confidence >= 0.6 and v.agree == 2
+        assert not s2.publishable(v, 0.6, 2)
+
+
+def test_unreadable_crop_is_not_dissent() -> None:
+    # 글자를 못 읽은 크롭(NONE)은 반대표가 아니다
+    v = votes(("대치동", 0.9, 50), ("", 0.0, 80), ("대치동", 0.9, 60))
+    assert (v.agree, v.picked, v.total) == (2, 2, 3) and s2.publishable(v, 0.6, 2)

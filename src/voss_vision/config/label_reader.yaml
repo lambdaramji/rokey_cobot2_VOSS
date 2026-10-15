@@ -13,7 +13,7 @@ label_reader:
     stage2:                    # 추종 중 2차 판독 (T19 2차, BRD TR-OCR-02, label_stage2.py). 기본 off — 실기 확인 뒤 켠다
       enable: false            # 켜기: launch 인자 stage2:=true (확인할 것: belt_servo 틱 주기, 추종 중 판독률, goal 끝나기 전 결과)
       max_ocr: 3               # 트랙당 OCR 최대 장수 (CPU 장당 약 2 s, 180° 다시 읽으면 2배 — TrackAndGrasp 약 11 s 안)
-      min_agree: 2             # 같은 동 이만큼 + confidence_min 이상일 때만 2단계를 발행하고 그 트랙은 더 읽지 않는다(1장으로 구역이 바뀌지 않게)
+      min_agree: 2             # 같은 동 이만큼 + confidence_min 이상 + 반대표 없음일 때만 2단계를 발행한다(1장·갈린 판독으로 구역이 바뀌지 않게). 같은 동이 이만큼 모이면 그 트랙은 더 읽지 않는다
       min_sharpness: 0.0       # 이보다 흐린 크롭은 읽지 않는다 (box_tracker 라플라시안 분산과 같은 척도, 공용 PC 영상으로 정한다)
       skip_confident_stage1: true  # 1단계 발행이 모두 확실했던 트랙은 읽지 않는다 — sort_manager 는 재확인행 박스에만 2단계를 쓴다
       flip_retry: true         # 글자가 없으면 180° 돌려 한 번 더 (거꾸로 올린 박스 구제 — 1단계는 10/12 부터 끔)
