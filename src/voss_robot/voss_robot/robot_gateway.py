@@ -46,9 +46,9 @@ from voss_robot.zone_motion import (
     pick_grip_ok,
     pick_pose,
     plan_move,
-    row_stage_slot,
     search_travel_z,
     slot_pose,
+    slot_route,
 )
 
 
@@ -419,12 +419,12 @@ class RobotGatewayNode(Node):
                     targets.append(list(zc["view"]))
                 if not (zc["pose"] and zc["grid"]):
                     continue
-                stage = slot_pose(zc["pose"], zc["grid"], 0)
+                # 1층 칸만: 2층은 x·y·출입구·하한이 1층과 같아 캐시가 그대로 맞는다(slot_route)
                 for k in range(int(zc["grid"][0]) * int(zc["grid"][1])):
-                    t = slot_pose(zc["pose"], zc["grid"], k)
+                    t, _via, stage, floor = slot_route(zc, k)
                     slots += 1
                     if self._travel_z(t, sol) is None:
-                        self._in_tray(t, stage, sol)
+                        self._in_tray(t, stage, sol, floor)
             for t in targets:
                 self._travel_z(t, sol)
             self.get_logger().info(
@@ -465,8 +465,11 @@ class RobotGatewayNode(Node):
 
     def _js_tcp_done(self, fut) -> None:
         """joint_states 사용 중 2 s 마다: 컨트롤러 등록 TCP 가 바뀌면(펜던트 조작) fkin 이 틀어지므로 service 로.
-        움직이는 중엔 두 서비스 값이 0.1 s 어긋날 수 있어 20 mm 로 본다(두 후보는 247 mm 떨어져 헷갈리지 않음)."""
+        움직이는 중엔 두 서비스 값이 0.1 s 어긋날 수 있어 20 mm 로 본다(두 후보는 247 mm 떨어져 헷갈리지 않음).
+        MoveToZone(300 mm/s) 중에는 0.1 s 에 30 mm 라 None 으로 오판 → 결과를 버린다(10/15 U14 실기 HOLD)."""
         self._js_tcp_busy = False
+        if self.guard.motion_busy:
+            return
         try:
             ctrl, flange = fut.result()
         except Exception:
@@ -604,6 +607,7 @@ class RobotGatewayNode(Node):
             self.pose_source == "joint_states"
             and self._js_off is not None
             and not self._js_tcp_busy
+            and not self.guard.motion_busy  # MoveToZone 중엔 확인하지 않는다(위 _js_tcp_done)
             and now - self._js_tcp_t >= 2.0
         ):
             self._js_tcp_busy, self._js_tcp_t = True, now
@@ -723,11 +727,9 @@ class RobotGatewayNode(Node):
             if zc["pose"] is None or zc["grid"] is None:
                 return fail(f"NOT_CONFIGURED: zones.{zone}.pose·grid")
             try:
-                target = slot_pose(zc["pose"], zc["grid"], int(req.slot))
-                # 트레이 안 이동의 출입구 = 같은 Y 줄의 −X 끝 칸(C 칸 2 → 칸 0, 칸 5 → 칸 3)
-                via = row_stage_slot(zc["grid"], int(req.slot))
-                stage = slot_pose(zc["pose"], zc["grid"], via)
-                in_tray_z = zc["in_tray"]
+                # 트레이 안 이동의 출입구 = 같은 Y 줄의 −X 끝 칸(C 칸 2 → 칸 0, 칸 5 → 칸 3), 하한 = 구역 in_tray.
+                # 미리 계산(_prewarm_travel)도 같은 함수 — 캐시 키가 맞아야 경로 계산이 ikin 을 다시 안 돈다(#147)
+                target, via, stage, in_tray_z = slot_route(zc, int(req.slot))
                 if pick:
                     target = pick_pose(target, self.pick_dz)
             except ValueError as e:

@@ -64,3 +64,36 @@ def test_track_reads_enough_and_forget() -> None:
     tr.add(6, 1, r("청담동", 0.9, 20), now=1.0)
     assert not tr.enough(6, 1, 0.6, 2)  # 엇갈리면 더 읽는다
     assert tr.forget(now=40.0, older_than_s=30.0) == 2 and not tr.reads
+
+
+def rs(dong: str, conf: float, t: int, sharp: float) -> Read:
+    return Read(m(dong, conf), t * MS, sharp)
+
+
+def test_weighted_vote_trusts_the_sharp_crop() -> None:
+    # 2단계(MC-007): 선명한 대치 1장 vs 흐린 청담 1장 — 가중 없으면 동률 0.45, 가중하면 대치 0.75·청담 0.15
+    reads = [rs("대치동", 0.9, 10, 100.0), rs("청담동", 0.9, 20, 20.0)]
+    plain = vote(reads)
+    assert plain.match.confidence == pytest.approx(0.45)
+    w = vote(reads, weighted=True)
+    assert (w.match.dong, w.match.dong_alt) == ("대치동", "청담동")
+    assert w.match.confidence == pytest.approx(0.75) and w.match.confidence_alt == pytest.approx(
+        0.15
+    )
+    assert (w.agree, w.picked, w.total) == (1, 2, 2)
+
+
+def test_weighted_vote_equals_plain_when_sharpness_is_flat_or_missing() -> None:
+    same = [rs("대치동", 0.9, 10, 50.0), rs("대치동", 0.7, 20, 50.0), rs("청담동", 0.8, 30, 50.0)]
+    zero = [rs("대치동", 0.9, 10, 0.0), rs("청담동", 0.8, 20, 0.0)]
+    for reads in (same, zero):
+        assert vote(reads, weighted=True) == vote(reads)
+
+
+def test_track_reads_weights_only_the_listed_stage() -> None:
+    t = TrackReads(weighted_stages=frozenset({2}))
+    for stage in (1, 2):
+        t.add(7, stage, rs("대치동", 0.9, 10, 100.0), 0.0)
+        v = t.add(7, stage, rs("청담동", 0.9, 20, 20.0), 0.0)
+        assert v.match.confidence == pytest.approx(0.45 if stage == 1 else 0.75)
+    assert t.enough(7, 2, 0.6, 1) and not t.enough(7, 1, 0.6, 1)

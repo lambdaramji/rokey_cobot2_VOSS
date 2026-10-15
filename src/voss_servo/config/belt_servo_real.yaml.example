@@ -50,7 +50,8 @@ belt_servo:
     input:
       stale_timeout_s: null         # position_valid=false·pose 끊김 지속 기준. 제안 0.3
       lost_timeout_s: null          # 내 track_id 미수신 지속 기준. 제안 0.5. DESCEND 경주는 cutoff 30 으로 없앰 (U9a)
-      pose_lag_ms: 60.0             # pose stamp 지연. gateway pose_source 와 짝: joint_states 운용 = 0(10/10 PL 시험값, measurements-1010 #10), service = 60(임시값).
+      pose_lag_ms: 0.0              # pose stamp 지연. 현장 운용 = gateway pose_source:=joint_states 와 짝 0(10/10 PL, measurements-1010 #10).
+                                    # gateway 를 pose_source 없이(service, 노드 기본) 띄우면 60 으로 — 그때는 rotate.enable false 여야 READY
                                     # box_tracker 의 15 는 영상 대비 상대 지연이라 여기 쓰지 않음(DESIGN DEC-03)
       pose_extrap_max_ms: null      # TCP 외삽 지평 상한. 제안 200
       blind_entry_max_age_s: null   # 하강 시작 때 마지막 유효 관측 나이 상한. 제안 0.15. TRACK→DESCEND 전환에서만 씀 (cutoff 와 무관)
@@ -63,26 +64,30 @@ belt_servo:
                                     # 참고: gateway rg2_timeout_s 6.0 이라 belt_servo 가 4 s 에 포기해도 RG2 가 잠시 바빠 다음 요청이 BUSY 일 수 있다
     rate_hz: 30.0                   # 서보 루프 (topics.md 계약)
     zero_hold_s: 0.5                # goal 종료 뒤 0 속도 유지 (watchdog 200 ms + 정지 시간보다 길게) 실기 yaml 은 0.2(10/12 학민, gateway acc 100 → 정지 0.15 s 안, 10/12 로컬 20회 + 10/13 S4 36회(틱 로그 0 유지 6~7틱으로 확인) + 10/13 게이트 31회 = 87회, zero_hold 관련 이상 0; DEC-16 기준 0.25 보다 짧으니 acc 를 낮추면 되돌림)
-    rotate:                         # S2-T18 J6 회전 파지 (기능 플래그, 기본 off). design/S2T18-{hld,dd,pseudo}.md
-      enable: false                 # true 면 아래 값이 모두 필요(null 이면 READY 거부), input.pose_lag_ms 0(joint_states) 전제.
+    rotate:                         # S2-T18 J6 회전 파지 (기능 플래그 — 노드·sim 기본 off, 실기 예시는 on). design/S2T18-{hld,dd,pseudo,result}.md
+      enable: true                  # 10/15 U14 실기 최종(design/S2T18-result.md). input.pose_lag_ms 0(joint_states) 전제.
+                                    # gateway 짝: `pose_source:=joint_states servo_angular:=true servo_yaw_limit_deg:=130`
+                                    #   (기동 줄 `pose_source joint_states 확인 … → 사용`·`servo angular on … ± 130°` 확인). 끄기 = false
                                     # 기준 공구 yaw 를 고정하려면 rotate.home_tool_yaw_deg 를 더한다(없으면 노드 기동 뒤 첫 goal 공구 yaw)
-      deadband_deg:               null  # 제안 4 — 데드밴드 — |Δ| 이하는 돌리지 않음. 검출 바닥 1.3° + 송장 붙임 공차(yaw 관측 실험 뒤 확정)
-      min_deg:                    null  # 제안 10 — 1단계: |Δ| ≤ 10° 는 돌리지 않음 (TR-SERVO-05 단계 적용). 5단계에서 deadband 와 같게
-      max_deg:                    null  # 제안 45 — 1단계 상한 — 넘으면 돌리지 않고 진행(pending #27 a 안). 간섭·측정 ② 뒤 90
-      n_min:                      null  # 제안 5 — 목표 각 결정에 필요한 유효 yaw 프레임 수 (box_tracker min_hits 와 같음)
-      buffer_n:                   null  # 제안 15 — 트랙별 yaw 버퍼 길이 (goal 전부터 모음, D1 A 안)
-      r_min:                      null  # 제안 0.97 — 흩어짐 하한 — 2θ 평균 벡터 길이 (≈ 흩어짐 7°)
-      decide_max_s:               null  # 제안 0.5 — goal 뒤 결정 마감 — 넘으면 NO_YAW 로 회전 없이 진행
-      start_tol_deg:              null  # 제안 3 — goal 시작 공구 yaw 가 기준에서 이만큼 벗어나면 START_ROTATED (기준 = 첫 goal 공구 yaw)
-      omega_max_dps:              null  # 제안 60 — 각속도 상한 (T17 전 제안값 — 학민 확인)
-      alpha_dps2:                 null  # 제안 90 — 각가속 (T17 전 제안값). gateway servo_acc[1] 이하여야 함 — S2-T17 #164 는 각속도 켬일 때 90(기본 10 유지)
-      tol_deg:                    null  # 제안 1.5 — 도달 허용 (deadband 보다 작아야 함)
-      omega_floor_dps:            null  # 제안 3 — 끝에서 멈춰 버리지 않게 하는 최소 각속도
-      hold_dz_mm:                 null  # 제안 50 — 회전 중 z 하한 = 윗면 + 50 (시야 보험: 회전 중 송장이 보이는 최소 +46, D2-2)
-      settle_s:                   null  # 제안 0.3 — 멈춘 뒤 정착 시간 (pose·비전이 따라오는 시간)
-      stall_s:                    null  # 제안 0.6 — 명령하고 이 시간 동안 1° 도 못 돌면 STALL (T17 전 gateway·sim 은 여기로 폴백)
-      still_dps:                  null  # 제안 2 — 이 각속도 아래면 멈춘 것
-      return_min_dz_mm:           null  # 제안 10 — LIFT·VERIFY 되돌리기는 TCP 가 윗면 + 10 위일 때만
-      pose_fresh_s:               null  # 제안 0.05 — pose 주기의 2배 이상(joint_states 50 Hz → 0.05). 이보다 최근에 pose 가 왔는데 값이 그대로면 정지
+      deadband_deg:               4     # 데드밴드 — |Δ| 이하는 돌리지 않음. 검출 바닥 1.3° + 송장 붙임 공차(yaw 관측 실험 뒤 확정)
+      min_deg:                    10    # 1단계: |Δ| ≤ 10° 는 돌리지 않음 (TR-SERVO-05 단계 적용). 5단계에서 deadband 와 같게
+      max_deg:                    110   # 넘으면 돌리지 않고 진행. flip_above 70 과 짝 — − 쪽 최대 110(10/15 실기 −109.4° 파지 OK, −120° 지령 때 케이블 육안 이상 없음)
+      n_min:                      5     # 목표 각 결정에 필요한 유효 yaw 프레임 수 (box_tracker min_hits 와 같음)
+      buffer_n:                   15    # 트랙별 yaw 버퍼 길이 (goal 전부터 모음, D1 A 안)
+      r_min:                      0.97  # 흩어짐 하한 — 2θ 평균 벡터 길이 (≈ 흩어짐 7°)
+      decide_max_s:               0.5   # goal 뒤 결정 마감 — 넘으면 NO_YAW 로 회전 없이 진행
+      start_tol_deg:              3     # goal 시작 공구 yaw 가 기준에서 이만큼 벗어나면 START_ROTATED (기준 = 첫 goal 공구 yaw)
+      omega_max_dps:              60    # 각속도 상한 (10/15 실기). gateway servo_max_ang_dps 이하
+      alpha_dps2:                 90    # 각가속 (10/15 실기). gateway servo_ang_acc_dps2(켬일 때 90) 이하
+      tol_deg:                    1.5   # 도달 허용 (deadband 보다 작아야 함)
+      omega_floor_dps:            3     # 끝에서 멈춰 버리지 않게 하는 최소 각속도
+      hold_dz_mm:                 50    # 회전 중 z 하한 = 윗면 + 50 (시야 보험: 회전 중 송장이 보이는 최소 +46, D2-2)
+      settle_s:                   0.3   # 멈춘 뒤 정착 시간 (pose·비전이 따라오는 시간)
+      stall_s:                    0.6   # 명령하고 이 시간 동안 1° 도 못 돌면 STALL (T17 전 gateway·sim 은 여기로 폴백)
+      still_dps:                  2     # 이 각속도 아래면 멈춘 것 (10/15 실기 정지 지터 최대 0.1 °/s)
+      return_min_dz_mm:           10    # LIFT·VERIFY 되돌리기는 TCP 가 윗면 + 10 위일 때만
+      pose_fresh_s:               0.05  # pose 주기의 2배 이상(10/15 실기 joint_states 20 ms, 최대 간격 47 ms). 이보다 최근에 pose 가 왔는데 값이 그대로면 정지
+      flip_above_deg:             70    # + Δ > 70 → Δ − 180 (−110~−90 으로 반대 회전). 10/15 실기: + 회전 67° 이상 LOST 9/18 → 반대 회전 7/7
+      lost_timeout_s:             1.2   # 회전을 쓴 goal 의 PREPARE·TRACK 에서만 LOST 기준(그 밖은 input.lost_timeout_s 0.5)
     log:
       dir: data/servo               # T7 은 launch 인자 log_dir:=<레포>/data/servo 로 덮어쓴다

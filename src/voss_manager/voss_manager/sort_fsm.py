@@ -692,8 +692,14 @@ def _on_label(ctx: Ctx, ev: LabelSeen) -> Out:
 def _on_label_tracking(ctx: Ctx, ev: LabelSeen) -> Out:
     """추종 중(stage 2) 판독: 재확인 구역으로 가려던 박스가 확실해지면 목적 구역으로 바로 바꾼다."""
     box = ctx.box
-    if box is None or ctx.phase != PH_GOAL or ev.track_id != box.track_id or box.zone != "RECHECK":
+    if box is None or ev.track_id != box.track_id or box.zone != "RECHECK":
         return Out(ctx)
+    if (
+        ctx.phase != PH_GOAL
+    ):  # goal 이 끝난 뒤 도착 — 재확인 그대로 (T19 2단계 실기 집계: "늦게 도착" 수)
+        return Out(
+            ctx, (Log("info", f"{box.box_id} 추종 중 판독 늦게 도착(goal 뒤) — 재확인 그대로"),)
+        )
     dong, zone, why = resolve_label(ev.code, ev.dong, ev.confidence, ctx.cfg)
     if why or ctx.slots[zone] >= ctx.cfg.capacity[zone]:
         return Out(ctx)
