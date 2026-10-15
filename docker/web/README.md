@@ -6,7 +6,7 @@
 ## 구현 범위
 
 - React/TypeScript/Vite: 운전(시작·정지·재개), 동 우선·HOLD 답변·구역 초기화, 투입 예정 수량, 최신 상태·OCR·로봇 상태·구역별 집계·보류·이력, CSV.
-- Spring Boot: `GET /api/stream` SSE(state·result·zone_map·robot·command_ack·log_status·pallet_state·link, 실시간 전용 voice_status·box_track·robot_pose·robot_joints·box_motion), `POST /api/commands`, `GET /api/stats`, `GET /api/sessions/current`, `PUT /api/sessions/current/plan`, `GET /api/results`, `GET /api/export.csv`.
+- Spring Boot: `GET /api/stream` SSE(state·result·zone_map·robot·command_ack·log_status·pallet_state·link, 실시간 전용 voice_status·box_track·robot_pose·robot_joints·box_motion), `POST /api/commands`, `GET /api/stats`, `GET /api/sessions/current`, `PUT /api/sessions/current/plan`, `GET /api/results`, `GET /api/pallet/placements/latest`, `GET /api/export.csv`.
 - MQTT: 구독 12개 `voss/state`, `voss/result`, `voss/zone_map`, `voss/robot`, `voss/command/ack`, `voss/log_status`, `voss/pallet/state`, `voss/voice_status`, `voss/box_track`, `voss/robot_pose`, `voss/box_motion`, `voss/robot_joints`(QoS 1/1/1/0/1/1/1/0/0/0/1/0); `voss/command` 발행(QoS 1). 접속 스냅샷은 state·zone_map·robot·log_status·pallet_state 만 — 위치·음성 이벤트는 재생하지 않는다. retained는 브로커 토픽 계약에 따름.
 - SQL: `sort_log`는 조회 전용 연결만 사용하고, 투입 수량은 별도 `session_plan` 테이블에서 관리.
 - 원격 접근: `stop` 이외 명령은 Nginx가 덮어쓴 `X-Real-IP`가 localhost일 때만 허용. `X-Forwarded-For`는 무시. **단, SSH가 127.0.0.1:8080에 직접 연결되면 Nginx를 거치지 않으므로 이 헤더만으로 원격 접속자를 인증할 수 없다.**
@@ -112,6 +112,12 @@ ros2 run voss_vision camera_preview
 송출 노드는 최근 원본 프레임 최대 10장만 보관하고 JPEG 전송 전에 최대 960×540으로 줄입니다. box_tracker·OCR·belt_servo와 함께 실행할 때의 실제 부하는 아직 측정하지 않았으므로 게이트 측정 중에는 송출 노드를 실행하지 않습니다.
 
 Web PC의 개발 서버(`npm run dev`)는 `/camera/gripper/frame.jpg`를 로컬 `127.0.0.1:8091`로 전달합니다. 따라서 개발 서버를 실행하는 PC에서 송출 노드의 `127.0.0.1:8091`에 닿아야 합니다. 카메라 메뉴의 **그리퍼 카메라 → 영상 연결**을 누르면 프레임을 요청합니다. 송출 노드가 실행되지 않았거나 입력 영상이 없으면 OFFLINE으로 표시됩니다. 배포 Nginx의 이 경로는 로컬 접속만 허용합니다.
+
+### 제어 버튼 음성 안내 (Nodes PC)
+
+로컬 HMI의 시작·정지·재개·우선 분류·답변·구역 초기화·팔레트 적재·계획 저장이 API에 접수되면 Web 백엔드가 `voss/voice/request`를 보냅니다. Nodes PC의 일반 `hmi_bridge`가 이를 검증해 고정 문구를 `/voss/voice/say`로 발행하고 `speech_out`이 재생합니다. `hmi_bridge voice_status_only:=true`는 이 요청을 받지 않습니다. TTS 문구의 "전달"은 로봇 동작 완료가 아닙니다.
+
+적용하려면 Web 이미지를 재빌드하고, MQTT ACL 템플릿 `docker/mqtt/acl`의 새 read/write 규칙을 실제 `docker/mqtt/secrets/acl`에 반영한 뒤 브로커를 재시작합니다. Nodes PC에서는 `voss_hmi`를 빌드하고 일반 `hmi_bridge`와 `speech_out`을 재시작합니다. `speech_out`에는 기존 Nodes PC의 `127.0.0.1:8000` AI TTS 경로가 필요합니다.
 
 ### 실제 음성 인식과 마이크 표시등
 
