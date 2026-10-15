@@ -101,6 +101,13 @@ def test_web_button_announcements_do_not_reenter_voice_pipeline():
         assert events == []
 
 
+def test_web_button_phrases_stay_in_echo_filter():
+    from voss_hmi.voice_request import VOICE_PHRASES
+
+    for phrase in VOICE_PHRASES.values():
+        assert is_ack_echo(phrase), f"버튼 안내가 메아리 필터에서 빠짐: {phrase}"
+
+
 def listener_node(sort_state=""):
     statuses, spoken = [], []
     node = SimpleNamespace(
