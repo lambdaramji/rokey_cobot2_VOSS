@@ -8,4 +8,4 @@
 | `issue_drafts/issue_payloads.json` | 제목·라벨·담당자(GitHub 계정)·본문 파일 |
 | `issue_drafts/create_issues.sh` | `gh issue create` 로 한 번에 만든다. 실행 전 검토 |
 
-요구사항·일정·역할의 기준은 `../VOSS_BRD_v1.5.docx` 10장(사본 `../VOSS_BRD.md`). v1.5 확장(박스 20개, 팔레트 4×2×2, 초과 처리)은 10.4·10.5·10.12.
+요구사항·일정·역할의 기준은 `../VOSS_BRD_v1.7.docx` 10장(v1.6~v1.7 변경은 10.13)(사본 `../VOSS_BRD.md`). v1.5 확장(박스 20개, 팔레트 4×2×2, 초과 처리)은 10.4·10.5·10.12.
