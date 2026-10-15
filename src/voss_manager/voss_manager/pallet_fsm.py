@@ -279,10 +279,10 @@ def _on_palletize(ctx: f.Ctx, ev: f.Command) -> f.Out:
 
 
 def _on_reset_pallet(ctx: f.Ctx) -> f.Out:
-    # 적재가 끝나 분류 상태로 돌아온 뒤에도 실물 비움 확인을 받을 수 있다.
-    # 진행 중이거나 멈춘 팔레타이징에서는 칸을 지우지 않는다.
-    if ctx.state not in (f.IDLE, f.PAUSED, f.RUNNING):
-        return _reject(ctx, "reset_zone PALLET 은 IDLE·PAUSED·RUNNING 에서만")
+    # PR #176 PL 안전 결정: 사람 손이 닿는 실물 비움은 분류 RUNNING 동안 받지 않는다.
+    # 소프트웨어 stop 은 안전 등급 정지가 아니므로 실물 작업 전 현장 안전 확인이 필요하다.
+    if ctx.state not in (f.IDLE, f.PAUSED):
+        return _reject(ctx, "reset_zone PALLET 은 IDLE·PAUSED 에서만")
     if _paused_run(ctx):
         return _reject(ctx, "멈춘 팔레타이징이 있음 — resume 으로 끝낸 뒤 비운다")
     return f.Out(

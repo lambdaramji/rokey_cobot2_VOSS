@@ -362,12 +362,19 @@ def test_reset_pallet_before_next_run(cfg) -> None:
     ctx, _ = gateway(ctx, acts, ok_all)
     assert ctx.state == f.RUNNING and ctx.pallet_count == 1
     assert "박스 1개가 남아" in pf.step(ctx, palletize("청담동")).reply[1]
-    out = pf.step(ctx, cmd("reset_zone", "PALLET"))
+    # PL 안전 결정: 분류 RUNNING 중에는 작업자가 팔레트에 손대는 절차를 허용하지 않는다.
+    denied = pf.step(ctx, cmd("reset_zone", "PALLET"))
+    assert not denied.reply[0] and "IDLE·PAUSED" in denied.reply[1]
+    assert denied.ctx.pallet_count == 1
+    stopped = pf.step(ctx, cmd("stop"))
+    assert stopped.ctx.state == f.PAUSED and of(stopped.actions, f.CallStop)
+    # 현장에서는 로봇 안전 정지·실물 비움을 확인한 뒤 비움 버튼을 누른다.
+    out = pf.step(stopped.ctx, cmd("reset_zone", "PALLET"))
     assert out.reply == (True, "PALLET 비움") and out.ctx.pallet_count == 0
-    assert out.ctx.state == f.RUNNING
-    assert (
-        pf.pallet_state(out.ctx)["state"] == "" and pf.step(out.ctx, palletize("청담동")).reply[0]
-    )
+    assert out.ctx.state == f.PAUSED and pf.pallet_state(out.ctx)["state"] == ""
+    resumed = pf.step(out.ctx, cmd("resume"))
+    assert resumed.reply[0] and resumed.ctx.state == f.RUNNING
+    assert pf.step(resumed.ctx, palletize("청담동")).reply[0]
 
 
 def test_pallet_state_during_run(cfg) -> None:

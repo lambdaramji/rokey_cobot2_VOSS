@@ -72,6 +72,7 @@ export default function PalletPanel({pallet,sortState,stale,dongs,controlEnabled
         onClick={()=>{ if (window.confirm(resetPalletPrompt(pallet))) onCommand('reset_zone',{zone:'PALLET'}); }}>트럭 짐칸 비움 확인</button>
     </div>
 
+    {!reset.ok && sortState === 'RUNNING' && <p className="micro-note" role="status">분류를 멈춘 뒤 비워 주세요. 안전을 확인하고 실물 비움 → 비움 확인 → 재개 순서로 진행하세요.</p>}
     {warning&&<p className="pallet-warning" role="alert">⚠ {warning}</p>}
 
     <div className="pallet-progress" data-testid="pallet-progress"><div className="progress-text"><strong>{recorded?`${pallet.done} / 16칸 적재 기록`:prog.text}</strong>{pallet.box_id&&<small>옮기는 박스 {pallet.box_id}</small>}</div>

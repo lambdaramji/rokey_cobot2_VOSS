@@ -143,11 +143,12 @@ test('지연 관측 키는 박스마다 바뀐다', () => {
   for (let i = 1; i < keys.length; i++) assert.notEqual(keys[i], keys[i - 1]);
 });
 
-test('짐칸 비움 확인은 완료 뒤 RUNNING 복귀에도 허용하고 진행·멈춘 팔레타이징에서는 막는다', () => {
+test('짐칸 비움 확인은 IDLE·PAUSED 만 허용하고 RUNNING 중에는 멈춤을 안내한다', () => {
   assert.equal(resetPalletAllowed('IDLE','').ok, true);
   assert.equal(resetPalletAllowed('PAUSED','DONE').ok, true);
-  assert.equal(resetPalletAllowed('RUNNING','DONE').ok, true);
-  assert.equal(resetPalletAllowed('RUNNING','').ok, true);
+  assert.equal(resetPalletAllowed('RUNNING','DONE').ok, false);
+  assert.equal(resetPalletAllowed('RUNNING','').ok, false);
+  assert.match(resetPalletAllowed('RUNNING','DONE').reason, /분류를 멈춘 뒤 비워 주세요/);
   assert.equal(resetPalletAllowed('PALLETIZING','RUNNING').ok, false);
   assert.equal(resetPalletAllowed('PAUSED','PAUSED').ok, false);
   assert.equal(resetPalletAllowed('UNKNOWN','').ok, false);

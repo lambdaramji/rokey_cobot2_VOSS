@@ -192,11 +192,12 @@ export const RUN_STATE_TEXT:Record<string,string> = { '':'실행 없음', RUNNIN
  *  (실물 확인 대화상자)으로만 보낸다(정의석 #47 재리뷰). REST/MQTT 의 reset_zone PALLET 계약은 그대로다. */
 export const GENERAL_RESET_ZONES = ['A','B','C','RECHECK','HOLD'] as const;
 
-/** 팔레타이징이 끝나 RUNNING 으로 복귀한 경우에도 실물 비움 확인을 허용한다. */
+/** PR #176 PL 안전 결정: 실물 비움은 분류가 멈춘 IDLE·PAUSED 에서만 확인한다. */
 export function resetPalletAllowed(sortState:string, palletRunState:string):{ok:boolean; reason:string} {
   if (palletRunState === 'RUNNING') return { ok:false, reason:'팔레타이징 중' };
   if (palletRunState === 'PAUSED') return { ok:false, reason:'멈춘 팔레타이징이 있음 — 재개해서 끝낸 뒤' };
-  if (!['IDLE','PAUSED','RUNNING'].includes(sortState)) return { ok:false, reason:'분류 IDLE·PAUSED·RUNNING 에서만' };
+  if (sortState === 'RUNNING') return { ok:false, reason:'분류를 멈춘 뒤 비워 주세요' };
+  if (!['IDLE','PAUSED'].includes(sortState)) return { ok:false, reason:'분류 IDLE·PAUSED 에서만' };
   return { ok:true, reason:'' };
 }
 
