@@ -15,7 +15,6 @@ import logging
 import os
 import time
 from collections.abc import Iterator
-from difflib import SequenceMatcher
 from typing import Annotated
 
 from fastapi import FastAPI, File, Form, UploadFile
@@ -23,6 +22,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from app.intent_prompt import INTENT_SCHEMA, build_messages, normalize
+from app.stt_filter import is_prompt_echo as _is_prompt_echo
 from app.tts_service import iter_tts_pcm
 
 app = FastAPI(title="VOSS AI", docs_url=None, redoc_url=None)
@@ -41,13 +41,7 @@ _intent_chain = None
 
 def is_prompt_echo(text: str, prompt: str | None = None) -> bool:
     """잡음 구간에서 Whisper가 긴 initial_prompt를 되읽은 결과를 버린다."""
-    heard = "".join(ch.casefold() for ch in text if ch.isalnum())
-    seed = "".join(
-        ch.casefold() for ch in (prompt if prompt is not None else STT_PROMPT) if ch.isalnum()
-    )
-    return (
-        len(heard) >= 20 and len(seed) >= 20 and SequenceMatcher(None, heard, seed).ratio() >= 0.82
-    )
+    return _is_prompt_echo(text, prompt if prompt is not None else STT_PROMPT)
 
 
 def _err(code: int, message: str, detail: str = "") -> JSONResponse:
