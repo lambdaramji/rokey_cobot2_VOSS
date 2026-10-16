@@ -8,11 +8,7 @@
 
 ## 시연 영상
 
-시연 녹화(ROS bag `~/voss_data/1015/demo2`, 17.6분)와 기록표는 레포 밖 팀 Drive `1015/` 에 있다(CLAUDE.md 규칙 8 — 촬영 데이터는 커밋하지 않는다). 영상 파일을 올리면 아래 자리에 링크한다.
-
-| 분류 스토리 | 팔레타이징 스토리 |
-|---|---|
-| [영상 자리] "헬로, 로키. 작업 시작" → 우선 분류 → 전체 분류 → 재확인·질문·보류 | [영상 자리] "청담, 역삼, 대치 순서로 실어줘" → 되읽기 TTS → 16칸 적재 → 완료 안내 |
+**[▶ 전체 시연 영상 (3분 27초)](docs/presentations/1016_최종발표/videos/C-3협동2_김학민_남현지_박병후_정의석_전체영상.mp4)** — 분류 스토리("헬로, 로키. 작업 시작" → 우선 분류 → 전체 분류 → 재확인·질문·보류)와 팔레타이징 스토리(배송 순서 지시 → 되읽기 TTS → 16칸 적재 → 완료 안내). 최종 발표 자료는 [PPT](docs/presentations/1016_최종발표/C-3협동2_김학민_남현지_박병후_정의석.pptx)(18·21번 슬라이드에 장면별 영상 포함). 영상은 GitHub 용량 한도 때문에 다시 압축한 판(1080p)이고, 원본 화질과 시연 녹화(ROS bag `~/voss_data/1015/demo2`, 17.6분)·기록표는 팀 Drive 에 있다.
 
 시연 절차와 각 단계의 발화·기대 동작은 [시연 대본](docs/demo-script.md), 결과 수치는 [measurements-1015](docs/measurements-1015.md)에 있다.
 
@@ -308,6 +304,8 @@ scripts/voss_down.sh                     # 역순 종료 (RUNNING 중이면 거�
 
 실기 전 체크: `ros2 topic echo /voss/robot/state --once` 가 `connected: true` · `state: READY`, `/voss/log/status` 가 `OK`, `/voss/sort/state` 가 `ready: true`. 브라우저 `http://127.0.0.1` 에서 **시작** 또는 "헬로, 로키. 작업 시작". 시연 절차는 [시연 대본](docs/demo-script.md), 단계별 런북은 [docs/g0-runbook.md](docs/g0-runbook.md), 두 PC 배치는 [docs/interfaces/deployment_two_pc_trial.md](docs/interfaces/deployment_two_pc_trial.md).
 
+처음부터 다시 세울 때 필요한 버전·레포 밖 파일·순서는 [docs/reproduce.md](docs/reproduce.md) 에 모았다.
+
 ### 웹 명령
 
 ```
@@ -356,6 +354,8 @@ palletize  <동>,<동>,<동> 순서로 팔레트 적재
     ├── plan.md · pending-decisions.md · conventions.md
     ├── g0-runbook.md · g1-gate.md · sprint2-gate.md · demo-script.md
     ├── setup/                      개발 환경 · Drive 구조
+    ├── presentations/              최종 발표 PPT · 전체 시연 영상 (압축본)
+    ├── reproduce.md                처음부터 다시 구현하기 — 코드 기준점 · 외부 의존성 버전 · 레포 밖 파일
     ├── testing/ · verification/    음성-웹 연동 시험 · 팔레타이징 검증 보고
     └── requirements/sprint2/workbench_v1.5.png   작업대 구성도
 ```
