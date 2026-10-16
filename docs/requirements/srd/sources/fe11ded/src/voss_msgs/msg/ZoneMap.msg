@@ -1,0 +1,2 @@
+ZoneMapEntry[] entries
+string version

@@ -1,0 +1,92 @@
+{
+  "checked_kst": "2026-10-07",
+  "result": "pass",
+  "counts": {
+    "SYS": 70,
+    "VT": 70,
+    "IC": 18,
+    "TBD": 26,
+    "MC": 34,
+    "pair_occurrences": 66,
+    "followups": 16,
+    "Word": 6,
+    "Markdown": 6
+  },
+  "preserved_requirement_IDs": true,
+  "all_6_issues_closed": true,
+  "pair_counts": [
+    14,
+    15,
+    14,
+    12,
+    7,
+    4
+  ],
+  "source_git_blob_exact_matches": "19/19 (main@671c67f)",
+  "original_v02_unchanged": "43/45 원본 유지. ZIP 2개는 PR #56 head 고정 링크로 대체, v0.2-r2/README.md의 ZIP 링크 2줄만 변경",
+  "brd_v11_v12_requirement_rows": {
+    "rows": 45,
+    "differences": 0
+  },
+  "semantic_rules": {
+    "ISO 구성 유지": true,
+    "촬영 관측 중심/TCP 목표 분리": true,
+    "동적 위치 G0 필수": true,
+    "pose 응답 수신 시각": true,
+    "최소 정지 계약": true,
+    "원래 질문 box_id": true,
+    "commit 증거 정정": true,
+    "DB 공식 집계 REST": true,
+    "부분 실패/용량/수치 후속": true,
+    "정상/예외/작업자 대기": true,
+    "100ms와 중단 분리": true,
+    "C 선택": true,
+    "r2 상태 정정": true
+  },
+  "documents": [
+    {
+      "document": "00_배포_사용안내",
+      "word_tables": 1,
+      "word_paragraphs": 7,
+      "markdown_word_body_text_identical": true,
+      "word_zip_integrity": true
+    },
+    {
+      "document": "01_VOSS_SRD_v1.0",
+      "word_tables": 19,
+      "word_paragraphs": 750,
+      "markdown_word_body_text_identical": true,
+      "word_zip_integrity": true
+    },
+    {
+      "document": "02_상호확인_합의_종합",
+      "word_tables": 2,
+      "word_paragraphs": 212,
+      "markdown_word_body_text_identical": true,
+      "word_zip_integrity": true
+    },
+    {
+      "document": "03_남은_결정_구현_실측_대장",
+      "word_tables": 0,
+      "word_paragraphs": 124,
+      "markdown_word_body_text_identical": true,
+      "word_zip_integrity": true
+    },
+    {
+      "document": "04_검증카드_70개요구사항_추적표",
+      "word_tables": 1,
+      "word_paragraphs": 5,
+      "markdown_word_body_text_identical": true,
+      "word_zip_integrity": true
+    },
+    {
+      "document": "05_BRD_v1.1_v1.2_대조기록",
+      "word_tables": 1,
+      "word_paragraphs": 3,
+      "markdown_word_body_text_identical": true,
+      "word_zip_integrity": true
+    }
+  ],
+  "limits": "정적 문서·원본·Word 구조/본문 동일성 검사. 실기 시험·전체 문서 승인·Word 페이지별 시각 렌더링은 별도. r1 재검증: Markdown↔Word 본문 일치(목록 번호 제외), ID 수 유지, Word ZIP 무결성.",
+  "revision": "v1.0 (기준 문서, main@671c67f)"
+}

@@ -1,92 +1,61 @@
 {
-  "checked_kst": "2026-10-07",
+  "checked_kst": "2026-10-16",
   "result": "pass",
-  "counts": {
-    "SYS": 70,
-    "VT": 70,
-    "IC": 18,
-    "TBD": 26,
-    "MC": 34,
-    "pair_occurrences": 66,
-    "followups": 16,
-    "Word": 6,
-    "Markdown": 6
+  "mechanical_checks": {
+    "SYS 카드 96장·중복 없음": "PASS — 96장, 중복 []",
+    "SYS ID 범위 빠짐 없음(FR-001~050 등)": "PASS — []",
+    "v1.0 SYS 70 모두 보존": "PASS — []",
+    "v1.0 카드 단계·담당 유지": "PASS — []",
+    "v1.0 카드 VT 번호 유지": "PASS — []",
+    "VT 1:1(96, 중복 없음, 001~096)": "PASS",
+    "신규 VT 가 P2 골격 표 대응(071~096)": "PASS — []",
+    "카드 상태 값이 범례 안": "PASS — []",
+    "v2.0 변경 판정 값이 정의 안": "PASS — []",
+    "IC 21개(18 + 신규 3)": "PASS — 21: ['IC-CMD-01', 'IC-CONFIG-01', 'IC-DB-01', 'IC-DEVICE-01', 'IC-LAUNCH-01', 'IC-MQTT-01', 'IC-OPTION-01', 'IC-PALLET-01', 'IC-PALLET-02', 'IC-PICK-01', 'IC-RESULT-01', 'IC-ROBOT-01', 'IC-ROBOT-02', 'IC-ROBOT-03', 'IC-STATE-01', 'IC-STATS-01', 'IC-VISION-01', 'IC-VISION-02', 'IC-VISION-03', 'IC-VISION-04', 'IC-VOICE-01']",
+    "TBD-001~035 표": "PASS — 35",
+    "본문이 가리키는 TBD 가 모두 있음": "PASS — []",
+    "03 대장 F-01~18": "PASS — ['F-01', 'F-02', 'F-03', 'F-04', 'F-05', 'F-06', 'F-07', 'F-08', 'F-09', 'F-10', 'F-11', 'F-12', 'F-13', 'F-14', 'F-15', 'F-16', 'F-17', 'F-18']",
+    "본문·03 이 가리키는 F 가 모두 있음": "PASS — []",
+    "본문이 가리키는 SYS ID 가 모두 있음": "PASS — []",
+    "02 카드 96행·상태 = 본문": "PASS — []",
+    "04 VT 96행·상태 = 본문": "PASS — []",
+    "§8.4 단계별 합계 = 카드": "PASS — ('31', '37', '2', '26', '96')",
+    "§9 추적표 96행": "PASS — set()",
+    "§9.3 이 BRD v1.7(Markdown 사본) TR·NFR 전부 포함": "PASS — BRD 73개, 9.3 73개, 빠짐 []",
+    "본문 ROS 이름이 fe11ded 인터페이스 문서에 있음": "PASS — []",
+    "본문 MQTT 토픽이 mqtt.md 에 있음": "PASS — []",
+    "본문이 쓰는 메시지 필드가 voss_msgs 에 있음": "PASS — []",
+    "본문 설정값이 fe11ded voss_config 와 같음": "PASS — []",
+    "belt_servo retry.max_attempts 1·hold_width 44.0": "PASS",
+    "금지 용어 \"31 mm 면\" 없음": "PASS — []",
+    "상대 링크(archive/v0.2-r2·sources 제외)": "PASS — \n    ",
+    "본문·00·README 에 \"(잠정)\" 표기": "PASS",
+    "archive/v1.0 해시 53개 일치": "PASS — []"
   },
-  "preserved_requirement_IDs": true,
-  "all_6_issues_closed": true,
-  "pair_counts": [
-    14,
-    15,
-    14,
-    12,
-    7,
-    4
-  ],
-  "source_git_blob_exact_matches": "19/19 (main@671c67f)",
-  "original_v02_unchanged": "43/45 원본 유지. ZIP 2개는 PR #56 head 고정 링크로 대체, v0.2-r2/README.md의 ZIP 링크 2줄만 변경",
-  "brd_v11_v12_requirement_rows": {
-    "rows": 45,
-    "differences": 0
+  "independent_review": {
+    "reviewer": "독립 재검 서브에이전트(Opus, 읽기 전용)",
+    "fact_samples": "약 55건 원문 대조",
+    "findings": {
+      "high": 4,
+      "medium": 17,
+      "low": 18
+    },
+    "applied": 37,
+    "deferred": [
+      "#37 복합 요구 하위 조건 분해(담당자 확인 때)",
+      "#38 FR-048 정확도 합격 수치(결정 사항)"
+    ],
+    "high_items_verified_against_source": true
   },
-  "semantic_rules": {
-    "ISO 구성 유지": true,
-    "촬영 관측 중심/TCP 목표 분리": true,
-    "동적 위치 G0 필수": true,
-    "pose 응답 수신 시각": true,
-    "최소 정지 계약": true,
-    "원래 질문 box_id": true,
-    "commit 증거 정정": true,
-    "DB 공식 집계 REST": true,
-    "부분 실패/용량/수치 후속": true,
-    "정상/예외/작업자 대기": true,
-    "100ms와 중단 분리": true,
-    "C 선택": true,
-    "r2 상태 정정": true
+  "tests_run": {
+    "what": "src/voss_manager/test/test_pallet_plan.py·test_verify_palletizing.py·test_pallet_fsm.py",
+    "commit": "fe11ded",
+    "result": "88 passed",
+    "where": "개인 PC(로봇 없음)"
   },
-  "documents": [
-    {
-      "document": "00_배포_사용안내",
-      "word_tables": 1,
-      "word_paragraphs": 7,
-      "markdown_word_body_text_identical": true,
-      "word_zip_integrity": true
-    },
-    {
-      "document": "01_VOSS_SRD_v1.0",
-      "word_tables": 19,
-      "word_paragraphs": 750,
-      "markdown_word_body_text_identical": true,
-      "word_zip_integrity": true
-    },
-    {
-      "document": "02_상호확인_합의_종합",
-      "word_tables": 2,
-      "word_paragraphs": 212,
-      "markdown_word_body_text_identical": true,
-      "word_zip_integrity": true
-    },
-    {
-      "document": "03_남은_결정_구현_실측_대장",
-      "word_tables": 0,
-      "word_paragraphs": 124,
-      "markdown_word_body_text_identical": true,
-      "word_zip_integrity": true
-    },
-    {
-      "document": "04_검증카드_70개요구사항_추적표",
-      "word_tables": 1,
-      "word_paragraphs": 5,
-      "markdown_word_body_text_identical": true,
-      "word_zip_integrity": true
-    },
-    {
-      "document": "05_BRD_v1.1_v1.2_대조기록",
-      "word_tables": 1,
-      "word_paragraphs": 3,
-      "markdown_word_body_text_identical": true,
-      "word_zip_integrity": true
-    }
-  ],
-  "limits": "정적 문서·원본·Word 구조/본문 동일성 검사. 실기 시험·전체 문서 승인·Word 페이지별 시각 렌더링은 별도. r1 재검증: Markdown↔Word 본문 일치(목록 번호 제외), ID 수 유지, Word ZIP 무결성.",
-  "revision": "v1.0 (기준 문서, main@671c67f)"
+  "not_done": [
+    "Word 렌더링 육안 확인(이 PC 에 LibreOffice 없음)",
+    "담당자 확인·PL 기준선 승인",
+    "실기 시험(이 문서 작성 중 장비를 작동하지 않음)"
+  ]
 }

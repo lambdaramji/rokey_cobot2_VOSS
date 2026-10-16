@@ -1,31 +1,23 @@
-# VOSS SRD v1.0
+# VOSS SRD v2.0 (잠정)
 
-**게시일:** 2026-10-07(KST) · **관리 이슈:** [#6](https://github.com/lambdaramji/rokey_cobot2_VOSS/issues/6)
+**작성일:** 2026-10-16(KST) · **상태:** 잠정 — 작성자 검토 중, 팀 기준선 승인(PL)·담당자 확인 전 · **기준:** BRD v1.7 레포판(PR old#166), main `fe11ded`
 
-#50~#55 전체 댓글과 최종 정정을 반영한 시스템 요구사항 명세와 근거 자료다. ISO/IEC/IEEE 29148:2018 참고 구성과 70개 SYS·70개 VT·18개 IC·26개 TBD·34개 MC ID를 유지했다.
+Sprint 2(팔레타이징·음성 시스템 기동·추종·파지 고도화)와 10/15 시연 뒤 상태를 반영한 시스템 요구사항 명세와 근거 자료다. ISO/IEC/IEEE 29148:2018 SyRS 참고 구성과 v1.0 의 ID 를 유지하고(삭제·재사용·폐기 없음) 신규 SYS 26·VT 26·IC 3·TBD 9·F 2 를 붙였다. 요구사항마다 기준 시점의 구현·검증 상태와 증거 출처를 적었다.
 
 | 읽을 자료 | Markdown | Word |
 |---|---|---|
 | 배포·사용 안내 | [00 안내](markdown/00_배포_사용안내.md) | [Word](word/00_배포_사용안내.docx) |
-| **SRD v1.0 본문** | [01 SRD](markdown/01_VOSS_SRD_v1.0.md) | [Word](word/01_VOSS_SRD_v1.0.docx) |
-| 34개 MC 합의 종합·근거 | [02 합의 종합](markdown/02_상호확인_합의_종합.md) | [Word](word/02_상호확인_합의_종합.docx) |
-| 16개 남은 결정·구현·실측 | [03 후속 대장](markdown/03_남은_결정_구현_실측_대장.md) | [Word](word/03_남은_결정_구현_실측_대장.docx) |
-| 70개 SYS/VT 검증 추적표 | [04 검증 추적표](markdown/04_검증카드_70개요구사항_추적표.md) | [Word](word/04_검증카드_70개요구사항_추적표.docx) |
-| BRD v1.1/v1.2/v1.3 대조 | [05 BRD 대조](markdown/05_BRD_v1.1_v1.2_대조기록.md) | [Word](word/05_BRD_v1.1_v1.2_대조기록.docx) |
+| **SRD v2.0 본문** | [01 SRD](markdown/01_VOSS_SRD_v2.0.md) | [Word](word/01_VOSS_SRD_v2.0.docx) |
+| v1.0 → v2.0 변경 대장 | [02 변경 대장](markdown/02_v1.0_v2.0_변경대장.md) | [Word](word/02_v1.0_v2.0_변경대장.docx) |
+| 남은 결정·구현·실측(F-01~18) | [03 후속 대장](markdown/03_남은_결정_구현_실측_대장.md) | [Word](word/03_남은_결정_구현_실측_대장.docx) |
+| 96개 요구사항 검증 추적표 | [04 검증 추적표](markdown/04_검증_추적표_v2.0.md) | [Word](word/04_검증_추적표_v2.0.docx) |
+| BRD v1.3 → v1.7 대조 | [05 BRD 대조](markdown/05_BRD_v1.3_v1.7_대조기록.md) | [Word](word/05_BRD_v1.3_v1.7_대조기록.docx) |
 
-- 전체 자료 묶음이 필요하면 GitHub의 Download ZIP을 쓴다. 폴더와 같은 파일을 한 번 더 담던 ZIP은 PR #77 리뷰에 따라 뺐다(최초 게시본: [7e5e928 ZIP](https://github.com/lambdaramji/rokey_cobot2_VOSS/blob/7e5e92859cd452054ad62b7b83f0569ce123e8f2/docs/requirments/srd/VOSS_SRD_v0.3_%ED%95%A9%EC%9D%98%EB%B0%98%EC%98%81_%EC%A0%84%EC%B2%B4%EC%9E%90%EB%A3%8C.zip)).
-- [논리 구조도](assets/VOSS_v0.3_논리구조.png) · [상세 구조도](assets/VOSS_v0.3_논리구조_전체.png) · DOT 원본은 같은 폴더 (v0.3에서 그린 책임·경로 그림이며 v1.0에서 바뀐 경로는 없다)
-- [6개 이슈 전체 회신·이전 SRD·main 계약/IDL·BRD 근거](sources/) — 기준판 BRD는 [docs/requirements/VOSS_BRD_v1.3.docx](../VOSS_BRD_v1.3.docx)(#79), v1.2 Word는 [git 기록 e8dd5e5](https://github.com/lambdaramji/rokey_cobot2_VOSS/blob/e8dd5e5/docs/requirements/VOSS_BRD_v1.2.docx)에 있다
-- [문서 검증 결과](문서검증결과.json) · [원본 파일 해시](파일해시_manifest.json) · [합의/출처 manifest](manifest.json)
-- [PR #56의 v0.2 자료 보관](archive/) — 이전 회신 원문·취합 양식·초안 등 45개 중 ZIP 2개를 뺀 43개 파일을 원본 그대로 보존(ZIP 2개는 PR #56 head 고정 링크)
-- 원본 보존 자료(`파일해시_manifest.json` 대장의 파일과 `archive/`)는 10/08 GitHub 아이디 변경(`yujh5537` → `lambdaramji`, #98) 뒤에도 **원문 그대로** 둔다. 옛 링크는 GitHub 가 새 주소로 넘겨 준다 — 고치면 대장 sha256 과 어긋난다.
+- [근거 자료](sources/README.md) — fe11ded 계약 사본, 작성 원자료(P1) · [문서 검증 결과](문서검증결과.json) · [파일 해시](파일해시_manifest.json) · [manifest](manifest.json)
+- 그림(배포·논리 구성도)은 아직 넣지 않았다. 본문 부록 F 의 자리에 추후 넣는다.
+- **이전 판:** [v1.0 (2026-10-07, BRD v1.3 기준)](archive/v1.0/README.md) — 원문·해시 그대로 옮겼다(`archive/v1.0/파일해시_manifest.json`). [v0.2-r2](archive/README.md)
+- v1.0 안의 옛 링크(`yujh5537` → `lambdaramji` 넘겨 주기)와 이슈 번호는 고치지 않았다. v2.0 의 근거 번호는 `old#n`(lambdaramji/rokey_cobot2_VOSS)·`_2#n`(임시 레포 rokeyhak/rokey_cobot2_VOSS_2, ADR-0015)으로 구분한다.
 
-## 현재 상태와 다음 작업
+## 확정까지 남은 일
 
-v1.0은 6개 상호확인 합의, PR #77 리뷰, 독립 재검 채택분, main@671c67f 재대조를 반영한 **기준 문서**다(작업 중 v0.4로 부르던 판). 당분간 이 판을 기준으로 삼고, 이후 변경은 SRD §9.2 절차로 v1.x에 기록한다. 팀 전체 기준선 승인(PL, #6), 런타임 구현, 실기 수락은 각각 기록한다. RETURN_FAILED 업무 결과·HOLD/RECHECK 용량·T34 파지 수치·stop 호출 주체·manager 로그·질문 회차·미반영 IDL·실측은 03 후속 대장에서 관리한다.
-
-A 실제 1박스 흐름을 먼저 연결한다. B 음성·HMI·예외·이력 등은 최종 필수이며 C 규칙 변경·신규 구역 교시는 G0 이후 선택한다. 첫 실기 실험/실측 목표는 10/07, 실제 인식→이동 중 픽업→적재→DB commit/동일 box 조회→복귀 G0 통과 목표는 10/10이다.
-
-본문 대조 기준은 main@`671c67f3a5e4f1de46dec3f34b4cf2975727c975`이다(v0.3은 fff1121). `sources/current_main/`은 그 시점 계약 사본 19개이며 실행 계약의 실제 변경은 `docs/interfaces/`·`src/voss_msgs/`·설정/구현 담당 PR에서 동기화한다. 이번 문서 게시가 미반영 IDL·미수행 실측의 완료를 뜻하지 않는다.
-
-`markdown/00_배포_사용안내.md`의 “#6/#56을 갱신하지 않았다”는 v0.3 작성 시점 기록이다. 게시 이후 진행 상태와 PR 연결은 이슈 #6에서 확인한다. `sources/열린_PR68_web_api_참고.md`·`열린_PR70_파지방향_선택보고.json`은 v0.3 작성 당시 열린 PR 기록이며 두 PR은 이후 머지됐다. 저장 위치는 `docs/requirements/srd/`이며 `docs/requirements/README.md`에서 링크한다. PR #77 첫 커밋(7e5e928)의 `docs/requirments/`는 의도하지 않은 철자 오타여서 리뷰에 따라 옮겼다.
+본문 부록 A 절차를 따른다: 담당자 확인(02 의 수정·신규 카드) → TBD-027~035 결정 → 문서 검증(ID·추적·계약 대조·독립 재검) → PL 기준선 승인 → "(잠정)" 제거·Word·manifest 생성.
