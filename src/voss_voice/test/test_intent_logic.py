@@ -108,12 +108,18 @@ def test_priority_needs_known_dong():
     )
 
 
-@pytest.mark.parametrize("text,dong", [
-    ("A구역부터 분류해.", "역삼동"), ("에이 구역 먼저 분류해", "역삼동"),
-    ("B 먼저 선별해", "대치동"), ("비 구역 우선 처리해줘", "대치동"),
-    ("C구역부터 분류해주세요", "청담동"), ("씨 구역 먼저 해", "청담동"),
-    ("우선 구역을 A로 설정해", "역삼동"),
-])
+@pytest.mark.parametrize(
+    "text,dong",
+    [
+        ("A구역부터 분류해.", "역삼동"),
+        ("에이 구역 먼저 분류해", "역삼동"),
+        ("B 먼저 선별해", "대치동"),
+        ("비 구역 우선 처리해줘", "대치동"),
+        ("C구역부터 분류해주세요", "청담동"),
+        ("씨 구역 먼저 해", "청담동"),
+        ("우선 구역을 A로 설정해", "역삼동"),
+    ],
+)
 def test_zone_priority_without_llm(text, dong):
     result = decide_zone_priority(text, VIEW)
     assert result.intent["type"] == "priority"
@@ -121,7 +127,9 @@ def test_zone_priority_without_llm(text, dong):
     assert result.intent["raw_text"] == text
 
 
-@pytest.mark.parametrize("text", ["A구역부터 보류해", "A구역 먼저 분류하지 마", "A말고 B 먼저 분류해", "A구역으로 보내"])
+@pytest.mark.parametrize(
+    "text", ["A구역부터 보류해", "A구역 먼저 분류하지 마", "A말고 B 먼저 분류해", "A구역으로 보내"]
+)
 def test_zone_priority_does_not_guess_for_hold_or_complex_command(text):
     assert decide_zone_priority(text, VIEW) is None
 
@@ -162,9 +170,17 @@ def test_llm_allowed_payload():
     assert "역삼" in a["aliases"]["역삼동"]
 
 
-@pytest.mark.parametrize("spoken,dong", [("A구역", "역삼동"), ("에이", "역삼동"),
-                                      ("B", "대치동"), ("비구역", "대치동"),
-                                      ("C구역", "청담동"), ("씨", "청담동")])
+@pytest.mark.parametrize(
+    "spoken,dong",
+    [
+        ("A구역", "역삼동"),
+        ("에이", "역삼동"),
+        ("B", "대치동"),
+        ("비구역", "대치동"),
+        ("C구역", "청담동"),
+        ("씨", "청담동"),
+    ],
+)
 def test_zone_name_resolves_to_unique_dong(spoken, dong):
     assert VIEW.canonical_dong(spoken) == dong
     answer = decide_bare_dong(spoken, VIEW, "ASKING", "box-12")
@@ -180,7 +196,11 @@ def test_palletize_zone_order():
     from voss_voice.intent_logic import decide_palletize
     result = decide_palletize("A, B, C 구역 순서로 팔레트에 실어줘", VIEW)
     assert result.intent["route"] == ["역삼동", "대치동", "청담동"]
-    assert decide_palletize("에이, 비, 씨 구역 순서로 실어줘", VIEW).intent["route"] == ["역삼동", "대치동", "청담동"]
+    assert decide_palletize("에이, 비, 씨 구역 순서로 실어줘", VIEW).intent["route"] == [
+        "역삼동",
+        "대치동",
+        "청담동",
+    ]
     assert decide_palletize("팔레트 비우고 실어줘", VIEW).say == "동 이름을 순서대로 말씀해 주세요."
 
 
