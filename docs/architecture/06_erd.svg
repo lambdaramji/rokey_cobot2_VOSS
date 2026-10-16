@@ -1,0 +1,237 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2620" height="1010" viewBox="0 0 2620 1010" font-family="Noto Sans CJK KR, Noto Sans KR, sans-serif">
+<pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0 H0 V40" fill="none" stroke="#0b1220" stroke-width="1"/></pattern>
+<rect width="2620" height="1010" fill="#020617"/><rect width="2620" height="1010" fill="url(#grid)"/>
+<text x="40" y="46" font-size="26" font-weight="700" fill="#f8fafc">VOSS ERD — PostgreSQL 16 · 테이블 3 · 컬럼 38 (01_schema.sql + 20261012_sprint2_pallet.sql)</text>
+<text x="40" y="76" font-size="14" fill="#94a3b8">NN = NOT NULL · '' = DEFAULT '' · CHECK = 허용값 제약. sort_log → pallet_log 는 box_id 논리 참조(스풀 지연 때문에 FK 를 걸지 않음), session_plan → sort_log 는 session_id 논리 참조.</text>
+<rect x="60" y="110" width="1100" height="660" rx="10" fill="#0b1220" stroke="#a78bfa" stroke-width="2"/>
+<rect x="60" y="110" width="1100" height="36" rx="10" fill="#2b1a5c"/>
+<text x="74" y="134" font-size="18" font-weight="700" fill="#f8fafc">⛁ sort_log</text>
+<text x="1146" y="134" font-size="12" fill="#c4b5fd" text-anchor="end">SortResult 1건 = 1행 · writer voss_logger · reader voss_web</text>
+<rect x="60" y="146" width="1100" height="24" fill="#111827"/>
+<text x="70" y="163" font-size="12" font-weight="700" fill="#94a3b8">컬럼</text>
+<text x="280" y="163" font-size="12" font-weight="700" fill="#94a3b8">타입</text>
+<text x="410" y="163" font-size="12" font-weight="700" fill="#94a3b8">키·제약</text>
+<text x="520" y="163" font-size="12" font-weight="700" fill="#94a3b8">의미 · 허용값</text>
+<rect x="60" y="170" width="1100" height="30" fill="#0b1220"/>
+<text x="70" y="190" font-size="13" font-weight="700" fill="#f8fafc">box_id</text>
+<text x="280" y="190" font-size="13" font-weight="400" fill="#7dd3fc">varchar(32)</text>
+<text x="410" y="190" font-size="13" font-weight="400" fill="#fcd34d">PK</text>
+<text x="520" y="190" font-size="13" font-weight="400" fill="#cbd5e1">&lt;session_id&gt;-NNN (24자)</text>
+<rect x="60" y="200" width="1100" height="30" fill="#0f172a"/>
+<text x="70" y="220" font-size="13" font-weight="500" fill="#f8fafc">session_id</text>
+<text x="280" y="220" font-size="13" font-weight="400" fill="#7dd3fc">varchar(24)</text>
+<text x="410" y="220" font-size="13" font-weight="400" fill="#cbd5e1">NN</text>
+<text x="520" y="220" font-size="13" font-weight="400" fill="#cbd5e1">YYYYMMDDTHHMMSS-xxxx</text>
+<rect x="60" y="230" width="1100" height="30" fill="#0b1220"/>
+<text x="70" y="250" font-size="13" font-weight="500" fill="#f8fafc">track_id</text>
+<text x="280" y="250" font-size="13" font-weight="400" fill="#7dd3fc">integer</text>
+<text x="410" y="250" font-size="13" font-weight="400" fill="#cbd5e1"></text>
+<text x="520" y="250" font-size="13" font-weight="400" fill="#cbd5e1">BoxTrack.track_id (참고)</text>
+<rect x="60" y="260" width="1100" height="30" fill="#0f172a"/>
+<text x="70" y="280" font-size="13" font-weight="500" fill="#f8fafc">code</text>
+<text x="280" y="280" font-size="13" font-weight="400" fill="#7dd3fc">varchar(16)</text>
+<text x="410" y="280" font-size="13" font-weight="400" fill="#cbd5e1">NN &#x27;&#x27;</text>
+<text x="520" y="280" font-size="13" font-weight="400" fill="#cbd5e1">S07-01 · 02 · 03</text>
+<rect x="60" y="290" width="1100" height="30" fill="#0b1220"/>
+<text x="70" y="310" font-size="13" font-weight="500" fill="#f8fafc">dong</text>
+<text x="280" y="310" font-size="13" font-weight="400" fill="#7dd3fc">varchar(16)</text>
+<text x="410" y="310" font-size="13" font-weight="400" fill="#cbd5e1">NN &#x27;&#x27;</text>
+<text x="520" y="310" font-size="13" font-weight="400" fill="#cbd5e1">역삼동 · 대치동 · 청담동</text>
+<rect x="60" y="320" width="1100" height="30" fill="#0f172a"/>
+<text x="70" y="340" font-size="13" font-weight="500" fill="#f8fafc">confidence</text>
+<text x="280" y="340" font-size="13" font-weight="400" fill="#7dd3fc">real</text>
+<text x="410" y="340" font-size="13" font-weight="400" fill="#cbd5e1"></text>
+<text x="520" y="340" font-size="13" font-weight="400" fill="#cbd5e1">0~1</text>
+<rect x="60" y="350" width="1100" height="30" fill="#0b1220"/>
+<text x="70" y="370" font-size="13" font-weight="500" fill="#f8fafc">decided_by</text>
+<text x="280" y="370" font-size="13" font-weight="400" fill="#7dd3fc">varchar(8)</text>
+<text x="410" y="370" font-size="13" font-weight="400" fill="#cbd5e1">NN CHECK</text>
+<text x="520" y="370" font-size="13" font-weight="400" fill="#cbd5e1">OCR · RECHECK · OPERATOR · NONE</text>
+<rect x="60" y="380" width="1100" height="30" fill="#0f172a"/>
+<text x="70" y="400" font-size="13" font-weight="500" fill="#f8fafc">zone</text>
+<text x="280" y="400" font-size="13" font-weight="400" fill="#7dd3fc">varchar(8)</text>
+<text x="410" y="400" font-size="13" font-weight="400" fill="#cbd5e1">NN CHECK</text>
+<text x="520" y="400" font-size="13" font-weight="400" fill="#cbd5e1">A · B · C · RECHECK · HOLD · &#x27;&#x27;</text>
+<rect x="60" y="410" width="1100" height="30" fill="#0b1220"/>
+<text x="70" y="430" font-size="13" font-weight="500" fill="#f8fafc">result</text>
+<text x="280" y="430" font-size="13" font-weight="400" fill="#7dd3fc">varchar(8)</text>
+<text x="410" y="430" font-size="13" font-weight="400" fill="#cbd5e1">NN CHECK</text>
+<text x="520" y="430" font-size="13" font-weight="400" fill="#cbd5e1">PLACED · HELD · FAILED · PASSED</text>
+<rect x="60" y="440" width="1100" height="30" fill="#0f172a"/>
+<text x="70" y="460" font-size="13" font-weight="500" fill="#f8fafc">reason</text>
+<text x="280" y="460" font-size="13" font-weight="400" fill="#7dd3fc">varchar(24)</text>
+<text x="410" y="460" font-size="13" font-weight="400" fill="#cbd5e1">NN &#x27;&#x27;</text>
+<text x="520" y="460" font-size="13" font-weight="400" fill="#cbd5e1">LOW_CONF · NO_ANSWER · NON_TARGET · STOPPED · DEVICE_ERROR · …</text>
+<rect x="60" y="470" width="1100" height="30" fill="#0b1220"/>
+<text x="70" y="490" font-size="13" font-weight="500" fill="#f8fafc">raw_text</text>
+<text x="280" y="490" font-size="13" font-weight="400" fill="#7dd3fc">text</text>
+<text x="410" y="490" font-size="13" font-weight="400" fill="#cbd5e1">NN &#x27;&#x27;</text>
+<text x="520" y="490" font-size="13" font-weight="400" fill="#cbd5e1">OCR 원문</text>
+<rect x="60" y="500" width="1100" height="30" fill="#0f172a"/>
+<text x="70" y="520" font-size="13" font-weight="500" fill="#f8fafc">second_region</text>
+<text x="280" y="520" font-size="13" font-weight="400" fill="#7dd3fc">varchar(16)</text>
+<text x="410" y="520" font-size="13" font-weight="400" fill="#cbd5e1">NN &#x27;&#x27;</text>
+<text x="520" y="520" font-size="13" font-weight="400" fill="#cbd5e1">dong_alt (2위 후보)</text>
+<rect x="60" y="530" width="1100" height="30" fill="#0b1220"/>
+<text x="70" y="550" font-size="13" font-weight="500" fill="#f8fafc">rule_version</text>
+<text x="280" y="550" font-size="13" font-weight="400" fill="#7dd3fc">varchar(16)</text>
+<text x="410" y="550" font-size="13" font-weight="400" fill="#cbd5e1">NN &#x27;&#x27;</text>
+<text x="520" y="550" font-size="13" font-weight="400" fill="#cbd5e1">ZoneMap.version</text>
+<rect x="60" y="560" width="1100" height="30" fill="#0f172a"/>
+<text x="70" y="580" font-size="13" font-weight="500" fill="#f8fafc">attempts</text>
+<text x="280" y="580" font-size="13" font-weight="400" fill="#7dd3fc">smallint</text>
+<text x="410" y="580" font-size="13" font-weight="400" fill="#cbd5e1">NN 0</text>
+<text x="520" y="580" font-size="13" font-weight="400" fill="#cbd5e1">파지 시도 횟수</text>
+<rect x="60" y="590" width="1100" height="30" fill="#0b1220"/>
+<text x="70" y="610" font-size="13" font-weight="500" fill="#f8fafc">retries</text>
+<text x="280" y="610" font-size="13" font-weight="400" fill="#7dd3fc">smallint</text>
+<text x="410" y="610" font-size="13" font-weight="400" fill="#cbd5e1">GENERATED</text>
+<text x="520" y="610" font-size="13" font-weight="400" fill="#cbd5e1">GREATEST(attempts-1, 0) STORED</text>
+<rect x="60" y="620" width="1100" height="30" fill="#0f172a"/>
+<text x="70" y="640" font-size="13" font-weight="500" fill="#f8fafc">started_at</text>
+<text x="280" y="640" font-size="13" font-weight="400" fill="#7dd3fc">timestamptz</text>
+<text x="410" y="640" font-size="13" font-weight="400" fill="#cbd5e1"></text>
+<text x="520" y="640" font-size="13" font-weight="400" fill="#cbd5e1">첫 관측 (ROS Time 0 → NULL)</text>
+<rect x="60" y="650" width="1100" height="30" fill="#0b1220"/>
+<text x="70" y="670" font-size="13" font-weight="500" fill="#f8fafc">finished_at</text>
+<text x="280" y="670" font-size="13" font-weight="400" fill="#7dd3fc">timestamptz</text>
+<text x="410" y="670" font-size="13" font-weight="400" fill="#cbd5e1">NN</text>
+<text x="520" y="670" font-size="13" font-weight="400" fill="#cbd5e1">SortResult.stamp · cycle_s = finished_at − started_at</text>
+<rect x="60" y="680" width="1100" height="30" fill="#0f172a"/>
+<text x="70" y="700" font-size="13" font-weight="500" fill="#f8fafc">inserted_at</text>
+<text x="280" y="700" font-size="13" font-weight="400" fill="#7dd3fc">timestamptz</text>
+<text x="410" y="700" font-size="13" font-weight="400" fill="#cbd5e1">NN now()</text>
+<text x="520" y="700" font-size="13" font-weight="400" fill="#cbd5e1">트랜잭션 시작 시각</text>
+<rect x="60" y="710" width="1100" height="30" fill="#0b1220"/>
+<text x="70" y="730" font-size="13" font-weight="500" fill="#f8fafc">slot</text>
+<text x="280" y="730" font-size="13" font-weight="400" fill="#7dd3fc">smallint</text>
+<text x="410" y="730" font-size="13" font-weight="400" fill="#cbd5e1">CHECK ≥0</text>
+<text x="520" y="730" font-size="13" font-weight="400" fill="#cbd5e1">격자 칸 (Sprint 2 마이그레이션, −1 → NULL)</text>
+<text x="70" y="760" font-size="12" fill="#94a3b8">IDX (session_id, result) · IDX (finished_at)</text>
+<rect x="1460" y="110" width="1100" height="570" rx="10" fill="#0b1220" stroke="#a78bfa" stroke-width="2"/>
+<rect x="1460" y="110" width="1100" height="36" rx="10" fill="#2b1a5c"/>
+<text x="1474" y="134" font-size="18" font-weight="700" fill="#f8fafc">⛁ pallet_log</text>
+<text x="2546" y="134" font-size="12" fill="#c4b5fd" text-anchor="end">PalletResult 1건 = 1행 · Sprint 2 · PK (run_id, box_id)</text>
+<rect x="1460" y="146" width="1100" height="24" fill="#111827"/>
+<text x="1470" y="163" font-size="12" font-weight="700" fill="#94a3b8">컬럼</text>
+<text x="1680" y="163" font-size="12" font-weight="700" fill="#94a3b8">타입</text>
+<text x="1810" y="163" font-size="12" font-weight="700" fill="#94a3b8">키·제약</text>
+<text x="1920" y="163" font-size="12" font-weight="700" fill="#94a3b8">의미 · 허용값</text>
+<rect x="1460" y="170" width="1100" height="30" fill="#0b1220"/>
+<text x="1470" y="190" font-size="13" font-weight="700" fill="#f8fafc">run_id</text>
+<text x="1680" y="190" font-size="13" font-weight="400" fill="#7dd3fc">varchar(24)</text>
+<text x="1810" y="190" font-size="13" font-weight="400" fill="#fcd34d">PK</text>
+<text x="1920" y="190" font-size="13" font-weight="400" fill="#cbd5e1">팔레타이징 실행 ID</text>
+<rect x="1460" y="200" width="1100" height="30" fill="#0f172a"/>
+<text x="1470" y="220" font-size="13" font-weight="700" fill="#f8fafc">box_id</text>
+<text x="1680" y="220" font-size="13" font-weight="400" fill="#7dd3fc">varchar(32)</text>
+<text x="1810" y="220" font-size="13" font-weight="400" fill="#fcd34d">PK</text>
+<text x="1920" y="220" font-size="13" font-weight="400" fill="#cbd5e1">sort_log.box_id</text>
+<rect x="1460" y="230" width="1100" height="30" fill="#0b1220"/>
+<text x="1470" y="250" font-size="13" font-weight="500" fill="#f8fafc">session_id</text>
+<text x="1680" y="250" font-size="13" font-weight="400" fill="#7dd3fc">varchar(24)</text>
+<text x="1810" y="250" font-size="13" font-weight="400" fill="#cbd5e1">NN</text>
+<text x="1920" y="250" font-size="13" font-weight="400" fill="#cbd5e1"></text>
+<rect x="1460" y="260" width="1100" height="30" fill="#0f172a"/>
+<text x="1470" y="280" font-size="13" font-weight="500" fill="#f8fafc">dong</text>
+<text x="1680" y="280" font-size="13" font-weight="400" fill="#7dd3fc">varchar(16)</text>
+<text x="1810" y="280" font-size="13" font-weight="400" fill="#cbd5e1">NN &#x27;&#x27;</text>
+<text x="1920" y="280" font-size="13" font-weight="400" fill="#cbd5e1"></text>
+<rect x="1460" y="290" width="1100" height="30" fill="#0b1220"/>
+<text x="1470" y="310" font-size="13" font-weight="500" fill="#f8fafc">route_index</text>
+<text x="1680" y="310" font-size="13" font-weight="400" fill="#7dd3fc">smallint</text>
+<text x="1810" y="310" font-size="13" font-weight="400" fill="#cbd5e1">NN −1~2</text>
+<text x="1920" y="310" font-size="13" font-weight="400" fill="#cbd5e1">0 = 첫 배송지 · −1 = EXCLUDED</text>
+<rect x="1460" y="320" width="1100" height="30" fill="#0f172a"/>
+<text x="1470" y="340" font-size="13" font-weight="500" fill="#f8fafc">zone</text>
+<text x="1680" y="340" font-size="13" font-weight="400" fill="#7dd3fc">varchar(8)</text>
+<text x="1810" y="340" font-size="13" font-weight="400" fill="#cbd5e1">NN CHECK</text>
+<text x="1920" y="340" font-size="13" font-weight="400" fill="#cbd5e1">집은 구역 A · B · C</text>
+<rect x="1460" y="350" width="1100" height="30" fill="#0b1220"/>
+<text x="1470" y="370" font-size="13" font-weight="500" fill="#f8fafc">slot</text>
+<text x="1680" y="370" font-size="13" font-weight="400" fill="#7dd3fc">smallint</text>
+<text x="1810" y="370" font-size="13" font-weight="400" fill="#cbd5e1">NN ≥0</text>
+<text x="1920" y="370" font-size="13" font-weight="400" fill="#cbd5e1">집은 칸</text>
+<rect x="1460" y="380" width="1100" height="30" fill="#0f172a"/>
+<text x="1470" y="400" font-size="13" font-weight="500" fill="#f8fafc">pallet_slot</text>
+<text x="1680" y="400" font-size="13" font-weight="400" fill="#7dd3fc">smallint</text>
+<text x="1810" y="400" font-size="13" font-weight="400" fill="#cbd5e1">0~15</text>
+<text x="1920" y="400" font-size="13" font-weight="400" fill="#cbd5e1">(열−1)×4 + (층−1)×2 + (줄−1) · NULL = 미적재</text>
+<rect x="1460" y="410" width="1100" height="30" fill="#0b1220"/>
+<text x="1470" y="430" font-size="13" font-weight="500" fill="#f8fafc">pallet_col</text>
+<text x="1680" y="430" font-size="13" font-weight="400" fill="#7dd3fc">smallint</text>
+<text x="1810" y="430" font-size="13" font-weight="400" fill="#cbd5e1">1~4</text>
+<text x="1920" y="430" font-size="13" font-weight="400" fill="#cbd5e1">1 = 트럭 머리(−X) · 4 = 문</text>
+<rect x="1460" y="440" width="1100" height="30" fill="#0f172a"/>
+<text x="1470" y="460" font-size="13" font-weight="500" fill="#f8fafc">pallet_lane</text>
+<text x="1680" y="460" font-size="13" font-weight="400" fill="#7dd3fc">smallint</text>
+<text x="1810" y="460" font-size="13" font-weight="400" fill="#cbd5e1">1~2</text>
+<text x="1920" y="460" font-size="13" font-weight="400" fill="#cbd5e1"></text>
+<rect x="1460" y="470" width="1100" height="30" fill="#0b1220"/>
+<text x="1470" y="490" font-size="13" font-weight="500" fill="#f8fafc">pallet_layer</text>
+<text x="1680" y="490" font-size="13" font-weight="400" fill="#7dd3fc">smallint</text>
+<text x="1810" y="490" font-size="13" font-weight="400" fill="#cbd5e1">1~2</text>
+<text x="1920" y="490" font-size="13" font-weight="400" fill="#cbd5e1">2 = +27 mm</text>
+<rect x="1460" y="500" width="1100" height="30" fill="#0f172a"/>
+<text x="1470" y="520" font-size="13" font-weight="500" fill="#f8fafc">result</text>
+<text x="1680" y="520" font-size="13" font-weight="400" fill="#7dd3fc">varchar(8)</text>
+<text x="1810" y="520" font-size="13" font-weight="400" fill="#cbd5e1">NN CHECK</text>
+<text x="1920" y="520" font-size="13" font-weight="400" fill="#cbd5e1">DONE · FAILED · OVERFLOW · EXCLUDED</text>
+<rect x="1460" y="530" width="1100" height="30" fill="#0b1220"/>
+<text x="1470" y="550" font-size="13" font-weight="500" fill="#f8fafc">reason</text>
+<text x="1680" y="550" font-size="13" font-weight="400" fill="#7dd3fc">varchar(24)</text>
+<text x="1810" y="550" font-size="13" font-weight="400" fill="#cbd5e1">NN &#x27;&#x27;</text>
+<text x="1920" y="550" font-size="13" font-weight="400" fill="#cbd5e1">GRIP_FAIL · DROPPED · STOPPED · DEVICE_ERROR</text>
+<rect x="1460" y="560" width="1100" height="30" fill="#0f172a"/>
+<text x="1470" y="580" font-size="13" font-weight="500" fill="#f8fafc">attempts</text>
+<text x="1680" y="580" font-size="13" font-weight="400" fill="#7dd3fc">smallint</text>
+<text x="1810" y="580" font-size="13" font-weight="400" fill="#cbd5e1">NN 0</text>
+<text x="1920" y="580" font-size="13" font-weight="400" fill="#cbd5e1"></text>
+<rect x="1460" y="590" width="1100" height="30" fill="#0b1220"/>
+<text x="1470" y="610" font-size="13" font-weight="500" fill="#f8fafc">finished_at</text>
+<text x="1680" y="610" font-size="13" font-weight="400" fill="#7dd3fc">timestamptz</text>
+<text x="1810" y="610" font-size="13" font-weight="400" fill="#cbd5e1">NN</text>
+<text x="1920" y="610" font-size="13" font-weight="400" fill="#cbd5e1">PalletResult.stamp</text>
+<rect x="1460" y="620" width="1100" height="30" fill="#0f172a"/>
+<text x="1470" y="640" font-size="13" font-weight="500" fill="#f8fafc">inserted_at</text>
+<text x="1680" y="640" font-size="13" font-weight="400" fill="#7dd3fc">timestamptz</text>
+<text x="1810" y="640" font-size="13" font-weight="400" fill="#cbd5e1">NN now()</text>
+<text x="1920" y="640" font-size="13" font-weight="400" fill="#cbd5e1"></text>
+<text x="1470" y="670" font-size="12" fill="#94a3b8">IDX (session_id, box_id)</text>
+<rect x="1460" y="790" width="1100" height="150" rx="10" fill="#0b1220" stroke="#a78bfa" stroke-width="2"/>
+<rect x="1460" y="790" width="1100" height="36" rx="10" fill="#2b1a5c"/>
+<text x="1474" y="814" font-size="18" font-weight="700" fill="#f8fafc">⛁ session_plan</text>
+<text x="2546" y="814" font-size="12" fill="#c4b5fd" text-anchor="end">Spring Boot 전용 · voss_web 읽기/쓰기</text>
+<rect x="1460" y="826" width="1100" height="24" fill="#111827"/>
+<text x="1470" y="843" font-size="12" font-weight="700" fill="#94a3b8">컬럼</text>
+<text x="1680" y="843" font-size="12" font-weight="700" fill="#94a3b8">타입</text>
+<text x="1810" y="843" font-size="12" font-weight="700" fill="#94a3b8">키·제약</text>
+<text x="1920" y="843" font-size="12" font-weight="700" fill="#94a3b8">의미 · 허용값</text>
+<rect x="1460" y="850" width="1100" height="30" fill="#0b1220"/>
+<text x="1470" y="870" font-size="13" font-weight="700" fill="#f8fafc">session_id</text>
+<text x="1680" y="870" font-size="13" font-weight="400" fill="#7dd3fc">varchar(24)</text>
+<text x="1810" y="870" font-size="13" font-weight="400" fill="#fcd34d">PK</text>
+<text x="1920" y="870" font-size="13" font-weight="400" fill="#cbd5e1">&#x27;next&#x27; → 첫 voss/state 수신 시 세션 ID 로</text>
+<rect x="1460" y="880" width="1100" height="30" fill="#0f172a"/>
+<text x="1470" y="900" font-size="13" font-weight="500" fill="#f8fafc">planned</text>
+<text x="1680" y="900" font-size="13" font-weight="400" fill="#7dd3fc">integer</text>
+<text x="1810" y="900" font-size="13" font-weight="400" fill="#cbd5e1">NN 1~100</text>
+<text x="1920" y="900" font-size="13" font-weight="400" fill="#cbd5e1">투입 예정 수량 (HMI 스테퍼, 기본 10)</text>
+<rect x="1460" y="910" width="1100" height="30" fill="#0b1220"/>
+<text x="1470" y="930" font-size="13" font-weight="500" fill="#f8fafc">updated_at</text>
+<text x="1680" y="930" font-size="13" font-weight="400" fill="#7dd3fc">timestamptz</text>
+<text x="1810" y="930" font-size="13" font-weight="400" fill="#cbd5e1">NN now()</text>
+<text x="1920" y="930" font-size="13" font-weight="400" fill="#cbd5e1"></text>
+<path d="M1160 185.0 L1270.0 185.0 L1270.0 215.0 L1444 215.0" fill="none" stroke="#a78bfa" stroke-width="2.5" stroke-dasharray="8 6"/>
+<path d="M1444 215.0 L1460 206.0 M1444 215.0 L1460 215.0 M1444 215.0 L1460 224.0" stroke="#a78bfa" stroke-width="2.5" fill="none"/>
+<path d="M1168 176.0 L1168 194.0" stroke="#a78bfa" stroke-width="2.5"/>
+<rect x="1150.0" y="230.0" width="240" height="48" rx="6" fill="#020617" stroke="#a78bfa" stroke-opacity="0.5"/>
+<text x="1270.0" y="249.0" font-size="13" fill="#c4b5fd" text-anchor="middle">1 : N (논리) box_id</text>
+<text x="1270.0" y="268.0" font-size="12" fill="#94a3b8" text-anchor="middle">세션 적재 기록 → 팔레트 이동</text>
+<path d="M1460 865.0 L1350.0 865.0 L1350.0 215.0 L1176 215.0" fill="none" stroke="#a78bfa" stroke-width="2.5" stroke-dasharray="8 6"/>
+<path d="M1176 215.0 L1160 206.0 M1176 215.0 L1160 215.0 M1176 215.0 L1160 224.0" stroke="#a78bfa" stroke-width="2.5" fill="none"/>
+<rect x="1230.0" y="775.0" width="240" height="48" rx="6" fill="#020617" stroke="#a78bfa" stroke-opacity="0.5"/>
+<text x="1350.0" y="794.0" font-size="13" fill="#c4b5fd" text-anchor="middle">1 : N (논리) session_id</text>
+<text x="1350.0" y="813.0" font-size="12" fill="#94a3b8" text-anchor="middle">next → 첫 state 수신 시 세션에 붙임</text>
+<text x="2580" y="990" font-size="13" fill="#64748b" text-anchor="end">근거: docker/db/init/01_schema.sql · 02_roles.sh · migrations/20261012_sprint2_pallet.sql · docker/web/backend PlanRepository</text>
+</svg>

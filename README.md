@@ -35,7 +35,44 @@
 
 [![시스템 배포 아키텍처 — 공용 PC 호스트 프로세스 · 컨테이너 5종 · 로봇 셀 · Web PC](docs/architecture/01_system.png)](docs/architecture/01_system.png)
 
-📐 **편집용 원본:** [`docs/architecture/01_system.mmd`](docs/architecture/01_system.mmd) (Mermaid) — 도면 6장 전체와 다시 그리는 법은 [docs/architecture/](docs/architecture/README.md)
+📐 **편집용 원본:** [`docs/architecture/gen_01_system.py`](docs/architecture/gen_01_system.py) (좌표 기반 SVG 생성) — 도면 6장 전체와 다시 그리는 법은 [docs/architecture/](docs/architecture/README.md). 노드 안 글씨는 기술 · 버전 · 포트, 선의 Sn 번호는 아래 등록표와 같다.
+<details>
+<summary><b>S1~S31 연결 등록표</b> (도면의 선 번호 · 프로토콜 · 근거)</summary>
+
+| # | 어디서 → 어디로 | 프로토콜 · 내용 | 근거 |
+|---|---|---|---|
+| S1 | realsense2_camera ↔ vision 컨테이너 | DDS `/camera/color/image_raw` · `camera_info` ↑, `/voss/vision/box` · `label` ↓ (같은 ROS_DOMAIN_ID 30) | `docker/vision/compose.yml` `network_mode: host`, `entrypoint.sh` |
+| S2 | vision 컨테이너 → sort_manager · belt_servo | DDS `/voss/vision/box` BoxTrack ~30 Hz · `/voss/vision/label` LabelRead | `src/voss_vision/voss_vision/box_tracker.py` · `label_reader.py` |
+| S5 | voss_voice 3노드 → ai 컨테이너 | HTTP `POST /ai/stt` (WAV) · `POST /ai/intent` (JSON) · `POST /ai/tts` (PCM 스트림), `127.0.0.1:8000` | `src/voss_voice/voss_voice/http_client.py` · `tts_client.py`, `docker/ai/app/main.py` |
+| S6 | hmi_bridge ↔ mqtt 컨테이너 | MQTT `voss/*` 발행 12 · 구독 3, QoS 0/1, retained `zone_map` · `log_status` · `pallet/state`, 계정 `bridge` | `src/voss_hmi/voss_hmi/hmi_bridge.py`, `docker/mqtt/acl` |
+| S7 | sort_logger → db 컨테이너 | psycopg2 `INSERT … ON CONFLICT DO NOTHING` → `sort_log` · `pallet_log`, 계정 `voss_logger`, 실패 시 JSONL 스풀 | `src/voss_hmi/voss_hmi/db_writer.py` · `result_store.py` |
+| S8 | web/backend ↔ mqtt | MQTT JSON (Paho, 계정 `web`): 구독 13 · 발행 `voss/command` · `voice/request` · `voice/text` | `docker/web/backend/.../mqtt/MqttSubscriberConfig.java` |
+| S9 | web/backend → db | JDBC `SELECT` (`voss_web`) · `session_plan` upsert | `DbAccess.java` · `HistoryRepository.java` · `PlanRepository.java` |
+| S10 | web/frontend → web/backend | Nginx proxy `/api/` → `127.0.0.1:8080`, SSE `/api/stream` (`proxy_buffering off`) | `docker/web/nginx/default.conf` |
+| S11 | web/frontend → camera_preview · usb_camera_preview | `/camera/gripper/` → `:8091`, `/camera/usb/` → `:8092` (로컬만 allow) | `default.conf`, `src/voss_vision/voss_vision/camera_preview.py` · `usb_camera_preview.py` |
+| S12 | voss_voice → ai | S5 와 같은 경로 (컨테이너 행 표시) | — |
+| S13 | voss_voice ↔ sort_manager | `/voss/voice/intent` Intent → · `/voss/voice/say` String ← | `intent_parser.py`, `sort_manager.py` |
+| S14 | sort_manager → hmi_bridge | `/voss/sort/state` · `result` · `zone_map` · `/voss/pallet/state` · `result` | `sort_manager.py` |
+| S15 | sort_manager → sort_logger | `/voss/sort/result` · `/voss/pallet/result` · srv `/voss/log/list_placements` | `sort_manager.py` · `sort_logger.py` |
+| S16 | sort_manager → belt_servo | action `/voss/servo/track_and_grasp` (TrackAndGrasp) | `belt_servo.py` |
+| S17 | sort_manager ↔ robot_gateway | srv `/voss/robot/move_to_zone` · `/voss/robot/stop` ↓, `/voss/robot/pose` 50 Hz · `/voss/robot/state` 2 Hz ↑ | `robot_gateway.py` |
+| S18 | belt_servo ↔ robot_gateway | `/voss/robot/servo_cmd` TwistStamped 30 Hz → · `/voss/robot/pose` ← · srv `gripper` · `stop` | `belt_servo.py` · `servo_guard.py` |
+| S19 | robot_gateway ↔ 두산 브링업 | DDS `/dsr01/dsr_controller2/speedl_stream` · 서비스 9종 (단일 직렬 큐) · `/dsr01/joint_states` 100 Hz | `doosan.py` · `call_queue.py` |
+| S20 | config/ → launch | `config_dir` 인자 → `voss_config.yaml`(sort_manager 만) · `hand_eye.yaml` · `belt_homography.yaml` · `belt_servo_real.yaml` | `src/voss_bringup/launch/voss_host.launch.py` · `config_params.py` |
+| S21 | 두산 브링업 ↔ 컨트롤러 | 유선 TCP `$VOSS_ROBOT_HOST:12345`, `mode:=real model:=m0609` | `scripts/voss_up.py` T1 |
+| S22 | 컨트롤러 ↔ M0609 | 두산 제공 (레포 밖) | — |
+| S23 | M0609 플랜지 ↔ RG2 | 기구 장착 · TCP 오프셋 `[1.382, 2.684, 246.642]` mm | `config/voss_config.yaml` |
+| S24 | robot_gateway ↔ RG2 Compute Box | Modbus TCP `192.168.1.1:502`, unit 65, reg 0 힘 · 1 폭 · 2 제어 · 267 실제 폭 · 268 상태 | `src/voss_robot/voss_robot/rg2.py` (ADR-0005) |
+| S25 | D435i → realsense2_camera | USB 3.0, color 1920×1080×30, depth/infra/imu off | `voss_host.launch.py` CAMERA_PARAMS |
+| S26 | C270 → usb_camera_preview | USB V4L2 `/dev/v4l/by-id/*C270*` → `:8092/frame.jpg` | `usb_camera_preview.py` |
+| S27 | 아두이노 ↔ 공용 PC | 시리얼 9600 (`s`/`r`), 벨트 속도 설정 전용 — 런타임 ROS 연결 없음 | `tools/arduino/conveyor_test/conveyor_test.ino` |
+| S28 | D435i ↔ M0609 손목 | Eye-in-Hand 장착, 핸드아이 `T_tcp_camera` | `config/hand_eye.yaml` |
+| S29 | ai 컨테이너 → OpenAI API | HTTPS (별도 Wi-Fi NIC), `OPENAI_MODEL=gpt-4o` · `TTS_MODEL=gpt-4o-mini-tts` | `docker/ai/.env.example`, `docs/architecture.md` |
+| S30 | Web PC 브라우저 → web/frontend | HTTP `:80`, 원격은 `X-Real-IP` 판정으로 STOP 만 허용 | `CommandController.java` |
+| S31 | Web PC 음성 노드 ↔ 공용 PC | SSH `-L 8000·8080·1883·5432` → `POST /api/commands` (`command_transport=web_api`) · `/ai/*` · MQTT `voice_web` | `scripts/web_pc_voice.sh`, `docs/interfaces/deployment_two_pc_trial.md` |
+
+</details>
+
 
 | 위치 | 구성 | 역할 |
 |---|---|---|
@@ -51,9 +88,58 @@
 
 ### ROS 2 패키지와 노드
 
-[![ROS 2 통신 아키텍처 — 노드 · 토픽 · 서비스 · 액션](docs/architecture/02_ros2.png)](docs/architecture/02_ros2.png)
+[![ROS 2 통신 아키텍처 — 노드 10 · 외부 6 · 인터페이스 41](docs/architecture/02_ros2.png)](docs/architecture/02_ros2.png)
 
-센서 → 인지(비전·음성) → **sort_manager** → 실행(belt_servo · robot_gateway · speech_out) → 장치. 인지는 판단 결과만 올리고, 실행은 `sort_manager` 의 명령(action · srv)만 받는다. 굵은 선이 서비스·액션, 점선이 HTTP · MQTT · Modbus 다. 노드별 전체 목록은 아래 표.
+📐 **편집용 원본:** [`docs/architecture/gen_02_ros2.py`](docs/architecture/gen_02_ros2.py). 인지(비전·음성)는 판단 결과만 올리고, 실행(belt_servo · robot_gateway · speech_out)은 `sort_manager` 의 명령(action · srv)만 받는다. 굵은 녹색 선이 서비스·액션, 점선이 HTTP · 요청 중만 구독, 주황이 MQTT · Modbus 다. 같은 방향의 여러 인터페이스는 한 선으로 묶고 이름 · 타입 · QoS 전체는 아래 등록표에 적었다.
+
+<details>
+<summary><b>R1~R41 인터페이스 등록표</b> (도면의 선 번호 · 이름 · 타입 · QoS/주기 · 근거)</summary>
+
+| # | 발행/호출 → 구독/제공 | 이름 | 타입 · QoS · 주기 | 근거 |
+|---|---|---|---|---|
+| R1 | realsense2_camera → box_tracker | `/camera/color/image_raw` · `/camera/color/camera_info` | sensor_msgs/Image 1920×1080 30 fps (best_effort 1) · CameraInfo (sensor_data, 1회) | `box_tracker.py` |
+| R2 | realsense2_camera → label_reader | `/camera/color/image_raw` | **read_label 요청 중만** 구독 (best_effort 2), 응답 전 해제 | `label_reader.py` |
+| R3 | box_tracker → label_reader | `/voss/vision/label_crop` | voss_msgs/LabelCrop, reliable 5, 트랙당 ≤5 Hz (`crop_period_s` 0.2) | `box_tracker.py` · `tracker_logic.py` |
+| R4 | box_tracker → sort_manager | `/voss/vision/box` | voss_msgs/BoxTrack, best_effort 1 (구독 10), 트랙당 1건 ~30 Hz | `box_tracker.py` · `sort_manager.py` |
+| R5 | box_tracker → belt_servo | `/voss/vision/box` | best_effort 5 (동시 박스 수) | `belt_servo.py` |
+| R6 | box_tracker → hmi_bridge | `/voss/vision/box` | best_effort 5 → MQTT `voss/box_track` 트랙당 ≤10 Hz | `hmi_bridge.py` |
+| R7 | label_reader → sort_manager | `/voss/vision/label` | voss_msgs/LabelRead stage 1·2, reliable 10 — OCR 예열 + zone_map 수신 뒤 생성 | `label_reader.py` |
+| R8 | sort_manager → label_reader | srv `/voss/vision/read_label` · `/voss/sort/zone_map` | voss_msgs/srv/ReadLabel (stage 3, 15 s) · ZoneMap reliable transient_local 1 | `sort_manager.py` |
+| R9 | sort_manager → box_tracker | `/voss/sort/state` | voss_msgs/SortState, reliable 10, 0.4 s 주기 + 변화 시 (PICKING 트랙 보류 · 크롭 stage) | `tracker_logic.py` |
+| R10 | voice_listener → intent_parser | `/voss/voice/transcript` | std_msgs/String, reliable 10 | `voice_listener.py` |
+| R11 | intent_parser → sort_manager | `/voss/voice/intent` | voss_msgs/Intent (start · stop · resume · priority · answer · recheck · palletize), reliable 10 | `intent_parser.py` |
+| R12 | sort_manager → intent_parser | `/voss/sort/zone_map` · `/voss/sort/state` | ZoneMap transient_local (허용 목록) · SortState (answer 의 box_id) | `intent_parser.py` |
+| R13 | sort_manager → voice_listener | `/voss/sort/state` | SortState | `voice_listener.py` |
+| R14 | sort_manager → speech_out | `/voss/voice/say` | std_msgs/String, reliable 10 — 같은 box_id 의 같은 이벤트 1회 | `sort_manager.py` · `speech_out.py` |
+| R15 | intent_parser → speech_out | `/voss/voice/say` | 되묻기 · 이력 질의 답 · 처리 중 안내 | `intent_parser.py` |
+| R16 | voice_listener → speech_out | `/voss/voice/say` | 호출어 뒤 무응답 TIMED_OUT 안내 (30 s 간격) | `voice_listener.py` |
+| R17 | voice_listener → FastAPI | `POST /ai/stt` | HTTP multipart WAV 16 kHz → `{text, stt_ms}`, 5 s | `http_client.py`, `docker/ai/app/main.py` |
+| R18 | intent_parser → FastAPI · Spring Boot | `POST /ai/intent` · `GET /api/stats` · `POST /api/commands` | JSON `{text, allowed}` → intent (3 s) · 이력 질의 · web_api 전송 모드 | `intent_logic.py` · `command_delivery.py` |
+| R19 | speech_out → FastAPI | `POST /ai/tts` | S16LE 24 kHz mono PCM 스트림, 10 s | `tts_client.py` |
+| R20 | voice_listener → hmi_bridge | `/voss/voice/status` | std_msgs/String JSON `{phase, event_id, utterance_id}` → MQTT `voss/voice_status` | `voice_status.py` |
+| R21 | hmi_bridge ↔ intent_parser | `/voss/voice/text` → · `/voss/voice/text/reply` ← | std_msgs/String JSON (웹 텍스트 명령 · 응답), 600 s 중복 억제 | `text_request.py` |
+| R24 | sort_manager → belt_servo | action `/voss/servo/track_and_grasp` | voss_msgs/action/TrackAndGrasp — goal track_id → result grasped · reason · attempts, feedback phase; 서버는 파라미터 READY 일 때만 | `belt_servo.py` · `params.py` |
+| R25 | belt_servo → robot_gateway | `/voss/robot/servo_cmd` | geometry_msgs/TwistStamped, best_effort 1, 30 Hz, TCP 기준 m/s · `angular.z` rad/s, stamp = 발행 시각 | `belt_servo.py` · `servo_guard.py` |
+| R26 | robot_gateway → belt_servo | `/voss/robot/pose` | geometry_msgs/PoseStamped (TCP=핑거 끝, `base_link`), best_effort 1, 50 Hz (`joint_states` + fkin) | `robot_gateway.py` · `pose_source.py` |
+| R27 | belt_servo → robot_gateway | srv `/voss/robot/gripper` · `/voss/robot/stop` | voss_msgs/srv/Gripper (폭 · 힘 → 실제 폭 · grip_detected, 4 s) · std_srvs/Trigger (cancel 시) | `grip.py` |
+| R28 | sort_manager → robot_gateway | srv `/voss/robot/move_to_zone` · `/voss/robot/stop` | voss_msgs/srv/MoveToZone (zone · slot · PLACE/DROP/VIEW/PICK, 60 s) · Trigger 멱등 (3 s) | `sort_manager.py` · `zone_motion.py` |
+| R29 | robot_gateway → sort_manager | `/voss/robot/pose` · `/voss/robot/state` | PoseStamped best_effort 1 · voss_msgs/RobotState reliable transient_local 1, 2 Hz + 변화 시 | `state_logic.py` · `readiness.py` |
+| R30 | robot_gateway → box_tracker | `/voss/robot/pose` | best_effort 10, 촬영 시각 보간 (`pose_lag_ms` 15, 외삽 ≤80 ms) | `box_tracker.py` · `pose_lag.py` |
+| R31 | robot_gateway · 두산 → hmi_bridge | `/voss/robot/pose` · `/voss/robot/state` · `/dsr01/joint_states` | → MQTT `voss/robot_pose` · `voss/robot` · `voss/robot_joints` (≤20 Hz) | `hmi_bridge.py` |
+| R32 | robot_gateway → dsr_controller2 | `/dsr01/dsr_controller2/speedl_stream` · srv `aux_control/get_current_tool_flange_posx` · `get_current_posx` · `system/get_robot_state` · `motion/ikin` · `fkin` · `move_line` · `move_spline_task` · `check_motion` · `move_stop` | dsr_msgs2 — 서비스는 **단일 직렬 큐**, 0.5 s 타임아웃 3회 연속 → FAULT; speedl 은 reliable 10 토픽 | `doosan.py` · `call_queue.py` (ADR-0010) |
+| R33 | dsr_controller2 → robot_gateway | `/dsr01/joint_states` · `/dsr01/error` · `/dsr01/robot_disconnection` | sensor_msgs/JointState 100 Hz (sensor_data) · dsr_msgs2/RobotError · RobotDisconnection | `robot_gateway.py` |
+| R34 | robot_gateway ↔ RG2 | Modbus TCP `192.168.1.1:502` | pymodbus unit 65, reg 0 힘(0.1 N) · 1 폭(0.1 mm) · 2 제어 · 267 실제 폭 · 268 상태(busy · grip_detected · safety_err), poll 50 ms | `rg2.py` |
+| R35 | sort_manager → sort_logger | `/voss/sort/result` · `/voss/pallet/result` · srv `/voss/log/list_placements` | voss_msgs/SortResult · PalletResult reliable 10 · ListPlacements (3 s, 스풀 미반영 시 SPOOL_PENDING 거부) | `sort_logger.py` |
+| R36 | sort_logger → sort_manager | `/voss/log/status` | std_msgs/String STARTING · OK · DB_ERROR · SPOOL_FULL, reliable 1, 1 Hz | `readiness.py` |
+| R37 | sort_logger → hmi_bridge | `/voss/log/status` | → MQTT `voss/log_status` retained | `hmi_bridge.py` |
+| R38 | sort_manager → hmi_bridge | `/voss/sort/state` · `result` · `zone_map` · `/voss/pallet/state` · `result` | SortState · SortResult · ZoneMap · PalletState · PalletResult → MQTT 5 토픽 | `hmi_bridge.py` · `mqtt_logic.py` |
+| R39 | hmi_bridge → sort_manager | srv `/voss/sort/command` | voss_msgs/srv/Command (start · stop · resume · priority · answer · reset_zone · palletize · recheck), 30 s 이내 명령만, `voss/command/ack` 회신 | `sort_manager.py` |
+| R40 | hmi_bridge ↔ Mosquitto | MQTT `voss/*` | 발행 `state` `result` `zone_map` `robot` `box_track` `robot_pose` `robot_joints` `voice_status` `log_status` `pallet/state` `voice/text/reply` `command/ack` · 구독 `command` `voice/request` `voice/text`, 계정 `bridge`, keepalive 30 | `hmi_bridge.py`, `docker/mqtt/acl` |
+| R41 | sort_logger → PostgreSQL | `INSERT ON CONFLICT DO NOTHING` | psycopg2, `127.0.0.1:5432/voss`, 계정 `voss_logger`, 실패 → `/var/lib/voss/spool/*.jsonl` 재전송 1·2·5·10·30 s | `db_writer.py` · `result_store.py` |
+
+R22 · R23 은 R21 에 합쳤다. 응답 · feedback · result 는 서비스 · 액션 호출의 역방향이며 별도 선이 아니다. 전체 QoS 표와 변경 이력은 [docs/interfaces/topics.md](docs/interfaces/topics.md).
+
+</details>
 
 | 패키지 | 노드 | 발행 | 구독 · 호출 | 제공 서비스 · 액션 |
 |---|---|---|---|---|
@@ -262,7 +348,7 @@ palletize  <동>,<동>,<동> 순서로 팔레트 적재
 ├── .claude/                      /sync · /pr · /standup 커맨드, 실행 deny 설정
 └── docs/
     ├── architecture.md             노드 책임 · 배포 · 상태기계 요약
-    ├── architecture/               도면 6장 (배포 · ROS 2 통신 · 제어 루프 · 플로우차트 · 사람/기록 경로 · ERD) + Mermaid 원본
+    ├── architecture/               도면 6장 (배포 · ROS 2 통신 · 제어 루프 · 플로우차트 · 사람/기록 경로 · ERD) + 생성 스크립트 · Mermaid 원본
     ├── interfaces/                 토픽 · 메시지 · intent JSON · MQTT · voss_config · calibration · web_api · voice_status (코드보다 우선)
     ├── adr/                        설계 결정 0001~0016
     ├── requirements/               BRD v1.7 · SRD v1.0 · 개발일정 xlsx · Sprint 2 자료
