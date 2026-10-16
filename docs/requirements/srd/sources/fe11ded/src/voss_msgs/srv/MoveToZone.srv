@@ -1,0 +1,11 @@
+string zone              # A | B | C | RECHECK | HOLD | PALLET | OBSERVE (대문자. PALLET = 팔레타이징 트레이(BRD 10.7). voss_config zones 키는 대소문자 무시, OBSERVE = observe_pose)
+int32 slot               # 격자 칸 번호 (0부터 −X 끝부터, zones.<zone>.grid 순서 = layer×(cols×rows) + row×cols + col). PALLET 도 같다 — 팔레트 적재 순서 slot(PalletState·D2)과 다르며 sort_manager 가 바꿔 부른다. VIEW·OBSERVE 는 무시
+string mode              # "" = PLACE (놓기 + OBSERVE 복귀) | DROP (PALLET 전용: 놓고 칸 위로 올라가 멈춤, OBSERVE 복귀 없음 — BRD TR-PAL-06) | VIEW (카메라로 구역을 보는 자세로만 이동) | PICK (slot 에서 집어 안전 높이로 — RECHECK, 팔레타이징 때 A·B·C·HOLD)
+#                          zone=OBSERVE 는 "" 만 받고 이동만 한다(그리퍼 동작 없음, placed_stamp 0). VIEW·PICK 은 INVALID
+#                          PALLET 은 4열 × 2줄 × 2층(cols 필드 없음, BRD v1.5). 적재 순서 slot(D2: (열−1)×4+(층−1)×2+(줄−1)) → 이 slot = (층−1)×8 + (줄−1)×4 + (열−1)
+---
+bool ok                  # PLACE 는 OBSERVE 복귀까지 마친 뒤 응답한다 (응답 즉시 다음 추종 시작 가능)
+string message           # 실패 시 대문자 코드로 시작 (GRIP_FAIL / TIMEOUT / LIMIT / BUSY / RETURN_FAILED / STOPPED / INVALID / NOT_CONFIGURED)
+builtin_interfaces/Time placed_stamp   # PLACE: RG2 개방 완료 확인 시각 (호스트 시계). 그 밖의 mode 는 0
+# RETURN_FAILED = 개방 후 OBSERVE 복귀 실패: ok=false 이고 placed_stamp 는 채운다. 개방 전 실패는 placed_stamp = 0
+# STOPPED = /voss/robot/stop 이 진행 중 동작을 끊음: ok=false, 이미 개방했으면 placed_stamp 를 채우고 개방 전이면 0

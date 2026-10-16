@@ -1,0 +1,6 @@
+string command           # start | priority | stop | resume | answer | reset_zone | palletize (응답 = 접수, 완료는 SortState·SortResult·PalletState)
+string arg               # start: "" 또는 ALL · priority: 동 이름 · answer: <box_id>|<동 또는 HOLD> · reset_zone: 구역 (Sprint 2: PALLET 추가)
+#                          palletize: 정식 동 이름을 배송 순서대로 쉼표로 (예 역삼동,대치동,청담동, 1~3개) (Sprint 2)
+---
+bool ok
+string message
