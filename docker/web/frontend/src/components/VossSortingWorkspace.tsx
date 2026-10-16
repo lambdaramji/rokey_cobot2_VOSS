@@ -19,6 +19,7 @@ import {
 import type { ZoneId, ZoneLayout } from '../lib/workspaceGeometry';
 import { INITIAL_INDICATOR, VOICE_COMMAND_TIMEOUT_MS, VOICE_FAILURE_DISPLAY_MS, reduceVoiceIndicator } from '../lib/voiceIndicator';
 import type { VoiceSignal } from '../lib/voiceIndicator';
+import type { ZoneMap } from '../types';
 import type { BoxMotionSample, BoxTrackSample, Point3, RobotPoseSample } from '../lib/workspacePosition';
 import { boxTopFromTcp, parseBoxMotion, parseBoxTrack, parseRobotPose, POSE_STALE_MS, TRACK_STALE_MS } from '../lib/workspacePosition';
 import './VossSortingWorkspace.css';
@@ -34,6 +35,7 @@ const BOX_HEIGHT = 36;
 const ARM_UPPER_PX = 180;
 const ARM_FOREARM_PX = 170;
 const ARM_MAX_REACH_PX = 320;
+const ARM_MIN_REACH_PX = 80;
 type ScreenPoint = { x: number; y: number };
 function illustrationTarget(phase: IllustrationPhase, zone: ZoneId | undefined): ScreenPoint {
   if (phase === 'PICKING') return toScreen(60, -285);
@@ -101,6 +103,7 @@ export interface WorkspaceViewData {
   isPoseFresh?: boolean;
   lastResult: SortResultSnapshot | null;
   zoneCounts: ZoneCounts | null;
+  zoneNames?: Record<string, string>;
   isStateFresh: boolean;
   isRobotFresh?: boolean;
   isDemo?: boolean;
@@ -115,11 +118,13 @@ interface SessionApiResponse {
   ok?: boolean;
   session_id?: string;
   by_zone?: Record<string, number>;
+  available_by_zone?: Record<string, number>;
 }
 
 interface TrayProps {
   zone: ZoneLayout;
   count: number | undefined;
+  zoneName?: string;
   /** '비움' 버튼 — reset_zone 은 PAUSED 에서만 접수된다. undefined 면 버튼을 그리지 않는다. */
   onReset?: () => void;
   resetEnabled?: boolean;
@@ -162,7 +167,7 @@ function confirmResetZone(zone: ZoneId, count: number | undefined, onResetZone: 
 }
 
 /** 기존 적재함 윤곽 안에 현재 세션의 공식 처리 수량만 표시한다. TRUCK 은 팔레트 적재 칸(DONE) 수. */
-function Tray({ zone, count, onReset, resetEnabled = false, resetReason = '' }: TrayProps) {
+function Tray({ zone, count, zoneName, onReset, resetEnabled = false, resetReason = '' }: TrayProps) {
   const { y } = toScreen(zone.xMm, zone.yMm);
   const trayShell = getTrayShellHorizontalLayout(zone);
   const visualOffsetX = zone.name === 'C' ? SECTOR_C_EDGE_OFFSET_PX
@@ -174,7 +179,7 @@ function Tray({ zone, count, onReset, resetEnabled = false, resetReason = '' }: 
   return (
     <g className="voss-ws__tray">
       <text x={trayCenterX} y={y - TRAY_DISPLAY_HEIGHT_PX / 2 - 22} textAnchor="middle" className="voss-ws__zone-title">
-        {['A', 'B', 'C'].includes(zone.name) ? `SECTOR ${zone.name}` : zone.name === 'TRUCK' ? 'TRUCK' : zone.name}
+        {['A', 'B', 'C'].includes(zone.name) ? `${zone.name}: ${zoneName ?? '—'}` : zone.name === 'TRUCK' ? 'TRUCK' : zone.name}
       </text>
       <rect
         x={trayCenterX - TRAY_DISPLAY_WIDTH_PX / 2}
@@ -205,11 +210,15 @@ function Robot({ phase, zone, pose, poseFresh, picking }: {
   pose?: RobotPoseSample | null; poseFresh: boolean; picking: boolean;
 }) {
   const center = toScreen(ROBOT_BASE_MM.x, ROBOT_BASE_MM.y);
-  const target = illustrationTarget(phase, zone);
+  // 실제 TCP 가 신선하면 팔이 TCP 점을 향한다. 도달 범위 안이면 팔 끝이 점에 겹치고,
+  // 범위 밖(먼 적재함)이면 아래 반경 클램프로 그 방향에 최대한 뻗는 모션만 취한다 (10/15 현장 요청).
+  // 포즈가 없거나 끊기면 상태 기반 표현 목표.
+  const tcp = pose ? toScreen(pose.position.x * 1000, pose.position.y * 1000) : null;
+  const target: ScreenPoint = tcp && poseFresh ? tcp : illustrationTarget(phase, zone);
   const dx = target.x - center.x;
   const dy = target.y - center.y;
   const targetAngle = Math.atan2(dy, dx);
-  const targetRadius = Math.max(80, Math.min(ARM_MAX_REACH_PX, Math.hypot(dx, dy)));
+  const targetRadius = Math.max(ARM_MIN_REACH_PX, Math.min(ARM_MAX_REACH_PX, Math.hypot(dx, dy)));
   const [shown, setShown] = useState({ angle: targetAngle, radius: targetRadius });
   const shownRef = useRef(shown);
 
@@ -252,7 +261,6 @@ function Robot({ phase, zone, pose, poseFresh, picking }: {
     y: center.y + reach * Math.sin(shown.angle),
   };
   const gripperAngle = Math.atan2(tip.y - elbow.y, tip.x - elbow.x) * 180 / Math.PI;
-  const tcp = pose ? toScreen(pose.position.x * 1000, pose.position.y * 1000) : null;
   const links = [[center, elbow], [elbow, tip]];
 
   return (
@@ -293,14 +301,14 @@ function Robot({ phase, zone, pose, poseFresh, picking }: {
       </circle> : null}
       <circle cx={center.x} cy={center.y} r="17" className="voss-ws__robot-hub" />
       <circle cx={center.x} cy={center.y} r="5" className="voss-ws__robot-hub-core" />
-      <text x={center.x} y={center.y - 80} textAnchor="middle" className="voss-ws__robot-title">M0609 · 모션 표현</text>
+      <text x={center.x} y={center.y - 80} textAnchor="middle" className="voss-ws__robot-title">M0609</text>
       {pose ? <text x={center.x} y={center.y + 103} textAnchor="middle" className="voss-ws__robot-z">TCP Z {Math.round(pose.position.z * 1000)} mm{poseFresh ? '' : ' · 갱신 중단'}</text> : null}
     </g>
   );
 }
 
 /** 순수 SVG이므로 브라우저에서만 표시되며 ROS나 MQTT 명령을 전송하지 않는다. */
-export function VossSortingWorkspace({ state, boxTracks = [], robotPose = null, boxMotion = null, isPoseFresh = false, zoneCounts, isStateFresh, isDemo = false, voiceSignal = null, voiceConnected = true, lastResult, controlEnabled = false, onResetZone }: WorkspaceViewData) {
+export function VossSortingWorkspace({ state, boxTracks = [], robotPose = null, boxMotion = null, isPoseFresh = false, zoneCounts, zoneNames = {}, isStateFresh, isDemo = false, voiceSignal = null, voiceConnected = true, lastResult, controlEnabled = false, onResetZone }: WorkspaceViewData) {
   const [flashZone, setFlashZone] = useState<ZoneId | undefined>(undefined);
   const [flightBoxId, setFlightBoxId] = useState('');
   const [demoActive, setDemoActive] = useState(false);
@@ -472,7 +480,7 @@ export function VossSortingWorkspace({ state, boxTracks = [], robotPose = null, 
         <rect width="1550" height="1035" rx="20" fill="url(#vossWsGrid)" />
         {/* 제어 패널에서 mm의 동일 축척을 사용한다. 실제 벨트 외곽 좌표는 미계측이다. */}
         {ZONES.map((zone) => (
-          <Tray key={zone.name} zone={zone} count={demoActive ? demoCounts?.[zone.name] : zoneCounts?.[zone.name]}
+          <Tray key={zone.name} zone={zone} count={demoActive ? demoCounts?.[zone.name] : zoneCounts?.[zone.name]} zoneName={zoneNames[zone.name]}
             onReset={onResetZone && !demoActive ? () => confirmResetZone(zone.name, zoneCounts?.[zone.name], onResetZone) : undefined}
             resetEnabled={resetZoneEnabled}
             resetReason={!controlEnabled ? '공용 PC 로컬 · MQTT 연결 중에만' : rawState !== 'PAUSED' ? '정지(PAUSED) 상태에서만 비울 수 있습니다' : ''} />
@@ -582,6 +590,7 @@ export function VossSortingWorkspaceLive() {
   const [boxMotion, setBoxMotion] = useState<BoxMotionSample | null>(null);
   const [lastResult, setLastResult] = useState<SortResultSnapshot | null>(null);
   const [zoneCounts, setZoneCounts] = useState<ZoneCounts | null>(null);
+  const [zoneNames, setZoneNames] = useState<Record<string, string>>({});
   const [lastStateAt, setLastStateAt] = useState(0);
   const [lastRobotAt, setLastRobotAt] = useState(0);
   const [dbSessionId, setDbSessionId] = useState('');
@@ -603,7 +612,7 @@ export function VossSortingWorkspaceLive() {
         const data = await response.json() as SessionApiResponse;
         if (isMounted) {
           setDbSessionId(data.ok ? data.session_id ?? '' : '');
-          setZoneCounts(data.ok ? normalizeCounts(data.by_zone) : null);
+          setZoneCounts(data.ok ? normalizeCounts(data.available_by_zone ?? data.by_zone) : null);
         }
       } catch (error) {
         // DB/네트워크 일시 실패는 정상 개수 0으로 위장하지 않는다.
@@ -616,6 +625,14 @@ export function VossSortingWorkspaceLive() {
     }
 
     const source = new EventSource('/api/stream');
+    source.addEventListener('zone_map', (event) => {
+      try {
+        const data = JSON.parse((event as MessageEvent).data) as ZoneMap;
+        if (isMounted && Array.isArray(data.entries)) {
+          setZoneNames(Object.fromEntries(data.entries.map(entry => [entry.zone, entry.dong])));
+        }
+      } catch (error) { console.error('[VOSS Workspace] zone_map JSON 파싱 실패', error); }
+    });
     source.addEventListener('state', (event) => {
       try {
         const data = JSON.parse((event as MessageEvent).data) as SortStateSnapshot;
@@ -724,6 +741,7 @@ export function VossSortingWorkspaceLive() {
       isPoseFresh={robotPose !== null && now - robotPose.receivedAt < POSE_STALE_MS}
       lastResult={matchingResult}
       zoneCounts={sessionMatches ? zoneCounts : null}
+      zoneNames={zoneNames}
       isRobotFresh={lastRobotAt > 0 && now - lastRobotAt < STATE_TIMEOUT_MS}
       isStateFresh={lastStateAt > 0 && now - lastStateAt < STATE_TIMEOUT_MS}
     />

@@ -204,3 +204,22 @@ def test_stop_still_bypasses_wake():
     flow, events = feedback()
     assert flow.on_text("멈춰", 0) == "멈춰"
     assert events == []
+
+
+def test_audio_activity_does_not_publish_wake_or_display_event():
+    import queue
+    import numpy as np
+    from voss_voice.listen_logic import Segmenter
+    from voss_voice.voice_listener import VoiceListenerNode
+
+    node, statuses, spoken = listener_node()
+    stops = iter([False, True])
+    node._stop = SimpleNamespace(is_set=lambda: next(stops))
+    node._seg = Segmenter()
+    node._frames = queue.Queue()
+    node._frames.put(np.full(480, 10000, dtype=np.int16))
+    node._publish_status = lambda payload: VoiceListenerNode._publish_status(node, payload)
+    VoiceListenerNode._mic_loop(node)
+    assert node._seg.recording
+    assert statuses == []
+    assert spoken == []

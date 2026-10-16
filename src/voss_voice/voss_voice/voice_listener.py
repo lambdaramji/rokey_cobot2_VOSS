@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import queue
+import subprocess
 import sys
 import threading
 import time
@@ -93,13 +94,6 @@ class VoiceListenerNode(Node):
 
     # ---------- 마이크 ----------
     def _start_mic(self) -> bool:
-        try:
-            import sounddevice as sd  # noqa: PLC0415 — 마이크 모드에서만 필요
-        except ImportError:
-            self.get_logger().error(
-                "sounddevice 없음 → text 모드로 전환 (src/voss_voice/CLAUDE.md 설치 명령 참고)"
-            )
-            return False
         cfg = VadConfig(
             threshold_db=float(self.get_parameter("vad_threshold_db").value),
             end_silence_ms=int(self.get_parameter("end_silence_ms").value),
@@ -109,6 +103,30 @@ class VoiceListenerNode(Node):
         self._seg = Segmenter(cfg)
         self._frames: queue.Queue[np.ndarray] = queue.Queue(maxsize=200)
         self._dropped = 0
+        echo_source = os.environ.get("VOSS_ECHO_SOURCE", "")
+        if echo_source:
+            try:
+                self._capture = subprocess.Popen(
+                    ["parec", "--raw", "--format=s16le", "--rate=16000",
+                     "--channels=1", "--latency-msec=30", f"--device={echo_source}"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.DEVNULL,
+                )
+                if self._capture.stdout is None:
+                    raise RuntimeError("parec stdout unavailable")
+            except (OSError, RuntimeError) as error:
+                self.get_logger().error(f"에코 제거 마이크 시작 실패: {error}")
+                return False
+            threading.Thread(target=self._read_echo_mic, daemon=True).start()
+            threading.Thread(target=self._mic_loop, daemon=True).start()
+            return True
+        try:
+            import sounddevice as sd  # noqa: PLC0415 — 마이크 모드에서만 필요
+        except ImportError:
+            self.get_logger().error(
+                "sounddevice 없음 → text 모드로 전환 (src/voss_voice/CLAUDE.md 설치 명령 참고)"
+            )
+            return False
         dev = self.get_parameter("device").value or None
         try:
             self._stream = sd.InputStream(
@@ -125,6 +143,19 @@ class VoiceListenerNode(Node):
             return False
         threading.Thread(target=self._mic_loop, daemon=True).start()
         return True
+
+    def _read_echo_mic(self) -> None:
+        frame_bytes = self._cfg.sample_rate * self._cfg.frame_ms // 1000 * 2
+        while not self._stop.is_set():
+            chunk = self._capture.stdout.read(frame_bytes)
+            if not chunk:
+                if not self._stop.is_set():
+                    self.get_logger().error("에코 제거 마이크 입력이 끊겼습니다")
+                return
+            if len(chunk) != frame_bytes:
+                continue
+            if put_drop_oldest(self._frames, np.frombuffer(chunk, dtype="<i2").copy()):
+                self._dropped += 1
 
     def _on_audio(self, indata, frames, t, status) -> None:  # sounddevice 콜백 스레드
         if put_drop_oldest(self._frames, indata[:, 0].copy()):
@@ -180,6 +211,14 @@ class VoiceListenerNode(Node):
 
     def destroy_node(self) -> None:
         self._stop.set()
+        capture = getattr(self, "_capture", None)
+        if capture is not None:
+            capture.terminate()
+            try:
+                capture.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                capture.kill()
+                capture.wait()
         stream = getattr(self, "_stream", None)
         if stream is not None:
             stream.stop()

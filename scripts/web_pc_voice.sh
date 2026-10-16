@@ -48,7 +48,48 @@ if pgrep -u "$(id -u)" -f '^/usr/bin/python3 .*/voss_hmi/hmi_bridge --ros-args -
   exit 1
 fi
 curl --noproxy '*' -fsS --max-time 5 http://127.0.0.1:8000/ai/health >/dev/null
+# Whisper 가 GPU 에 올라오기 전에는 STT 가 5초 제한에 걸린다 (10/15). 적재가 끝날 때까지 기다린다.
+for _ in $(seq 1 180); do
+  if curl --noproxy '*' -fsS --max-time 5 http://127.0.0.1:8000/ai/health | grep -q '"whisper_loaded":true'; then
+    break
+  fi
+  echo 'Whisper 적재 대기 중…'
+  sleep 2
+done
+if ! curl --noproxy '*' -fsS --max-time 5 http://127.0.0.1:8000/ai/health | grep -q '"whisper_loaded":true'; then
+  echo 'AI 컨테이너의 Whisper 가 올라오지 않았습니다. docker logs ai-ai-1 을 확인하세요.' >&2
+  exit 1
+fi
 curl --noproxy '*' -fsS --max-time 5 http://127.0.0.1:8080/api/sessions/current >/dev/null
+# 재생 음성을 참조 신호로 쓰는 WebRTC 에코 제거 경로를 두 노드에 함께 적용한다.
+for audio_tool in pactl parec pacat; do
+  command -v "$audio_tool" >/dev/null || { echo "$audio_tool 가 필요합니다." >&2; exit 1; }
+done
+echo_module_id=''
+cleanup_echo() {
+  if [ -n "$echo_module_id" ]; then
+    pactl unload-module "$echo_module_id" || true
+  fi
+}
+trap cleanup_echo EXIT
+echo_source='voss_echo_cancel_source'
+echo_sink='voss_echo_cancel_sink'
+if pactl list short sources | awk -v name="$echo_source" '$2 == name {found=1} END {exit !found}'; then
+  if ! pactl list short sinks | awk -v name="$echo_sink" '$2 == name {found=1} END {exit !found}'; then
+    echo '에코 제거 소스만 있고 싱크가 없습니다. 오디오 모듈 상태를 확인하세요.' >&2
+    exit 1
+  fi
+else
+  physical_source="$(pactl get-default-source)"
+  physical_sink="$(pactl get-default-sink)"
+  echo_module_id="$(pactl load-module module-echo-cancel \
+    "source_master=$physical_source" "sink_master=$physical_sink" \
+    "source_name=$echo_source" "sink_name=$echo_sink" aec_method=webrtc)"
+fi
+export VOSS_ECHO_SOURCE="$echo_source"
+export VOSS_TTS_SINK="$echo_sink"
+# PipeWire가 같은 이름의 가상 출력에 저장한 음소거 상태를 복원할 수 있다.
+pactl set-sink-mute "$echo_sink" 0
 touch "$log_dir/status.log"
 voice_bin="$(ros2 pkg prefix voss_voice)/lib/voss_voice"
 bridge_pid=''
@@ -93,11 +134,13 @@ mic_pid=$!
 cleanup() {
   kill "$mic_pid" "$parser_pid" "$tts_pid" ${bridge_pid:+"$bridge_pid"} 2>/dev/null || true
   wait "$mic_pid" "$parser_pid" "$tts_pid" ${bridge_pid:+"$bridge_pid"} 2>/dev/null || true
+  cleanup_echo
 }
 trap cleanup EXIT
 sleep 3
 if ! kill -0 "$mic_pid" "$parser_pid" "$tts_pid" 2>/dev/null \
-    || ! grep -q 'voice_listener: mic 모드' "$log_dir/mic.log"; then
+    || ! grep -q 'voice_listener: mic 모드' "$log_dir/mic.log" \
+    || grep -q '에코 제거 마이크 입력이 끊겼습니다' "$log_dir/mic.log"; then
   echo "음성 노드 또는 Web PC 마이크 시작 실패. 로그: $log_dir" >&2
   exit 1
 fi

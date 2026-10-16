@@ -16,6 +16,13 @@ class VoiceStatusFilterTest {
         assertFalse(new VoiceStatusFilter().accept(event("e", "u", "WAKE_DETECTED"), true));
     }
 
+    @Test void audioActivityIsAcceptedOnlyLive() {
+        VoiceStatusFilter filter = new VoiceStatusFilter();
+        assertTrue(filter.accept(event("audio-start", "audio", "AUDIO_DETECTED"), false));
+        assertTrue(filter.accept(event("audio-end", "audio", "AUDIO_REJECTED"), false));
+        assertFalse(filter.accept(event("old-audio", "old", "AUDIO_DETECTED"), true));
+    }
+
     @Test void repeatedEventAndRepeatedWakeAreRejected() {
         VoiceStatusFilter filter = new VoiceStatusFilter();
         assertTrue(filter.accept(event("e1", "u1", "WAKE_DETECTED"), false));

@@ -4,7 +4,7 @@
 
 ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React, `/api` → Spring Boot(127.0.0.1:8080) 로 넘어간다. **Nginx 는 `/ai` 를 넘기지 않는다** — FastAPI 는 음성 ROS 노드만 `http://127.0.0.1:8000` 으로 부른다(Wi-Fi 에서 OpenAI 사용량이 나가지 않게). 브라우저·Spring Boot 는 ROS 에 직접 붙지 않는다(ROS ↔ 웹은 MQTT, `mqtt.md`).
 
-카메라 화면은 같은 Nginx(80)의 `GET /camera/gripper/frame.jpg`와 `GET /camera/usb/frame.jpg`를 사용한다. 두 경로는 Web PC 로컬 브라우저(`127.0.0.1`/`::1`)에서만 허용하고, Nginx가 각각 Web PC 로컬 `127.0.0.1:8091`·`127.0.0.1:8092`로 프록시한다. Nodes PC 송출 노드는 loopback 바인드를 유지하고 Web PC에서 SSH `-L` 터널로 연결한다. 원격 브라우저의 카메라 요청은 거부한다.
+카메라 화면은 같은 Nginx(80)의 `GET /camera/gripper/frame.jpg`와 `GET /camera/usb/frame.jpg`를 사용한다. 두 경로는 보기 전용이라 Web PC 주소로 접속한 모든 브라우저(로컬·원격)에 허용하고(10/15, 이전에는 로컬만), Nginx가 각각 Web PC 로컬 `127.0.0.1:8091`·`127.0.0.1:8092`로 프록시한다. Nodes PC 송출 노드는 loopback 바인드를 유지하고 Web PC에서 SSH `-L` 터널로 연결한다. 운전 명령(`/api/commands`)의 로컬 전용 제한은 그대로다.
 
 ## 공통
 - JSON, UTF-8. 시각은 ISO-8601 `+09:00` 문자열(공용 PC 시스템 시계).
@@ -56,8 +56,10 @@ ADR-0006 기준. 브라우저는 Nginx(80) 하나로 들어오고 `/` → React,
 {"ok": true, "session_id": "20261010T143012-a3f9", "planned": 10,
  "placed": 3, "held": 1, "failed": 1, "passed": 2, "remaining": 5,
  "by_zone": {"A": 1, "B": 1, "C": 1, "RECHECK": 0, "HOLD": 1},
+ "available_by_zone": {"A": 1, "B": 1, "C": 1, "RECHECK": 0, "HOLD": 1},
  "as_of": "2026-10-10T14:35:40+09:00"}
 ```
+- `by_zone`은 세션의 분류 이력 누적값이다. `available_by_zone`의 A/B/C는 해당 세션의 `sort_log` 중 `pallet_log.result=DONE`이 없는 박스만 세며, 화면의 분류함 잔여 수량에 쓴다. `FAILED`·`OVERFLOW`·`EXCLUDED` 팔레트 결과는 차감하지 않는다.
 
 ### `PUT /api/sessions/current/plan` — 투입 예정 수량 (SYS-FR-032)
 - 요청 `{"planned": 10}` (1 ~ 100 정수, 기본 10). 응답은 위 `/api/sessions/current` 와 같은 형식.

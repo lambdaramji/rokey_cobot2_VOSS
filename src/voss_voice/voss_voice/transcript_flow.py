@@ -30,6 +30,7 @@ from voss_voice.intent_logic import (
     decide_pallet_route_answer,
     decide_palletize,
     decide_recheck_start,
+    decide_zone_priority,
     is_stop,
     stats_sentence,
     stop_decision,
@@ -126,6 +127,9 @@ class TranscriptFlow:
                 d = decide_destination_answer(text, view, state, box_id)
 
             # 4-1. "송장 확인 불가"·"보류" 답은 보류로 (LLM 없이)
+            if d is None:
+                d = decide_zone_priority(text, view)
+
             if d is None:
                 d = decide_hold_answer(text, state, box_id)
 

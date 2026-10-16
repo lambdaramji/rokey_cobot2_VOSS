@@ -106,6 +106,10 @@ class Segmenter:
         self._speech_ms = 0
         self._silence_ms = 0
 
+    @property
+    def recording(self) -> bool:
+        return bool(self._buf)
+
     def feed(self, frame: np.ndarray) -> np.ndarray | None:
         c = self.cfg
         loud = dbfs(frame) >= c.threshold_db
