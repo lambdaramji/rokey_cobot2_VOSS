@@ -23,6 +23,8 @@ from voss_voice.intent_logic import (
     decide,
     decide_bare_dong,
     decide_destination_answer,
+    decide_hold_answer,
+    decide_zone_priority,
     is_stop,
     stats_sentence,
 )
@@ -106,6 +108,36 @@ def test_priority_needs_known_dong():
     )
 
 
+@pytest.mark.parametrize(
+    "text,dong",
+    [
+        ("A구역부터 분류해.", "역삼동"),
+        ("에이 구역 먼저 분류해", "역삼동"),
+        ("B 먼저 선별해", "대치동"),
+        ("비 구역 우선 처리해줘", "대치동"),
+        ("C구역부터 분류해주세요", "청담동"),
+        ("씨 구역 먼저 해", "청담동"),
+        ("우선 구역을 A로 설정해", "역삼동"),
+    ],
+)
+def test_zone_priority_without_llm(text, dong):
+    result = decide_zone_priority(text, VIEW)
+    assert result.intent["type"] == "priority"
+    assert result.intent["dong"] == dong
+    assert result.intent["raw_text"] == text
+
+
+@pytest.mark.parametrize(
+    "text", ["A구역부터 보류해", "A구역 먼저 분류하지 마", "A말고 B 먼저 분류해", "A구역으로 보내"]
+)
+def test_zone_priority_does_not_guess_for_hold_or_complex_command(text):
+    assert decide_zone_priority(text, VIEW) is None
+
+
+def test_priority_llm_can_supply_zone_instead_of_dong():
+    assert decide({"type": "priority", "zone": "B"}, "비 우선", VIEW).intent["dong"] == "대치동"
+
+
 def test_alias_never_leaves_parser():
     d = decide({"type": "priority", "dong": "역삼"}, "역삼 먼저", VIEW)
     assert d.intent["dong"] == "역삼동"
@@ -136,6 +168,41 @@ def test_llm_allowed_payload():
     assert a["dongs"] == ["역삼동", "대치동", "청담동"]
     assert a["zones"] == ["A", "B", "C"]
     assert "역삼" in a["aliases"]["역삼동"]
+
+
+@pytest.mark.parametrize(
+    "spoken,dong",
+    [
+        ("A구역", "역삼동"),
+        ("에이", "역삼동"),
+        ("B", "대치동"),
+        ("비구역", "대치동"),
+        ("C구역", "청담동"),
+        ("씨", "청담동"),
+    ],
+)
+def test_zone_name_resolves_to_unique_dong(spoken, dong):
+    assert VIEW.canonical_dong(spoken) == dong
+    answer = decide_bare_dong(spoken, VIEW, "ASKING", "box-12")
+    assert answer.intent["dong"] == dong
+
+
+def test_shared_zone_is_not_an_ambiguous_destination():
+    view = ZoneMapView.from_entries([("역삼동", "A", []), ("대치동", "A", [])])
+    assert view.canonical_dong("A구역") is None
+
+
+def test_palletize_zone_order():
+    from voss_voice.intent_logic import decide_palletize
+
+    result = decide_palletize("A, B, C 구역 순서로 팔레트에 실어줘", VIEW)
+    assert result.intent["route"] == ["역삼동", "대치동", "청담동"]
+    assert decide_palletize("에이, 비, 씨 구역 순서로 실어줘", VIEW).intent["route"] == [
+        "역삼동",
+        "대치동",
+        "청담동",
+    ]
+    assert decide_palletize("팔레트 비우고 실어줘", VIEW).say == "동 이름을 순서대로 말씀해 주세요."
 
 
 # --- 이력 응답 문장 ---
@@ -230,6 +297,41 @@ def test_destination_answer_requires_active_question(state: str, box_id: str) ->
 def test_destination_rule_does_not_match_unknown_or_complex_phrases(text: str) -> None:
     """복합·부정·미등록 목적지는 로컬 답변으로 취급하지 않는다."""
     assert decide_destination_answer(text, VIEW, "ASKING", "box-12") is None
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "고류",
+        "고려우",
+        "고려우로 해줘.",
+        "보루",
+        "볼류",
+        "포류로 처리",
+        "고려",
+        "보리우",
+        "보유",
+        "보류.",
+    ],
+)
+def test_hold_answer_accepts_misheard_hold_while_asking(text: str) -> None:
+    """질문 중에는 '보류'로 들리는 STT 오인식도 보류 답으로 받는다 (10/15 현장: 고려우·고류)."""
+    decision = decide_hold_answer(text, "ASKING", "box-12")
+    assert decision is not None and decision.kind == "publish"
+    assert decision.intent["type"] == "answer" and decision.intent["zone"] == "HOLD"
+    assert decision.intent["raw_text"] == text
+
+
+@pytest.mark.parametrize("text", ["소리", "도로", "대치", "고려해봐", "보유", "고류"])
+def test_misheard_hold_is_not_used_outside_question(text: str) -> None:
+    """질문 중이 아니면 오인식 보정을 하지 않는다 — 그대로 LLM 경로로 넘긴다."""
+    assert decide_hold_answer(text, "RUNNING", "box-12") is None
+
+
+@pytest.mark.parametrize("text", ["소리", "도로", "대치", "고려해봐", "모래"])
+def test_unrelated_short_words_are_not_hold_while_asking(text: str) -> None:
+    """질문 중이라도 보류와 거리가 먼 말은 보류로 바꾸지 않는다 (잘못된 HOLD 이동 방지)."""
+    assert decide_hold_answer(text, "ASKING", "box-12") is None
 
 
 def test_local_answers_require_zone_map() -> None:

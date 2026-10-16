@@ -4,6 +4,7 @@
 근거: docs/interfaces/web_api.md, SYS-FR-022.
 """
 
+import os
 import subprocess
 from collections.abc import Callable, Iterable
 
@@ -22,14 +23,25 @@ APLAY_COMMAND = [
     "1",
 ]
 
+PACAT_COMMAND = [
+    "pacat",
+    "--playback",
+    "--raw",
+    "--format=s16le",
+    "--rate=24000",
+    "--channels=1",
+]
+
 
 def play_pcm(
     chunks: Iterable[bytes],
     on_first_pcm_written: Callable[[], None] | None = None,
 ) -> int:
     """PCM을 순차 재생하고 전달한 바이트 수를 반환한다."""
+    echo_sink = os.environ.get("VOSS_TTS_SINK", "")
+    command = [*PACAT_COMMAND, f"--device={echo_sink}"] if echo_sink else APLAY_COMMAND
     player = subprocess.Popen(
-        APLAY_COMMAND,
+        command,
         stdin=subprocess.PIPE,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.PIPE,
@@ -63,7 +75,7 @@ def play_pcm(
 
         if player.returncode != 0:
             message = error_output.decode("utf-8", errors="replace")
-            raise RuntimeError(f"aplay failed: {message}")
+            raise RuntimeError(f"{'pacat' if echo_sink else 'aplay'} failed: {message}")
 
         if received_bytes == 0:
             raise RuntimeError("TTS returned empty PCM")

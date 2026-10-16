@@ -53,7 +53,7 @@ export default function App() {
   const clearedPalletRunId = useRef('');
   useEffect(()=>{palletRef.current=pallet;},[pallet]);
   // 워크스페이스 트레이 '비움': reset_zone 접수(ack '<구역> 비움') 시점의 DB 세션 집계를 기준점으로 두고 그 뒤 증가분만 보인다.
-  // DB 집계(세션 누적 처리 수)는 줄지 않으므로 화면에서만 뺀다. 세션이 바뀌면 기준점을 버린다.
+  // 분류함 잔여 수량의 기준점을 저장한다. 세션이 바뀌면 기준점을 버린다.
   const [zoneClearBase,setZoneClearBase] = useState<{session:string; counts:Record<string,number>}|null>(null);
   const summaryRef = useRef<Summary|null>(null);
   const [logStatus,setLogStatus] = useState('UNKNOWN');
@@ -71,7 +71,6 @@ export default function App() {
   const [selectedDong,setSelectedDong] = useState('');
   const [selectedZone,setSelectedZone] = useState('A');
   const [answerDong,setAnswerDong] = useState('');
-  const [answerHold,setAnswerHold] = useState(false);
   const [busy,setBusy] = useState(false);
   const [clock,setClock] = useState(Date.now());
   const [voiceSignal,setVoiceSignal] = useState<VoiceSignal|null>(null);
@@ -85,13 +84,15 @@ export default function App() {
   const displayMqtt = sseConnected ? mqtt : 'DOWN';
   const sessionId = state?.session_id ?? summary?.session_id ?? '';
   const dongs = useMemo(()=>zoneMap?.entries.map(entry=>entry.dong) ?? [],[zoneMap]);
+  const zoneNames = useMemo(()=>Object.fromEntries(zoneMap?.entries.map(entry=>[entry.zone,entry.dong]) ?? []),[zoneMap]);
   const controlEnabled = isLocal && mqtt === 'UP' && !busy;
   useEffect(()=>{ summaryRef.current = summary; },[summary]);
   const workspaceCounts = useMemo(()=>{
     if (!summary) return null;
-    if (!zoneClearBase || zoneClearBase.session !== (summary.session_id ?? '')) return summary.by_zone;
-    const counts:Record<string,number> = { ...summary.by_zone };
-    for (const [zone,base] of Object.entries(zoneClearBase.counts)) counts[zone] = Math.max(0,(summary.by_zone[zone] ?? 0) - base);
+    const available = summary.available_by_zone ?? summary.by_zone;
+    if (!zoneClearBase || zoneClearBase.session !== (summary.session_id ?? '')) return available;
+    const counts:Record<string,number> = { ...available };
+    for (const [zone,base] of Object.entries(zoneClearBase.counts)) counts[zone] = Math.max(0,(available[zone] ?? 0) - base);
     return counts;
   },[summary,zoneClearBase]);
   // 트럭(팔레트) 칸 수는 DB 세션 집계가 아니라 팔레트 상태(ROS voss/pallet/state 또는 DB pallet_log)의 DONE 칸 수다. 비움 확인 ack 로 팔레트가 비면 0 이 된다.
@@ -274,7 +275,7 @@ export default function App() {
         const zone = cleared[1];
         const latest = summaryRef.current;
         const session = latest?.session_id ?? '';
-        setZoneClearBase(base => ({ session, counts: { ...(base?.session === session ? base.counts : {}), [zone]: latest?.by_zone?.[zone] ?? 0 } }));
+        setZoneClearBase(base => ({ session, counts: { ...(base?.session === session ? base.counts : {}), [zone]: latest?.available_by_zone?.[zone] ?? latest?.by_zone?.[zone] ?? 0 } }));
       }
       if (ack.ok && ack.message === 'PALLET 비움' && !palletPreview) {
         clearedPalletRunId.current = palletRef.current.run_id;
@@ -372,6 +373,7 @@ export default function App() {
         isPoseFresh={robotPose!==null && clock-robotPose.receivedAt<POSE_STALE_MS && sseConnected && mqtt==='UP'}
         lastResult={state?.session_id && latestResult?.session_id === state.session_id ? latestResult : null}
         zoneCounts={displayState !== 'UNKNOWN' && state?.session_id && summary?.session_id === state.session_id ? { ...workspaceCounts, TRUCK: truckCount } : null}
+        zoneNames={zoneNames}
         controlEnabled={controlEnabled}
         onResetZone={zone=>void command('reset_zone',{zone})}
         isStateFresh={displayState !== 'UNKNOWN' && sseConnected && mqtt === 'UP'}
@@ -388,12 +390,12 @@ export default function App() {
           <section className="panel"><div className="section-heading"><div><span className="eyebrow">01 / CONTROL</span><h2>운전 및 분류 제어</h2></div><span className="micro-note">시작·이동 명령은 공용 PC 로컬에서만</span></div>
             <div className="button-cluster"><button className="action primary" disabled={!controlEnabled} onClick={()=>void command('start')}>▶   시작</button><button className="action danger" onClick={()=>void command('stop')}>■   정지</button><button className="action subdued" disabled={!controlEnabled} onClick={()=>void command('resume')}>↻   재개</button></div>
             <div className="form-grid"><div className="field"><label htmlFor="planned">투입 예정 수량</label><div className="inline-input"><div className="plan-stepper"><button type="button" aria-label="투입 예정 수량 1개 줄이기" disabled={busy||Number(plannedText)<=1} onClick={()=>stepPlan(-1)}>−</button><input id="planned" type="number" min="1" max="100" step="1" value={plannedText} onChange={event=>{setPlannedText(event.target.value);editingPlan.current=true;}}/><button type="button" aria-label="투입 예정 수량 1개 늘리기" disabled={busy||Number(plannedText)>=100} onClick={()=>stepPlan(1)}>+</button></div><button disabled={busy} onClick={()=>void savePlan()}>저장</button></div></div><div className="field"><label htmlFor="priority">동별 우선 분류</label><div className="inline-input"><select id="priority" value={selectedDong} onChange={event=>setSelectedDong(event.target.value)}><option value="">동 선택</option>{dongs.map(dong=><option key={dong} value={dong}>{dong}</option>)}</select><button disabled={!controlEnabled||!selectedDong} onClick={()=>void command('priority',{dong:selectedDong})}>적용</button></div></div></div>
-            <div className="form-grid"><div className="field"><label htmlFor="answer">작업자 답변 · 질문 박스 {state?.box_id||'없음'}</label><div className="inline-input"><select id="answer" value={answerDong} disabled={answerHold} onChange={event=>setAnswerDong(event.target.value)}><option value="">동 선택</option>{dongs.map(dong=><option key={dong} value={dong}>{dong}</option>)}</select><button disabled={!controlEnabled||displayState!=='ASKING'||!state?.box_id||(!answerHold&&!answerDong)} onClick={()=>void command('answer',answerHold?{box_id:state?.box_id??'',zone:'HOLD'}:{box_id:state?.box_id??'',dong:answerDong})}>답변</button></div><label className="checkbox"><input type="checkbox" checked={answerHold} onChange={event=>setAnswerHold(event.target.checked)}/> HOLD로 보류</label></div><div className="field"><label htmlFor="zone">구역 초기화</label><div className="inline-input"><select id="zone" value={selectedZone} onChange={event=>setSelectedZone(event.target.value)}>{RESET_ZONES.map(zone=><option key={zone}>{zone}</option>)}</select><button disabled={!controlEnabled} onClick={()=>void command('reset_zone',{zone:selectedZone})}>초기화</button></div></div></div>
+            <div className="form-grid"><div className="field"><label htmlFor="answer">작업자 답변 · 질문 박스 {state?.box_id||'없음'}</label><div className="inline-input"><select id="answer" value={answerDong} onChange={event=>setAnswerDong(event.target.value)}><option value="">동 선택</option>{dongs.map(dong=><option key={dong} value={dong}>{dong}</option>)}<option value="HOLD">HOLD로 보류</option></select><button disabled={!controlEnabled||displayState!=='ASKING'||!state?.box_id||!answerDong} onClick={()=>void command('answer',answerDong==='HOLD'?{box_id:state?.box_id??'',zone:'HOLD'}:{box_id:state?.box_id??'',dong:answerDong})}>답변</button></div></div><div className="field"><label htmlFor="zone">구역 초기화</label><div className="inline-input"><select id="zone" value={selectedZone} onChange={event=>setSelectedZone(event.target.value)}>{RESET_ZONES.map(zone=><option key={zone}>{zone}</option>)}</select><button disabled={!controlEnabled} onClick={()=>void command('reset_zone',{zone:selectedZone})}>초기화</button></div></div></div>
             <p className="inline-notice" role="status">{notice}</p>
             {voiceNotice && <p className="inline-notice" role="alert">{voiceNotice}</p>}
             {state?.pending_question&&<p className="question">질문 대기 · {state.pending_question}</p>}
           </section>
-          <section className="panel"><div className="section-heading"><div><span className="eyebrow">02 / DISTRIBUTION</span><h2>구역별 적재 현황</h2></div><span className="micro-note">PostgreSQL 공식 집계</span></div><div className="zone-grid">{ZONES.map(zone=><div key={zone} className="zone-tile"><span className={`zone-symbol zone-${zone.toLowerCase()}`}>{zone==='RECHECK'?'R':zone==='HOLD'?'H':zone}</span><div><strong>{zone}</strong><small>{zone==='HOLD'?'보류 구역':zone==='RECHECK'?'재확인 구역':'기본 적재 구역'}</small></div><b>{summary?String(summary.by_zone[zone]??0):'—'}<small>건</small></b></div>)}</div></section>
+          <section className="panel"><div className="section-heading"><div><span className="eyebrow">02 / DISTRIBUTION</span><h2>구역별 남은 박스</h2></div><span className="micro-note">PostgreSQL 적재 완료 반영</span></div><div className="zone-grid">{ZONES.map(zone=><div key={zone} className="zone-tile"><span className={`zone-symbol zone-${zone.toLowerCase()}`}>{zone==='RECHECK'?'R':zone==='HOLD'?'H':zone}</span><div><strong>{zone}</strong><small>{zone==='HOLD'?'보류 구역':zone==='RECHECK'?'재확인 구역':zoneNames[zone]??'구역표 대기 중'}</small></div><b>{workspaceCounts?String(workspaceCounts[zone]??0):'—'}<small>건</small></b></div>)}</div></section>
         </div>
         <div className="dashboard-column">
         <PalletPanel pallet={pallet} sortState={displayState} stale={!palletPreview&&palletSource!=='db'&&(!sseConnected||displayMqtt!=='UP')} dongs={dongs} controlEnabled={controlEnabled&&!palletPreview} preview={palletPreview} recorded={palletSource==='db'} onCommand={(type,args)=>void command(type,args)}/>

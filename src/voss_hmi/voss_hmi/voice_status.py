@@ -2,7 +2,14 @@
 
 import json
 
-PHASES = {"WAKE_DETECTED", "COMMAND_ACCEPTED", "RECOGNITION_FAILED", "TIMED_OUT"}
+PHASES = {
+    "AUDIO_DETECTED",
+    "AUDIO_REJECTED",
+    "WAKE_DETECTED",
+    "COMMAND_ACCEPTED",
+    "RECOGNITION_FAILED",
+    "TIMED_OUT",
+}
 
 
 def parse_voice_status(raw):

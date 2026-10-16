@@ -18,6 +18,19 @@ def _flow(post_intent, get_stats=lambda q: {"ok": True, "count": 1}):
     return f, published, said
 
 
+@pytest.mark.parametrize(
+    "text,dong", [("A구역부터 분류해", "역삼동"), ("비 구역 우선 선별해", "대치동")]
+)
+def test_zone_priority_is_resolved_without_llm(text, dong):
+    def unexpected_llm(*args):
+        raise AssertionError("구역 우선 분류는 로컬에서 처리해야 한다")
+
+    flow, published, _ = _flow(unexpected_llm)
+    assert flow.handle(text)[0] == "publish"
+    assert published[0]["type"] == "priority"
+    assert published[0]["dong"] == dong
+
+
 def test_stop_is_not_blocked_by_slow_llm():
     started = threading.Event()
 

@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "architecture",
+  "quality": "standard",
+  "specification": {
+    "path": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/data/04_flow.json",
+    "sha256": "26a86d9e202359a32b4aeab8b0cc5c9ad78b42841bc7f7639a22fc932a37ea33",
+    "bytes": 10725
+  },
+  "artifact": {
+    "path": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/04_flow.html",
+    "sha256": "80effc65219f8825598afab6a6cd6004584b0da18b9c053553fc616ae00db71e",
+    "bytes": 849900
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/04_flow.finalize.json",
+    "summaryReceipt": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/04_flow.finalize-summary.json",
+    "browserCheckReceipt": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/04_flow.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.1.0",
+    "availableVersion": "3.1.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-10-16T02:10:42.521Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 2541,
+  "visualReviewRecommendation": {
+    "action": "inspect-route-readability",
+    "signals": {
+      "routesOverSuggestedBends": 1
+    },
+    "reason": "Automated gates passed, but crossings or detours still need perceptual review before claiming visual quality.",
+    "affectedRoutes": {
+      "crossings": [],
+      "detours": [
+        {
+          "relationship": {
+            "id": "pallet_move-pause",
+            "from": "pallet_move",
+            "to": "pause",
+            "label": "실패 / stop",
+            "collectionIndex": 20,
+            "artifactIndex": 21
+          },
+          "bends": 3,
+          "stretch": 1.057
+        }
+      ],
+      "truncated": false
+    },
+    "hints": [
+      "pallet_move → pause needs 3 bends: move node pallet_move or pause so they share a row or column with matching centers, or sit diagonally with a clear corner."
+    ],
+    "repair": "Trace these relationships at the desktop viewport. For Architecture, use references/architecture-layout-repair.md: reflow a blocked main path or tangled connected scene, and repair an isolated defect locally only when the surrounding composition is accepted. Preserve all semantic content and user-fixed geometry. Rerun finalize once after the edit."
+  }
+}

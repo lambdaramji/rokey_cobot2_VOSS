@@ -24,6 +24,12 @@ def test_only_display_contract_fields_are_forwarded():
     assert parse_voice_status(json.dumps({**payload, "text": "private transcript"})) == payload
 
 
+@pytest.mark.parametrize("phase", ["AUDIO_DETECTED", "AUDIO_REJECTED"])
+def test_audio_activity_is_display_only(phase):
+    payload = {"phase": phase, "event_id": "event", "utterance_id": "audio"}
+    assert parse_voice_status(json.dumps(payload)) == payload
+
+
 def test_disconnect_drops_without_queue_and_reconnect_sends_only_new_event():
     from unittest.mock import Mock
 

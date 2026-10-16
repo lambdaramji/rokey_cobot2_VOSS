@@ -17,10 +17,12 @@ cd ~/voss_ws/src/rokey_cobot2_VOSS/docker/ai
 cp .env.example .env          # OPENAI_API_KEY, OPENAI_MODEL 채우기 (.env 는 커밋 금지)
 docker compose up -d --build
 curl -s http://127.0.0.1:8000/ai/health
+
+서비스는 시작하자마자 Whisper 를 백그라운드로 적재한다(`WHISPER_PRELOAD=0` 이면 첫 STT 때 적재). `whisper_loaded` 가 `true` 가 되기 전의 STT 요청은 5초 제한에 걸리므로 `scripts/web_pc_voice.sh` 는 `true` 를 기다린 뒤 음성 노드를 띄운다(10/15).
 ```
 - Whisper 가중치는 첫 `/ai/stt` 호출 때 내려받아 `whisper-cache` 볼륨에 둔다(레포·이미지에 넣지 않음).
 - 모델 크기 `WHISPER_MODEL` 은 pending #6 — 10/08 비전과 동시 부하 시험(`nvidia-smi`) 후 확정. GPU 가 모자라면 `WHISPER_DEVICE=cpu`, `WHISPER_COMPUTE=int8`.
-- 운영자가 `docker/ai/.env`의 `WHISPER_PROMPT`를 확인한다. 예전 제어 단어가 포함되어 있으면 `.env.example`의 호출어·동 이름 중심 값으로 직접 갱신하고 AI 컨테이너를 다시 생성한다. 실제 `.env` 값은 로그나 Git에 복사하지 않는다.
+- 운영자가 `docker/ai/.env`의 `WHISPER_PROMPT`를 확인한다. `.env.example`의 호출어·동 이름·A/B/C 구역 및 분류/보류 용어를 참고해 갱신하고 AI 컨테이너를 다시 생성한다. 실제 `.env` 값은 로그나 Git에 복사하지 않는다.
 
 ## 단독 확인
 ```bash

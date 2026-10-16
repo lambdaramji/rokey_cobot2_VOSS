@@ -78,7 +78,6 @@ export function TextCommandPanel({connected, enabled, reply, asking, pallet}: {
   return <section className="panel text-command-panel">
     <div className="section-heading"><div><span className="eyebrow">TEXT / INTENT</span><h2>텍스트 명령</h2></div><span className="micro-note">Web PC 로컬 입력</span></div>
     <div className="text-command-history" role="log" aria-live="polite" ref={historyRef}>
-      {entries.length === 0 && <p className="empty">예: 역삼, 대치 순서로 팔레타이징 실행해</p>}
       {entries.map(entry => entry.kind === 'notice'
         ? <p className="text-command-question" key={entry.id}>{entry.text}</p>
         : <div className="text-command-turn" key={entry.id}>

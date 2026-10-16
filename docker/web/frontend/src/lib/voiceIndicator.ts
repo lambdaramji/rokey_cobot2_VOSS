@@ -7,7 +7,7 @@
 export const VOICE_COMMAND_TIMEOUT_MS = 13000; // Web PC 호출어 창 10초보다 긴 예비 타임아웃
 export const VOICE_FAILURE_DISPLAY_MS = 3000;
 
-export type VoicePhase = 'WAKE_DETECTED' | 'COMMAND_ACCEPTED' | 'RECOGNITION_FAILED' | 'TIMED_OUT';
+export type VoicePhase = 'AUDIO_DETECTED' | 'AUDIO_REJECTED' | 'WAKE_DETECTED' | 'COMMAND_ACCEPTED' | 'RECOGNITION_FAILED' | 'TIMED_OUT';
 export type IndicatorColor = 'green' | 'yellow' | 'red';
 export type VoiceFailure = 'recognition' | 'timeout' | null;
 
@@ -20,6 +20,7 @@ export interface VoiceSignal {
 export interface IndicatorState {
   color: IndicatorColor;
   activeUtteranceId: string;
+  confirmedWake: boolean;
   ignoredUtteranceId: string;
   lastEventId: string;
   failure: VoiceFailure;
@@ -36,6 +37,7 @@ export type IndicatorAction =
 export const INITIAL_INDICATOR: IndicatorState = {
   color: 'green',
   activeUtteranceId: '',
+  confirmedWake: false,
   ignoredUtteranceId: '',
   lastEventId: '',
   failure: null,
@@ -53,7 +55,7 @@ function remember(ids: string[], id: string): string[] {
 /** 호출어를 실제로 받은 발화만 처리하며 종료된 발화는 다시 열지 않는다. */
 export function reduceVoiceIndicator(state: IndicatorState, action: IndicatorAction): IndicatorState {
   if (action.type === 'RESET') {
-    return { ...state, color: 'green', activeUtteranceId: '', failure: null,
+    return { ...state, color: 'green', activeUtteranceId: '', confirmedWake: false, failure: null,
       ignoredUtteranceId: state.activeUtteranceId || state.ignoredUtteranceId };
   }
   if (action.type === 'UI_TIMEOUT') {
@@ -62,22 +64,25 @@ export function reduceVoiceIndicator(state: IndicatorState, action: IndicatorAct
   }
   if (action.type === 'UI_RECOVER') {
     if (state.color !== 'red' || state.activeUtteranceId !== action.utteranceId) return state;
-    return { ...state, color: 'green', activeUtteranceId: '', failure: null,
+    return { ...state, color: 'green', activeUtteranceId: '', confirmedWake: false, failure: null,
       ignoredUtteranceId: action.utteranceId };
   }
   const signal = parseVoiceSignal(action.signal);
   if (!signal || state.seenEventIds.includes(signal.event_id)) return state;
   const next = { ...state, lastEventId: signal.event_id,
     seenEventIds: remember(state.seenEventIds, signal.event_id) };
+  // 구버전 노드의 일반 음성 감지 이벤트는 화면 색상에 반영하지 않는다.
+  if (signal.phase === 'AUDIO_DETECTED' || signal.phase === 'AUDIO_REJECTED') return next;
   if (signal.phase === 'WAKE_DETECTED') {
     if (state.seenUtteranceIds.includes(signal.utterance_id)) return next;
     return { ...next, color: 'yellow', activeUtteranceId: signal.utterance_id,
+      confirmedWake: true,
       failure: null, ignoredUtteranceId: '',
       seenUtteranceIds: remember(state.seenUtteranceIds, signal.utterance_id) };
   }
   if (signal.utterance_id !== state.activeUtteranceId || state.color !== 'yellow') return next;
   if (signal.phase === 'COMMAND_ACCEPTED') {
-    return { ...next, color: 'green', activeUtteranceId: '', failure: null };
+    return { ...next, color: 'green', activeUtteranceId: '', confirmedWake: false, failure: null };
   }
   return { ...next, color: 'red', failure: signal.phase === 'TIMED_OUT' ? 'timeout' : 'recognition' };
 }
@@ -88,7 +93,7 @@ export function parseVoiceSignal(value: unknown): VoiceSignal | null {
     return null;
   }
   const data = value as Record<string, unknown>;
-  const phases: string[] = ['WAKE_DETECTED', 'COMMAND_ACCEPTED', 'RECOGNITION_FAILED', 'TIMED_OUT'];
+  const phases: string[] = ['AUDIO_DETECTED', 'AUDIO_REJECTED', 'WAKE_DETECTED', 'COMMAND_ACCEPTED', 'RECOGNITION_FAILED', 'TIMED_OUT'];
   if (typeof data.phase !== 'string' || !phases.includes(data.phase)) {
     return null;
   }

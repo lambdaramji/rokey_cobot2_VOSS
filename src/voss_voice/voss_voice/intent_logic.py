@@ -40,6 +40,88 @@ HOLD_ANSWER_RE = re.compile(
     r"|보류(?:로)?(?:처리|보내)?"
     r"(?:해|해줘|해주세요|해요|합니다|할게|할게요|줘|주세요|부탁해|부탁해요|부탁합니다|입니다|요)?"
 )
+# "보류"의 STT 오인식(고류·고려우·보루·볼류…)을 질문 중(ASKING)에만 보류로 받는다 (10/15 현장).
+_HANGUL_BASE, _HANGUL_END = 0xAC00, 0xD7A3
+_JAMO_INITIAL = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ"
+_JAMO_MEDIAL = "ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ"
+_JAMO_FINAL = " ㄱㄲㄳㄴㄵㄶㄷㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅄㅅㅆㅇㅈㅊㅋㅌㅍㅎ"
+_HOLD_WORD = "보류"
+
+
+def _jamo(ch: str) -> tuple[str, str, str] | None:
+    """한글 음절 → (초성, 중성, 종성). 종성 없음은 ' '. 한글이 아니면 None."""
+    code = ord(ch)
+    if not _HANGUL_BASE <= code <= _HANGUL_END:
+        return None
+    code -= _HANGUL_BASE
+    return _JAMO_INITIAL[code // 588], _JAMO_MEDIAL[code % 588 // 28], _JAMO_FINAL[code % 28]
+
+
+def _compose(initial: str, medial: str, final: str = " ") -> str:
+    return chr(
+        _HANGUL_BASE
+        + _JAMO_INITIAL.index(initial) * 588
+        + _JAMO_MEDIAL.index(medial) * 28
+        + _JAMO_FINAL.index(final)
+    )
+
+
+def _collapse_yu(word: str) -> str:
+    """'려우'·'리우'처럼 두 음절로 늘어진 '류' 소리를 한 음절로 합친다 (고려우 → 고류)."""
+    out: list[str] = []
+    i = 0
+    while i < len(word):
+        cur, nxt = _jamo(word[i]), _jamo(word[i + 1]) if i + 1 < len(word) else None
+        if cur is not None and nxt == ("ㅇ", "ㅜ", " ") and cur[1] in "ㅕㅣ" and cur[2] == " ":
+            out.append(_compose(cur[0], "ㅠ"))
+            i += 2
+            continue
+        out.append(word[i])
+        i += 1
+    return "".join(out)
+
+
+def _jamo_tokens(word: str) -> list[str]:
+    tokens: list[str] = []
+    for ch in word:
+        j = _jamo(ch)
+        tokens.extend(j[:2] if j is not None and j[2] == " " else (j or (ch,)))
+    return tokens
+
+
+def _edit_distance(a: list[str], b: list[str]) -> int:
+    prev = list(range(len(b) + 1))
+    for i, x in enumerate(a, 1):
+        cur = [i]
+        for j, y in enumerate(b, 1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (x != y)))
+        prev = cur
+    return prev[-1]
+
+
+def sounds_like_hold(word: str) -> bool:
+    """두 음절 낱말이 '보류'로 들리는가: 자모 하나 차이(고류·보루·볼류·포류),
+    또는 첫 음절 모음 ㅗ + 둘째 음절 ㄹ+ㅠ/ㅕ/ㅜ 꼴(고려·모루). 소리·도로·대치는 아니다."""
+    word = _collapse_yu(word)
+    if len(word) != 2:
+        return False
+    first, second = _jamo(word[0]), _jamo(word[1])
+    if first is None or second is None:
+        return False
+    if _edit_distance(_jamo_tokens(word), _jamo_tokens(_HOLD_WORD)) <= 1:
+        return True
+    return first[1] == "ㅗ" and second[0] == "ㄹ" and second[1] in "ㅠㅕㅜ" and second[2] == " "
+
+
+def canonicalize_hold(squashed: str) -> str:
+    """앞머리 2~3음절이 '보류'로 들리면 '보류'로 바꾸고 뒤(조사·어미)는 그대로 둔다."""
+    for n in (3, 2):
+        head = squashed[:n]
+        if len(head) == n and all(_jamo(ch) is not None for ch in head) and sounds_like_hold(head):
+            return _HOLD_WORD + squashed[n:]
+    return squashed
+
+
 # "재확인 시작" → 보관 중인 재확인 칸 박스 처리(type recheck, 10/12 시연, LLM 없이). 전체 일치
 RECHECK_START_RE = re.compile(
     r"재확인(?:을)?(?:시작|진행|처리)?(?:해|해줘|해주세요|하자|합니다|할게|해요)?"
@@ -55,6 +137,7 @@ PALLETIZE_RE = re.compile(
 PALLETIZE_START_RE = re.compile(
     r"팔레타이징(?:을)?(?:실행|시작)(?:해|해줘|해주세요|하자|합니다|해요)?"
 )
+SHORT_ZONE_ALIASES = frozenset({"a", "b", "c", "에이", "비", "비이", "씨", "시"})
 SAY_PALLET_ORDER = "동 이름을 순서대로 말씀해 주세요."
 
 # 정지 키워드: 공백·문장부호를 지운 뒤 포함 여부로 본다. 오인식으로 멈추는 쪽은 허용한다.
@@ -105,17 +188,30 @@ class ZoneMapView:
         dongs: list[str] = []
         zones: list[str] = []
         alias: dict[str, str] = {}
+        zone_dongs: dict[str, list[str]] = {}
         for dong, zone, aliases in entries:
             if not dong:
                 continue
             dongs.append(dong)
             if zone and zone not in zones:
                 zones.append(zone)
+            if zone:
+                zone_dongs.setdefault(zone.upper(), []).append(dong)
             alias[_squash(dong)] = dong  # 정식 이름은 aliases 가 비어도 항상 허용
             if dong.endswith("동"):
                 alias.setdefault(_squash(dong[:-1]), dong)  # "역삼" → 역삼동
             for a in aliases:
                 alias.setdefault(_squash(a), dong)
+        # 구역이 동 하나에만 대응할 때만 구역명으로 로봇 목적지를 지정할 수 있다.
+        # 여러 동이 한 구역을 공유하면 임의의 동을 선택하지 않는다.
+        spoken = {"A": ("에이",), "B": ("비", "비이"), "C": ("씨", "시")}
+        for zone, members in zone_dongs.items():
+            if len(members) != 1:
+                continue
+            for name in (zone, f"{zone}구역", *spoken.get(zone, ())):
+                alias.setdefault(_squash(name), members[0])
+            for name in spoken.get(zone, ()):
+                alias.setdefault(_squash(f"{name}구역"), members[0])
         return cls(tuple(dongs), tuple(zones), alias, version)
 
     def canonical_dong(self, raw: str | None) -> str | None:
@@ -239,13 +335,43 @@ def decide_bare_dong(
     )
 
 
+def decide_zone_priority(raw_text: str, view: ZoneMapView | None) -> Decision | None:
+    """A/B/C 구역을 먼저 분류하라는 명시적인 지시를 LLM 없이 처리한다."""
+    name = r"(?P<name>(?:a|b|c|에이|비이?|씨|시)(?:구역)?)"
+    ending = r"(?:해|해줘|해주세요|해요|하자|해줘요|시작해)?"
+    text = _squash(raw_text)
+    match = re.fullmatch(
+        name + r"(?:을|를|은|는)?"
+        r"(?:부터(?:먼저|우선)?(?:분류|선별|처리)?|(?:먼저|우선)(?:분류|선별|처리)?|분류|선별)"
+        + ending,
+        text,
+    )
+    if match is None:
+        match = re.fullmatch(
+            r"우선(?:분류|선별)?구역(?:을|은)?" + name + r"(?:으로|로)(?:설정|지정|변경)" + ending,
+            text,
+        )
+    if match is None:
+        return None
+    if view is None:
+        return Decision("say", say=SAY_NOT_READY)
+    dong = view.canonical_dong(match.group("name"))
+    if dong is None:
+        return Decision("say", say=SAY_UNKNOWN_DONG)
+    return Decision("publish", intent=_intent("priority", dong=dong, raw_text=raw_text))
+
+
 def decide_hold_answer(
     raw_text: str,
     sort_state: str,
     sort_box_id: str,
 ) -> Decision | None:
-    """'송장 확인 불가'·'보류' 같은 답을 보류(HOLD) 답으로 처리한다. 해당 표현이 아니면 None."""
-    if HOLD_ANSWER_RE.fullmatch(_squash(raw_text)) is None:
+    """'송장 확인 불가'·'보류' 같은 답을 보류(HOLD) 답으로 처리한다. 해당 표현이 아니면 None.
+    질문 중(ASKING)에는 '고류'·'고려우'처럼 보류로 들리는 오인식도 보류로 받는다."""
+    squashed = _squash(raw_text)
+    if sort_state == "ASKING":
+        squashed = canonicalize_hold(squashed)
+    if HOLD_ANSWER_RE.fullmatch(squashed) is None:
         return None
     # 질문 중이 아니면 보류 답으로 로봇을 움직이지 않는다.
     if sort_state != "ASKING" or not sort_box_id:
@@ -272,9 +398,21 @@ def decide_palletize(raw_text: str, view: ZoneMapView | None) -> Decision | None
         return None
     if view is None:
         return Decision("say", say=SAY_NOT_READY)
-    found: dict[str, int] = {}  # 정식 동 → 처음 나온 위치
+    positions = [
+        index for index, char in enumerate(raw_text) if not re.fullmatch(r"[\s\.,!?~·\-]", char)
+    ]
+    found: dict[str, int] = {}  # 정식 동 → 원문에서 처음 나온 위치
     for alias, dong in view.alias_to_dong.items():
-        i = s.find(alias)
+        if alias in SHORT_ZONE_ALIASES:
+            # '비우고'의 비, '시작'의 시를 B/C 구역으로 읽지 않는다.
+            pattern = re.compile(
+                rf"(?<![가-힣A-Za-z]){re.escape(alias)}(?=\s*구역|\s*[,./→]|\s+|$)", re.IGNORECASE
+            )
+            match = pattern.search(raw_text)
+            i = match.start() if match else -1
+        else:
+            offset = s.find(alias)
+            i = positions[offset] if offset >= 0 else -1
         if alias and i >= 0 and (dong not in found or i < found[dong]):
             found[dong] = i
     if not found:
@@ -364,9 +502,10 @@ def decide(
         return Decision("publish", intent=_intent(t, raw_text=raw_text))
 
     if t == "priority":
-        if not llm.get("dong"):
+        destination = llm.get("dong") or llm.get("zone")
+        if not destination:
             return Decision("say", say=SAY_WHICH_DONG)
-        dong = view.canonical_dong(llm.get("dong"))
+        dong = view.canonical_dong(destination)
         if dong is None:
             return Decision("say", say=SAY_UNKNOWN_DONG)
         return Decision("publish", intent=_intent(t, dong=dong, raw_text=raw_text))

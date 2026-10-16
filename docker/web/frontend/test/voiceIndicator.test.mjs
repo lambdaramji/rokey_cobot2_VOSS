@@ -3,6 +3,21 @@ import assert from 'node:assert/strict';
 import { INITIAL_INDICATOR, reduceVoiceIndicator as reduce, parseVoiceSignal, VOICE_COMMAND_TIMEOUT_MS, VOICE_FAILURE_DISPLAY_MS } from '../src/lib/voiceIndicator.ts';
 const event = (phase, utterance_id='u1', event_id=`${utterance_id}-${phase}`) => ({ type:'VOICE_EVENT', signal:{phase, utterance_id, event_id} });
 const wake = () => reduce(INITIAL_INDICATOR, event('WAKE_DETECTED'));
+test('일반 음성 감지만으로 색상을 바꾸지 않음',()=>{
+ const listening=reduce(INITIAL_INDICATOR,event('AUDIO_DETECTED','audio1'));
+ assert.equal(listening.color,'green'); assert.equal(listening.confirmedWake,false);
+ assert.equal(reduce(listening,event('AUDIO_REJECTED','audio1')).color,'green');
+ const failed=reduce(wake(),event('RECOGNITION_FAILED'));
+ assert.equal(reduce(failed,event('AUDIO_DETECTED','noise')).color,'red');
+});
+test('확인된 호출어는 앞선 음성 구간 종료로 지워지지 않음',()=>{
+ const listening=reduce(INITIAL_INDICATOR,event('AUDIO_DETECTED','audio1'));
+ const confirmed=reduce(listening,event('WAKE_DETECTED','wake1'));
+ assert.equal(confirmed.confirmedWake,true);
+ assert.equal(reduce(confirmed,event('AUDIO_REJECTED','audio1')).color,'yellow');
+ assert.equal(reduce(confirmed,event('AUDIO_DETECTED','audio2')).activeUtteranceId,'wake1');
+ assert.equal(reduce(confirmed,event('COMMAND_ACCEPTED','wake1')).color,'green');
+});
 test('호출어 수신 → 노랑',()=>assert.equal(wake().color,'yellow'));
 test('전사 수락 → 초록',()=>assert.equal(reduce(wake(),event('COMMAND_ACCEPTED')).color,'green'));
 test('실패 → 빨강 및 인식 실패 안내 상태',()=>assert.deepEqual([reduce(wake(),event('RECOGNITION_FAILED')).color,reduce(wake(),event('RECOGNITION_FAILED')).failure],['red','recognition']));

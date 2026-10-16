@@ -9,7 +9,8 @@ import java.util.function.LongSupplier;
 /** 음성 표시 이벤트만 검증하고 최근 중복을 제한된 메모리에서 제거한다. */
 final class VoiceStatusFilter {
     private static final Set<String> PHASES = Set.of(
-            "WAKE_DETECTED", "COMMAND_ACCEPTED", "RECOGNITION_FAILED", "TIMED_OUT");
+            "AUDIO_DETECTED", "AUDIO_REJECTED", "WAKE_DETECTED",
+            "COMMAND_ACCEPTED", "RECOGNITION_FAILED", "TIMED_OUT");
     private static final long TTL_NS = 600_000_000_000L;
     private static final int MAX_IDS = 1024;
     private final Map<String, Long> seen = new LinkedHashMap<>();

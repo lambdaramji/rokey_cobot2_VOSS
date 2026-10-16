@@ -5,7 +5,7 @@
 ## ROS 쪽 (voss_voice 변경 PR 이 새로 추가)
 
 - `voice_listener`의 `/voss/voice/status`: `std_msgs/String` JSON. ROS reliable/volatile, depth 10 (topics.md `/voss/voice/*` 행). main 에는 없던 토픽이며 `voice_feedback.py` 와 함께 들어온다.
-- phase는 `WAKE_DETECTED`, `COMMAND_ACCEPTED`, `RECOGNITION_FAILED`, `TIMED_OUT` 네 가지다. `RECOGNITION_FAILED` 는 호출어 뒤 STT **호출 실패**일 때만 낸다 — 잡음 구간의 빈 전사는 기존 WakeGate 처럼 무시하고 호출 대기를 유지한다(10/14 #40 리뷰).
+- phase는 `WAKE_DETECTED`, `COMMAND_ACCEPTED`, `RECOGNITION_FAILED`, `TIMED_OUT`이다. 일반 음성/VAD 감지만으로 표시 이벤트를 보내지 않는다. 이전 버전의 `AUDIO_DETECTED`·`AUDIO_REJECTED`는 수신 호환만 유지하고 화면 색상에는 반영하지 않는다. `RECOGNITION_FAILED`는 확인된 호출어 뒤 STT **호출 실패**일 때만 낸다.
 - `TIMED_OUT` 때 voice_listener 는 `/voss/voice/say` 로 안내 한 줄("시간이 지났어요. 호출어를 다시 말해 주세요.")을 낸다. 안내문에 호출어 자체를 넣지 않는다 — 스피커 소리가 마이크로 돌아와 호출어로 잡힌 사례(10/15). 단 SortState 가 `PICKING`·`RECHECK`·`PALLETIZING`(로봇 동작 중)이면 말하지 않고(작업자의 "정지"와 겹치거나 manager 안내를 speech_out FIFO 뒤로 밀지 않게), 그 밖에도 `timeout_say_min_interval_s`(기본 30 s)에 한 번만 말한다. 표시 이벤트 `TIMED_OUT` 은 항상 보낸다(10/14 #40 리뷰, 박병후).
 - `publish_transcript:=false`(표시등만 시험)에서도 상태 이벤트는 나간다 — 이때는 transcript 가 안 나가 음성 명령·정지가 무효이므로 기동 때 WARN 을 남기고, **ROS_DOMAIN_ID 30(운용 도메인)에서는 기동을 거부한다**.
 - 필드는 `phase`, `event_id`, `utterance_id`뿐이다. timestamp는 없다. UUID를 시각순으로 비교하지 않는다.
@@ -33,7 +33,7 @@ MQTT QoS 0 이유: 이 이벤트는 잠깐의 화면 상태이며, 끊긴 동안
 
 ID는 공백만인 값·앞뒤 공백·128자 초과를 거부한다. 추가 필드는 ROS→MQTT 경계에서 제거한다. 원문·오디오는 웹으로 보내지 않는다.
 
-- 실제 호출어 인식: 노랑. `WAKE_DETECTED`는 음성 구간 종료와 STT 전사 후에 발행된다. voice_listener의 기본 종료 무음은 350 ms이며, 실시간 키워드 검출 이벤트는 아니다. 호출어 없는 stop/텍스트 폴백을 통과시키기 위해 가짜 `WAKE_DETECTED`를 만들지 않는다. stop의 transcript 처리는 그대로 유지한다.
+- 실제 호출어 인식(`WAKE_DETECTED`) 때만 노랑으로 바뀐다. 호출어 확인은 음성 구간 종료와 STT 전사 후에 확정되므로 일반 음성 시작만으로 색을 바꾸지 않는다. voice_listener의 기본 종료 무음은 350 ms다. 호출어 없는 stop/텍스트 폴백을 통과시키기 위해 가짜 `WAKE_DETECTED`를 만들지 않는다. stop의 transcript 처리는 그대로 유지한다.
 - 같은 발화의 `COMMAND_ACCEPTED`: 초록.
 - 같은 발화의 `RECOGNITION_FAILED` 또는 `TIMED_OUT`: 빨강 및 안내.
 - 호출 후 이벤트가 없으면 Web PC에서 `VOICE_COMMAND_TIMEOUT_MS=13000`: 빨강.

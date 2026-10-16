@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "924c5e34-590d-49a9-ab6f-a1b48febac97",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/data/02_ros2.json",
+  "output": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/02_ros2.html",
+  "specification": {
+    "sha256": "26ccb68b8953610711023be8080baece60e071c04cc9f34c880cb87ae9414404",
+    "bytes": 10506
+  },
+  "artifact": {
+    "sha256": "bc4618e854946bd74e974c67b096b46fb108681f8e3755157ed81bc881c0f78e",
+    "bytes": 851104
+  }
+}

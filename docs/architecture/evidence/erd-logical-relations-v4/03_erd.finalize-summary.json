@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "erd",
+  "quality": "standard",
+  "specification": {
+    "path": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/data/03_erd.json",
+    "sha256": "a483caa6c6f92ef6c068d0fdbe69fb8a6a3f02db60615eec85e7ffe1e9c10e20",
+    "bytes": 6625
+  },
+  "artifact": {
+    "path": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/03_erd.html",
+    "sha256": "4b33fc62903d7fe095a5a6d2bddc5ff5dfe4cabcbfddffcba6b5749d94185ee3",
+    "bytes": 837793
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/evidence/erd-logical-relations-v4/03_erd.finalize.json",
+    "summaryReceipt": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/evidence/erd-logical-relations-v4/03_erd.finalize-summary.json",
+    "browserCheckReceipt": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/evidence/erd-logical-relations-v4/03_erd.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.1.0",
+    "availableVersion": "3.1.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-10-16T02:10:42.521Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 2282
+}

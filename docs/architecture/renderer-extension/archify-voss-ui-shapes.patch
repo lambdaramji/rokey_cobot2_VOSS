@@ -1,0 +1,468 @@
+diff --git a/archify/assets/template.html b/archify/assets/template.html
+index a3014c0..114604f 100644
+--- a/archify/assets/template.html
++++ b/archify/assets/template.html
+@@ -7912,8 +7912,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
+       }
+       function writeStored() {
+         try {
+-          if (readerPaused) localStorage.removeItem(STORAGE_KEY);
+-          else localStorage.setItem(STORAGE_KEY, 'live');
++          localStorage.setItem(STORAGE_KEY, readerPaused ? 'still' : 'live');
+         } catch (_) {}
+       }
+       function reducedMotion() {
+@@ -8063,7 +8062,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
+       createFlows();
+       html.setAttribute('data-motion-capable', 'true');
+       btn.hidden = false;
+-      readerPaused = readStored() !== 'live';
++      readerPaused = readStored() === 'still';
+       btn.addEventListener('click', function () { setPaused(!readerPaused); });
+       if (motionQuery) {
+         if (typeof motionQuery.addEventListener === 'function') motionQuery.addEventListener('change', render);
+diff --git a/archify/renderers/architecture/render-architecture.mjs b/archify/renderers/architecture/render-architecture.mjs
+index 8269df9..d957077 100644
+--- a/archify/renderers/architecture/render-architecture.mjs
++++ b/archify/renderers/architecture/render-architecture.mjs
+@@ -1080,6 +1080,28 @@ function renderConnectionLabel(conn, index) {
+         </g>`;
+ }
+ 
++function vossFlowShape(c, cls, animate = '') {
++  const x = c.x, y = c.y, w = c.width, h = c.height;
++  const common = `class="${cls}"${animate} stroke-width="1.5"`;
++  if (c.shape === 'decision') {
++    return `<path d="M ${x+w/2} ${y} L ${x+w} ${y+h/2} L ${x+w/2} ${y+h} L ${x} ${y+h/2} Z" ${common}/>`;
++  }
++  if (c.shape === 'input') {
++    const k = Math.min(22, w * 0.12);
++    return `<path d="M ${x+k} ${y} L ${x+w} ${y} L ${x+w-k} ${y+h} L ${x} ${y+h} Z" ${common}/>`;
++  }
++  if (c.shape === 'delay') {
++    const q = Math.min(h/2, 38);
++    return `<path d="M ${x} ${y} L ${x+w-q} ${y} Q ${x+w} ${y} ${x+w} ${y+h/2} Q ${x+w} ${y+h} ${x+w-q} ${y+h} L ${x} ${y+h} Z" ${common}/>`;
++  }
++  if (c.shape === 'database') {
++    const k = Math.min(12, h * 0.15);
++    return `<path d="M ${x} ${y+k} C ${x} ${y-k/2} ${x+w} ${y-k/2} ${x+w} ${y+k} L ${x+w} ${y+h-k} C ${x+w} ${y+h+k/2} ${x} ${y+h+k/2} ${x} ${y+h-k} Z" ${common}/><path d="M ${x} ${y+k} C ${x} ${y+2*k} ${x+w} ${y+2*k} ${x+w} ${y+k}" fill="none" class="${cls}" stroke-width="1.5"/>`;
++  }
++  const rx = c.shape === 'terminator' ? h / 2 : c.shape === 'process' ? 3 : 8;
++  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" ${common}/>`;
++}
++
+ function renderComponent(c) {
+   const fill = componentFill[c.type] || 'c-external';
+   const accent = componentText[c.type] || 't-muted';
+@@ -1097,9 +1119,9 @@ function renderComponent(c) {
+   const passport = { kind: c.type, sublabel: c.sublabel, tag: c.tag, context: componentContext(c), ...brandMetadataFor(c) };
+   return `        <g ${focusNodeAttrs(c.id, c.label, passport, arch.meta.locale)}>
+           ${focusNodeTitle(c.label, passport)}
+-          <rect x="${c.x}" y="${c.y}" width="${c.width}" height="${c.height}" rx="8" class="c-mask"/>
+-          <rect x="${c.x}" y="${c.y}" width="${c.width}" height="${c.height}" rx="8" class="${fill}"${animateAttr(arch.meta, 'node', componentSteps.get(c.id))} stroke-width="1.5"/>
+-          ${renderSemanticSigil(c.type, { icon: c.icon, x: c.x + 6, y: c.y + 6 })}${brand ? `\n          ${brand}` : ''}
++          ${vossFlowShape(c, 'c-mask')}
++          ${vossFlowShape(c, fill, animateAttr(arch.meta, 'node', componentSteps.get(c.id)))}
++          ${c.shape ? '' : renderSemanticSigil(c.type, { icon: c.icon, x: c.x + 6, y: c.y + 6 })}${brand ? `\n          ${brand}` : ''}
+           <text data-node-label=""${hasSub ? ' data-detail-anchor=""' : ''} x="${cx}" y="${labelY}" class="t-primary" font-size="${labelFontSize}" font-weight="600" text-anchor="middle">${esc(c.label)}</text>${sub}${tag}
+         </g>`;
+ }
+diff --git a/archify/schemas/architecture.schema.json b/archify/schemas/architecture.schema.json
+index 5fe3b8e..9dcb9f3 100644
+--- a/archify/schemas/architecture.schema.json
++++ b/archify/schemas/architecture.schema.json
+@@ -4,42 +4,95 @@
+   "title": "Archify Architecture Diagram",
+   "type": "object",
+   "additionalProperties": false,
+-  "required": ["schema_version", "diagram_type", "meta", "components"],
++  "required": [
++    "schema_version",
++    "diagram_type",
++    "meta",
++    "components"
++  ],
+   "properties": {
+-    "schema_version": { "const": 1 },
+-    "diagram_type": { "const": "architecture" },
++    "schema_version": {
++      "const": 1
++    },
++    "diagram_type": {
++      "const": "architecture"
++    },
+     "meta": {
+       "type": "object",
+       "additionalProperties": false,
+-      "required": ["title", "output"],
++      "required": [
++        "title",
++        "output"
++      ],
+       "properties": {
+-        "title": { "type": "string", "minLength": 1 },
+-        "locale": { "$ref": "common.schema.json#/$defs/locale" },
+-        "translations": { "$ref": "common.schema.json#/$defs/translations" },
+-        "subtitle": { "type": "string" },
+-        "output": { "$ref": "common.schema.json#/$defs/portableOutputPath" },
+-        "animation": { "$ref": "common.schema.json#/$defs/animation" },
+-        "visual_preset": { "$ref": "common.schema.json#/$defs/visualPreset" },
+-        "quality_profile": { "$ref": "common.schema.json#/$defs/qualityProfile" },
+-        "engineering_profile": { "enum": ["deployment-ownership"] },
+-        "repository": { "$ref": "common.schema.json#/$defs/repository" },
+-        "views": { "$ref": "common.schema.json#/$defs/guidedViews" },
++        "title": {
++          "type": "string",
++          "minLength": 1
++        },
++        "locale": {
++          "$ref": "common.schema.json#/$defs/locale"
++        },
++        "translations": {
++          "$ref": "common.schema.json#/$defs/translations"
++        },
++        "subtitle": {
++          "type": "string"
++        },
++        "output": {
++          "$ref": "common.schema.json#/$defs/portableOutputPath"
++        },
++        "animation": {
++          "$ref": "common.schema.json#/$defs/animation"
++        },
++        "visual_preset": {
++          "$ref": "common.schema.json#/$defs/visualPreset"
++        },
++        "quality_profile": {
++          "$ref": "common.schema.json#/$defs/qualityProfile"
++        },
++        "engineering_profile": {
++          "enum": [
++            "deployment-ownership"
++          ]
++        },
++        "repository": {
++          "$ref": "common.schema.json#/$defs/repository"
++        },
++        "views": {
++          "$ref": "common.schema.json#/$defs/guidedViews"
++        },
+         "legend": {
+           "type": "object",
+           "additionalProperties": false,
+           "properties": {
+-            "mode": { "$ref": "common.schema.json#/$defs/legendMode" },
++            "mode": {
++              "$ref": "common.schema.json#/$defs/legendMode"
++            },
+             "entries": {
+               "type": "object",
+               "additionalProperties": false,
+               "properties": {
+-                "frontend": { "$ref": "common.schema.json#/$defs/legendEntry" },
+-                "backend": { "$ref": "common.schema.json#/$defs/legendEntry" },
+-                "database": { "$ref": "common.schema.json#/$defs/legendEntry" },
+-                "cloud": { "$ref": "common.schema.json#/$defs/legendEntry" },
+-                "security": { "$ref": "common.schema.json#/$defs/legendEntry" },
+-                "messagebus": { "$ref": "common.schema.json#/$defs/legendEntry" },
+-                "external": { "$ref": "common.schema.json#/$defs/legendEntry" }
++                "frontend": {
++                  "$ref": "common.schema.json#/$defs/legendEntry"
++                },
++                "backend": {
++                  "$ref": "common.schema.json#/$defs/legendEntry"
++                },
++                "database": {
++                  "$ref": "common.schema.json#/$defs/legendEntry"
++                },
++                "cloud": {
++                  "$ref": "common.schema.json#/$defs/legendEntry"
++                },
++                "security": {
++                  "$ref": "common.schema.json#/$defs/legendEntry"
++                },
++                "messagebus": {
++                  "$ref": "common.schema.json#/$defs/legendEntry"
++                },
++                "external": {
++                  "$ref": "common.schema.json#/$defs/legendEntry"
++                }
+               }
+             }
+           }
+@@ -47,8 +100,14 @@
+         "viewBox": {
+           "type": "array",
+           "prefixItems": [
+-            { "type": "number", "minimum": 320 },
+-            { "type": "number", "minimum": 240 }
++            {
++              "type": "number",
++              "minimum": 320
++            },
++            {
++              "type": "number",
++              "minimum": 240
++            }
+           ],
+           "items": false,
+           "minItems": 2,
+@@ -59,15 +118,39 @@
+     "layout": {
+       "type": "object",
+       "additionalProperties": false,
+-      "required": ["mode"],
++      "required": [
++        "mode"
++      ],
+       "properties": {
+-        "mode": { "enum": ["grid"] },
+-        "origin": { "$ref": "common.schema.json#/$defs/point" },
+-        "cols": { "type": "integer", "minimum": 1, "maximum": 12 },
+-        "gapX": { "type": "number", "minimum": 0 },
+-        "gapY": { "type": "number", "minimum": 0 },
+-        "cellW": { "type": "number", "minimum": 40 },
+-        "cellH": { "type": "number", "minimum": 24 }
++        "mode": {
++          "enum": [
++            "grid"
++          ]
++        },
++        "origin": {
++          "$ref": "common.schema.json#/$defs/point"
++        },
++        "cols": {
++          "type": "integer",
++          "minimum": 1,
++          "maximum": 12
++        },
++        "gapX": {
++          "type": "number",
++          "minimum": 0
++        },
++        "gapY": {
++          "type": "number",
++          "minimum": 0
++        },
++        "cellW": {
++          "type": "number",
++          "minimum": 40
++        },
++        "cellH": {
++          "type": "number",
++          "minimum": 24
++        }
+       }
+     },
+     "components": {
+@@ -76,28 +159,73 @@
+       "items": {
+         "type": "object",
+         "additionalProperties": false,
+-        "required": ["id", "type", "label"],
++        "required": [
++          "id",
++          "type",
++          "label"
++        ],
+         "properties": {
+-          "id": { "$ref": "common.schema.json#/$defs/id" },
+-          "type": { "$ref": "common.schema.json#/$defs/componentType" },
+-          "label": { "type": "string", "minLength": 1 },
+-          "sublabel": { "type": "string" },
+-          "tag": { "type": "string" },
+-          "icon": { "$ref": "common.schema.json#/$defs/nodeIcon" },
+-          "brand": { "$ref": "common.schema.json#/$defs/brandMark" },
+-          "sources": { "$ref": "common.schema.json#/$defs/sourceReferences" },
+-          "row": { "type": "integer", "minimum": 0 },
+-          "col": { "type": "integer", "minimum": 0 },
+-          "pos": { "$ref": "common.schema.json#/$defs/point" },
++          "id": {
++            "$ref": "common.schema.json#/$defs/id"
++          },
++          "type": {
++            "$ref": "common.schema.json#/$defs/componentType"
++          },
++          "label": {
++            "type": "string",
++            "minLength": 1
++          },
++          "sublabel": {
++            "type": "string"
++          },
++          "tag": {
++            "type": "string"
++          },
++          "icon": {
++            "$ref": "common.schema.json#/$defs/nodeIcon"
++          },
++          "brand": {
++            "$ref": "common.schema.json#/$defs/brandMark"
++          },
++          "sources": {
++            "$ref": "common.schema.json#/$defs/sourceReferences"
++          },
++          "row": {
++            "type": "integer",
++            "minimum": 0
++          },
++          "col": {
++            "type": "integer",
++            "minimum": 0
++          },
++          "pos": {
++            "$ref": "common.schema.json#/$defs/point"
++          },
+           "size": {
+             "type": "array",
+             "prefixItems": [
+-              { "type": "number", "exclusiveMinimum": 0 },
+-              { "type": "number", "exclusiveMinimum": 0 }
++              {
++                "type": "number",
++                "exclusiveMinimum": 0
++              },
++              {
++                "type": "number",
++                "exclusiveMinimum": 0
++              }
+             ],
+             "items": false,
+             "minItems": 2,
+             "maxItems": 2
++          },
++          "shape": {
++            "enum": [
++              "process",
++              "decision",
++              "terminator",
++              "input",
++              "delay",
++              "database"
++            ]
+           }
+         }
+       }
+@@ -107,16 +235,33 @@
+       "items": {
+         "type": "object",
+         "additionalProperties": false,
+-        "required": ["kind", "label", "wraps"],
++        "required": [
++          "kind",
++          "label",
++          "wraps"
++        ],
+         "properties": {
+-          "kind": { "enum": ["region", "security-group"] },
+-          "label": { "type": "string", "minLength": 1 },
++          "kind": {
++            "enum": [
++              "region",
++              "security-group"
++            ]
++          },
++          "label": {
++            "type": "string",
++            "minLength": 1
++          },
+           "wraps": {
+             "type": "array",
+             "minItems": 1,
+-            "items": { "$ref": "common.schema.json#/$defs/id" }
++            "items": {
++              "$ref": "common.schema.json#/$defs/id"
++            }
+           },
+-          "pad": { "type": "number", "minimum": 0 }
++          "pad": {
++            "type": "number",
++            "minimum": 0
++          }
+         }
+       }
+     },
+@@ -125,28 +270,67 @@
+       "items": {
+         "type": "object",
+         "additionalProperties": false,
+-        "required": ["from", "to"],
++        "required": [
++          "from",
++          "to"
++        ],
+         "properties": {
+-          "id": { "$ref": "common.schema.json#/$defs/id" },
+-          "from": { "$ref": "common.schema.json#/$defs/id" },
+-          "to": { "$ref": "common.schema.json#/$defs/id" },
+-          "label": { "type": "string" },
+-          "variant": { "$ref": "common.schema.json#/$defs/variant" },
+-          "fromSide": { "$ref": "common.schema.json#/$defs/side" },
+-          "toSide": { "$ref": "common.schema.json#/$defs/side" },
+-          "route": { "enum": ["auto", "straight", "orthogonal-h", "orthogonal-v"] },
++          "id": {
++            "$ref": "common.schema.json#/$defs/id"
++          },
++          "from": {
++            "$ref": "common.schema.json#/$defs/id"
++          },
++          "to": {
++            "$ref": "common.schema.json#/$defs/id"
++          },
++          "label": {
++            "type": "string"
++          },
++          "variant": {
++            "$ref": "common.schema.json#/$defs/variant"
++          },
++          "fromSide": {
++            "$ref": "common.schema.json#/$defs/side"
++          },
++          "toSide": {
++            "$ref": "common.schema.json#/$defs/side"
++          },
++          "route": {
++            "enum": [
++              "auto",
++              "straight",
++              "orthogonal-h",
++              "orthogonal-v"
++            ]
++          },
+           "via": {
+             "type": "array",
+-            "items": { "$ref": "common.schema.json#/$defs/point" }
++            "items": {
++              "$ref": "common.schema.json#/$defs/point"
++            }
++          },
++          "labelAt": {
++            "$ref": "common.schema.json#/$defs/point"
++          },
++          "labelDx": {
++            "type": "number"
+           },
+-          "labelAt": { "$ref": "common.schema.json#/$defs/point" },
+-          "labelDx": { "type": "number" },
+-          "labelDy": { "type": "number" },
+-          "labelSegment": { "type": "integer", "minimum": 0 },
+-          "width": { "$ref": "common.schema.json#/$defs/relationshipWidth" }
++          "labelDy": {
++            "type": "number"
++          },
++          "labelSegment": {
++            "type": "integer",
++            "minimum": 0
++          },
++          "width": {
++            "$ref": "common.schema.json#/$defs/relationshipWidth"
++          }
+         }
+       }
+     },
+-    "cards": { "$ref": "common.schema.json#/$defs/cards" }
++    "cards": {
++      "$ref": "common.schema.json#/$defs/cards"
++    }
+   }
+ }

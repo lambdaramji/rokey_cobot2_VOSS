@@ -1,0 +1,505 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "VOSS ROS 2 통신 아키텍처",
+    "locale": "ko",
+    "output": "docs/architecture/02_ros2.html",
+    "quality_profile": "standard",
+    "repository": {
+      "url": "https://github.com/lambdaramji/rokey_cobot2_VOSS.git",
+      "revision": "70463ef435b50b45d243823b6f7318789728d786",
+      "provider": "github",
+      "link_mode": "web"
+    },
+    "animation": "trace"
+  },
+  "components": [
+    {
+      "id": "camera",
+      "type": "external",
+      "label": "RealSense 2",
+      "sublabel": "Image · CameraInfo",
+      "pos": [
+        40,
+        70
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_bringup/launch/voss_host.launch.py",
+          "line": 160,
+          "end_line": 160
+        }
+      ]
+    },
+    {
+      "id": "tracker",
+      "type": "backend",
+      "label": "box_tracker",
+      "sublabel": "BoxTrack · LabelCrop pub",
+      "pos": [
+        290,
+        70
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_vision/voss_vision/box_tracker.py",
+          "line": 180,
+          "end_line": 180
+        }
+      ]
+    },
+    {
+      "id": "reader",
+      "type": "backend",
+      "label": "label_reader",
+      "sublabel": "LabelRead pub · ReadLabel srv",
+      "pos": [
+        540,
+        70
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_vision/voss_vision/label_reader.py",
+          "line": 240,
+          "end_line": 240
+        }
+      ]
+    },
+    {
+      "id": "manager",
+      "type": "backend",
+      "label": "sort_manager",
+      "sublabel": "Command srv · FSM",
+      "pos": [
+        790,
+        70
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_manager/voss_manager/sort_manager.py",
+          "line": 123,
+          "end_line": 123
+        }
+      ]
+    },
+    {
+      "id": "servo",
+      "type": "backend",
+      "label": "belt_servo",
+      "sublabel": "TrackAndGrasp ActionServer",
+      "pos": [
+        790,
+        260
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_servo/voss_servo/belt_servo.py",
+          "line": 379,
+          "end_line": 379
+        }
+      ]
+    },
+    {
+      "id": "gateway",
+      "type": "backend",
+      "label": "robot_gateway",
+      "sublabel": "pose/state pub · control srv",
+      "pos": [
+        1040,
+        260
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_robot/voss_robot/robot_gateway.py",
+          "line": 150,
+          "end_line": 150
+        }
+      ]
+    },
+    {
+      "id": "logger",
+      "type": "database",
+      "label": "sort_logger",
+      "sublabel": "SortResult → PostgreSQL",
+      "pos": [
+        790,
+        450
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_hmi/voss_hmi/sort_logger.py",
+          "line": 137,
+          "end_line": 137
+        }
+      ]
+    },
+    {
+      "id": "bridge",
+      "type": "messagebus",
+      "label": "hmi_bridge",
+      "sublabel": "ROS ↔ MQTT",
+      "pos": [
+        1040,
+        450
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_hmi/voss_hmi/hmi_bridge.py",
+          "line": 105,
+          "end_line": 105
+        }
+      ]
+    },
+    {
+      "id": "listener",
+      "type": "backend",
+      "label": "voice_listener",
+      "sublabel": "transcript · status pub",
+      "pos": [
+        40,
+        680
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_voice/voss_voice/voice_listener.py",
+          "line": 66,
+          "end_line": 66
+        }
+      ]
+    },
+    {
+      "id": "parser",
+      "type": "backend",
+      "label": "intent_parser",
+      "sublabel": "Intent pub",
+      "pos": [
+        290,
+        680
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_voice/voss_voice/intent_parser.py",
+          "line": 60,
+          "end_line": 60
+        }
+      ]
+    },
+    {
+      "id": "speech",
+      "type": "backend",
+      "label": "speech_out",
+      "sublabel": "say sub · TTS",
+      "pos": [
+        540,
+        680
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_voice/voss_voice/speech_out.py",
+          "line": 42,
+          "end_line": 42
+        }
+      ]
+    },
+    {
+      "id": "doosan",
+      "type": "external",
+      "label": "Doosan ROS bringup",
+      "sublabel": "Robot PC · DSR/RG2",
+      "pos": [
+        1040,
+        70
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_robot/voss_robot/doosan.py",
+          "line": 250,
+          "end_line": 250
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "camera-tracker",
+      "from": "camera",
+      "to": "tracker",
+      "label": "Image/Info",
+      "variant": "default"
+    },
+    {
+      "id": "tracker-reader",
+      "from": "tracker",
+      "to": "reader",
+      "label": "LabelCrop",
+      "variant": "default"
+    },
+    {
+      "id": "tracker-manager",
+      "from": "tracker",
+      "to": "manager",
+      "label": "BoxTrack",
+      "variant": "default"
+    },
+    {
+      "id": "reader-manager",
+      "from": "reader",
+      "to": "manager",
+      "label": "LabelRead + srv 응답",
+      "variant": "default",
+      "labelAt": [
+        752,
+        160
+      ]
+    },
+    {
+      "id": "manager-reader",
+      "from": "manager",
+      "to": "reader",
+      "label": "ReadLabel 요청",
+      "variant": "default",
+      "labelAt": [
+        760,
+        160
+      ]
+    },
+    {
+      "id": "manager-servo",
+      "from": "manager",
+      "to": "servo",
+      "label": "Action goal",
+      "variant": "default"
+    },
+    {
+      "id": "servo-gateway",
+      "from": "servo",
+      "to": "gateway",
+      "label": "servo_cmd + srv 요청",
+      "variant": "default",
+      "labelAt": [
+        1004,
+        350
+      ]
+    },
+    {
+      "id": "gateway-servo",
+      "from": "gateway",
+      "to": "servo",
+      "label": "pose + srv 응답",
+      "variant": "default",
+      "labelAt": [
+        1010,
+        350
+      ]
+    },
+    {
+      "id": "manager-gateway",
+      "from": "manager",
+      "to": "gateway",
+      "label": "MoveToZone/stop 요청",
+      "variant": "default"
+    },
+    {
+      "id": "gateway-manager",
+      "from": "gateway",
+      "to": "manager",
+      "label": "Pose/State + 응답",
+      "variant": "default"
+    },
+    {
+      "id": "gateway-doosan",
+      "from": "gateway",
+      "to": "doosan",
+      "label": "DSR 제어 요청",
+      "variant": "default"
+    },
+    {
+      "id": "manager-logger",
+      "from": "manager",
+      "to": "logger",
+      "label": "Sort/PalletResult",
+      "variant": "default"
+    },
+    {
+      "id": "manager-bridge",
+      "from": "manager",
+      "to": "bridge",
+      "label": "State/Result + 응답",
+      "variant": "default"
+    },
+    {
+      "id": "bridge-manager",
+      "from": "bridge",
+      "to": "manager",
+      "label": "Command 요청",
+      "variant": "default",
+      "labelAt": [
+        1060,
+        350
+      ]
+    },
+    {
+      "id": "listener-parser",
+      "from": "listener",
+      "to": "parser",
+      "label": "transcript",
+      "variant": "default"
+    },
+    {
+      "id": "parser-manager",
+      "from": "parser",
+      "to": "manager",
+      "label": "Intent",
+      "variant": "default"
+    },
+    {
+      "id": "manager-speech",
+      "from": "manager",
+      "to": "speech",
+      "label": "/voss/voice/say",
+      "variant": "default"
+    },
+    {
+      "id": "parser-speech",
+      "from": "parser",
+      "to": "speech",
+      "label": "/voss/voice/say",
+      "variant": "default"
+    },
+    {
+      "id": "servo-to-manager-return",
+      "from": "servo",
+      "to": "manager",
+      "label": "Feedback/Result",
+      "variant": "default"
+    },
+    {
+      "id": "logger-to-manager-return",
+      "from": "logger",
+      "to": "manager",
+      "label": "Log status + 조회 응답",
+      "variant": "default",
+      "labelAt": [
+        827,
+        350
+      ]
+    },
+    {
+      "id": "doosan-to-gateway-return",
+      "from": "doosan",
+      "to": "gateway",
+      "label": "DSR 응답/JointState",
+      "variant": "default",
+      "labelAt": [
+        1128,
+        160
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "방향 표기",
+      "items": [
+        "Robot PC: 카메라·비전·매니저·서보·로봇·logger·bridge·Doosan bringup",
+        "Web PC: voice_listener·intent_parser·speech_out·web_voice_status_bridge",
+        "화살표는 Publisher → Subscriber 또는 Client → Server",
+        "Service 응답 및 Action feedback/result는 해당 호출의 역방향",
+        "전체 정확한 이름과 타입은 ANALYSIS.md 인터페이스 등록표 참조",
+        "선 라벨은 줄였고 정확한 인터페이스 이름·타입은 ANALYSIS.md와 INTERFACES.md에 보존"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "외부 의존성",
+      "items": [
+        "RealSense와 Doosan 드라이버 구현은 이 저장소 밖",
+        "label_reader pub/srv는 OCR 예열과 zone_map 수신 후 생성"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "화살표 읽는 법",
+      "items": [
+        "Action goal과 feedback/result는 실제 별도 방향",
+        "Service 요청과 응답은 서로 반대 방향; Topic은 발행 방향만",
+        "외부 드라이버 응답·joint_states는 Doosan adapter가 수신하는 인터페이스"
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Robot PC · ms-03 (ROS 노드)",
+      "wraps": [
+        "camera",
+        "tracker",
+        "reader",
+        "manager",
+        "servo",
+        "gateway",
+        "logger",
+        "bridge",
+        "doosan"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Web PC · runo-ros (음성 ROS 노드)",
+      "wraps": [
+        "listener",
+        "parser",
+        "speech"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,148 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "architecture",
+  "quality": "standard",
+  "specification": {
+    "path": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/data/01_system.json",
+    "sha256": "606b19d9f8b5b0b20dcb7cfdfb2c001b6266144ecdbda804fa753a346bf5adf9",
+    "bytes": 9786
+  },
+  "artifact": {
+    "path": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/01_system.html",
+    "sha256": "71140ddf6df50fedc391495429ea081d89dd9f5e0bd621b7413f20ab69535d80",
+    "bytes": 846410
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/01_system.finalize.json",
+    "summaryReceipt": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/01_system.finalize-summary.json",
+    "browserCheckReceipt": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/01_system.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.1.0",
+    "availableVersion": "3.1.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-10-16T02:10:42.521Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 2101,
+  "visualReviewRecommendation": {
+    "action": "inspect-route-readability",
+    "signals": {
+      "resolvedCrossovers": 2,
+      "routesOverSuggestedBends": 2
+    },
+    "reason": "Automated gates passed, but crossings or detours still need perceptual review before claiming visual quality.",
+    "affectedRoutes": {
+      "crossings": [
+        {
+          "left": {
+            "id": "spring-broker",
+            "from": "spring",
+            "to": "broker",
+            "label": "MQTT command",
+            "collectionIndex": 3,
+            "artifactIndex": 4
+          },
+          "right": {
+            "id": "logger-postgres",
+            "from": "logger",
+            "to": "postgres",
+            "label": "SQL INSERT",
+            "collectionIndex": 13,
+            "artifactIndex": 14
+          },
+          "point": [
+            655,
+            170
+          ]
+        },
+        {
+          "left": {
+            "id": "logger-postgres",
+            "from": "logger",
+            "to": "postgres",
+            "label": "SQL INSERT",
+            "collectionIndex": 13,
+            "artifactIndex": 14
+          },
+          "right": {
+            "id": "voice-manager",
+            "from": "voice",
+            "to": "manager",
+            "label": "Intent",
+            "collectionIndex": 15,
+            "artifactIndex": 16
+          },
+          "point": [
+            395,
+            478
+          ]
+        }
+      ],
+      "detours": [
+        {
+          "relationship": {
+            "id": "vision-manager",
+            "from": "vision",
+            "to": "manager",
+            "label": "BoxTrack · LabelRead",
+            "collectionIndex": 7,
+            "artifactIndex": 8
+          },
+          "bends": 3,
+          "stretch": 1.254
+        },
+        {
+          "relationship": {
+            "id": "voice-manager",
+            "from": "voice",
+            "to": "manager",
+            "label": "Intent",
+            "collectionIndex": 15,
+            "artifactIndex": 16
+          },
+          "bends": 4,
+          "stretch": 1.139,
+          "directCorridorBlockers": [
+            {
+              "id": "vision",
+              "label": "box_tracker + OCR",
+              "box": [
+                560,
+                440,
+                190,
+                76
+              ]
+            }
+          ]
+        }
+      ],
+      "truncated": false
+    },
+    "hints": [
+      "spring → broker crosses logger → postgres: move the node of whichever is a branch, return, or second entrance to the other side of the main path, so that relationship runs through an empty corridor.",
+      "logger → postgres crosses voice → manager: move the node of whichever is a branch, return, or second entrance to the other side of the main path, so that relationship runs through an empty corridor.",
+      "vision → manager needs 3 bends: move node vision or manager so they share a row or column with matching centers, or sit diagonally with a clear corner."
+    ],
+    "repair": "Trace these relationships at the desktop viewport. For Architecture, use references/architecture-layout-repair.md: reflow a blocked main path or tangled connected scene, and repair an isolated defect locally only when the surrounding composition is accepted. Preserve all semantic content and user-fixed geometry. Rerun finalize once after the edit."
+  }
+}

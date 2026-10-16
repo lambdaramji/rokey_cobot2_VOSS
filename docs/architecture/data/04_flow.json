@@ -1,0 +1,603 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "VOSS 분류 · 적재 공정 흐름",
+    "locale": "ko",
+    "output": "docs/architecture/04_flow.html",
+    "quality_profile": "standard",
+    "repository": {
+      "url": "https://github.com/lambdaramji/rokey_cobot2_VOSS.git",
+      "revision": "70463ef435b50b45d243823b6f7318789728d786",
+      "provider": "github",
+      "link_mode": "web"
+    },
+    "animation": "trace"
+  },
+  "components": [
+    {
+      "id": "start",
+      "type": "external",
+      "label": "START",
+      "sublabel": "운영자 start 명령",
+      "pos": [
+        450,
+        35
+      ],
+      "size": [
+        200,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_manager/voss_manager/sort_fsm.py",
+          "line": 493,
+          "end_line": 493
+        }
+      ],
+      "shape": "terminator"
+    },
+    {
+      "id": "ready",
+      "type": "security",
+      "label": "준비 조건 검사",
+      "sublabel": "로봇·비전·서보·OCR·기록",
+      "pos": [
+        450,
+        145
+      ],
+      "size": [
+        200,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_manager/voss_manager/readiness.py",
+          "line": 1,
+          "end_line": 1
+        }
+      ],
+      "shape": "decision"
+    },
+    {
+      "id": "observe",
+      "type": "backend",
+      "label": "RUNNING / OBSERVE",
+      "sublabel": "입구 관측 대기",
+      "pos": [
+        450,
+        255
+      ],
+      "size": [
+        200,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_manager/voss_manager/sort_fsm.py",
+          "line": 493,
+          "end_line": 493
+        }
+      ],
+      "shape": "process"
+    },
+    {
+      "id": "detect",
+      "type": "backend",
+      "label": "박스 추적·OCR",
+      "sublabel": "BoxTrack · LabelRead",
+      "pos": [
+        450,
+        365
+      ],
+      "size": [
+        200,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_manager/voss_manager/sort_fsm.py",
+          "line": 609,
+          "end_line": 609
+        }
+      ],
+      "shape": "process"
+    },
+    {
+      "id": "decision",
+      "type": "security",
+      "label": "판독 신뢰도 분기",
+      "sublabel": "정상 / 불확실",
+      "pos": [
+        450,
+        475
+      ],
+      "size": [
+        200,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_manager/voss_manager/sort_fsm.py",
+          "line": 655,
+          "end_line": 655
+        }
+      ],
+      "shape": "decision"
+    },
+    {
+      "id": "grasp",
+      "type": "backend",
+      "label": "PICKING",
+      "sublabel": "TrackAndGrasp · 내부 재시도 최대 3회",
+      "pos": [
+        450,
+        585
+      ],
+      "size": [
+        200,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_servo/voss_servo/fsm.py",
+          "line": 273,
+          "end_line": 292
+        }
+      ],
+      "shape": "process"
+    },
+    {
+      "id": "place",
+      "type": "backend",
+      "label": "목적 구역 배치",
+      "sublabel": "MoveToZone PLACE",
+      "pos": [
+        450,
+        695
+      ],
+      "size": [
+        200,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_manager/voss_manager/sort_fsm.py",
+          "line": 6,
+          "end_line": 6
+        }
+      ],
+      "shape": "process"
+    },
+    {
+      "id": "record",
+      "type": "database",
+      "label": "SortResult 기록",
+      "sublabel": "sort_logger → sort_log",
+      "pos": [
+        450,
+        805
+      ],
+      "size": [
+        200,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_hmi/voss_hmi/sort_logger.py",
+          "line": 138,
+          "end_line": 138
+        }
+      ],
+      "shape": "database"
+    },
+    {
+      "id": "loop",
+      "type": "external",
+      "label": "다음 박스 대기",
+      "sublabel": "별도 palletize 가능",
+      "pos": [
+        450,
+        915
+      ],
+      "size": [
+        200,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_manager/voss_manager/sort_fsm.py",
+          "line": 6,
+          "end_line": 6
+        }
+      ],
+      "shape": "process"
+    },
+    {
+      "id": "recheck",
+      "type": "backend",
+      "label": "RECHECK",
+      "sublabel": "VIEW → ReadLabel",
+      "pos": [
+        770,
+        475
+      ],
+      "size": [
+        210,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_manager/voss_manager/sort_fsm.py",
+          "line": 8,
+          "end_line": 8
+        }
+      ],
+      "shape": "process"
+    },
+    {
+      "id": "ask",
+      "type": "security",
+      "label": "ASKING",
+      "sublabel": "운영자 답변 30초 대기",
+      "pos": [
+        770,
+        585
+      ],
+      "size": [
+        210,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_manager/voss_manager/sort_fsm.py",
+          "line": 9,
+          "end_line": 9
+        }
+      ],
+      "shape": "input"
+    },
+    {
+      "id": "hold",
+      "type": "backend",
+      "label": "HOLD",
+      "sublabel": "무응답 또는 불확실",
+      "pos": [
+        770,
+        695
+      ],
+      "size": [
+        210,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_manager/voss_manager/sort_fsm.py",
+          "line": 9,
+          "end_line": 9
+        }
+      ],
+      "shape": "delay"
+    },
+    {
+      "id": "pause",
+      "type": "security",
+      "label": "PAUSED",
+      "sublabel": "stop · 구역 가득 · 실패",
+      "pos": [
+        60,
+        695
+      ],
+      "size": [
+        220,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_manager/voss_manager/sort_fsm.py",
+          "line": 7,
+          "end_line": 7
+        }
+      ],
+      "shape": "delay"
+    },
+    {
+      "id": "resume",
+      "type": "backend",
+      "label": "resume",
+      "sublabel": "중단 단계 확인 후 재개",
+      "pos": [
+        60,
+        805
+      ],
+      "size": [
+        220,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_manager/voss_manager/sort_fsm.py",
+          "line": 560,
+          "end_line": 560
+        }
+      ],
+      "shape": "process"
+    },
+    {
+      "id": "pallet",
+      "type": "backend",
+      "label": "PALLETIZING",
+      "sublabel": "별도 명령 · 대상 조회",
+      "pos": [
+        770,
+        805
+      ],
+      "size": [
+        210,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_manager/voss_manager/pallet_fsm.py",
+          "line": 1,
+          "end_line": 1
+        }
+      ],
+      "shape": "process"
+    },
+    {
+      "id": "pallet_move",
+      "type": "backend",
+      "label": "팔레트 PICK / DROP",
+      "sublabel": "PICK 최대 3회 · DROP",
+      "pos": [
+        770,
+        915
+      ],
+      "size": [
+        210,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_manager/voss_manager/pallet_fsm.py",
+          "line": 471,
+          "end_line": 485
+        }
+      ],
+      "shape": "process"
+    },
+    {
+      "id": "end",
+      "type": "external",
+      "label": "END",
+      "sublabel": "stop 후 수동 운전 종료",
+      "pos": [
+        60,
+        925
+      ],
+      "size": [
+        220,
+        76
+      ],
+      "sources": [
+        {
+          "path": "scripts/voss_down.sh",
+          "line": 1,
+          "end_line": 3
+        }
+      ],
+      "shape": "terminator"
+    }
+  ],
+  "connections": [
+    {
+      "id": "start-ready",
+      "from": "start",
+      "to": "ready",
+      "label": "",
+      "variant": "default"
+    },
+    {
+      "id": "ready-observe",
+      "from": "ready",
+      "to": "observe",
+      "label": "준비됨",
+      "variant": "default",
+      "labelAt": [
+        557,
+        235
+      ]
+    },
+    {
+      "id": "observe-detect",
+      "from": "observe",
+      "to": "detect",
+      "label": "",
+      "variant": "default"
+    },
+    {
+      "id": "detect-decision",
+      "from": "detect",
+      "to": "decision",
+      "label": "",
+      "variant": "default"
+    },
+    {
+      "id": "decision-grasp",
+      "from": "decision",
+      "to": "grasp",
+      "label": "확정",
+      "variant": "default",
+      "labelAt": [
+        550,
+        565
+      ]
+    },
+    {
+      "id": "decision-recheck",
+      "from": "decision",
+      "to": "recheck",
+      "label": "불확실",
+      "variant": "default"
+    },
+    {
+      "id": "recheck-ask",
+      "from": "recheck",
+      "to": "ask",
+      "label": "여전히 불확실",
+      "variant": "default",
+      "labelAt": [
+        875,
+        565
+      ]
+    },
+    {
+      "id": "recheck-grasp",
+      "from": "recheck",
+      "to": "grasp",
+      "label": "확정",
+      "variant": "default",
+      "labelAt": [
+        550,
+        565
+      ]
+    },
+    {
+      "id": "ask-grasp",
+      "from": "ask",
+      "to": "grasp",
+      "label": "응답",
+      "variant": "default"
+    },
+    {
+      "id": "ask-hold",
+      "from": "ask",
+      "to": "hold",
+      "label": "30초 timeout",
+      "variant": "default",
+      "labelAt": [
+        875,
+        675
+      ]
+    },
+    {
+      "id": "grasp-place",
+      "from": "grasp",
+      "to": "place",
+      "label": "파지 성공",
+      "variant": "default",
+      "labelAt": [
+        550,
+        675
+      ]
+    },
+    {
+      "id": "place-record",
+      "from": "place",
+      "to": "record",
+      "label": "",
+      "variant": "default"
+    },
+    {
+      "id": "hold-record",
+      "from": "hold",
+      "to": "record",
+      "label": "HELD",
+      "variant": "default"
+    },
+    {
+      "id": "record-loop",
+      "from": "record",
+      "to": "loop",
+      "label": "",
+      "variant": "default"
+    },
+    {
+      "id": "grasp-pause",
+      "from": "grasp",
+      "to": "pause",
+      "label": "실패 / stop",
+      "variant": "default"
+    },
+    {
+      "id": "ready-pause",
+      "from": "ready",
+      "to": "pause",
+      "label": "미준비",
+      "variant": "default"
+    },
+    {
+      "id": "pause-resume",
+      "from": "pause",
+      "to": "resume",
+      "label": "수동 resume",
+      "variant": "default",
+      "labelAt": [
+        170,
+        785
+      ]
+    },
+    {
+      "id": "loop-pallet",
+      "from": "loop",
+      "to": "pallet",
+      "label": "별도 palletize 명령",
+      "variant": "default"
+    },
+    {
+      "id": "pallet-pallet_move",
+      "from": "pallet",
+      "to": "pallet_move",
+      "label": "대상 있음",
+      "variant": "default",
+      "labelAt": [
+        875,
+        895
+      ]
+    },
+    {
+      "id": "pallet_move-loop",
+      "from": "pallet_move",
+      "to": "loop",
+      "label": "완료",
+      "variant": "default"
+    },
+    {
+      "id": "pallet_move-pause",
+      "from": "pallet_move",
+      "to": "pause",
+      "label": "실패 / stop",
+      "variant": "default"
+    },
+    {
+      "id": "pause-end",
+      "from": "pause",
+      "to": "end",
+      "label": "수동 종료",
+      "variant": "default"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "정상 경로",
+      "items": [
+        "start → OBSERVE → 추적/OCR → 파지 → 배치 → 기록",
+        "적재는 자동 후속 단계가 아닌 별도 palletize 명령",
+        "터미네이터=시작·수동 운전 종료, 마름모=조건, 평행사변형=운영자 입력",
+        "원통=DB 기록, 지연형=HOLD·PAUSED 대기"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "복구와 보류",
+      "items": [
+        "stop과 일부 실패는 PAUSED; resume은 조건을 검사하고 재개",
+        "ASKING은 30초 무응답 시 HOLD",
+        "구역 가득 또는 파지 실패도 PAUSED 경로",
+        "파지 실패는 조건 충족 시 servo 내부에서 최대 3회 재시도; 팔레트 PICK도 GRIP_FAIL 시 최대 3회"
+      ]
+    }
+  ]
+}

@@ -51,6 +51,29 @@ public class HistoryRepository {
         return counts;
     }
 
+    /** 분류함에 남은 박스: 해당 세션의 PLACED 중 팔레트 DONE 이 없는 박스만 센다. */
+    public Map<String, Long> availableZones(String session) {
+        Map<String, Long> counts = new LinkedHashMap<>();
+        for (String zone : List.of("A", "B", "C", "RECHECK", "HOLD")) counts.put(zone, 0L);
+        String sql = "SELECT s.zone, COUNT(*) AS quantity FROM sort_log s "
+                + "WHERE s.session_id = ? AND s.result = 'PLACED' "
+                + "AND s.zone IN ('A','B','C') "
+                + "AND NOT EXISTS (SELECT 1 FROM pallet_log p WHERE p.session_id = s.session_id "
+                + "AND p.box_id = s.box_id AND p.result = 'DONE') GROUP BY s.zone";
+        try (Connection connection = db.openRead();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, session);
+            try (ResultSet rows = statement.executeQuery()) {
+                while (rows.next()) counts.put(rows.getString("zone"), rows.getLong("quantity"));
+            }
+        } catch (SQLException exception) {
+            throw db.dbError("분류함 잔여 수량 조회에 실패했습니다.");
+        }
+        counts.put("RECHECK", count("zone = 'RECHECK' AND result IN ('PLACED','HELD')", session, null));
+        counts.put("HOLD", count("zone = 'HOLD' AND result IN ('PLACED','HELD')", session, null));
+        return counts;
+    }
+
     /** 이력 필터를 바인드 변수로 적용하고 최근 기록부터 조회한다. */
     public List<Map<String,Object>> results(String session, List<String> outcomes, int limit) {
         StringBuilder sql = new StringBuilder("SELECT * FROM sort_log WHERE 1=1");

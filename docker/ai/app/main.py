@@ -13,6 +13,7 @@ from __future__ import annotations
 import io
 import logging
 import os
+import threading
 import time
 from collections.abc import Iterator
 from typing import Annotated
@@ -30,13 +31,31 @@ app = FastAPI(title="VOSS AI", docs_url=None, redoc_url=None)
 # 도메인 단어를 앞에 주면 고유명사 전사가 안정적이다
 STT_PROMPT = os.getenv(
     "WHISPER_PROMPT",
-    "헬로우 로키. 헬로 로키. 역삼동, 대치동, 청담동.",
+    "헬로 로키. 역삼동, 대치동, 청담동. A 구역, B 구역, C 구역. 우선 분류, 작업 시작, 보류.",
 )
 # LLM 출력 형식. OpenAI strict JSON Schema 로 보내 스키마 밖의 키·값을 처음부터 막는다.
 INTENT_RESPONSE_FORMAT = {"name": "intent", "schema": INTENT_SCHEMA, "strict": True}
 
 _whisper = None
 _intent_chain = None
+
+
+@app.on_event("startup")
+def _preload_whisper() -> None:
+    """서비스 시작 때 Whisper 를 백그라운드로 올린다 (10/15: 첫 발화 때 적재하면 약 50초 동안 STT 가 5초 제한에 걸림).
+    /ai/health 의 whisper_loaded 가 true 가 될 때까지 web_pc_voice.sh 가 기다린다. 시험에서는 WHISPER_PRELOAD=0."""
+    if os.getenv("WHISPER_PRELOAD", "1") != "1":
+        return
+
+    def load() -> None:
+        t0 = time.monotonic()
+        try:
+            _get_whisper()
+            logging.info("Whisper 적재 완료 %.1fs", time.monotonic() - t0)
+        except Exception as e:  # noqa: BLE001 — 첫 STT 요청이 다시 시도한다
+            logging.error("Whisper 사전 적재 실패: %s", type(e).__name__)
+
+    threading.Thread(target=load, name="whisper-preload", daemon=True).start()
 
 
 def is_prompt_echo(text: str, prompt: str | None = None) -> bool:

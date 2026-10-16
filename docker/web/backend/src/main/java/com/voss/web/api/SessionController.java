@@ -45,6 +45,7 @@ public class SessionController {
             for (String field : List.of("placed", "held", "failed", "passed")) { response.put(field, 0); }
             response.put("remaining", 0);
             response.put("by_zone", Map.of("A", 0, "B", 0, "C", 0, "RECHECK", 0, "HOLD", 0));
+            response.put("available_by_zone", Map.of("A", 0, "B", 0, "C", 0, "RECHECK", 0, "HOLD", 0));
         } else {
             response.put("placed", history.outcome(session, "PLACED"));
             response.put("held", history.outcome(session, "HELD"));
@@ -52,6 +53,7 @@ public class SessionController {
             response.put("passed", history.outcome(session, "PASSED"));
             response.put("remaining", Math.max(planned - history.completed(session), 0));
             response.put("by_zone", history.zones(session));
+            response.put("available_by_zone", history.availableZones(session));
         }
         response.put("as_of", clock.now());
         return response;
