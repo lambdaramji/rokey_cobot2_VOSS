@@ -67,6 +67,7 @@ docker compose logs -f label_reader       # "OCR 엔진 준비 gpu:0 …", 판�
 nvidia-smi                                # AI 컨테이너(Whisper)와 같이 띄운 상태의 VRAM → measurements
 ```
 확인할 것(22-4, measurements 에 기록):
+- GPU 빌드 로그: `Name: paddlepaddle-gpu`·`Version: 3.3.1`, `Name: paddleocr`·`Version: 3.7.0`, `label_reader import OK (gpu 이미지 …)`. GPU 이미지는 빌드 때 paddle 을 import 하지 않는다(libcuda 는 실행할 때 nvidia 런타임이 넣는다) — paddle·GPU 는 실행 첫 로그 `OCR 엔진 준비 gpu:0 N s` 로 본다(10/15 공용 PC 5.2 s, GPU 메모리 282 MiB)
 - GPU 컨테이너 기동, 로그 첫 줄(`ROS_DOMAIN_ID=30 RANGE=(기본 SUBNET) … CYCLONEDDS_URI=file:///etc/voss/cyclonedds.xml`)
 - OCR 1장 시간(label_reader `OCR N ms`, 호스트 CPU 약 3 s 대비), VRAM(비전 + AI 컨테이너 Whisper 같이 띄운 `nvidia-smi`)
 - box_tracker 30 Hz·카메라→발행 지연 ≤ 100 ms(5초 통계 줄)
