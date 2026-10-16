@@ -30,7 +30,7 @@ export interface OccupiedSlot {
 // 2026-10-12 Nodes PC의 실제 설정 SHA 39bf41a1bbe9를 시각화한 읽기 전용 스냅샷.
 // 실제 계약/배치가 바뀌면 프론트 좌표도 함께 검토해야 한다.
 export const CONFIG_SHA_SHORT = '39bf41a1bbe9';
-export const SORT_ORDER = [2, 5, 1, 4, 0, 3] as const;
+export const SORT_ORDER = [0, 1, 2, 3, 4, 5] as const; // 10/14 사용자: 왼쪽 위 0·1·2 → 왼쪽 아래 3·4·5 → 2층 6(칸 0 위)
 
 export const ZONES: readonly ZoneLayout[] = [
   { name: 'TRUCK', xMm: -158.82, yMm: 251.05, columns: 4, rows: 2, layers: 2, pitchXMm: 50, pitchYMm: 60, offsetXMm: 0, order: [] },
