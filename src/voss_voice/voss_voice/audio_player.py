@@ -24,8 +24,12 @@ APLAY_COMMAND = [
 ]
 
 PACAT_COMMAND = [
-    "pacat", "--playback", "--raw", "--format=s16le",
-    "--rate=24000", "--channels=1",
+    "pacat",
+    "--playback",
+    "--raw",
+    "--format=s16le",
+    "--rate=24000",
+    "--channels=1",
 ]
 
 
