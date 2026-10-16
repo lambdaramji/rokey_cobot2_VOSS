@@ -251,12 +251,12 @@ QoS: `/voss/vision/box` · `/voss/robot/pose` · `/voss/robot/servo_cmd` 는 bes
 
 | 항목 | 값 |
 |---|---|
-| 호스트 | Ubuntu 24.04 LTS · ROS 2 Jazzy · `rmw_cyclonedds_cpp` · `ROS_DOMAIN_ID=30`(운용) · Python 3.12 · 워크스페이스 `~/voss_ws/src/rokey_cobot2_VOSS` |
+| 호스트 | Ubuntu 24.04.5 LTS · ROS 2 Jazzy · `rmw_cyclonedds_cpp` · `ROS_DOMAIN_ID=30`(운용) · Python 3.12 · 워크스페이스 `~/voss_ws/src/rokey_cobot2_VOSS` |
 | 로봇 드라이버 | `doosan-robot2` (`dsr_controller2`, `/dsr01`, `dsr_msgs2`) + `m0609_rg2_bringup` (레포 밖 오버레이 `~/cobot2_ws`), RG2 는 pymodbus 로 Compute Box 직접(192.168.1.1:502) |
 | 비전 | OpenCV(분할 검출·핸드아이·호모그래피) · PaddleOCR 3.7.0 / paddlepaddle 3.3.1 (korean, CPU 또는 cu126 GPU) · rosbag2 mcap 재생 |
 | 음성·AI | faster-whisper 1.1 (small, CUDA fp16) · LangChain + OpenAI `gpt-4o` (structured output) · OpenAI `gpt-4o-mini-tts` · sounddevice · ALSA `aplay` |
 | 컨테이너 | Docker Compose 5종 — `docker/{vision,ai,db,mqtt,web}` (`network_mode: host`), CUDA 12.6 runtime(ai), `nvidia` 장치 예약 |
-| 컨테이너 런타임 (호스트에 필요) | Docker Engine + Compose v2 (`docker compose` 하위 명령) · NVIDIA 드라이버(CUDA 12.6 이미지 실행 가능) + NVIDIA Container Toolkit — ai 컨테이너는 GPU 필수, vision 은 `compose.gpu.yml` 을 쓸 때만. Node 22 · JDK 21 은 web 이미지 빌드 안에서만 쓰므로 호스트 설치 불필요 |
+| 컨테이너 런타임 (호스트에 필요) | Docker 29.8.2 · Docker Compose v5.5.1 (`docker compose` 하위 명령) · NVIDIA 드라이버 595.91.07 (RTX 4060 Laptop) · NVIDIA Container Toolkit 1.20.1 — 10/16 공용 PC 실측(10/06 값과 같음). ai 컨테이너는 GPU 필수, vision 은 `compose.gpu.yml` 을 쓸 때만. Node 22 · JDK 21 은 web 이미지 빌드 안에서만 쓰므로 호스트 설치 불필요 |
 | 웹·DB | Spring Boot 3.5 (Java 21, Gradle, spring-integration-mqtt, Paho) · React 19 + Vite 6 + TypeScript 5.7 · Nginx 1.27 · PostgreSQL 16 · Mosquitto 2 |
 | 언어 · 도구 | Python 3.12 (ROS 노드 · FastAPI · 도구), Java (Spring Boot), TypeScript (React), Arduino C++ (컨베이어), colcon · pytest · ruff · Gradle · npm |
 | CI | `.github/workflows/ci.yml` — `ros:jazzy-ros-base` 컨테이너에서 ruff → colcon build → colcon test → `voss_msgs`/`voss_config.yaml` 변경 시 `docs/interfaces/` 변경 강제. `@claude` 멘션 리뷰(`claude.yml`) |
@@ -275,7 +275,7 @@ QoS: `/voss/vision/box` · `/voss/robot/pose` · `/voss/robot/servo_cmd` 는 bes
 | 컨베이어 | 탁상 미니 컨베이어, 벨트 1,040 × 70 mm, 스텝모터 + Arduino Uno(`tools/arduino/conveyor_test/conveyor_test.ino`), 운용 4.56 cm/s(`belt.speed_cmps` 실측값) | 1 | 박스 이송(멈추지 않음) |
 | 부재 | 미니어처 택배 박스 46 × 31 × 27 mm × 20 + 자체 제작 송장 40 × 25 mm(분류코드 `S07-NN` 5.5 mm · 동 이름 4.5 mm · 받는 사람 2.8 mm, 흐린 1 · 판별 불가 1) | 20 | 분류·팔레타이징 대상 |
 | 작업대 | 120 × 65 cm. 구역 트레이 A·B·C(3×2 칸 × 2층) · 재확인 · 보류(2×1) · 팔레트(4열 × 2줄 × 2층, X 피치 50 · Y 60 · 층 27 mm) | 1 | 위 그림 참고 |
-| 공용 PC (Nodes PC) | Ubuntu 24.04 노트북(GPU), 로봇과 유선 | 1 | ROS 2 노드 · 컨테이너 5종 |
+| 공용 PC (Nodes PC) | MSI Katana 17 노트북 — i7-13620H · RAM 32 GB · RTX 4060 Laptop (VRAM 8 GB) · Ubuntu 24.04.5 LTS. 로봇과 유선(유선 NIC), 인터넷은 Wi-Fi | 1 | ROS 2 노드 · 컨테이너 5종 |
 | Web PC (선택) | Ubuntu 24.04, SSH 포트 포워딩(8000·8080·1883·5432 / 8091·8092) | 1 | 브라우저 · 마이크/스피커 음성 노드(`scripts/web_pc_voice.sh`, `command_transport=web_api`) |
 
 좌표·치수 실측값은 [docs/measurements-1006.md](docs/measurements-1006.md) 이후 날짜별 문서에, 구역 좌표는 `config/voss_config.yaml` 에만 둔다.
@@ -286,10 +286,10 @@ QoS: `/voss/vision/box` · `/voss/robot/pose` · `/voss/robot/servo_cmd` 는 bes
 
 | 항목 | 내용 | 설치 · 확인 |
 |---|---|---|
-| OS · ROS | Ubuntu 24.04 LTS, ROS 2 Jazzy (desktop) | `source /opt/ros/jazzy/setup.bash` |
+| OS · ROS | Ubuntu 24.04 LTS (공용 PC 24.04.5), ROS 2 Jazzy (desktop) | `source /opt/ros/jazzy/setup.bash` |
 | 두산 브링업 | `doosan-robot2` · `dsr_msgs2` · `m0609_rg2_bringup` 오버레이 `~/cobot2_ws` (레포 밖, rosdep 에 없음) | [docs/setup/dev-environment.md](docs/setup/dev-environment.md) · 공용 PC 에는 이미 빌드돼 있다 |
 | 카메라 드라이버 | `realsense2_camera` (package.xml 에 일부러 적지 않음 — CI 가 받지 않게) | `sudo apt install ros-jazzy-realsense2-camera` |
-| 컨테이너 | Docker Engine + Compose v2, NVIDIA 드라이버 + NVIDIA Container Toolkit | `docker compose version` · `nvidia-smi` |
+| 컨테이너 | Docker Engine + Compose 플러그인, NVIDIA 드라이버 + NVIDIA Container Toolkit (검증한 버전: Docker 29.8.2 · Compose v5.5.1 · 드라이버 595.91.07 · toolkit 1.20.1) | `docker --version` · `docker compose version` · `nvidia-smi` · `nvidia-ctk --version` |
 | 비밀값 | OpenAI API 키, DB · MQTT 비밀번호 | 아래 4단계 `.env` 표 |
 
 로봇 없이 개인 PC 에서 시험할 때는 두산 오버레이와 카메라 드라이버 없이 5단계(녹화 재생)만 할 수 있다.
