@@ -24,6 +24,7 @@ def _flow(post_intent, get_stats=lambda q: {"ok": True, "count": 1}):
 def test_zone_priority_is_resolved_without_llm(text, dong):
     def unexpected_llm(*args):
         raise AssertionError("구역 우선 분류는 로컬에서 처리해야 한다")
+
     flow, published, _ = _flow(unexpected_llm)
     assert flow.handle(text)[0] == "publish"
     assert published[0]["type"] == "priority"
