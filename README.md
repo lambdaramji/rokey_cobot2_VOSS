@@ -10,7 +10,7 @@
 
 **[▶ 전체 시연 영상 (3분 27초)](docs/presentations/1016_최종발표/videos/C-3협동2_김학민_남현지_박병후_정의석_전체영상.mp4)** — 분류 스토리("헬로, 로키. 작업 시작" → 우선 분류 → 전체 분류 → 재확인·질문·보류)와 팔레타이징 스토리(배송 순서 지시 → 되읽기 TTS → 16칸 적재 → 완료 안내). 최종 발표 자료는 [PPT](docs/presentations/1016_최종발표/C-3협동2_김학민_남현지_박병후_정의석.pptx)(18·21번 슬라이드에 장면별 영상 포함). 영상은 GitHub 용량 한도 때문에 다시 압축한 판(1080p)이고, 원본 화질과 시연 녹화(ROS bag `~/voss_data/1015/demo2`, 17.6분)·기록표는 팀 Drive 에 있다.
 
-시연 절차와 각 단계의 발화·기대 동작은 [시연 대본](docs/demo-script.md), 결과 수치는 [measurements-1015](docs/measurements-1015.md)에 있다.
+시연 절차와 각 단계의 발화·기대 동작은 [시연 대본](docs/demo-script.md)과 [박스 20개 통합 시나리오 1~3](docs/box_scenarios_3.md), 결과 수치는 [measurements-1015](docs/measurements-1015.md)에 있다.
 
 ## 주요 기능
 
@@ -352,7 +352,7 @@ palletize  <동>,<동>,<동> 순서로 팔레트 적재
     ├── requirements/               BRD v1.7 · SRD v1.0 · 개발일정 xlsx · Sprint 2 자료
     ├── measurements-1006~1015.md   날짜별 실측 (값은 여기에만)
     ├── plan.md · pending-decisions.md · conventions.md
-    ├── g0-runbook.md · g1-gate.md · sprint2-gate.md · demo-script.md
+    ├── g0-runbook.md · g1-gate.md · sprint2-gate.md · demo-script.md · box_scenarios_3.md
     ├── setup/                      개발 환경 · Drive 구조
     ├── presentations/              최종 발표 PPT · 전체 시연 영상 (압축본)
     ├── reproduce.md                처음부터 다시 구현하기 — 코드 기준점 · 외부 의존성 버전 · 레포 밖 파일

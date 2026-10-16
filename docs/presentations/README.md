@@ -15,3 +15,4 @@ PPT 18번 슬라이드에는 발표용 영상이 "음성 명령 포함 재촬영
 ## 함께 보면 좋은 것
 - 다시 구현하기: `docs/reproduce.md`
 - 시연 결과와 대본: `docs/measurements-1015.md`, `docs/demo-script.md`
+- 박스 20개 통합 시나리오 1~3(발표 영상은 시나리오 1 기준): `docs/box_scenarios_3.md`

@@ -8,7 +8,7 @@
 |---|---|
 | 최종 발표 PPT·전체 시연 영상·보고서 그림 | `docs/presentations/` (목록: `docs/presentations/README.md`) |
 | 10/15 시연 결과 (값의 기준) | `docs/measurements-1015.md` |
-| 시연 대본·판정 기록표 | `docs/demo-script.md` |
+| 시연 대본·판정 기록표 | `docs/demo-script.md` (10/15 시연 v2), `docs/box_scenarios_3.md` (박스 20개 통합 시나리오 3가지, 발표 영상은 시나리오 1) |
 
 ## 2. 코드 기준점
 
@@ -54,7 +54,7 @@
 2. **실측·캘리브레이션** (작업대를 새로 꾸몄다면) — `docs/measurements-1006.md`(벨트·구역 좌표), `docs/interfaces/calibration.md`(관측 자세·카메라·핸드아이). 결과를 `config/` 와 `voss_config.yaml` 에 반영.
 3. **노드 PC 단독 기동** — `docs/g0-runbook.md` (T1~T8 순서, PaddleOCR venv, DB, 시작 전 확인표) 또는 `scripts/voss_up.sh --real --print` 로 계획을 먼저 본다. 실기 기동은 사람이 비상정지 옆에서(CLAUDE.md 규칙 6).
 4. **웹 PC** — `docker/db`·`docker/mqtt`·`docker/ai`·`docker/web` README 순서로 컨테이너를 올리고, 노드 PC 에서 SSH 포워드(8000·8080·1883·5432 …, `docs/interfaces/deployment_two_pc_trial.md`)를 연 뒤 `scripts/web_pc_voice.sh`.
-5. **시연** — `docs/demo-script.md` 3절(시작 전) → 4절(단계별 대본) → 5절(기록표).
+5. **시연** — `docs/demo-script.md` 3절(시작 전) → 4절(단계별 대본) → 5절(기록표). 기능 ①~⑫를 모두 보이려면 `docs/box_scenarios_3.md` 시나리오 1 순서로 박스를 넣는다.
 
 ## 6. 알려진 공백 (2026-10-16 기준)
 
