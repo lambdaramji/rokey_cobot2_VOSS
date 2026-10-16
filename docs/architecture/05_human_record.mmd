@@ -1,0 +1,42 @@
+flowchart TB
+  classDef node fill:#EEF3FA,stroke:#13315C,color:#0B2545
+  classDef ext fill:#F2F2F2,stroke:#777,color:#333
+  classDef ctn fill:#FFFFFF,stroke:#2F6FB5,stroke-dasharray:6 3,color:#0B2545
+  classDef guard fill:#FFF4E5,stroke:#B35C00,color:#4A2600
+
+  MIC[("마이크")]:::ext
+  SPK[("스피커 aplay<br/>S16LE 24 kHz")]:::ext
+  BROW[("브라우저 React HMI<br/>Nginx :80")]:::ext
+
+  subgraph VOICE["음성 경로 — 사람은 말로만 개입"]
+    V1["voice_listener<br/>에너지 VAD 30 ms 프레임<br/>무음 350 ms 종료 · 최대 8 s"]:::node
+    V2["POST /ai/stt<br/>faster-whisper small<br/>initial_prompt '헬로우 로키 …'"]:::ctn
+    V3["호출어 매칭<br/>'헬로/헬로우 + 로키/록키'<br/>정지 키워드는 호출어 없이 통과"]:::guard
+    V4["intent_parser<br/>지름길 (ASKING 답 · 정지 · 팔레타이징)"]:::node
+    V5["POST /ai/intent<br/>LangChain + OpenAI gpt-4o<br/>JSON schema strict · 3 s"]:::ctn
+    V6["허용 목록 재검증<br/>type · dong · zone · route 1~3<br/>LLM 은 로봇을 직접 움직이지 않는다"]:::guard
+    V7["speech_out<br/>큐 20 → POST /ai/tts<br/>gpt-4o-mini-tts coral"]:::node
+  end
+
+  SM["sort_manager<br/>FSM"]:::node
+
+  subgraph WEB["웹 경로 — 브라우저·Spring Boot 는 ROS 에 붙지 않는다"]
+    W1["Spring Boot :8080<br/>POST /api/commands (로컬만, stop 은 원격 OK)<br/>POST /api/voice/text · /announce"]:::ctn
+    W2["Mosquitto :1883<br/>voss/command · voice/request · voice/text<br/>ACL web ↔ bridge"]:::ctn
+    W3["hmi_bridge<br/>JSON → srv /voss/sort/command<br/>command_id 600 s 중복 억제 → voss/command/ack"]:::node
+    W4["GET /api/stream SSE<br/>state · result · zone_map · robot · pallet_state<br/>box_track · robot_pose · voice_status · link"]:::ctn
+  end
+
+  subgraph REC["기록 경로 — 박스마다 1행"]
+    R1["sort_logger<br/>INSERT ON CONFLICT DO NOTHING<br/>실패 → JSONL 스풀 → 1·2·5·10·30 s 재전송"]:::node
+    R2[("PostgreSQL 16<br/>sort_log · pallet_log · session_plan<br/>writer voss_logger / reader voss_web")]:::ext
+    R3["GET /api/stats · results · export.csv<br/>sessions/current · pallet/placements/latest"]:::ctn
+  end
+
+  MIC --> V1 -- "WAV" --> V2 -- "전사" --> V3 --> V4 --> V5 --> V6 -- "/voss/voice/intent" --> SM
+  V4 -. "query_history → GET /api/stats" .-> R3
+  SM -- "/voss/voice/say (질문 · 되읽기 · 완료)" --> V7 --> SPK
+  BROW -- "버튼 · 텍스트" --> W1 -- "MQTT publish" --> W2 -- "subscribe" --> W3 -- "srv Command" --> SM
+  SM -- "/voss/sort/state · result · zone_map<br/>/voss/pallet/state · /voss/robot/state" --> W3 -- "MQTT voss/state … (retained 3종)" --> W2 --> W4 --> BROW
+  SM -- "/voss/sort/result · /voss/pallet/result" --> R1 --> R2 --> R3 --> BROW
+  R1 -- "/voss/log/status OK · DB_ERROR · SPOOL_FULL" --> SM

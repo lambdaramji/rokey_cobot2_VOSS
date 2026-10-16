@@ -1,0 +1,71 @@
+flowchart LR
+  classDef host fill:#EEF3FA,stroke:#13315C,color:#0B2545
+  classDef ctn fill:#FFFFFF,stroke:#2F6FB5,stroke-dasharray:6 3,color:#0B2545
+  classDef hw fill:#FFF4E5,stroke:#B35C00,color:#4A2600
+  classDef ext fill:#F2F2F2,stroke:#777,color:#333
+
+  subgraph NODES["공용 PC (Nodes PC) — Ubuntu 24.04 · ROS 2 Jazzy · CycloneDDS · ROS_DOMAIN_ID 30"]
+    direction TB
+    subgraph HOST["호스트 프로세스 (서보 루프 지연 분리)"]
+      direction LR
+      BR["두산 브링업<br/>dsr_controller2 (/dsr01)"]
+      RG["robot_gateway<br/>두산 서비스 단일 큐 · RG2 Modbus"]
+      BS["belt_servo<br/>30 Hz 추종·파지 FSM"]
+      SM["sort_manager<br/>작업 상태기계 · voss_config.yaml"]
+      VO["voice_listener · intent_parser · speech_out"]
+      HB["hmi_bridge<br/>ROS ↔ MQTT"]
+      SL["sort_logger<br/>ROS → PostgreSQL"]
+      CP["realsense2_camera<br/>camera_preview :8091 · usb_preview :8092"]
+    end
+    subgraph CTN["Docker 컨테이너 5종 — network_mode: host"]
+      direction LR
+      VC["vision<br/>box_tracker · label_reader<br/>ros:jazzy + PaddleOCR (CPU/GPU)"]
+      AC["ai (GPU)<br/>FastAPI :8000<br/>faster-whisper · OpenAI intent · TTS"]
+      MQ["mqtt<br/>Mosquitto :1883<br/>ACL · 익명 금지"]
+      DB["db<br/>PostgreSQL 16 :5432<br/>sort_log · pallet_log"]
+      WB["web<br/>Spring Boot :8080 + React/Nginx :80"]
+    end
+  end
+
+  subgraph CELL["로봇 셀 — 로봇 컨트롤러 유선 전용 서브넷"]
+    direction TB
+    CTRL["두산 컨트롤러<br/>M0609 · :12345"]
+    ROBOT["두산 M0609<br/>6축 · 6 kg · 900 mm"]
+    RG2["OnRobot RG2<br/>Compute Box 192.168.1.1:502"]
+    CAM["RealSense D435i (손목)<br/>RGB 1920×1080 30 fps · 깊이 미사용"]
+    BELT["탁상 컨베이어 1040×70 mm<br/>Arduino Uno · 약 4.6 cm/s"]
+    USB["Logitech C270<br/>작업대 관제"]
+    TABLE["작업대 120×65 cm<br/>A·B·C · 재확인 · 보류 · 팔레트 16칸"]
+  end
+
+  subgraph WEBPC["Web PC (선택) — SSH 포워딩 8000·8080·1883·5432 / 8091·8092"]
+    direction TB
+    BROW["브라우저 HMI<br/>원격은 STOP 만"]
+    WV["web_pc_voice.sh<br/>마이크·스피커 음성 노드<br/>command_transport=web_api"]
+  end
+
+  OPENAI(["OpenAI API<br/>(별도 Wi-Fi NIC)"])
+
+  BR -- "ROS 2 (DDS)" --- RG
+  RG -- "Modbus TCP" --- RG2
+  BR -- "유선 TCP" --- CTRL
+  CTRL --- ROBOT
+  ROBOT --- RG2
+  ROBOT --- CAM
+  CAM -- "USB 3.0" --- CP
+  USB -- "USB" --- CP
+  BELT -. "시리얼 (속도 설정)" .- NODES
+  HB -- "MQTT" --- MQ
+  MQ --- WB
+  SL -- "INSERT" --- DB
+  WB -- "SELECT" --- DB
+  VO -- "HTTP /ai/*" --- AC
+  AC -- "HTTPS" --- OPENAI
+  WB -- "HTTP :80 · SSE" --- BROW
+  WV -- "REST /api/commands" --- WB
+  VC -- "같은 DDS 도메인" --- SM
+
+  class BR,RG,BS,SM,VO,HB,SL,CP host
+  class VC,AC,MQ,DB,WB ctn
+  class CTRL,ROBOT,RG2,CAM,BELT,USB,TABLE hw
+  class BROW,WV,OPENAI ext

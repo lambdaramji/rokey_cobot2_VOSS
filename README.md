@@ -33,46 +33,9 @@
 
 공용 PC 한 대(Nodes PC) 위의 ROS 2 호스트 프로세스 + 컨테이너 5종, 로봇 전용 유선망. **느린 판단(OCR·LLM, 수백 ms)과 30 Hz 제어 루프를 프로세스로 분리**하고 `sort_manager` 가 조율한다. 비전·음성은 판단 결과만 올리고, 로봇·스피커·HMI 는 `sort_manager` 의 명령만 받는다.
 
-```mermaid
-flowchart LR
-  subgraph voice["음성 · 호스트"]
-    VL[voice_listener] -->|/voss/voice/transcript| IP[intent_parser]
-    IP -->|/voss/voice/say| SO[speech_out]
-  end
-  subgraph ai["AI 컨테이너 (GPU) :8000"]
-    AI[FastAPI<br/>faster-whisper · OpenAI intent · TTS]
-  end
-  subgraph vision["비전 컨테이너 (CPU/GPU)"]
-    BT[box_tracker] -->|/voss/vision/label_crop| LR[label_reader]
-  end
-  subgraph robot["로봇 · 호스트"]
-    BS[belt_servo 30 Hz] -->|/voss/robot/servo_cmd| RG[robot_gateway]
-    RG -->|/voss/robot/pose 50 Hz| BS
-  end
-  CAM[(RealSense D435i<br/>/camera/color/image_raw)] --> BT
-  VL -.->|POST /ai/stt| AI
-  IP -.->|POST /ai/intent| AI
-  SO -.->|POST /ai/tts| AI
-  IP -->|/voss/voice/intent| SM[sort_manager<br/>FSM]
-  BT -->|/voss/vision/box 30 Hz| SM
-  BT -->|/voss/vision/box| BS
-  LR -->|/voss/vision/label| SM
-  SM -->|srv read_label| LR
-  SM -->|action track_and_grasp| BS
-  SM -->|srv move_to_zone · stop| RG
-  BS -->|srv gripper · stop| RG
-  SM -->|/voss/voice/say| SO
-  SM -->|/voss/sort/state · result · zone_map<br/>/voss/pallet/state · result| HB[hmi_bridge]
-  SM -->|/voss/sort/result · /voss/pallet/result| SL[sort_logger]
-  SL -->|/voss/log/status| SM
-  RG -->|speedl_stream · move_line · ikin/fkin| DSR[(두산 dsr_controller2<br/>/dsr01)]
-  RG <-->|Modbus TCP 502| RG2[(OnRobot RG2)]
-  HB <-->|MQTT voss/*| MQ[(Mosquitto :1883)]
-  MQ <--> SB[Spring Boot :8080]
-  SB -->|REST + SSE| WEB[React HMI<br/>Nginx :80]
-  SL -->|INSERT| DB[(PostgreSQL :5432<br/>sort_log · pallet_log)]
-  SB -->|SELECT| DB
-```
+[![시스템 배포 아키텍처 — 공용 PC 호스트 프로세스 · 컨테이너 5종 · 로봇 셀 · Web PC](docs/architecture/01_system.png)](docs/architecture/01_system.png)
+
+📐 **편집용 원본:** [`docs/architecture/01_system.mmd`](docs/architecture/01_system.mmd) (Mermaid) — 도면 6장 전체와 다시 그리는 법은 [docs/architecture/](docs/architecture/README.md)
 
 | 위치 | 구성 | 역할 |
 |---|---|---|
@@ -87,6 +50,10 @@ flowchart LR
 컨테이너는 모두 `network_mode: host`, 호스트와 같은 `ROS_DOMAIN_ID`(운용 30)·`rmw_cyclonedds_cpp`. `docker compose up` 과 로봇을 움직이는 명령은 사람이 비상정지 옆에서 실행한다(`.claude/settings.json` 에서 Claude 는 deny).
 
 ### ROS 2 패키지와 노드
+
+[![ROS 2 통신 아키텍처 — 노드 · 토픽 · 서비스 · 액션](docs/architecture/02_ros2.png)](docs/architecture/02_ros2.png)
+
+센서 → 인지(비전·음성) → **sort_manager** → 실행(belt_servo · robot_gateway · speech_out) → 장치. 인지는 판단 결과만 올리고, 실행은 `sort_manager` 의 명령(action · srv)만 받는다. 굵은 선이 서비스·액션, 점선이 HTTP · MQTT · Modbus 다. 노드별 전체 목록은 아래 표.
 
 | 패키지 | 노드 | 발행 | 구독 · 호출 | 제공 서비스 · 액션 |
 |---|---|---|---|---|
@@ -125,6 +92,10 @@ QoS: `/voss/vision/box` · `/voss/robot/pose` · `/voss/robot/servo_cmd` 는 bes
 
 ### 데이터 흐름 — 박스 하나의 여정
 
+[![30 Hz 제어 루프 — 눈에서 손까지](docs/architecture/03_control_loop.png)](docs/architecture/03_control_loop.png)
+
+위 그림이 4번(추종·파지)의 30 Hz 루프다: 카메라 → `box_tracker`(검출·추적·핸드아이) → `belt_servo`(FF+P · FSM) → `robot_gateway`(guard · watchdog) → 두산 `speedl_stream` → 로봇 → `joint_states` → pose 피드백. 명령이 끊기면 200 ms 안에 gateway 가 혼자 멈춘다.
+
 1. **시작**: "헬로, 로키. 작업 시작" → `intent_parser` → `/voss/voice/intent` → `sort_manager` IDLE → RUNNING. "작업을 시작합니다." 발화, `MoveToZone(OBSERVE)` 로 관측 자세(벨트 상류 끝 위 약 15 cm) 이동.
 2. **관측·1차 OCR**: `box_tracker` 가 1920×1080 30 fps 프레임에서 HSV 로 흰 송장을 분할해 박스를 검출·추적(등속 예측 탐욕 매칭, `min_hits` 5), 촬영 시각의 TCP pose 를 보간(`pose_lag_ms` 15)해 핸드아이로 픽셀 → 베이스 좌표를 낸다. 관측 자세에서는 벨트 평면 호모그래피(`plane_z_mm` 100.8)로도 검산한다. 송장 크롭을 `label_reader` 로 보내 PaddleOCR 로 읽고 zone_map 과 퍼지 매칭 → `/voss/vision/label` stage 1.
 3. **판단**: `sort_manager` 가 코드·동 교차 검증(일치 → 확정, 불일치 → 코드 우선·신뢰도 하향, conf < 0.6 → LOW_CONF). 지시 대상(priority)이 아니면 집지 않고 흘려보낸다(PASSED). 목적 구역 칸(`slot_at`, 3×2×2층)을 잡고 `TrackAndGrasp` goal → PICKING.
@@ -135,18 +106,9 @@ QoS: `/voss/vision/box` · `/voss/robot/pose` · `/voss/robot/servo_cmd` 는 bes
 
 ### sort_manager 상태기계
 
-```
-IDLE ──start──▶ RUNNING ──LabelSeen──▶ PICKING ──GoalDone·PLACE──▶ RUNNING
-                  │                      │ 불확실                  
-                  │                      ▼                         
-                  │                   RECHECK ──확정──▶ PICK → PLACE ──▶ RUNNING
-                  │                      │ 미확정                   
-                  │                      ▼                         
-                  │                    ASKING ──answer / 30 s──▶ 목적 구역 / HOLD
-                  │
-  (모든 상태) ──stop──▶ PAUSED ──resume──▶ resume_to(RECHECK · ASKING · PICK · PLACE) 또는 OBSERVE
-  RUNNING/PAUSED ──palletize──▶ PALLETIZING ──완료──▶ 시작 전 상태
-```
+[![전체 공정 플로우차트 — 상태 전이 · 예외 분기 · 팔레타이징](docs/architecture/04_flow.png)](docs/architecture/04_flow.png)
+
+**정상 공정:** IDLE → RUNNING(관측 · 1차 OCR) → PICKING(추종 · 파지 · 2차 OCR · 적재) → RUNNING. **예외:** 불확실 → RECHECK(3차 재판독) → ASKING(질문 · 30 s 보류) / 실패 · stop · 구역 가득 → PAUSED → resume. **팔레타이징:** RUNNING·PAUSED → PALLETIZING → 완료 → 시작 전 상태.
 
 - `step(ctx, event)` 순수 함수(`sort_fsm.py`) — 전이·타임아웃을 ROS 없이 단위 시험한다. 준비 판정(`readiness.py`): ROBOT(RobotState ≤ 1.5 s · connected · READY/STOPPED) · SERVO(액션 서버 존재) · VISION(`/voss/vision/box` 발행자) · OCR(`/voss/vision/label` 발행자) · LOG(`/voss/log/status` ≤ 3 s · STARTING 아님). 하나라도 빠지면 start/resume 거부.
 - stop 은 `/voss/robot/stop` 을 **최우선**으로 부른 뒤 goal 취소 → PAUSED. stop 응답 실패(3 s)면 `stop_failed` → ROBOT 미준비, 재성공 전 resume 거부. 구역이 가득 차면(A/B/C 12칸, RECHECK·HOLD 2칸) PAUSED(full_zone) → `reset_zone` 뒤 재개.
@@ -165,6 +127,8 @@ IDLE ──start──▶ RUNNING ──LabelSeen──▶ PICKING ──GoalDon
 
 ### MQTT · 웹 · AI · DB
 
+[![사람 · 기록 경로 — 음성 · 웹 · DB 는 판단 계층에만 붙는다](docs/architecture/05_human_record.png)](docs/architecture/05_human_record.png)
+
 **MQTT (`docker/mqtt`, [docs/interfaces/mqtt.md](docs/interfaces/mqtt.md))** — ROS → 웹: `voss/state` `voss/result` `voss/zone_map`(retained) `voss/robot` `voss/box_track` `voss/robot_pose` `voss/robot_joints` `voss/voice_status` `voss/log_status`(retained) `voss/pallet/state`(retained) `voss/command/ack` `voss/voice/text/reply`. 웹 → ROS: `voss/command` `{command_id, type, args, raw_text, sent_at}` · `voss/voice/request`(버튼 안내 문구 → TTS) · `voss/voice/text`(자연어 텍스트). 계정별 read/write ACL, 익명 금지.
 
 **Spring Boot `/api` ([docs/interfaces/web_api.md](docs/interfaces/web_api.md))** — `POST /api/commands`(stop 외는 로컬 127.0.0.1 만) · `GET /api/stream`(SSE: state · result · zone_map · robot · command_ack · log_status · pallet_state · voice_status · box_track · robot_pose · robot_joints · text_reply · link) · `GET /api/sessions/current` · `PUT /api/sessions/current/plan`(투입 예정 수량) · `GET /api/stats?query_kind=count_by_dong|held_count|remaining_count` · `GET /api/results` · `GET /api/export.csv` · `GET /api/pallet/placements/latest` · `POST /api/voice/text` · `POST /api/voice/announce`. Nginx 가 `/api/` → 8080, `/camera/gripper/` → 8091, `/camera/usb/` → 8092 를 프록시한다.
@@ -172,6 +136,8 @@ IDLE ──start──▶ RUNNING ──LabelSeen──▶ PICKING ──GoalDon
 **React HMI (`docker/web/frontend`)** — `App.tsx`(SSE 구독, 운전·분류·답변·구역 초기화 패널, 집계 Metric, 이력·OCR 결과), `VossSortingWorkspace`(로봇 베이스 기준 2D 작업공간: 트레이·팔레트·컨베이어, `robot_pose` 로 팔 애니메이션, `box_track` 박스, 음성 표시등 초록/노랑/빨강), `PalletPanel`(배송지 1~3 선택, 3D SVG 팔레트 16칸, 진행률, 초과 경고, 비움 확인), `GripperCameraPanel` · `UsbCameraPanel`(JPEG 폴링), `TextCommandPanel`(웹 텍스트 명령 → `text_reply`).
 
 **AI (`docker/ai`)** — `POST /ai/stt`(WAV → faster-whisper, `initial_prompt` "헬로우 로키 …", 프롬프트 메아리 필터) · `POST /ai/intent`(`{text, allowed:{dongs, aliases, zones}}` → JSON schema strict: type · dong · zone · query_kind · route · raw_text, `temperature 0`, 3 s 타임아웃) · `POST /ai/tts`(S16LE 24 kHz PCM 스트리밍, voice `coral`).
+
+[![ERD — sort_log · pallet_log · session_plan](docs/architecture/06_erd.png)](docs/architecture/06_erd.png)
 
 **DB (`docker/db/init/01_schema.sql`, `migrations/20261012_sprint2_pallet.sql`)** — `sort_log`(PK box_id; session_id · track_id · code · dong · confidence · decided_by · zone · result · reason · raw_text · second_region · rule_version · attempts · retries(생성 컬럼) · started_at · finished_at · inserted_at · slot), `pallet_log`(PK run_id + box_id; route_index · zone · slot · pallet_slot 0~15 · pallet_col 1~4 · pallet_lane 1~2 · pallet_layer 1~2 · result DONE/FAILED/OVERFLOW/EXCLUDED · reason · attempts · finished_at), `session_plan`(session_id · planned). 마이그레이션은 구조를 검증한 뒤 롤백 또는 COMMIT.
 
@@ -296,6 +262,7 @@ palletize  <동>,<동>,<동> 순서로 팔레트 적재
 ├── .claude/                      /sync · /pr · /standup 커맨드, 실행 deny 설정
 └── docs/
     ├── architecture.md             노드 책임 · 배포 · 상태기계 요약
+    ├── architecture/               도면 6장 (배포 · ROS 2 통신 · 제어 루프 · 플로우차트 · 사람/기록 경로 · ERD) + Mermaid 원본
     ├── interfaces/                 토픽 · 메시지 · intent JSON · MQTT · voss_config · calibration · web_api · voice_status (코드보다 우선)
     ├── adr/                        설계 결정 0001~0016
     ├── requirements/               BRD v1.7 · SRD v1.0 · 개발일정 xlsx · Sprint 2 자료
