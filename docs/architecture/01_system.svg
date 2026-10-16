@@ -5204,7 +5204,11 @@ text{font-family:'Noto Sans CJK KR',sans-serif}]]></style><rect fill="#020617" h
 <path d="M 175 970 L 175 846" data-graph-role="automatic-crossover-underlay" fill="none" pointer-events="none" stroke="#0f172a" stroke-linecap="round" stroke-linejoin="round" stroke-width="5.5"></path>
 <path class="a-default" d="M 175 970 L 175 846" data-animate="edge" data-composition-crossover="halo" data-composition-points="175,970;175,846" data-edge-from="usb_camera" data-edge-id="usb-preview" data-edge-key="31" data-edge-label="USB 영상" data-edge-to="preview" marker-end="url(#arrowhead)" stroke-width="1.5" style="--step:12"></path>
 </g>
+
+<g data-graph-role="automatic-crossover" style="--step:32"><path data-graph-role="automatic-crossover-underlay" d="M 435 244 L 435 270" fill="none" stroke="var(--mask)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"></path><path data-edge-from="usb_microphone" data-edge-to="voice" data-edge-label="USB audio" data-edge-key="32" data-edge-id="mic-voice" data-composition-points="435,244;435,270" data-composition-crossover="halo" d="M 435 244 L 435 270" class="a-default" data-animate="edge" style="--step:12" stroke-width="1.5" marker-end="url(#arrowhead)"></path></g>
 <!-- Components -->
+<g id="node-usb_microphone" data-node-id="usb_microphone" data-node-label="USB microphone" tabindex="0" role="button" aria-label="USB microphone 포커스, Web PC · USB audio input, Web PC · runo-ros (서비스 실행)" aria-pressed="false" data-node-kind="external" data-node-sublabel="Web PC · USB audio input" data-node-context="Web PC · runo-ros (서비스 실행)"><title>USB microphone · Web PC · USB audio input · Web PC · runo-ros (서비스 실행)</title><rect x="340" y="184" width="190" height="60" rx="8" class="c-mask" stroke-width="1.5"></rect><rect x="340" y="184" width="190" height="60" rx="8" class="c-external" data-animate="node" style="--step:12" stroke-width="1.5"></rect><g aria-hidden="true" data-semantic-sigil="external" class="semantic-sigil s-external" transform="translate(346 190) scale(0.6875)"><rect x="2.5" y="5" width="8.5" height="8" rx="1.5"></rect><path d="M8 2.5h5.5V8M13.5 2.5 7.5 8.5"></path></g><text data-node-label="" data-detail-anchor="" x="435" y="210" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">USB microphone</text><text data-detail="context" x="435" y="226" class="t-muted" font-size="9" text-anchor="middle">Web PC · USB audio input</text></g>
+
 <g aria-label="운영자 브라우저 포커스, 명령 · 상태 · 이력, 아키텍처 구성요소" aria-pressed="false" data-node-context="아키텍처 구성요소" data-node-id="browser" data-node-kind="external" data-node-label="운영자 브라우저" data-node-sublabel="명령 · 상태 · 이력" id="node-browser" role="button" tabindex="0">
 <title>운영자 브라우저 · 명령 · 상태 · 이력 · 아키텍처 구성요소</title>
 <rect class="c-mask" height="76" rx="8" stroke-width="1.5" width="190" x="40" y="80"></rect>
@@ -5216,8 +5220,8 @@ text{font-family:'Noto Sans CJK KR',sans-serif}]]></style><rect fill="#020617" h
 <text class="t-primary" data-detail-anchor="" data-node-label="" font-size="11" font-weight="600" text-anchor="middle" x="135" y="116">운영자 브라우저</text>
 <text class="t-muted" data-detail="context" font-size="9" text-anchor="middle" x="135" y="132">명령 · 상태 · 이력</text>
 </g>
-<g aria-label="Nginx + React 포커스, 정적 UI · /api 프록시, Web PC · runo-ros (서비스 실행)" aria-pressed="false" data-node-context="Web PC · runo-ros (서비스 실행)" data-node-id="nginx" data-node-kind="frontend" data-node-label="Nginx + React" data-node-sublabel="정적 UI · /api 프록시" id="node-nginx" role="button" tabindex="0">
-<title>Nginx + React · 정적 UI · /api 프록시 · Web PC · runo-ros (서비스 실행)</title>
+<g aria-label="Nginx 1.27 · React 19.3 포커스, TypeScript 5.7 · Vite 6.4, Web PC · runo-ros (서비스 실행)" aria-pressed="false" data-node-context="Web PC · runo-ros (서비스 실행)" data-node-id="nginx" data-node-kind="frontend" data-node-label="Nginx 1.27 · React 19.3" data-node-sublabel="TypeScript 5.7 · Vite 6.4" id="node-nginx" role="button" tabindex="0">
+<title>Nginx 1.27 · React 19.3 · TypeScript 5.7 · Vite 6.4 · Web PC · runo-ros (서비스 실행)</title>
 <rect class="c-mask" height="76" rx="8" stroke-width="1.5" width="190" x="340" y="80"></rect>
 <rect class="c-frontend" data-animate="node" height="76" rx="8" stroke-width="1.5" style="--step:1" width="190" x="340" y="80"></rect>
 <g aria-hidden="true" class="semantic-sigil s-frontend" data-semantic-sigil="frontend" transform="translate(346 86) scale(0.6875)">
@@ -5226,18 +5230,18 @@ text{font-family:'Noto Sans CJK KR',sans-serif}]]></style><rect fill="#020617" h
 <circle class="sigil-fill" cx="4.1" cy="4.8" r=".7"></circle>
 <circle class="sigil-fill" cx="6.3" cy="4.8" r=".7"></circle>
 </g>
-<text class="t-primary" data-detail-anchor="" data-node-label="" font-size="11" font-weight="600" text-anchor="middle" x="435" y="116">Nginx + React</text>
-<text class="t-muted" data-detail="context" font-size="9" text-anchor="middle" x="435" y="132">정적 UI · /api 프록시</text>
+<text class="t-primary" data-detail-anchor="" data-node-label="" font-size="11" font-weight="600" text-anchor="middle" x="435" y="116">Nginx 1.27 · React 19.3</text>
+<text class="t-muted" data-detail="context" font-size="9" text-anchor="middle" x="435" y="132">TypeScript 5.7 · Vite 6.4</text>
 </g>
-<g aria-label="Spring Boot 포커스, REST · SSE · MQTT 연동, Web PC · runo-ros (서비스 실행)" aria-pressed="false" data-node-context="Web PC · runo-ros (서비스 실행)" data-node-id="spring" data-node-kind="backend" data-node-label="Spring Boot" data-node-sublabel="REST · SSE · MQTT 연동" id="node-spring" role="button" tabindex="0">
-<title>Spring Boot · REST · SSE · MQTT 연동 · Web PC · runo-ros (서비스 실행)</title>
+<g aria-label="Spring Boot 3.5 포커스, Java 21 · REST · SSE · MQTT, Web PC · runo-ros (서비스 실행)" aria-pressed="false" data-node-context="Web PC · runo-ros (서비스 실행)" data-node-id="spring" data-node-kind="backend" data-node-label="Spring Boot 3.5" data-node-sublabel="Java 21 · REST · SSE · MQTT" id="node-spring" role="button" tabindex="0">
+<title>Spring Boot 3.5 · Java 21 · REST · SSE · MQTT · Web PC · runo-ros (서비스 실행)</title>
 <rect class="c-mask" height="76" rx="8" stroke-width="1.5" width="190" x="600" y="80"></rect>
 <rect class="c-backend" data-animate="node" height="76" rx="8" stroke-width="1.5" style="--step:2" width="190" x="600" y="80"></rect>
 <g aria-hidden="true" class="semantic-sigil s-backend" data-semantic-sigil="backend" transform="translate(606 86) scale(0.6875)">
 <path d="M6 3 3 8l3 5M10 3l3 5-3 5"></path>
 </g>
-<text class="t-primary" data-detail-anchor="" data-node-label="" font-size="11" font-weight="600" text-anchor="middle" x="695" y="116">Spring Boot</text>
-<text class="t-muted" data-detail="context" font-size="9" text-anchor="middle" x="695" y="132">REST · SSE · MQTT 연동</text>
+<text class="t-primary" data-detail-anchor="" data-node-label="" font-size="11" font-weight="600" text-anchor="middle" x="695" y="116">Spring Boot 3.5</text>
+<text class="t-muted" data-detail="context" font-size="9" text-anchor="middle" x="695" y="132">Java 21 · REST · SSE · MQTT</text>
 </g>
 <g aria-label="PostgreSQL 16 포커스, sort · pallet · plan, Web PC · runo-ros (서비스 실행)" aria-pressed="false" data-node-context="Web PC · runo-ros (서비스 실행)" data-node-id="postgres" data-node-kind="database" data-node-label="PostgreSQL 16" data-node-sublabel="sort · pallet · plan" id="node-postgres" role="button" tabindex="0">
 <title>PostgreSQL 16 · sort · pallet · plan · Web PC · runo-ros (서비스 실행)</title>
@@ -5283,15 +5287,15 @@ text{font-family:'Noto Sans CJK KR',sans-serif}]]></style><rect fill="#020617" h
 <text class="t-primary" data-detail-anchor="" data-node-label="" font-size="11" font-weight="600" text-anchor="middle" x="695" y="606">sort_manager</text>
 <text class="t-muted" data-detail="context" font-size="9" text-anchor="middle" x="695" y="622">분류 · 재확인 · 적재 FSM</text>
 </g>
-<g aria-label="box_tracker + OCR 포커스, box_tracker · GPU OCR, Robot PC · ms-03 (ROS/비전 실행)" aria-pressed="false" data-node-context="Robot PC · ms-03 (ROS/비전 실행)" data-node-id="vision" data-node-kind="backend" data-node-label="box_tracker + OCR" data-node-sublabel="box_tracker · GPU OCR" id="node-vision" role="button" tabindex="0">
-<title>box_tracker + OCR · box_tracker · GPU OCR · Robot PC · ms-03 (ROS/비전 실행)</title>
+<g aria-label="box_tracker + OCR 포커스, OpenCV · PaddleOCR 3.7, Robot PC · ms-03 (ROS/비전 실행)" aria-pressed="false" data-node-context="Robot PC · ms-03 (ROS/비전 실행)" data-node-id="vision" data-node-kind="backend" data-node-label="box_tracker + OCR" data-node-sublabel="OpenCV · PaddleOCR 3.7" id="node-vision" role="button" tabindex="0">
+<title>box_tracker + OCR · OpenCV · PaddleOCR 3.7 · Robot PC · ms-03 (ROS/비전 실행)</title>
 <rect class="c-mask" height="76" rx="8" stroke-width="1.5" width="190" x="340" y="570"></rect>
 <rect class="c-backend" data-animate="node" height="76" rx="8" stroke-width="1.5" style="--step:7" width="190" x="340" y="570"></rect>
 <g aria-hidden="true" class="semantic-sigil s-backend" data-semantic-sigil="backend" transform="translate(346 576) scale(0.6875)">
 <path d="M6 3 3 8l3 5M10 3l3 5-3 5"></path>
 </g>
 <text class="t-primary" data-detail-anchor="" data-node-label="" font-size="11" font-weight="600" text-anchor="middle" x="435" y="606">box_tracker + OCR</text>
-<text class="t-muted" data-detail="context" font-size="9" text-anchor="middle" x="435" y="622">box_tracker · GPU OCR</text>
+<text class="t-muted" data-detail="context" font-size="9" text-anchor="middle" x="435" y="622">OpenCV · PaddleOCR 3.7</text>
 </g>
 <g aria-label="belt_servo 포커스, 추적·파지 Action, Robot PC · ms-03 (ROS/비전 실행)" aria-pressed="false" data-node-context="Robot PC · ms-03 (ROS/비전 실행)" data-node-id="servo" data-node-kind="backend" data-node-label="belt_servo" data-node-sublabel="추적·파지 Action" id="node-servo" role="button" tabindex="0">
 <title>belt_servo · 추적·파지 Action · Robot PC · ms-03 (ROS/비전 실행)</title>
@@ -5344,15 +5348,15 @@ text{font-family:'Noto Sans CJK KR',sans-serif}]]></style><rect fill="#020617" h
 <text class="t-primary" data-detail-anchor="" data-node-label="" font-size="11" font-weight="600" text-anchor="middle" x="435" y="306">음성 ROS 노드</text>
 <text class="t-muted" data-detail="context" font-size="9" text-anchor="middle" x="435" y="322">listener · parser · speech</text>
 </g>
-<g aria-label="FastAPI AI 포커스, STT · intent · TTS HTTP, Web PC · runo-ros (서비스 실행)" aria-pressed="false" data-node-context="Web PC · runo-ros (서비스 실행)" data-node-id="ai" data-node-kind="cloud" data-node-label="FastAPI AI" data-node-sublabel="STT · intent · TTS HTTP" id="node-ai" role="button" tabindex="0">
-<title>FastAPI AI · STT · intent · TTS HTTP · Web PC · runo-ros (서비스 실행)</title>
+<g aria-label="FastAPI 0.115 포커스, Whisper 1.1 · GPT-4o · TTS, Web PC · runo-ros (서비스 실행)" aria-pressed="false" data-node-context="Web PC · runo-ros (서비스 실행)" data-node-id="ai" data-node-kind="cloud" data-node-label="FastAPI 0.115" data-node-sublabel="Whisper 1.1 · GPT-4o · TTS" id="node-ai" role="button" tabindex="0">
+<title>FastAPI 0.115 · Whisper 1.1 · GPT-4o · TTS · Web PC · runo-ros (서비스 실행)</title>
 <rect class="c-mask" height="76" rx="8" stroke-width="1.5" width="190" x="600" y="270"></rect>
 <rect class="c-cloud" data-animate="node" height="76" rx="8" stroke-width="1.5" style="--step:12" width="190" x="600" y="270"></rect>
 <g aria-hidden="true" class="semantic-sigil s-cloud" data-semantic-sigil="cloud" transform="translate(606 276) scale(0.6875)">
 <path d="M4.3 12.5h7.3a2.4 2.4 0 0 0 .2-4.8 4 4 0 0 0-7.5-1.3A3.1 3.1 0 0 0 4.3 12.5Z"></path>
 </g>
-<text class="t-primary" data-detail-anchor="" data-node-label="" font-size="11" font-weight="600" text-anchor="middle" x="695" y="306">FastAPI AI</text>
-<text class="t-muted" data-detail="context" font-size="9" text-anchor="middle" x="695" y="322">STT · intent · TTS HTTP</text>
+<text class="t-primary" data-detail-anchor="" data-node-label="" font-size="11" font-weight="600" text-anchor="middle" x="695" y="306">FastAPI 0.115</text>
+<text class="t-muted" data-detail="context" font-size="9" text-anchor="middle" x="695" y="322">Whisper 1.1 · GPT-4o · TTS</text>
 </g>
 <g aria-label="RealSense camera 포커스, Robot PC · 컬러 프레임, Robot PC · ms-03 (ROS/비전 실행)" aria-pressed="false" data-node-context="Robot PC · ms-03 (ROS/비전 실행)" data-node-id="camera" data-node-kind="backend" data-node-label="RealSense camera" data-node-sublabel="Robot PC · 컬러 프레임" id="node-camera" role="button" tabindex="0">
 <title>RealSense camera · Robot PC · 컬러 프레임 · Robot PC · ms-03 (ROS/비전 실행)</title>
@@ -5514,6 +5518,8 @@ text{font-family:'Noto Sans CJK KR',sans-serif}]]></style><rect fill="#020617" h
 <rect class="c-mask" height="14" rx="3" width="48.4" x="157.8" y="942"></rect>
 <text class="t-edge-default" font-size="8" text-anchor="middle" x="182" y="952">USB 영상</text>
 </g>
+
+<g data-detail="context" data-edge-from="usb_microphone" data-edge-to="voice" data-edge-label="USB audio" data-edge-key="32" data-edge-id="mic-voice"><rect x="365" y="252" width="56" height="14" rx="3" class="c-mask"></rect><text x="393" y="262" class="t-edge-default" font-size="8" text-anchor="middle">USB audio</text></g>
 <!-- Boundary labels (foreground masks keep routes out of titles) -->
 <g data-composition-frame-id="0" data-composition-frame-kind="region" data-composition-frame-label="Web PC · runo-ros (서비스 실행)" data-graph-role="structural-frame-label">
 <rect class="c-mask" data-graph-role="structural-frame-label-mask" height="16" rx="3" width="177.4" x="314" y="60"></rect>

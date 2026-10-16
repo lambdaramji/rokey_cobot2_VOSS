@@ -12,7 +12,8 @@
       "provider": "github",
       "link_mode": "web"
     },
-    "animation": "trace"
+    "animation": "trace",
+    "version_note": "Versions reflect declared dependencies; USB microphone physically connected to Web PC (user-confirmed)."
   },
   "components": [
     {
@@ -39,8 +40,8 @@
     {
       "id": "nginx",
       "type": "frontend",
-      "label": "Nginx + React",
-      "sublabel": "정적 UI · /api 프록시",
+      "label": "Nginx 1.27 · React 19.3",
+      "sublabel": "TypeScript 5.7 · Vite 6.4",
       "pos": [
         340,
         80
@@ -60,8 +61,8 @@
     {
       "id": "spring",
       "type": "backend",
-      "label": "Spring Boot",
-      "sublabel": "REST · SSE · MQTT 연동",
+      "label": "Spring Boot 3.5",
+      "sublabel": "Java 21 · REST · SSE · MQTT",
       "pos": [
         600,
         80
@@ -166,7 +167,7 @@
       "id": "vision",
       "type": "backend",
       "label": "box_tracker + OCR",
-      "sublabel": "box_tracker · GPU OCR",
+      "sublabel": "OpenCV · PaddleOCR 3.7",
       "pos": [
         340,
         570
@@ -268,6 +269,27 @@
       ]
     },
     {
+      "id": "usb_microphone",
+      "type": "external",
+      "label": "USB microphone",
+      "sublabel": "Web PC · USB audio input",
+      "pos": [
+        340,
+        184
+      ],
+      "size": [
+        190,
+        60
+      ],
+      "sources": [
+        {
+          "path": "src/voss_voice/voss_voice/voice_listener.py",
+          "line": 131,
+          "end_line": 145
+        }
+      ]
+    },
+    {
       "id": "voice",
       "type": "backend",
       "label": "음성 ROS 노드",
@@ -291,8 +313,8 @@
     {
       "id": "ai",
       "type": "cloud",
-      "label": "FastAPI AI",
-      "sublabel": "STT · intent · TTS HTTP",
+      "label": "FastAPI 0.115",
+      "sublabel": "Whisper 1.1 · GPT-4o · TTS",
       "pos": [
         600,
         270
@@ -638,6 +660,17 @@
         182,
         952
       ]
+    },
+    {
+      "id": "mic-voice",
+      "from": "usb_microphone",
+      "to": "voice",
+      "label": "USB audio",
+      "variant": "default",
+      "labelAt": [
+        393,
+        262
+      ]
     }
   ],
   "boundaries": [
@@ -645,6 +678,7 @@
       "kind": "region",
       "label": "Web PC · runo-ros (서비스 실행)",
       "wraps": [
+        "usb_microphone",
         "nginx",
         "spring",
         "postgres",
@@ -675,7 +709,7 @@
       "dot": "cyan",
       "title": "실행 경계",
       "items": [
-        "Web PC: React/Nginx · Spring · PostgreSQL · Mosquitto · FastAPI · 음성 노드",
+        "Web PC: USB microphone · React/Nginx · Spring · PostgreSQL · Mosquitto · FastAPI · 음성 노드",
         "Robot PC: ROS/비전/GPU OCR · 카메라 · sort_logger · hmi_bridge · Doosan bringup",
         "SSH로 접속해 띄운 sort_logger·hmi_bridge·카메라 화면 서버도 Robot PC 프로세스"
       ]
