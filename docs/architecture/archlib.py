@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import html
 from dataclasses import dataclass, field
+from itertools import pairwise
 
 FONT = "Noto Sans CJK KR, Noto Sans KR, sans-serif"
 BG = "#020617"
@@ -97,7 +98,7 @@ def esc(s):
 
 def _lab_pos(pts):
     best = None
-    for (x1, y1), (x2, y2) in zip(pts, pts[1:]):
+    for (x1, y1), (x2, y2) in pairwise(pts):
         L = abs(x2 - x1) + abs(y2 - y1)
         if best is None or L > best[0]:
             best = (L, ((x1 + x2) / 2, (y1 + y2) / 2))
@@ -118,7 +119,7 @@ def render(width, height, title, nodes, zones, edges, legend, notes=None, out="o
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}" font-family="{FONT}">'
     )
     o.append("<defs>")
-    for k, (stroke, dash, _) in EDGE.items():
+    for k, (stroke, _dash, _) in EDGE.items():
         o.append(
             f'<marker id="arr-{k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">'
             f'<path d="M1 1 L9 5 L1 9 z" fill="{stroke}"/></marker>'
@@ -130,7 +131,9 @@ def render(width, height, title, nodes, zones, edges, legend, notes=None, out="o
     o.append(f'<rect width="{width}" height="{height}" fill="{BG}"/>')
     o.append(f'<rect width="{width}" height="{height}" fill="url(#grid)"/>')
     # title
-    o.append(f'<text x="40" y="46" font-size="26" font-weight="700" fill="#f8fafc">{esc(title)}</text>')
+    o.append(
+        f'<text x="40" y="46" font-size="26" font-weight="700" fill="#f8fafc">{esc(title)}</text>'
+    )
     o.append(f'<g transform="translate(0,{yoff})">')
     # zones
     for z in zones:
@@ -149,7 +152,9 @@ def render(width, height, title, nodes, zones, edges, legend, notes=None, out="o
         stroke, dash, lcol = EDGE[e.kind]
         d = "M " + " L ".join(f"{x:.1f} {y:.1f}" for x, y in e.pts)
         dash_attr = f' stroke-dasharray="{dash}"' if dash else ""
-        mk = f' marker-end="url(#arr-{e.kind})"' + (f' marker-start="url(#arr-{e.kind})"' if e.both else "")
+        mk = f' marker-end="url(#arr-{e.kind})"' + (
+            f' marker-start="url(#arr-{e.kind})"' if e.both else ""
+        )
         o.append(
             f'<path d="{d}" fill="none" stroke="{stroke}" stroke-width="{e.width}" stroke-linejoin="round"{dash_attr}{mk}/>'
         )
@@ -175,14 +180,18 @@ def render(width, height, title, nodes, zones, edges, legend, notes=None, out="o
         for i, s in enumerate(lines):
             ty = ly - th / 2 + 3 + (i + 1) * (fs + 4) - 4
             tx = bx + 8
-            o.append(f'<text x="{tx:.1f}" y="{ty:.1f}" font-size="{fs}" fill="{lcol}">{esc(s)}</text>')
+            o.append(
+                f'<text x="{tx:.1f}" y="{ty:.1f}" font-size="{fs}" fill="{lcol}">{esc(s)}</text>'
+            )
     # nodes
     for n in nodes:
         fill, stroke, glyph = KIND[n.kind]
         o.append(
             f'<rect x="{n.x}" y="{n.y}" width="{n.w}" height="{n.h}" rx="12" fill="{fill}" stroke="{stroke}" stroke-width="2.2"/>'
         )
-        o.append(f'<text x="{n.x + 12}" y="{n.y + 22}" font-size="15" fill="{stroke}">{esc(glyph)}</text>')
+        o.append(
+            f'<text x="{n.x + 12}" y="{n.y + 22}" font-size="15" fill="{stroke}">{esc(glyph)}</text>'
+        )
         ty = n.y + (n.h / 2 if not n.lines else 36)
         if n.lines:
             ty = n.y + 34
@@ -199,10 +208,12 @@ def render(width, height, title, nodes, zones, edges, legend, notes=None, out="o
             o.append(
                 f'<text x="{n.cx}" y="{ty + 22 + (i + 1) * 17}" font-size="12.5" fill="#94a3b8" text-anchor="middle">{esc(s)}</text>'
             )
-    o.append('</g>')
+    o.append("</g>")
     # legend
     lx, ly = 40, height - 24 - 24 * ((len(legend) + 5) // 6)
-    o.append(f'<text x="{lx}" y="{ly - 10}" font-size="15" font-weight="700" fill="#f8fafc">Legend</text>')
+    o.append(
+        f'<text x="{lx}" y="{ly - 10}" font-size="15" font-weight="700" fill="#f8fafc">Legend</text>'
+    )
     cx = lx
     cy = ly + 8
     for i, (kind, label, is_edge) in enumerate(legend):
@@ -212,13 +223,17 @@ def render(width, height, title, nodes, zones, edges, legend, notes=None, out="o
         if is_edge:
             stroke, dash, _ = EDGE[kind]
             dash_attr = f' stroke-dasharray="{dash}"' if dash else ""
-            o.append(f'<path d="M{cx} {cy} L{cx + 34} {cy}" stroke="{stroke}" stroke-width="2.5"{dash_attr}/>')
+            o.append(
+                f'<path d="M{cx} {cy} L{cx + 34} {cy}" stroke="{stroke}" stroke-width="2.5"{dash_attr}/>'
+            )
         else:
             fill, stroke, _ = KIND[kind]
             o.append(
                 f'<rect x="{cx}" y="{cy - 8}" width="34" height="16" rx="4" fill="{fill}" stroke="{stroke}" stroke-width="1.5"/>'
             )
-        o.append(f'<text x="{cx + 42}" y="{cy + 5}" font-size="14" fill="#cbd5e1">{esc(label)}</text>')
+        o.append(
+            f'<text x="{cx + 42}" y="{cy + 5}" font-size="14" fill="#cbd5e1">{esc(label)}</text>'
+        )
         cx += 42 + text_w(label, 14) + 36
     if notes:
         for i, s in enumerate(notes):
