@@ -497,4 +497,6 @@ HMI 화면 구성(운전 · 구역별 집계 · 보류 목록 · OCR 결과 · �
 
 ## 라이선스
 
-라이선스 파일은 아직 정하지 않았다(`LICENSE` 없음). Copyright 2026 VOSS (남현지 · 정의석 · 박병후 · 김학민). 두산 · OnRobot 제공 드라이버(`~/cobot2_ws`, 레포 밖)와 로봇 URDF 는 각 제공자의 라이선스를 따른다.
+[MIT License](LICENSE) — Copyright (c) 2026 VOSS Team C-3 (남현지 · 정의석 · 박병후 · 김학민). ROS 2 패키지 8개의 `package.xml` · `setup.py` 도 같은 라이선스(`MIT`)를 선언한다.
+
+레포 밖 구성 요소는 각 제공자의 라이선스를 따른다: 두산 · OnRobot 제공 드라이버와 로봇 URDF(`~/cobot2_ws`), 컨테이너가 받는 PaddleOCR · faster-whisper · Whisper 모델 등 오픈소스 의존성, 그리고 OpenAI API(이용 약관)는 이 레포의 라이선스에 포함되지 않는다.
