@@ -21,7 +21,7 @@
 - **멈추지 않는 벨트 위에서 집는다**: 두산 M0609 손목의 D435i **RGB 만** 쓰고(깊이 미사용), 알려진 박스 높이 27 mm + 핸드아이 캘리브레이션으로 박스 윗면 중심을 베이스 좌표로 구한다. `belt_servo` 가 30 Hz 로 **v = v_belt(피드포워드) + Kp·e(위치 오차)** 속도 명령을 내고 `robot_gateway` 가 두산 `speedl_stream` 으로 흘린다. 6단계 FSM(PREPARE → TRACK → DESCEND → GRASP → LIFT → VERIFY)으로 한 박스를 약 11 s 안에 집는다.
 - **송장은 세 번 읽는다**: ① 입구 관측에서 1차 OCR(집을지 결정) → ② 추종 중 선명 프레임 다수결로 2차 확정(같은 동 2장 + 반대표 없음) → ③ 재확인 구역에 내려놓고 정지 상태에서 3차 재판독. 분류코드(`S07-01~03`)와 동 이름을 **자모 편집거리** 퍼지 매칭으로 교차 검증한다. PaddleOCR 한국어 로컬 엔진.
 - **판독 실패를 설계에 넣었다**: 그래도 모르면 "NNN번 박스 송장을 확인하지 못했습니다. 역삼동, 청담동 중 어디입니까?" 하고 묻고, 30 s 무응답이면 보류 구역에 둔다. 시연 중 정지 0회.
-- **사람은 말로만 개입**: "헬로, 로키" 호출어 뒤 명령만 받는다(에너지 VAD → faster-whisper → 호출어 문자열 매칭 → LangChain + OpenAI intent JSON → 허용 목록 검증 → FSM). 정지 키워드("멈춰·정지·스톱·그만")는 호출어 없이 통과한다. **LLM 은 로봇을 직접 움직이지 않는다** — intent JSON 만 만들고, 실행은 `sort_manager` 상태기계가 한다. 음성이 안 되면 같은 명령을 웹 HMI 버튼·텍스트로.
+- **사람은 말로만 개입**: "헬로, 로키" 호출어 뒤 명령만 받는다(에너지 VAD → faster-whisper → 호출어 문자열 매칭 → LangChain + OpenAI intent JSON → 허용 목록 검증 → FSM). 정지 키워드("멈춰·정지·스톱·그만")는 호출어 없이 통과한다. **LLM 은 로봇을 직접 움직이지 않는다** — intent JSON 만 만들고, 실행은 `sort_manager` 상태기계가 한다. 음성이 안 되면 같은 명령을 웹 HMI 버튼·텍스트로. (10/15 시연 당일 명령 입력은 HMI 버튼으로 했고 TTS 안내만 음성으로 나왔다 — [결과](#결과) 참고.)
 - **분류에서 적재까지(팔레타이징)**: 배송지 순서를 말하면 팔레트(4열 × 2줄 × 2층 = 16칸)를 **트럭 짐칸**으로 보고 첫 배송지가 문(4열) 쪽에 오도록 마지막 배송지부터 싣는다. 16개를 넘으면 물량 많은 동부터 싣고 초과분은 원래 구역에 두고 음성·HMI 로 알린다. 배치 계획은 ROS 없이 시험하는 순수 함수다.
 - **웹 HMI + 이력**: 운전·분류·답변·구역 초기화·팔레타이징 버튼, 구역별 집계, 보류 목록, OCR 최근 결과, 로봇 상태, 손목·USB 카메라 화면, 2D 작업공간 애니메이션, 3D 팔레트 배치도·진행률·초과 경고, CSV 내보내기. 브라우저와 Spring Boot 는 ROS 에 붙지 않고 **MQTT 로만** 연결된다. 박스마다 OCR 원문·판정·구역·칸·결과·시각을 PostgreSQL `sort_log`·`pallet_log` 에 남긴다.
 - **드라이버 제약은 구조로 흡수**: 두산 서비스는 `robot_gateway` 의 **단일 직렬 호출 큐**만 부른다(동시 호출 시 드라이버 정지). servo 명령은 200 ms watchdog, TCP z 하한·x 범위·yaw 한계를 감속 거리까지 넣어 자르고, 끊기면 0 속도 + `move_stop`. 컨트롤러 등록 TCP 가 설정과 다르면 MoveToZone 을 거부한다.
@@ -31,7 +31,7 @@
 
 ### 아키텍처 한눈에
 
-공용 PC 한 대(Nodes PC) 위의 ROS 2 호스트 프로세스 + 컨테이너 5종, 로봇 전용 유선망. **느린 판단(OCR·LLM, 수백 ms)과 30 Hz 제어 루프를 프로세스로 분리**하고 `sort_manager` 가 조율한다. 비전·음성은 판단 결과만 올리고, 로봇·스피커·HMI 는 `sort_manager` 의 명령만 받는다.
+공용 PC 한 대(Nodes PC) 위의 ROS 2 호스트 프로세스 + 컨테이너 5종, 로봇 전용 유선망. **느린 판단(OCR·LLM, 수백 ms)과 30 Hz 제어 루프를 프로세스로 분리**하고 `sort_manager` 가 조율한다. 비전·음성은 판단 결과만 올리고, 작업 명령(집기 · 적재 · 정지 · 운전 상태 변경)은 `sort_manager` 만 내린다. 예외는 둘이다: `belt_servo` 는 추종 중 그리퍼·정지를 `robot_gateway` 에 직접 부르고(R27), `intent_parser` · `voice_listener` 는 안내 문장을 스피커에 직접 보낸다(R15 · R16).
 
 [![시스템 배포 아키텍처 — 공용 PC 호스트 프로세스 · 컨테이너 5종 · 로봇 셀 · Web PC](docs/architecture/01_system.png)](docs/architecture/01_system.png)
 
@@ -141,6 +141,9 @@ R22 · R23 은 R21 에 합쳤다. 응답 · feedback · result 는 서비스 · 
 
 </details>
 
+<details>
+<summary><b>패키지 · 노드별 발행 · 구독 · 서비스 표</b></summary>
+
 | 패키지 | 노드 | 발행 | 구독 · 호출 | 제공 서비스 · 액션 |
 |---|---|---|---|---|
 | `voss_msgs` | — | msg 12 · srv 7 · action 1 (아래 "메시지") | | |
@@ -157,9 +160,14 @@ R22 · R23 은 R21 에 합쳤다. 응답 · feedback · result 는 서비스 · 
 | | `sort_logger` | `/voss/log/status` (STARTING/OK/DB_ERROR/SPOOL_FULL, 1 Hz) · PostgreSQL `sort_log` · `pallet_log` INSERT (실패 시 JSONL 스풀 → 1·2·5·10·30 s 재전송) | `/voss/sort/result` · `/voss/pallet/result` | `/voss/log/list_placements` (ListPlacements) |
 | `voss_bringup` | (launch 만) | `voss_host.launch.py` (gateway → realsense → sort_logger → [vision] → belt_servo → sort_manager → 음성 3노드 → hmi_bridge) · `voss_vision.launch.py` · `voss_dry_run.launch.py` (녹화 재생 + 모의) | | |
 
+</details>
+
 QoS: `/voss/vision/box` · `/voss/robot/pose` · `/voss/robot/servo_cmd` 는 best_effort·depth 1(`box` 구독은 depth ≥ 동시 박스 수); `state` · `result` · `label` · `voice/*` 는 reliable·depth 10; `zone_map` · `robot/state` · `pallet/state` 는 reliable·transient_local·depth 1. 전체 표와 변경 이력은 [docs/interfaces/topics.md](docs/interfaces/topics.md).
 
 ### 메시지 (`src/voss_msgs`)
+
+<details>
+<summary><b>msg 12 · srv 7 · action 1 요약</b></summary>
 
 | 종류 | 이름 | 요지 |
 |---|---|---|
@@ -173,6 +181,8 @@ QoS: `/voss/vision/box` · `/voss/robot/pose` · `/voss/robot/servo_cmd` 는 bes
 | msg | `PalletState` / `PalletResult` / `Placement` | 실행 run_id, route, 동별 load/overflow/excluded, 16칸 slot_state(EMPTY · PLANNED · MOVING · DONE · FAILED) / 박스별 pallet_slot·col·lane·layer, outcome(DONE · FAILED · OVERFLOW · EXCLUDED) / 세션 적재 기록 |
 | srv | `Command` · `Gripper` · `MoveToZone` · `ReadLabel` · `ListPlacements` · `TeachZone`(정의만) · `UpdateZoneMap`(정의만) | 운전 명령 / 폭·힘 → 실제 폭·grip_detected / 구역·칸·모드 → ok·message·placed_stamp / 트랙·칸 → LabelRead stage 3 / 세션 → Placement[] |
 | action | `TrackAndGrasp` | goal track_id → result grasped · reason(OK · GRASP_FAILED · LOST · OUT_OF_REACH · STALE_INPUT · DEVICE_ERROR · CANCELED) · attempts, feedback phase |
+
+</details>
 
 필드 전문은 [docs/interfaces/voss_msgs.md](docs/interfaces/voss_msgs.md).
 
@@ -242,10 +252,11 @@ QoS: `/voss/vision/box` · `/voss/robot/pose` · `/voss/robot/servo_cmd` 는 bes
 | 항목 | 값 |
 |---|---|
 | 호스트 | Ubuntu 24.04 LTS · ROS 2 Jazzy · `rmw_cyclonedds_cpp` · `ROS_DOMAIN_ID=30`(운용) · Python 3.12 · 워크스페이스 `~/voss_ws/src/rokey_cobot2_VOSS` |
-| 로봇 드라이버 | `doosan-robot2` (`dsr_controller2`, `/dsr01`) + `m0609_rg2_bringup` (레포 밖 `~/ws_cobot_pjt`), RG2 는 pymodbus 로 Compute Box 직접(192.168.1.1:502) |
+| 로봇 드라이버 | `doosan-robot2` (`dsr_controller2`, `/dsr01`, `dsr_msgs2`) + `m0609_rg2_bringup` (레포 밖 오버레이 `~/cobot2_ws`), RG2 는 pymodbus 로 Compute Box 직접(192.168.1.1:502) |
 | 비전 | OpenCV(분할 검출·핸드아이·호모그래피) · PaddleOCR 3.7.0 / paddlepaddle 3.3.1 (korean, CPU 또는 cu126 GPU) · rosbag2 mcap 재생 |
 | 음성·AI | faster-whisper 1.1 (small, CUDA fp16) · LangChain + OpenAI `gpt-4o` (structured output) · OpenAI `gpt-4o-mini-tts` · sounddevice · ALSA `aplay` |
 | 컨테이너 | Docker Compose 5종 — `docker/{vision,ai,db,mqtt,web}` (`network_mode: host`), CUDA 12.6 runtime(ai), `nvidia` 장치 예약 |
+| 컨테이너 런타임 (호스트에 필요) | Docker Engine + Compose v2 (`docker compose` 하위 명령) · NVIDIA 드라이버(CUDA 12.6 이미지 실행 가능) + NVIDIA Container Toolkit — ai 컨테이너는 GPU 필수, vision 은 `compose.gpu.yml` 을 쓸 때만. Node 22 · JDK 21 은 web 이미지 빌드 안에서만 쓰므로 호스트 설치 불필요 |
 | 웹·DB | Spring Boot 3.5 (Java 21, Gradle, spring-integration-mqtt, Paho) · React 19 + Vite 6 + TypeScript 5.7 · Nginx 1.27 · PostgreSQL 16 · Mosquitto 2 |
 | 언어 · 도구 | Python 3.12 (ROS 노드 · FastAPI · 도구), Java (Spring Boot), TypeScript (React), Arduino C++ (컨베이어), colcon · pytest · ruff · Gradle · npm |
 | CI | `.github/workflows/ci.yml` — `ros:jazzy-ros-base` 컨테이너에서 ruff → colcon build → colcon test → `voss_msgs`/`voss_config.yaml` 변경 시 `docs/interfaces/` 변경 강제. `@claude` 멘션 리뷰(`claude.yml`) |
@@ -261,7 +272,7 @@ QoS: `/voss/vision/box` · `/voss/robot/pose` · `/voss/robot/servo_cmd` 는 bes
 | 그리퍼 | OnRobot RG2 (스트로크 0~110 mm · 힘 3~40 N), Compute Box Modbus TCP | 1 | 31 mm 폭 파지: 개방 90/50 mm · 닫힘 39 mm · 14 N(종이 박스 보호), grip_detected·폭 피드백 |
 | 손목 카메라 | Intel RealSense D435i (Eye-in-Hand, RGB 1920×1080 30 fps, 노출 고정 6 ms · WB 4600, **깊이 미사용**) | 1 | 박스 검출·추적·송장 OCR. USB 3.0 |
 | 관제 카메라 | Logitech C270 USB 웹캠 | 1 | HMI 작업대 화면(`usb_camera_preview` :8092) |
-| 컨베이어 | 탁상 미니 컨베이어, 벨트 1,040 × 70 mm, 스텝모터 + Arduino Uno(`tools/arduino/conveyor_test/conveyor_test.ino`), 약 4.56~4.9 cm/s | 1 | 박스 이송(멈추지 않음) |
+| 컨베이어 | 탁상 미니 컨베이어, 벨트 1,040 × 70 mm, 스텝모터 + Arduino Uno(`tools/arduino/conveyor_test/conveyor_test.ino`), 운용 4.56 cm/s(`belt.speed_cmps` 실측값) | 1 | 박스 이송(멈추지 않음) |
 | 부재 | 미니어처 택배 박스 46 × 31 × 27 mm × 20 + 자체 제작 송장 40 × 25 mm(분류코드 `S07-NN` 5.5 mm · 동 이름 4.5 mm · 받는 사람 2.8 mm, 흐린 1 · 판별 불가 1) | 20 | 분류·팔레타이징 대상 |
 | 작업대 | 120 × 65 cm. 구역 트레이 A·B·C(3×2 칸 × 2층) · 재확인 · 보류(2×1) · 팔레트(4열 × 2줄 × 2층, X 피치 50 · Y 60 · 층 27 mm) | 1 | 위 그림 참고 |
 | 공용 PC (Nodes PC) | Ubuntu 24.04 노트북(GPU), 로봇과 유선 | 1 | ROS 2 노드 · 컨테이너 5종 |
@@ -271,54 +282,137 @@ QoS: `/voss/vision/box` · `/voss/robot/pose` · `/voss/robot/servo_cmd` 는 bes
 
 ## 설치 및 실행
 
+### 사전 요구 사항
+
+| 항목 | 내용 | 설치 · 확인 |
+|---|---|---|
+| OS · ROS | Ubuntu 24.04 LTS, ROS 2 Jazzy (desktop) | `source /opt/ros/jazzy/setup.bash` |
+| 두산 브링업 | `doosan-robot2` · `dsr_msgs2` · `m0609_rg2_bringup` 오버레이 `~/cobot2_ws` (레포 밖, rosdep 에 없음) | [docs/setup/dev-environment.md](docs/setup/dev-environment.md) · 공용 PC 에는 이미 빌드돼 있다 |
+| 카메라 드라이버 | `realsense2_camera` (package.xml 에 일부러 적지 않음 — CI 가 받지 않게) | `sudo apt install ros-jazzy-realsense2-camera` |
+| 컨테이너 | Docker Engine + Compose v2, NVIDIA 드라이버 + NVIDIA Container Toolkit | `docker compose version` · `nvidia-smi` |
+| 비밀값 | OpenAI API 키, DB · MQTT 비밀번호 | 아래 4단계 `.env` 표 |
+
+로봇 없이 개인 PC 에서 시험할 때는 두산 오버레이와 카메라 드라이버 없이 5단계(녹화 재생)만 할 수 있다.
+
 ### 빠른 시작
 
 ```bash
-# 1. 레포 (두산·RG2 브링업 ws 는 레포 밖: docs/setup/dev-environment.md)
+# 1. 레포
 mkdir -p ~/voss_ws/src && cd ~/voss_ws
 git clone https://github.com/lambdaramji/rokey_cobot2_VOSS.git src/rokey_cobot2_VOSS
+REPO=~/voss_ws/src/rokey_cobot2_VOSS
 
-# 2. ROS 2 빌드·시험
+# 2. ROS 2 빌드·시험 (두산 오버레이가 있으면 먼저 source)
 source /opt/ros/jazzy/setup.bash
-export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp ROS_DOMAIN_ID=30
+[ -f ~/cobot2_ws/install/setup.bash ] && source ~/cobot2_ws/install/setup.bash
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 rosdep install --from-paths src --ignore-src -y
+pip install --break-system-packages pymodbus sounddevice ruff pytest   # package.xml 밖 의존성 (아래 표)
 colcon build --symlink-install && source install/setup.bash
 colcon test && colcon test-result --verbose
-ruff check src/rokey_cobot2_VOSS && ruff format --check src/rokey_cobot2_VOSS
+ruff check $REPO && ruff format --check $REPO
 
-# 3. 컨테이너 (각 폴더의 .env.example → .env 를 채운 뒤, 사람이 실행)
-cd src/rokey_cobot2_VOSS/docker
-(cd mqtt && docker compose up -d)         # Mosquitto :1883 — 계정은 mqtt/README.md
-(cd db && docker compose up -d)           # PostgreSQL :5432 + 마이그레이션 db/migrations/
-(cd ai && docker compose up -d --build)   # FastAPI :8000 (GPU, OPENAI_API_KEY)
-(cd web && docker compose up -d --build)  # Spring Boot :8080 + Nginx :80
-(cd vision && docker compose -f compose.yml [-f compose.gpu.yml] up --build)  # box_tracker · label_reader
+# 3. 설정 — launch 는 ~/voss_ws/config 를 읽는다 (레포 config/ 가 원본)
+mkdir -p ~/voss_ws/config ~/voss_data/logs/vision
+cp $REPO/config/{voss_config.yaml,belt_homography.yaml,hand_eye.yaml} ~/voss_ws/config/
+cp $REPO/src/voss_servo/config/belt_servo_real.yaml.example ~/voss_ws/config/belt_servo_real.yaml   # 실측값으로 채운다 (커밋 금지)
+# 실기 터미널 공통 환경 파일 — voss_up --real 이 단계마다 source 한다 (docs/g0-runbook.md §1-5)
+cat > ~/voss_g0_env.sh <<'EOF'
+source /opt/ros/jazzy/setup.bash
+source ~/cobot2_ws/install/setup.bash
+source ~/voss_ws/install/setup.bash
+export ROS_DOMAIN_ID=30 RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export VOSS_CONFIG_DIR=$HOME/voss_ws/config
+export VOSS_DB_LOGGER_PASSWORD=<docker/db/.env 와 같은 값>      # sort_logger
+export VOSS_MQTT_BRIDGE_PASSWORD=<mosquitto 'bridge' 계정 암호>  # hmi_bridge
+EOF
+chmod 600 ~/voss_g0_env.sh
 
-# 4. 로봇 없이 (녹화 재생 + 모의, 운용 도메인 30 에서는 거부)
-ROS_DOMAIN_ID=77 scripts/voss_up.sh --dry --playback <bag 경로> --servo mock
+# 4. 컨테이너 — 사람이 실행. .env 값은 아래 표대로 채운다
+cd $REPO/docker
+for d in ai db web vision; do cp -n $d/.env.example $d/.env; done
+# MQTT 는 .env 가 아니라 계정 파일: docker/mqtt/README.md 의 mosquitto_passwd 절차(web · bridge · debug · voice_web)
+(cd mqtt && docker compose up -d)          # Mosquitto 127.0.0.1:1883
+(cd db   && docker compose up -d)          # PostgreSQL 127.0.0.1:5432 — 새 DB 는 init/ 이 스키마를 만든다
+(cd ai   && docker compose up -d --build)  # FastAPI 127.0.0.1:8000 (GPU)
+(cd web  && docker compose up -d --build)  # Spring Boot 127.0.0.1:8080 + Nginx :80
+cd $REPO                                   # ← 이후 명령은 레포 루트 기준
+# vision 컨테이너는 여기서 띄우지 않는다 — voss_up 이 T5 단계에서 띄운다(GPU OCR 이면 --gpu)
 
-# 5. 실기 — 사람이 비상정지 옆에서. T1 두산 브링업 → T2 gateway → T3 카메라 → T4 logger → T5 비전 → T7 belt_servo → T8 sort_manager → 음성 3노드 → hmi_bridge
-export VOSS_ROBOT_HOST=<컨트롤러 IP>; source ~/voss_g0_env.sh    # 비밀값: deploy/node/.env.example
-scripts/voss_up.sh --real --print        # 계획만 출력
-scripts/voss_up.sh --real                # 단계별 준비 로그를 기다리며 기동, IDLE 에서 멈춤
-scripts/voss_down.sh                     # 역순 종료 (RUNNING 중이면 거부)
+# 5. 로봇 없이 — 녹화 재생 + 모의 서보 (운용 도메인 30 에서는 기동 거부)
+ROS_DOMAIN_ID=77 scripts/voss_up.sh --dry --playback <bag 폴더> --servo mock   # bag 은 팀 Drive (docs/setup/drive.md)
+
+# 6. 실기 — 사람이 비상정지 옆에서
+export VOSS_ROBOT_HOST=<컨트롤러 IP>   # 공개 레포라 주소는 적지 않는다 (현장 메모)
+scripts/voss_up.sh --real --print   # 계획만 출력: T1 두산 브링업 → T2 gateway → T3 카메라 → T4 logger → T5 비전 → T7 belt_servo → T8 sort_manager → 음성 3노드 → hmi_bridge
+scripts/voss_up.sh --real           # 단계별 준비 로그를 기다리며 기동, IDLE 에서 멈춤 (로그 ~/voss_data/run)
+scripts/voss_down.sh                # 역순 종료 (RUNNING · PICKING 중이면 거부)
 ```
 
-주요 의존성: ROS 노드 `rclpy` · `paho-mqtt` · `psycopg2` · `pymodbus` · `numpy` · `opencv` · `sounddevice` · `PyYAML`(HTTP 는 표준 `urllib`), 비전 컨테이너 `paddleocr` · `paddlepaddle`, AI `fastapi` · `uvicorn` · `faster-whisper` · `langchain-openai` · `openai`(`docker/ai/requirements.txt`), 웹 `spring-boot-starter-web` · `spring-integration-mqtt` · `postgresql`(`build.gradle`), 프론트 `react` · `vite`(`frontend/package.json`).
+이미 쓰던 DB(데이터 폴더가 있는 경우)는 `init/` 이 다시 돌지 않으므로 [docker/db/README.md](docker/db/README.md) 대로 `migrations/20261012_sprint2_pallet.sql` 을 한 번 적용한다.
 
-실기 전 체크: `ros2 topic echo /voss/robot/state --once` 가 `connected: true` · `state: READY`, `/voss/log/status` 가 `OK`, `/voss/sort/state` 가 `ready: true`. 브라우저 `http://127.0.0.1` 에서 **시작** 또는 "헬로, 로키. 작업 시작". 시연 절차는 [시연 대본](docs/demo-script.md), 단계별 런북은 [docs/g0-runbook.md](docs/g0-runbook.md), 두 PC 배치는 [docs/interfaces/deployment_two_pc_trial.md](docs/interfaces/deployment_two_pc_trial.md).
+**`.env` 에 꼭 채울 값** (나머지는 `.env.example` 기본값 그대로)
 
-### 웹 명령
+| 파일 | 변수 | 비고 |
+|---|---|---|
+| `docker/ai/.env` | `OPENAI_API_KEY`, `TTS_OPENAI_API_KEY` | intent(`gpt-4o`) · TTS(`gpt-4o-mini-tts`) |
+| `docker/db/.env` | `POSTGRES_PASSWORD`, `VOSS_DB_LOGGER_PASSWORD`, `VOSS_DB_WEB_PASSWORD` | 계정 `voss_admin` · `voss_logger` · `voss_web` |
+| `docker/web/.env` | `VOSS_MQTT_ENABLED=true`, `VOSS_MQTT_WEB_PASSWORD`, `VOSS_DB_READ_PASSWORD`, `VOSS_DB_PLAN_PASSWORD` | 기본 `false` 면 HMI 가 MQTT 를 받지 않는다 |
+| `docker/vision/.env` | `VOSS_CONFIG_HOST=${HOME}/voss_ws/config`, `BOX_TRACKER_ARGS=` (비움), `OCR_DEVICE` | 기본값은 개인 PC 녹화 재생용 — 실기는 `BOX_TRACKER_ARGS` 를 비워야 카메라를 쓴다 |
+| `~/voss_g0_env.sh` (3단계, 변수 목록은 `deploy/node/.env.example`) | `VOSS_DB_LOGGER_PASSWORD`, `VOSS_MQTT_BRIDGE_PASSWORD` | `sort_logger` · `hmi_bridge` 가 환경 변수로 읽는다 |
+
+### 의존성
+
+| 범위 | 의존성 파일 | 설치 |
+|---|---|---|
+| ROS 노드 | `src/*/package.xml` (numpy · opencv · paho-mqtt · psycopg2 · PyYAML · rosbag2_py …) | `rosdep install --from-paths src --ignore-src -y` |
+| ROS 노드 — package.xml 밖 | `pymodbus`(RG2, `robot_gateway`) · `sounddevice`(마이크, `voice_listener` — 없으면 text 모드) | `pip install --break-system-packages pymodbus sounddevice` |
+| 두산 · 카메라 | `dsr_msgs2` · `doosan-robot2` (`~/cobot2_ws`) · `realsense2_camera` | 사전 요구 사항 표 |
+| 개발 도구 | `ruff` · `pytest` (`pyproject.toml` 설정) | `pip install --break-system-packages ruff pytest` |
+| AI 컨테이너 | [docker/ai/requirements.txt](docker/ai/requirements.txt) (fastapi · uvicorn · faster-whisper · langchain-openai · openai) | 이미지 빌드 시 자동 |
+| 비전 컨테이너 | `docker/vision/Dockerfile` (paddleocr 3.7.0 · paddlepaddle 3.3.1) | 이미지 빌드 시 자동 |
+| 웹 | `docker/web/backend/build.gradle` · `docker/web/frontend/package.json` | 이미지 빌드 시 자동 |
+
+### 기동 확인
+
+```bash
+ros2 topic echo /voss/robot/state --once   # connected: true · state: READY
+ros2 topic echo /voss/log/status --once    # data: OK
+ros2 topic echo /voss/sort/state --once    # state: IDLE · ready: true · not_ready: []
+curl -s 127.0.0.1:8000/ai/health           # {"ok": true, "whisper_loaded": …}
+```
+
+`not_ready` 에 항목이 남으면 그 장치부터 본다(ROBOT · SERVO · VISION · OCR · LOG). 단계별 런북은 [docs/g0-runbook.md](docs/g0-runbook.md), 두 PC 배치는 [docs/interfaces/deployment_two_pc_trial.md](docs/interfaces/deployment_two_pc_trial.md).
+
+## 사용 방법
+
+공용 PC 브라우저에서 `http://127.0.0.1` (HMI) 을 열고 **시작** 을 누르거나 마이크에 "헬로, 로키" 로 말을 건다. 원격 PC 의 브라우저는 STOP 만 보낼 수 있다.
+
+| 작업자 (음성 · HMI) | 로봇 · HMI 응답 (실제 코드 문장) |
+|---|---|
+| "헬로, 로키. 작업 시작" / **시작** | "작업을 시작합니다." → 관측 자세로 이동, 상태 `RUNNING` |
+| "대치동부터 분류해" / 동별 우선 분류 | 대치동 박스만 집고 나머지는 벨트 끝으로 흘려보냄 (`PASSED · NON_TARGET`) |
+| (송장을 못 읽은 박스) | "016번 박스 송장을 확인하지 못했습니다. 역삼동, 청담동 중 어디입니까? 보류하려면 보류라고 말해 주세요." · 상태 `ASKING` |
+| "역삼동이야" / 답변 + 동 선택 | A 구역에 적재 (`decided_by OPERATOR`) |
+| 30 s 무응답 · "보류해" | "응답이 없어 보류 구역에 놓습니다." → HOLD |
+| "지금까지 역삼동 물류 몇 개야?" | "역삼동은 지금까지 7개입니다." |
+| "보류 박스는 몇 개야?" · "지금 박스 몇 개 남았어?" | "보류는 1개입니다." · "남은 수량은 N개입니다." (투입 예정 수량 기준) |
+| "청담, 역삼, 대치 순서로 실어줘" / 팔레트 배송지 선택 | "청담동, 역삼동, 대치동 순서로 싣겠습니다. 첫 배송지 청담동은 오른쪽입니다. 팔레트가 16칸이라 3개는 싣지 못하고 원래 구역에 둡니다." → 16칸 적재 → "팔레트 적재를 마쳤습니다. …" |
+| "멈춰" (호출어 없이) / **정지** | 로봇 정지 요청 → 상태 `PAUSED` (소프트웨어 정지 — 비상정지 버튼을 대신하지 않는다) |
+
+숫자(016 · 7 · 1)는 10/15 시연 2회차 기록의 예다. 웹 HMI 는 같은 명령을 버튼으로 보낸다(`POST /api/commands` → MQTT `voss/command`):
 
 ```
 start      새 세션 시작 (관측 자세 이동)
-stop       현재 작업 중지 → PAUSED (소프트웨어 정지, 비상정지 대체 아님)
+stop       현재 작업 중지 → PAUSED (원격 PC 에서도 허용)
 resume     PAUSED 에서 이어서 (RECHECK · ASKING · PICK · PLACE 또는 OBSERVE)
 priority   <동>부터 분류 — 다른 동은 집지 않고 흘려보냄
 answer     ASKING 질문에 <box_id>|<동|HOLD>
-reset_zone A | B | C | RECHECK | HOLD | PALLET 칸 카운터 0
+reset_zone A | B | C | RECHECK | HOLD | PALLET 칸 카운터 0 (트레이를 비운 뒤)
 palletize  <동>,<동>,<동> 순서로 팔레트 적재
 ```
+
+HMI 화면 구성(운전 · 구역별 집계 · 보류 목록 · OCR 결과 · 로봇 상태 · 카메라 · 2D 작업공간 · 3D 팔레트)은 [MQTT · 웹 · AI · DB](#mqtt--웹--ai--db) 의 React HMI 항목. 시연 단계별 발화와 통과 조건은 [시연 대본](docs/demo-script.md).
 
 ## 프로젝트 구조
 
@@ -360,7 +454,7 @@ palletize  <동>,<동>,<동> 순서로 팔레트 적재
     └── requirements/sprint2/workbench_v1.5.png   작업대 구성도
 ```
 
-레포 밖: `~/ws_cobot_pjt`(두산 · RG2 브링업), `~/voss_ws/config/belt_servo_real.yaml`(실기 파라미터), `~/voss_data/`(녹화 · 로그 · 기록표), 모델 가중치·녹음·촬영 데이터(`.gitignore`, 팀 Drive — [docs/setup/drive.md](docs/setup/drive.md)). 제공 드라이버는 수정하지 않는다.
+레포 밖: `~/cobot2_ws`(두산 · RG2 브링업 오버레이), `~/voss_ws/config/belt_servo_real.yaml`(실기 파라미터), `~/voss_data/`(녹화 · 로그 · 기록표), 모델 가중치·녹음·촬영 데이터(`.gitignore`, 팀 Drive — [docs/setup/drive.md](docs/setup/drive.md)). 제공 드라이버는 수정하지 않는다.
 
 ## 결과
 
@@ -397,10 +491,10 @@ palletize  <동>,<동>,<동> 순서로 팔레트 적재
 7. **시연 뒤에도 한 번 더 고쳤다.** 2차 OCR 이 goal 뒤에 도착하는 원인을 모의(실기 시간 1/10)로 먼저 재현하고 예측값(첫 발행 뒤 약 5.1 s)을 낸 뒤 고쳐 실기 5/5. 실기 한 번으로 검증이 끝났다.
 8. **미달·미실시도 수치와 함께 남긴다.** 시연 속도에서의 멈춤·재개 미확인, stop 응답 TIMEOUT 4/5, 음성 명령 대신 HMI 입력 — 못 한 것을 그대로 적었다.
 
-**현장 확장 과제**: 실제 규격 박스·실제 송장(손글씨·구겨짐) / 벨트 위 박스 연속 투입(지금은 1개씩) / 벨트 속도 7~10 cm/s 상향(지금 약 4.6 cm/s) / 팔레트 다단 적재 최적화·무게 고려 / WMS 등 실제 택배 시스템 연동 / 소음 환경 호출어 강건성 / 안전 인증·장시간 운영 신뢰성 / 멈춤·재개를 시연 속도에서 반복 검증 / J6 회전 파지(S2-T18, 기본 off) 실기 적용.
+**현장 확장 과제**: 실제 규격 박스·실제 송장(손글씨·구겨짐) / 벨트 위 박스 연속 투입(지금은 1개씩) / 벨트 속도 7~10 cm/s 상향(지금 4.56 cm/s) / 팔레트 다단 적재 최적화·무게 고려 / WMS 등 실제 택배 시스템 연동 / 소음 환경 호출어 강건성 / 안전 인증·장시간 운영 신뢰성 / 멈춤·재개를 시연 속도에서 반복 검증 / J6 회전 파지(S2-T18, 기본 off) 실기 적용.
 
 팀 운영: `main` 직접 푸시 금지, 이슈 번호 브랜치 → PR → CI + CODEOWNERS 리뷰 → squash merge. 규칙은 [docs/conventions.md](docs/conventions.md), 팀 공유 Claude 지침은 [CLAUDE.md](CLAUDE.md), 레포 세팅 순서는 [SETUP.md](SETUP.md).
 
 ## 라이선스
 
-라이선스 파일은 아직 정하지 않았다(`LICENSE` 없음). Copyright 2026 VOSS (남현지 · 정의석 · 박병후 · 김학민). 두산 · OnRobot 제공 드라이버(`ws_cobot_pjt`, 레포 밖)와 로봇 URDF 는 각 제공자의 라이선스를 따른다.
+라이선스 파일은 아직 정하지 않았다(`LICENSE` 없음). Copyright 2026 VOSS (남현지 · 정의석 · 박병후 · 김학민). 두산 · OnRobot 제공 드라이버(`~/cobot2_ws`, 레포 밖)와 로봇 URDF 는 각 제공자의 라이선스를 따른다.
