@@ -348,8 +348,7 @@ def decide_zone_priority(raw_text: str, view: ZoneMapView | None) -> Decision | 
     )
     if match is None:
         match = re.fullmatch(
-            r"우선(?:분류|선별)?구역(?:을|은)?" + name
-            + r"(?:으로|로)(?:설정|지정|변경)" + ending,
+            r"우선(?:분류|선별)?구역(?:을|은)?" + name + r"(?:으로|로)(?:설정|지정|변경)" + ending,
             text,
         )
     if match is None:
@@ -399,12 +398,16 @@ def decide_palletize(raw_text: str, view: ZoneMapView | None) -> Decision | None
         return None
     if view is None:
         return Decision("say", say=SAY_NOT_READY)
-    positions = [index for index, char in enumerate(raw_text) if not re.fullmatch(r"[\s\.,!?~·\-]", char)]
+    positions = [
+        index for index, char in enumerate(raw_text) if not re.fullmatch(r"[\s\.,!?~·\-]", char)
+    ]
     found: dict[str, int] = {}  # 정식 동 → 원문에서 처음 나온 위치
     for alias, dong in view.alias_to_dong.items():
         if alias in SHORT_ZONE_ALIASES:
             # '비우고'의 비, '시작'의 시를 B/C 구역으로 읽지 않는다.
-            pattern = re.compile(rf"(?<![가-힣A-Za-z]){re.escape(alias)}(?=\s*구역|\s*[,./→]|\s+|$)", re.IGNORECASE)
+            pattern = re.compile(
+                rf"(?<![가-힣A-Za-z]){re.escape(alias)}(?=\s*구역|\s*[,./→]|\s+|$)", re.IGNORECASE
+            )
             match = pattern.search(raw_text)
             i = match.start() if match else -1
         else:
