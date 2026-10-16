@@ -1,7 +1,9 @@
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-exclude = ["build", "install", "log"]
+# 아키텍처 전달물 생성 보조 스크립트는 별도 도구 체계로 관리한다.
+# 이 스크립트의 재포맷은 MANIFEST/ZIP 재생성을 동반하므로 일반 ROS 린트 대상에서 제외한다.
+exclude = ["build", "install", "log", "docs/architecture/renderer-extension"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP"]
