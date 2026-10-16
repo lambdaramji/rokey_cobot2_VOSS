@@ -208,7 +208,9 @@ def test_stop_still_bypasses_wake():
 
 def test_audio_activity_does_not_publish_wake_or_display_event():
     import queue
+
     import numpy as np
+
     from voss_voice.listen_logic import Segmenter
     from voss_voice.voice_listener import VoiceListenerNode
 
