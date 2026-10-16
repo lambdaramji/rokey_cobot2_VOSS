@@ -1,5 +1,15 @@
 # 검증 요약
 
+## 2026-10-16 시스템 도면 최종 경로 갱신 (기존 검증 이후 변경)
+
+- GitHub 브랜치: `webpc-freezing-16thOct`; 최종 도면 반영 커밋: `b34755a3470ab38c5a223d2f3844f42aee7100c3`.
+- `01_system.html`과 `data/01_system.json`에 의존성 설정으로 확인한 버전과 Web PC의 `USB microphone → 음성 ROS 노드` 경로를 반영했다. 마이크는 Web PC 노란 영역 안에 있고 입력 인터페이스는 **USB audio**이며, ROS Topic으로 표시하지 않았다.
+- `index.html`과 `site-wrapper.html`은 새로운 `01_system.html`을 그대로 내장한다. `01_system.svg`에도 동일 라벨과 마이크 노드를 반영했다. 임시 `01_system_versions.html`과 `data/01_system_versions.json`은 삭제했다.
+- GitHub 파일과 내장 페이지의 일치, 노드/연결선 추가 여부, 새 마이크의 영역 좌표를 확인했다. **이 변경분은 Archify `finalize` 및 브라우저 시각·동작 시험을 다시 실행하지 않았으므로**, 아래의 과거 pass는 갱신 전 렌더의 증거다.
+- **`01_system.png`는 이전 출력으로 유지**된다. 최종 PNG가 필요하면 `renderer-extension/export_assets.py`를 실행해 새 HTML로 재생성·검증해야 한다.
+- GitHub 푸시는 확인했지만 별도 Archify 서비스/GitHub Pages 배포 여부는 확인되지 않았다. 외부 배포 성공을 주장하지 않는다.
+
+
 기준 코드 `70463ef435b50b45d243823b6f7318789728d786`, Archify 3.1.0 `f8021f7eee6870a552bbad3373cf6bad32c80f37` + 문서에 포함된 UI/도형 확장 패치. 아래 결과는 실제 실행 기록만 적었다. `pass`는 자동 게이트/조작이 실행되어 성공한 경우, `skipped`는 의도적으로 실행하지 않은 경우, `unconfirmed`는 결과를 확인할 수 없는 경우다.
 
 | 결과물 | JSON/참조·레이아웃 validate | HTML deliver | provenance check | Chrome browser-check | SVG XML/PNG decode | 시각 확인 |
