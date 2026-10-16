@@ -194,6 +194,7 @@ def test_shared_zone_is_not_an_ambiguous_destination():
 
 def test_palletize_zone_order():
     from voss_voice.intent_logic import decide_palletize
+
     result = decide_palletize("A, B, C 구역 순서로 팔레트에 실어줘", VIEW)
     assert result.intent["route"] == ["역삼동", "대치동", "청담동"]
     assert decide_palletize("에이, 비, 씨 구역 순서로 실어줘", VIEW).intent["route"] == [
