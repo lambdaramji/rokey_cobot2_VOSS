@@ -107,8 +107,15 @@ class VoiceListenerNode(Node):
         if echo_source:
             try:
                 self._capture = subprocess.Popen(
-                    ["parec", "--raw", "--format=s16le", "--rate=16000",
-                     "--channels=1", "--latency-msec=30", f"--device={echo_source}"],
+                    [
+                        "parec",
+                        "--raw",
+                        "--format=s16le",
+                        "--rate=16000",
+                        "--channels=1",
+                        "--latency-msec=30",
+                        f"--device={echo_source}",
+                    ],
                     stdout=subprocess.PIPE,
                     stderr=subprocess.DEVNULL,
                 )
