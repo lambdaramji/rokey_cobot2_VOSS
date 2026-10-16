@@ -1,0 +1,2756 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "architecture",
+  "quality": "standard",
+  "startedAt": "2026-10-16T02:11:31.708Z",
+  "specification": {
+    "path": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/data/02_ros2.json",
+    "sha256": "6adc84e4426c8b8986785514cd6febb687e04e7cba441651d7b6a420d25f789e",
+    "bytes": 8999
+  },
+  "artifact": {
+    "path": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/02_ros2.html",
+    "sha256": "29a262ab6318b131f0273dee8a4078b6411255ae67856d47c0f72aa9784e905d",
+    "bytes": 844555
+  },
+  "stages": {
+    "validate": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": null,
+      "execution": "embedded-in-deliver",
+      "command": [
+        "/home/runo/.nvm/versions/node/v24.18.0/bin/node",
+        "/tmp/voss-archify/archify/bin/archify.mjs",
+        "deliver",
+        "architecture",
+        "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/data/02_ros2.json",
+        "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/02_ros2.html",
+        "--quality",
+        "standard",
+        "--repo-root",
+        "/home/runo/collaboration/rokey_cobot2_VOSS_2",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": true,
+        "command": "validate",
+        "specification": {
+          "sha256": "6adc84e4426c8b8986785514cd6febb687e04e7cba441651d7b6a420d25f789e",
+          "bytes": 8999
+        },
+        "validation": {
+          "checksPassed": 9,
+          "checkCount": 9,
+          "compositionProfile": "standard",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 13,
+          "compositionIssues": [
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "TrackAndGrasp action",
+              "labelRelationship": {
+                "id": "manager-servo",
+                "from": "manager",
+                "to": "servo",
+                "label": "TrackAndGrasp action",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "manager-logger",
+                "from": "manager",
+                "to": "logger",
+                "label": "SortResult · PalletResult",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 839,
+                "y": 150,
+                "width": 106,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                885,
+                146
+              ],
+              "to": [
+                885,
+                257
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "TrackAndGrasp action",
+              "labelRelationship": {
+                "id": "manager-servo",
+                "from": "manager",
+                "to": "servo",
+                "label": "TrackAndGrasp action",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "parser-manager",
+                "from": "parser",
+                "to": "manager",
+                "label": "Intent",
+                "collectionIndex": 15,
+                "artifactIndex": 16
+              },
+              "segmentIndex": 2,
+              "labelRect": {
+                "x": 839,
+                "y": 150,
+                "width": 106,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                885,
+                170
+              ],
+              "to": [
+                885,
+                146
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "TrackAndGrasp action",
+              "labelRelationship": {
+                "id": "manager-servo",
+                "from": "manager",
+                "to": "servo",
+                "label": "TrackAndGrasp action",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "manager-speech",
+                "from": "manager",
+                "to": "speech",
+                "label": "/voss/voice/say",
+                "collectionIndex": 16,
+                "artifactIndex": 17
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 839,
+                "y": 150,
+                "width": 106,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                871,
+                146
+              ],
+              "to": [
+                871,
+                170
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "servo_cmd · stop · Gripper",
+              "labelRelationship": {
+                "id": "servo-gateway",
+                "from": "servo",
+                "to": "gateway",
+                "label": "servo_cmd · stop · Gripper",
+                "collectionIndex": 6,
+                "artifactIndex": 7
+              },
+              "otherRelationship": {
+                "id": "manager-logger",
+                "from": "manager",
+                "to": "logger",
+                "label": "SortResult · PalletResult",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "segmentIndex": 2,
+              "labelRect": {
+                "x": 934.6,
+                "y": 340,
+                "width": 134.8,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                983,
+                257
+              ],
+              "to": [
+                983,
+                426
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "pose",
+              "labelRelationship": {
+                "id": "gateway-servo",
+                "from": "gateway",
+                "to": "servo",
+                "label": "pose",
+                "collectionIndex": 7,
+                "artifactIndex": 8
+              },
+              "otherRelationship": {
+                "id": "servo-gateway",
+                "from": "servo",
+                "to": "gateway",
+                "label": "servo_cmd · stop · Gripper",
+                "collectionIndex": 6,
+                "artifactIndex": 7
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 995,
+                "y": 292,
+                "width": 30,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 30,
+              "threshold": 2,
+              "from": [
+                980,
+                298
+              ],
+              "to": [
+                1040,
+                298
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "pose",
+              "labelRelationship": {
+                "id": "gateway-servo",
+                "from": "gateway",
+                "to": "servo",
+                "label": "pose",
+                "collectionIndex": 7,
+                "artifactIndex": 8
+              },
+              "otherRelationship": {
+                "id": "manager-gateway",
+                "from": "manager",
+                "to": "gateway",
+                "label": "MoveToZone · stop",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 995,
+                "y": 292,
+                "width": 30,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 6,
+              "threshold": 2,
+              "from": [
+                1010,
+                115
+              ],
+              "to": [
+                1010,
+                298
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "MoveToZone · stop",
+              "labelRelationship": {
+                "id": "manager-gateway",
+                "from": "manager",
+                "to": "gateway",
+                "label": "MoveToZone · stop",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "otherRelationship": {
+                "id": "gateway-manager",
+                "from": "gateway",
+                "to": "manager",
+                "label": "pose · RobotState",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 964.2,
+                "y": 186.5,
+                "width": 91.6,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                1016,
+                284
+              ],
+              "to": [
+                1016,
+                101
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "MoveToZone · stop",
+              "labelRelationship": {
+                "id": "manager-gateway",
+                "from": "manager",
+                "to": "gateway",
+                "label": "MoveToZone · stop",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "otherRelationship": {
+                "id": "manager-bridge",
+                "from": "manager",
+                "to": "bridge",
+                "label": "SortState · Result",
+                "collectionIndex": 12,
+                "artifactIndex": 13
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 964.2,
+                "y": 186.5,
+                "width": 91.6,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 3,
+              "threshold": 2,
+              "from": [
+                1004,
+                108
+              ],
+              "to": [
+                1004,
+                189.5
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "pose · RobotState",
+              "labelRelationship": {
+                "id": "gateway-manager",
+                "from": "gateway",
+                "to": "manager",
+                "label": "pose · RobotState",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "otherRelationship": {
+                "id": "manager-gateway",
+                "from": "manager",
+                "to": "gateway",
+                "label": "MoveToZone · stop",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 970.2,
+                "y": 172.5,
+                "width": 91.6,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                1010,
+                115
+              ],
+              "to": [
+                1010,
+                298
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "pose · RobotState",
+              "labelRelationship": {
+                "id": "gateway-manager",
+                "from": "gateway",
+                "to": "manager",
+                "label": "pose · RobotState",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "otherRelationship": {
+                "id": "manager-bridge",
+                "from": "manager",
+                "to": "bridge",
+                "label": "SortState · Result",
+                "collectionIndex": 12,
+                "artifactIndex": 13
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 970.2,
+                "y": 172.5,
+                "width": 91.6,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                1004,
+                108
+              ],
+              "to": [
+                1004,
+                189.5
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "SortResult · PalletResult",
+              "labelRelationship": {
+                "id": "manager-logger",
+                "from": "manager",
+                "to": "logger",
+                "label": "SortResult · PalletResult",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "otherRelationship": {
+                "id": "manager-servo",
+                "from": "manager",
+                "to": "servo",
+                "label": "TrackAndGrasp action",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 869,
+                "y": 237,
+                "width": 130,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                885,
+                146
+              ],
+              "to": [
+                885,
+                260
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "SortState · Result",
+              "labelRelationship": {
+                "id": "manager-bridge",
+                "from": "manager",
+                "to": "bridge",
+                "label": "SortState · Result",
+                "collectionIndex": 12,
+                "artifactIndex": 13
+              },
+              "otherRelationship": {
+                "id": "manager-gateway",
+                "from": "manager",
+                "to": "gateway",
+                "label": "MoveToZone · stop",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 955.8,
+                "y": 150,
+                "width": 96.4,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                1010,
+                115
+              ],
+              "to": [
+                1010,
+                298
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "SortState · Result",
+              "labelRelationship": {
+                "id": "manager-bridge",
+                "from": "manager",
+                "to": "bridge",
+                "label": "SortState · Result",
+                "collectionIndex": 12,
+                "artifactIndex": 13
+              },
+              "otherRelationship": {
+                "id": "gateway-manager",
+                "from": "gateway",
+                "to": "manager",
+                "label": "pose · RobotState",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 955.8,
+                "y": 150,
+                "width": 96.4,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                1016,
+                284
+              ],
+              "to": [
+                1016,
+                101
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "deliver": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 318,
+      "command": [
+        "/home/runo/.nvm/versions/node/v24.18.0/bin/node",
+        "/tmp/voss-archify/archify/bin/archify.mjs",
+        "deliver",
+        "architecture",
+        "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/data/02_ros2.json",
+        "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/02_ros2.html",
+        "--quality",
+        "standard",
+        "--repo-root",
+        "/home/runo/collaboration/rokey_cobot2_VOSS_2",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "receiptId": "55bcd0ce-b948-4c9e-8fbd-885b6a259d0a",
+        "ok": true,
+        "command": "deliver",
+        "type": "architecture",
+        "input": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/data/02_ros2.json",
+        "output": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/02_ros2.html",
+        "specification": {
+          "sha256": "6adc84e4426c8b8986785514cd6febb687e04e7cba441651d7b6a420d25f789e",
+          "bytes": 8999
+        },
+        "artifact": {
+          "sha256": "29a262ab6318b131f0273dee8a4078b6411255ae67856d47c0f72aa9784e905d",
+          "bytes": 844555
+        },
+        "validation": {
+          "checksPassed": 9,
+          "checkCount": 9,
+          "compositionProfile": "standard",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 13,
+          "compositionIssues": [
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "TrackAndGrasp action",
+              "labelRelationship": {
+                "id": "manager-servo",
+                "from": "manager",
+                "to": "servo",
+                "label": "TrackAndGrasp action",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "manager-logger",
+                "from": "manager",
+                "to": "logger",
+                "label": "SortResult · PalletResult",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 839,
+                "y": 150,
+                "width": 106,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                885,
+                146
+              ],
+              "to": [
+                885,
+                257
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "TrackAndGrasp action",
+              "labelRelationship": {
+                "id": "manager-servo",
+                "from": "manager",
+                "to": "servo",
+                "label": "TrackAndGrasp action",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "parser-manager",
+                "from": "parser",
+                "to": "manager",
+                "label": "Intent",
+                "collectionIndex": 15,
+                "artifactIndex": 16
+              },
+              "segmentIndex": 2,
+              "labelRect": {
+                "x": 839,
+                "y": 150,
+                "width": 106,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                885,
+                170
+              ],
+              "to": [
+                885,
+                146
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "TrackAndGrasp action",
+              "labelRelationship": {
+                "id": "manager-servo",
+                "from": "manager",
+                "to": "servo",
+                "label": "TrackAndGrasp action",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "manager-speech",
+                "from": "manager",
+                "to": "speech",
+                "label": "/voss/voice/say",
+                "collectionIndex": 16,
+                "artifactIndex": 17
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 839,
+                "y": 150,
+                "width": 106,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                871,
+                146
+              ],
+              "to": [
+                871,
+                170
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "servo_cmd · stop · Gripper",
+              "labelRelationship": {
+                "id": "servo-gateway",
+                "from": "servo",
+                "to": "gateway",
+                "label": "servo_cmd · stop · Gripper",
+                "collectionIndex": 6,
+                "artifactIndex": 7
+              },
+              "otherRelationship": {
+                "id": "manager-logger",
+                "from": "manager",
+                "to": "logger",
+                "label": "SortResult · PalletResult",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "segmentIndex": 2,
+              "labelRect": {
+                "x": 934.6,
+                "y": 340,
+                "width": 134.8,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                983,
+                257
+              ],
+              "to": [
+                983,
+                426
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "pose",
+              "labelRelationship": {
+                "id": "gateway-servo",
+                "from": "gateway",
+                "to": "servo",
+                "label": "pose",
+                "collectionIndex": 7,
+                "artifactIndex": 8
+              },
+              "otherRelationship": {
+                "id": "servo-gateway",
+                "from": "servo",
+                "to": "gateway",
+                "label": "servo_cmd · stop · Gripper",
+                "collectionIndex": 6,
+                "artifactIndex": 7
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 995,
+                "y": 292,
+                "width": 30,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 30,
+              "threshold": 2,
+              "from": [
+                980,
+                298
+              ],
+              "to": [
+                1040,
+                298
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "pose",
+              "labelRelationship": {
+                "id": "gateway-servo",
+                "from": "gateway",
+                "to": "servo",
+                "label": "pose",
+                "collectionIndex": 7,
+                "artifactIndex": 8
+              },
+              "otherRelationship": {
+                "id": "manager-gateway",
+                "from": "manager",
+                "to": "gateway",
+                "label": "MoveToZone · stop",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 995,
+                "y": 292,
+                "width": 30,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 6,
+              "threshold": 2,
+              "from": [
+                1010,
+                115
+              ],
+              "to": [
+                1010,
+                298
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "MoveToZone · stop",
+              "labelRelationship": {
+                "id": "manager-gateway",
+                "from": "manager",
+                "to": "gateway",
+                "label": "MoveToZone · stop",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "otherRelationship": {
+                "id": "gateway-manager",
+                "from": "gateway",
+                "to": "manager",
+                "label": "pose · RobotState",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 964.2,
+                "y": 186.5,
+                "width": 91.6,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                1016,
+                284
+              ],
+              "to": [
+                1016,
+                101
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "MoveToZone · stop",
+              "labelRelationship": {
+                "id": "manager-gateway",
+                "from": "manager",
+                "to": "gateway",
+                "label": "MoveToZone · stop",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "otherRelationship": {
+                "id": "manager-bridge",
+                "from": "manager",
+                "to": "bridge",
+                "label": "SortState · Result",
+                "collectionIndex": 12,
+                "artifactIndex": 13
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 964.2,
+                "y": 186.5,
+                "width": 91.6,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 3,
+              "threshold": 2,
+              "from": [
+                1004,
+                108
+              ],
+              "to": [
+                1004,
+                189.5
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "pose · RobotState",
+              "labelRelationship": {
+                "id": "gateway-manager",
+                "from": "gateway",
+                "to": "manager",
+                "label": "pose · RobotState",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "otherRelationship": {
+                "id": "manager-gateway",
+                "from": "manager",
+                "to": "gateway",
+                "label": "MoveToZone · stop",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 970.2,
+                "y": 172.5,
+                "width": 91.6,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                1010,
+                115
+              ],
+              "to": [
+                1010,
+                298
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "pose · RobotState",
+              "labelRelationship": {
+                "id": "gateway-manager",
+                "from": "gateway",
+                "to": "manager",
+                "label": "pose · RobotState",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "otherRelationship": {
+                "id": "manager-bridge",
+                "from": "manager",
+                "to": "bridge",
+                "label": "SortState · Result",
+                "collectionIndex": 12,
+                "artifactIndex": 13
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 970.2,
+                "y": 172.5,
+                "width": 91.6,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                1004,
+                108
+              ],
+              "to": [
+                1004,
+                189.5
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "SortResult · PalletResult",
+              "labelRelationship": {
+                "id": "manager-logger",
+                "from": "manager",
+                "to": "logger",
+                "label": "SortResult · PalletResult",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "otherRelationship": {
+                "id": "manager-servo",
+                "from": "manager",
+                "to": "servo",
+                "label": "TrackAndGrasp action",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 869,
+                "y": 237,
+                "width": 130,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                885,
+                146
+              ],
+              "to": [
+                885,
+                260
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "SortState · Result",
+              "labelRelationship": {
+                "id": "manager-bridge",
+                "from": "manager",
+                "to": "bridge",
+                "label": "SortState · Result",
+                "collectionIndex": 12,
+                "artifactIndex": 13
+              },
+              "otherRelationship": {
+                "id": "manager-gateway",
+                "from": "manager",
+                "to": "gateway",
+                "label": "MoveToZone · stop",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 955.8,
+                "y": 150,
+                "width": 96.4,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                1010,
+                115
+              ],
+              "to": [
+                1010,
+                298
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "SortState · Result",
+              "labelRelationship": {
+                "id": "manager-bridge",
+                "from": "manager",
+                "to": "bridge",
+                "label": "SortState · Result",
+                "collectionIndex": 12,
+                "artifactIndex": 13
+              },
+              "otherRelationship": {
+                "id": "gateway-manager",
+                "from": "gateway",
+                "to": "manager",
+                "label": "pose · RobotState",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 955.8,
+                "y": 150,
+                "width": 96.4,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                1016,
+                284
+              ],
+              "to": [
+                1016,
+                101
+              ]
+            }
+          ]
+        },
+        "evidence": {
+          "verified": true,
+          "repository": "https://github.com/lambdaramji/rokey_cobot2_VOSS",
+          "revision": "70463ef435b50b45d243823b6f7318789728d786",
+          "references": 12
+        },
+        "update": {
+          "status": "unavailable",
+          "installedVersion": null,
+          "availableVersion": null,
+          "releaseNotes": null,
+          "checkedAt": null,
+          "source": null,
+          "noticeRequired": false,
+          "noticeText": null,
+          "reason": "disabled"
+        }
+      }
+    },
+    "check": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 116,
+      "command": [
+        "/home/runo/.nvm/versions/node/v24.18.0/bin/node",
+        "/tmp/voss-archify/archify/bin/archify.mjs",
+        "check",
+        "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/02_ros2.html",
+        "--require-provenance"
+      ],
+      "receipt": {
+        "ok": true,
+        "file": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/02_ros2.html",
+        "artifact": {
+          "sha256": "29a262ab6318b131f0273dee8a4078b6411255ae67856d47c0f72aa9784e905d",
+          "bytes": 844555
+        },
+        "checks": [
+          {
+            "name": "single_svg",
+            "ok": true,
+            "details": [
+              "found 1 <svg> block(s)"
+            ]
+          },
+          {
+            "name": "finite_svg",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "orthogonal_arrows",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "label_route_clearance",
+            "ok": true,
+            "details": [
+              "[composition/label-route-clearance] standard label \"TrackAndGrasp action\" on relationship id \"manager-servo\" (\"manager\" -> \"servo\") is 0px from relationship id \"manager-logger\" (\"manager\" -> \"logger\") segment 0 [885, 146] -> [885, 257] with 14px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"TrackAndGrasp action\" on relationship id \"manager-servo\" (\"manager\" -> \"servo\") is 0px from relationship id \"parser-manager\" (\"parser\" -> \"manager\") segment 2 [885, 170] -> [885, 146] with 14px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"TrackAndGrasp action\" on relationship id \"manager-servo\" (\"manager\" -> \"servo\") is 0px from relationship id \"manager-speech\" (\"manager\" -> \"speech\") segment 0 [871, 146] -> [871, 170] with 14px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"servo_cmd · stop · Gripper\" on relationship id \"servo-gateway\" (\"servo\" -> \"gateway\") is 0px from relationship id \"manager-logger\" (\"manager\" -> \"logger\") segment 2 [983, 257] -> [983, 426] with 14px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"pose\" on relationship id \"gateway-servo\" (\"gateway\" -> \"servo\") is 0px from relationship id \"servo-gateway\" (\"servo\" -> \"gateway\") segment 0 [980, 298] -> [1040, 298] with 30px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"pose\" on relationship id \"gateway-servo\" (\"gateway\" -> \"servo\") is 0px from relationship id \"manager-gateway\" (\"manager\" -> \"gateway\") segment 1 [1010, 115] -> [1010, 298] with 6px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"MoveToZone · stop\" on relationship id \"manager-gateway\" (\"manager\" -> \"gateway\") is 0px from relationship id \"gateway-manager\" (\"gateway\" -> \"manager\") segment 1 [1016, 284] -> [1016, 101] with 14px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"MoveToZone · stop\" on relationship id \"manager-gateway\" (\"manager\" -> \"gateway\") is 0px from relationship id \"manager-bridge\" (\"manager\" -> \"bridge\") segment 1 [1004, 108] -> [1004, 189.5] with 3px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"pose · RobotState\" on relationship id \"gateway-manager\" (\"gateway\" -> \"manager\") is 0px from relationship id \"manager-gateway\" (\"manager\" -> \"gateway\") segment 1 [1010, 115] -> [1010, 298] with 14px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"pose · RobotState\" on relationship id \"gateway-manager\" (\"gateway\" -> \"manager\") is 0px from relationship id \"manager-bridge\" (\"manager\" -> \"bridge\") segment 1 [1004, 108] -> [1004, 189.5] with 14px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"SortResult · PalletResult\" on relationship id \"manager-logger\" (\"manager\" -> \"logger\") is 0px from relationship id \"manager-servo\" (\"manager\" -> \"servo\") segment 0 [885, 146] -> [885, 260] with 14px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"SortState · Result\" on relationship id \"manager-bridge\" (\"manager\" -> \"bridge\") is 0px from relationship id \"manager-gateway\" (\"manager\" -> \"gateway\") segment 1 [1010, 115] -> [1010, 298] with 14px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"SortState · Result\" on relationship id \"manager-bridge\" (\"manager\" -> \"bridge\") is 0px from relationship id \"gateway-manager\" (\"gateway\" -> \"manager\") segment 1 [1016, 284] -> [1016, 101] with 14px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel."
+            ]
+          },
+          {
+            "name": "relationship_crossings",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "relationship_corridors",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "container_border_runs",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "route_rhythm",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "legend_clearance",
+            "ok": true,
+            "details": []
+          }
+        ],
+        "composition": {
+          "schemaVersion": 1,
+          "profile": "standard",
+          "status": "pass",
+          "summary": {
+            "errors": 0,
+            "warnings": 13
+          },
+          "metrics": {
+            "properCrossings": 0,
+            "resolvedCrossovers": 5,
+            "ambiguousCorridors": 0,
+            "arrowheadCollisions": 0,
+            "containerBorderRuns": 0,
+            "labelRouteClearanceIssues": 13,
+            "labelCanvasOverflowIssues": 0,
+            "minLabelRouteClearance": 0,
+            "desktopReadabilityIssues": 0,
+            "viewportHeightIssues": 0,
+            "minProjectedNodeTextPx": 7.5,
+            "maxBends": 5,
+            "routesOverSuggestedBends": 5,
+            "maxStretch": 1.672,
+            "routesOverSuggestedStretch": 3,
+            "minSegmentPx": 24,
+            "minInteriorSegmentPx": 41,
+            "shortSegmentCount": 0,
+            "shortEndpointSegmentCount": 0,
+            "shortInteriorSegmentCount": 0,
+            "microSegmentCount": 0
+          },
+          "suggestedLimits": {
+            "bendsPerRelationship": 2,
+            "stretch": 1.35,
+            "segmentPx": 16,
+            "microSegmentPx": 8
+          },
+          "routeReview": {
+            "crossings": [
+              {
+                "left": {
+                  "id": "servo-gateway",
+                  "from": "servo",
+                  "to": "gateway",
+                  "label": "servo_cmd · stop · Gripper",
+                  "collectionIndex": 6,
+                  "artifactIndex": 7
+                },
+                "right": {
+                  "id": "manager-logger",
+                  "from": "manager",
+                  "to": "logger",
+                  "label": "SortResult · PalletResult",
+                  "collectionIndex": 11,
+                  "artifactIndex": 12
+                },
+                "point": [
+                  983,
+                  298
+                ]
+              },
+              {
+                "left": {
+                  "id": "gateway-servo",
+                  "from": "gateway",
+                  "to": "servo",
+                  "label": "pose",
+                  "collectionIndex": 7,
+                  "artifactIndex": 8
+                },
+                "right": {
+                  "id": "manager-logger",
+                  "from": "manager",
+                  "to": "logger",
+                  "label": "SortResult · PalletResult",
+                  "collectionIndex": 11,
+                  "artifactIndex": 12
+                },
+                "point": [
+                  983,
+                  312
+                ]
+              },
+              {
+                "left": {
+                  "id": "manager-gateway",
+                  "from": "manager",
+                  "to": "gateway",
+                  "label": "MoveToZone · stop",
+                  "collectionIndex": 8,
+                  "artifactIndex": 9
+                },
+                "right": {
+                  "id": "bridge-manager",
+                  "from": "bridge",
+                  "to": "manager",
+                  "label": "Command srv",
+                  "collectionIndex": 13,
+                  "artifactIndex": 14
+                },
+                "point": [
+                  1004,
+                  115.15384615384616
+                ],
+                "sharedNode": "manager"
+              },
+              {
+                "left": {
+                  "id": "gateway-manager",
+                  "from": "gateway",
+                  "to": "manager",
+                  "label": "pose · RobotState",
+                  "collectionIndex": 9,
+                  "artifactIndex": 10
+                },
+                "right": {
+                  "id": "bridge-manager",
+                  "from": "bridge",
+                  "to": "manager",
+                  "label": "Command srv",
+                  "collectionIndex": 13,
+                  "artifactIndex": 14
+                },
+                "point": [
+                  1004,
+                  101
+                ],
+                "sharedNode": "manager"
+              },
+              {
+                "left": {
+                  "id": "gateway-doosan",
+                  "from": "gateway",
+                  "to": "doosan",
+                  "label": "ROS service / Modbus",
+                  "collectionIndex": 10,
+                  "artifactIndex": 11
+                },
+                "right": {
+                  "id": "manager-bridge",
+                  "from": "manager",
+                  "to": "bridge",
+                  "label": "SortState · Result",
+                  "collectionIndex": 12,
+                  "artifactIndex": 13
+                },
+                "point": [
+                  1135,
+                  189.5
+                ]
+              }
+            ],
+            "detours": [
+              {
+                "relationship": {
+                  "id": "tracker-manager",
+                  "from": "tracker",
+                  "to": "manager",
+                  "label": "/voss/vision/box",
+                  "collectionIndex": 2,
+                  "artifactIndex": 3
+                },
+                "bends": 4,
+                "stretch": 1.265,
+                "directCorridorBlockers": [
+                  {
+                    "id": "reader",
+                    "label": "label_reader",
+                    "box": [
+                      540,
+                      70,
+                      190,
+                      76
+                    ]
+                  }
+                ]
+              },
+              {
+                "relationship": {
+                  "id": "manager-logger",
+                  "from": "manager",
+                  "to": "logger",
+                  "label": "SortResult · PalletResult",
+                  "collectionIndex": 11,
+                  "artifactIndex": 12
+                },
+                "bends": 4,
+                "stretch": 1.645,
+                "directCorridorBlockers": [
+                  {
+                    "id": "servo",
+                    "label": "belt_servo",
+                    "box": [
+                      790,
+                      260,
+                      190,
+                      76
+                    ]
+                  }
+                ]
+              },
+              {
+                "relationship": {
+                  "id": "manager-bridge",
+                  "from": "manager",
+                  "to": "bridge",
+                  "label": "SortState · Result",
+                  "collectionIndex": 12,
+                  "artifactIndex": 13
+                },
+                "bends": 5,
+                "stretch": 1.394
+              },
+              {
+                "relationship": {
+                  "id": "bridge-manager",
+                  "from": "bridge",
+                  "to": "manager",
+                  "label": "Command srv",
+                  "collectionIndex": 13,
+                  "artifactIndex": 14
+                },
+                "bends": 5,
+                "stretch": 1.672
+              },
+              {
+                "relationship": {
+                  "id": "parser-speech",
+                  "from": "parser",
+                  "to": "speech",
+                  "label": "/voss/voice/say",
+                  "collectionIndex": 17,
+                  "artifactIndex": 18
+                },
+                "bends": 3,
+                "stretch": 1.268
+              }
+            ]
+          },
+          "leadingSpace": {
+            "measured": true,
+            "emptyTopPx": 67,
+            "emptyTopRatio": 0.113,
+            "occupiedTop": 67,
+            "viewBoxTop": 0,
+            "canvasHeight": 594,
+            "typicalNodeHeight": 76,
+            "reviewSuggested": false
+          },
+          "desktopReadability": {
+            "budgetBasis": "recognized-declared-wide",
+            "readerContract": "declared-wide-v1",
+            "availableDiagramWidth": 1193.4375,
+            "actualBudgetPx": 1193.4375,
+            "actualReaderWidth": 1223.4375,
+            "desiredReaderWidth": 1223.4375,
+            "viewportCap": 1376,
+            "limit": "source-size",
+            "requestedTargetPx": 7.5,
+            "requestedTargetMet": true,
+            "hardFloorPx": 6,
+            "hardFloorMet": true,
+            "minimumOwner": {
+              "kind": "edge",
+              "id": "camera-tracker",
+              "from": "camera",
+              "to": "tracker"
+            },
+            "minimumSourceTextPx": 8,
+            "minimumProjectedTextPx": 7.5,
+            "semanticTextCount": 42
+          },
+          "issues": [
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "TrackAndGrasp action",
+              "labelRelationship": {
+                "id": "manager-servo",
+                "from": "manager",
+                "to": "servo",
+                "label": "TrackAndGrasp action",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "manager-logger",
+                "from": "manager",
+                "to": "logger",
+                "label": "SortResult · PalletResult",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 839,
+                "y": 150,
+                "width": 106,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                885,
+                146
+              ],
+              "to": [
+                885,
+                257
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "TrackAndGrasp action",
+              "labelRelationship": {
+                "id": "manager-servo",
+                "from": "manager",
+                "to": "servo",
+                "label": "TrackAndGrasp action",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "parser-manager",
+                "from": "parser",
+                "to": "manager",
+                "label": "Intent",
+                "collectionIndex": 15,
+                "artifactIndex": 16
+              },
+              "segmentIndex": 2,
+              "labelRect": {
+                "x": 839,
+                "y": 150,
+                "width": 106,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                885,
+                170
+              ],
+              "to": [
+                885,
+                146
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "TrackAndGrasp action",
+              "labelRelationship": {
+                "id": "manager-servo",
+                "from": "manager",
+                "to": "servo",
+                "label": "TrackAndGrasp action",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "manager-speech",
+                "from": "manager",
+                "to": "speech",
+                "label": "/voss/voice/say",
+                "collectionIndex": 16,
+                "artifactIndex": 17
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 839,
+                "y": 150,
+                "width": 106,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                871,
+                146
+              ],
+              "to": [
+                871,
+                170
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "servo_cmd · stop · Gripper",
+              "labelRelationship": {
+                "id": "servo-gateway",
+                "from": "servo",
+                "to": "gateway",
+                "label": "servo_cmd · stop · Gripper",
+                "collectionIndex": 6,
+                "artifactIndex": 7
+              },
+              "otherRelationship": {
+                "id": "manager-logger",
+                "from": "manager",
+                "to": "logger",
+                "label": "SortResult · PalletResult",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "segmentIndex": 2,
+              "labelRect": {
+                "x": 934.6,
+                "y": 340,
+                "width": 134.8,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                983,
+                257
+              ],
+              "to": [
+                983,
+                426
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "pose",
+              "labelRelationship": {
+                "id": "gateway-servo",
+                "from": "gateway",
+                "to": "servo",
+                "label": "pose",
+                "collectionIndex": 7,
+                "artifactIndex": 8
+              },
+              "otherRelationship": {
+                "id": "servo-gateway",
+                "from": "servo",
+                "to": "gateway",
+                "label": "servo_cmd · stop · Gripper",
+                "collectionIndex": 6,
+                "artifactIndex": 7
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 995,
+                "y": 292,
+                "width": 30,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 30,
+              "threshold": 2,
+              "from": [
+                980,
+                298
+              ],
+              "to": [
+                1040,
+                298
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "pose",
+              "labelRelationship": {
+                "id": "gateway-servo",
+                "from": "gateway",
+                "to": "servo",
+                "label": "pose",
+                "collectionIndex": 7,
+                "artifactIndex": 8
+              },
+              "otherRelationship": {
+                "id": "manager-gateway",
+                "from": "manager",
+                "to": "gateway",
+                "label": "MoveToZone · stop",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 995,
+                "y": 292,
+                "width": 30,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 6,
+              "threshold": 2,
+              "from": [
+                1010,
+                115
+              ],
+              "to": [
+                1010,
+                298
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "MoveToZone · stop",
+              "labelRelationship": {
+                "id": "manager-gateway",
+                "from": "manager",
+                "to": "gateway",
+                "label": "MoveToZone · stop",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "otherRelationship": {
+                "id": "gateway-manager",
+                "from": "gateway",
+                "to": "manager",
+                "label": "pose · RobotState",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 964.2,
+                "y": 186.5,
+                "width": 91.6,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                1016,
+                284
+              ],
+              "to": [
+                1016,
+                101
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "MoveToZone · stop",
+              "labelRelationship": {
+                "id": "manager-gateway",
+                "from": "manager",
+                "to": "gateway",
+                "label": "MoveToZone · stop",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "otherRelationship": {
+                "id": "manager-bridge",
+                "from": "manager",
+                "to": "bridge",
+                "label": "SortState · Result",
+                "collectionIndex": 12,
+                "artifactIndex": 13
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 964.2,
+                "y": 186.5,
+                "width": 91.6,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 3,
+              "threshold": 2,
+              "from": [
+                1004,
+                108
+              ],
+              "to": [
+                1004,
+                189.5
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "pose · RobotState",
+              "labelRelationship": {
+                "id": "gateway-manager",
+                "from": "gateway",
+                "to": "manager",
+                "label": "pose · RobotState",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "otherRelationship": {
+                "id": "manager-gateway",
+                "from": "manager",
+                "to": "gateway",
+                "label": "MoveToZone · stop",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 970.2,
+                "y": 172.5,
+                "width": 91.6,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                1010,
+                115
+              ],
+              "to": [
+                1010,
+                298
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "pose · RobotState",
+              "labelRelationship": {
+                "id": "gateway-manager",
+                "from": "gateway",
+                "to": "manager",
+                "label": "pose · RobotState",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "otherRelationship": {
+                "id": "manager-bridge",
+                "from": "manager",
+                "to": "bridge",
+                "label": "SortState · Result",
+                "collectionIndex": 12,
+                "artifactIndex": 13
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 970.2,
+                "y": 172.5,
+                "width": 91.6,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                1004,
+                108
+              ],
+              "to": [
+                1004,
+                189.5
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "SortResult · PalletResult",
+              "labelRelationship": {
+                "id": "manager-logger",
+                "from": "manager",
+                "to": "logger",
+                "label": "SortResult · PalletResult",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "otherRelationship": {
+                "id": "manager-servo",
+                "from": "manager",
+                "to": "servo",
+                "label": "TrackAndGrasp action",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 869,
+                "y": 237,
+                "width": 130,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                885,
+                146
+              ],
+              "to": [
+                885,
+                260
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "SortState · Result",
+              "labelRelationship": {
+                "id": "manager-bridge",
+                "from": "manager",
+                "to": "bridge",
+                "label": "SortState · Result",
+                "collectionIndex": 12,
+                "artifactIndex": 13
+              },
+              "otherRelationship": {
+                "id": "manager-gateway",
+                "from": "manager",
+                "to": "gateway",
+                "label": "MoveToZone · stop",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 955.8,
+                "y": 150,
+                "width": 96.4,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                1010,
+                115
+              ],
+              "to": [
+                1010,
+                298
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "SortState · Result",
+              "labelRelationship": {
+                "id": "manager-bridge",
+                "from": "manager",
+                "to": "bridge",
+                "label": "SortState · Result",
+                "collectionIndex": 12,
+                "artifactIndex": 13
+              },
+              "otherRelationship": {
+                "id": "gateway-manager",
+                "from": "gateway",
+                "to": "manager",
+                "label": "pose · RobotState",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 955.8,
+                "y": 150,
+                "width": 96.4,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                1016,
+                284
+              ],
+              "to": [
+                1016,
+                101
+              ]
+            }
+          ]
+        },
+        "provenance": "current",
+        "deliveryReceiptId": "55bcd0ce-b948-4c9e-8fbd-885b6a259d0a"
+      }
+    },
+    "browser-check": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 1576,
+      "command": [
+        "/home/runo/.nvm/versions/node/v24.18.0/bin/node",
+        "/tmp/voss-archify/archify/bin/archify.mjs",
+        "browser-check",
+        "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/02_ros2.html",
+        "--json",
+        "--require-provenance"
+      ],
+      "execution": "in-process",
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": true,
+        "command": "browser-check",
+        "evidenceKind": "automated-browser",
+        "status": "pass",
+        "visualReview": "not-requested",
+        "provenance": "current",
+        "deliveryReceiptId": "55bcd0ce-b948-4c9e-8fbd-885b6a259d0a",
+        "artifact": {
+          "path": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/02_ros2.html",
+          "sha256": "29a262ab6318b131f0273dee8a4078b6411255ae67856d47c0f72aa9784e905d",
+          "bytes": 844555
+        },
+        "state": {
+          "detail": "read",
+          "motion": "still"
+        },
+        "chrome": {
+          "status": "available",
+          "executable": "/usr/bin/google-chrome"
+        },
+        "diagnostics": [],
+        "containment": {
+          "status": "pass",
+          "policy": "fit-or-reader-declared-readable-vertical-scroll",
+          "viewports": [
+            {
+              "width": 1440,
+              "height": 900,
+              "theme": "light",
+              "innerWidth": 1440,
+              "innerHeight": 900,
+              "scrollWidth": 1440,
+              "scrollHeight": 900,
+              "overflowX": false,
+              "overflowY": false,
+              "verticalScrollAccepted": false,
+              "overflowDisposition": "contained",
+              "readerLayout": "adaptive",
+              "readerOverflow": null,
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1376,
+              "diagramWidth": 1346,
+              "pageComposition": {
+                "bodyPaddingPx": 12,
+                "headerPx": 52,
+                "diagramChromePx": 78,
+                "svgPx": 628,
+                "cardsPx": 0,
+                "viewBoxHeight": 594
+              },
+              "viewBoxWidth": 1273,
+              "minimumProjectedNodeTextPx": 8,
+              "minimumProjectedNonEdgeTextPx": 9,
+              "minimumProjectedEdgeTextPx": 8,
+              "minimumProjectedNodeText": "Image / CameraInfo",
+              "minimumProjectedNodeTextDetail": "edge",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "edge",
+                "id": "camera-tracker",
+                "from": "camera",
+                "to": "tracker"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1600,
+              "height": 1000,
+              "theme": "light",
+              "innerWidth": 1600,
+              "innerHeight": 1000,
+              "scrollWidth": 1600,
+              "scrollHeight": 1000,
+              "overflowX": false,
+              "overflowY": false,
+              "verticalScrollAccepted": false,
+              "overflowDisposition": "contained",
+              "readerLayout": "adaptive",
+              "readerOverflow": null,
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1536,
+              "diagramWidth": 1506,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 60,
+                "diagramChromePx": 84,
+                "svgPx": 703,
+                "cardsPx": 0,
+                "viewBoxHeight": 594
+              },
+              "viewBoxWidth": 1273,
+              "minimumProjectedNodeTextPx": 8,
+              "minimumProjectedNonEdgeTextPx": 9,
+              "minimumProjectedEdgeTextPx": 8,
+              "minimumProjectedNodeText": "Image / CameraInfo",
+              "minimumProjectedNodeTextDetail": "edge",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "edge",
+                "id": "camera-tracker",
+                "from": "camera",
+                "to": "tracker"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1920,
+              "height": 1080,
+              "theme": "light",
+              "innerWidth": 1920,
+              "innerHeight": 1080,
+              "scrollWidth": 1920,
+              "scrollHeight": 1080,
+              "overflowX": false,
+              "overflowY": false,
+              "verticalScrollAccepted": false,
+              "overflowDisposition": "contained",
+              "readerLayout": "adaptive",
+              "readerOverflow": null,
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1856,
+              "diagramWidth": 1826,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 60,
+                "diagramChromePx": 84,
+                "svgPx": 852,
+                "cardsPx": 0,
+                "viewBoxHeight": 594
+              },
+              "viewBoxWidth": 1273,
+              "minimumProjectedNodeTextPx": 8,
+              "minimumProjectedNonEdgeTextPx": 9,
+              "minimumProjectedEdgeTextPx": 8,
+              "minimumProjectedNodeText": "Image / CameraInfo",
+              "minimumProjectedNodeTextDetail": "edge",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "edge",
+                "id": "camera-tracker",
+                "from": "camera",
+                "to": "tracker"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "theme": "light",
+              "innerWidth": 2048,
+              "innerHeight": 1320,
+              "scrollWidth": 2048,
+              "scrollHeight": 1320,
+              "overflowX": false,
+              "overflowY": false,
+              "verticalScrollAccepted": false,
+              "overflowDisposition": "contained",
+              "readerLayout": "adaptive",
+              "readerOverflow": null,
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1920,
+              "diagramWidth": 1870,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 68,
+                "diagramChromePx": 94,
+                "svgPx": 873,
+                "cardsPx": 0,
+                "viewBoxHeight": 594
+              },
+              "viewBoxWidth": 1273,
+              "minimumProjectedNodeTextPx": 8,
+              "minimumProjectedNonEdgeTextPx": 9,
+              "minimumProjectedEdgeTextPx": 8,
+              "minimumProjectedNodeText": "Image / CameraInfo",
+              "minimumProjectedNodeTextDetail": "edge",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "edge",
+                "id": "camera-tracker",
+                "from": "camera",
+                "to": "tracker"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 44,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            }
+          ]
+        },
+        "themeStates": {
+          "status": "pass",
+          "viewports": [
+            {
+              "width": 1440,
+              "height": 900,
+              "requestedTheme": "light",
+              "resolvedTheme": "light",
+              "ok": true
+            },
+            {
+              "width": 1600,
+              "height": 1000,
+              "requestedTheme": "light",
+              "resolvedTheme": "light",
+              "ok": true
+            },
+            {
+              "width": 1920,
+              "height": 1080,
+              "requestedTheme": "light",
+              "resolvedTheme": "light",
+              "ok": true
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "requestedTheme": "light",
+              "resolvedTheme": "light",
+              "ok": true
+            },
+            {
+              "width": 1440,
+              "height": 900,
+              "requestedTheme": "dark",
+              "resolvedTheme": "dark",
+              "ok": true
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "requestedTheme": "dark",
+              "resolvedTheme": "dark",
+              "ok": true
+            }
+          ]
+        },
+        "readability": {
+          "status": "pass",
+          "minimumProjectedNodeTextPx": 6,
+          "viewports": [
+            {
+              "width": 1440,
+              "height": 900,
+              "theme": "light",
+              "innerWidth": 1440,
+              "innerHeight": 900,
+              "scrollWidth": 1440,
+              "scrollHeight": 900,
+              "overflowX": false,
+              "overflowY": false,
+              "verticalScrollAccepted": false,
+              "overflowDisposition": "contained",
+              "readerLayout": "adaptive",
+              "readerOverflow": null,
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1376,
+              "diagramWidth": 1346,
+              "pageComposition": {
+                "bodyPaddingPx": 12,
+                "headerPx": 52,
+                "diagramChromePx": 78,
+                "svgPx": 628,
+                "cardsPx": 0,
+                "viewBoxHeight": 594
+              },
+              "viewBoxWidth": 1273,
+              "minimumProjectedNodeTextPx": 8,
+              "minimumProjectedNonEdgeTextPx": 9,
+              "minimumProjectedEdgeTextPx": 8,
+              "minimumProjectedNodeText": "Image / CameraInfo",
+              "minimumProjectedNodeTextDetail": "edge",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "edge",
+                "id": "camera-tracker",
+                "from": "camera",
+                "to": "tracker"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1600,
+              "height": 1000,
+              "theme": "light",
+              "innerWidth": 1600,
+              "innerHeight": 1000,
+              "scrollWidth": 1600,
+              "scrollHeight": 1000,
+              "overflowX": false,
+              "overflowY": false,
+              "verticalScrollAccepted": false,
+              "overflowDisposition": "contained",
+              "readerLayout": "adaptive",
+              "readerOverflow": null,
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1536,
+              "diagramWidth": 1506,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 60,
+                "diagramChromePx": 84,
+                "svgPx": 703,
+                "cardsPx": 0,
+                "viewBoxHeight": 594
+              },
+              "viewBoxWidth": 1273,
+              "minimumProjectedNodeTextPx": 8,
+              "minimumProjectedNonEdgeTextPx": 9,
+              "minimumProjectedEdgeTextPx": 8,
+              "minimumProjectedNodeText": "Image / CameraInfo",
+              "minimumProjectedNodeTextDetail": "edge",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "edge",
+                "id": "camera-tracker",
+                "from": "camera",
+                "to": "tracker"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1920,
+              "height": 1080,
+              "theme": "light",
+              "innerWidth": 1920,
+              "innerHeight": 1080,
+              "scrollWidth": 1920,
+              "scrollHeight": 1080,
+              "overflowX": false,
+              "overflowY": false,
+              "verticalScrollAccepted": false,
+              "overflowDisposition": "contained",
+              "readerLayout": "adaptive",
+              "readerOverflow": null,
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1856,
+              "diagramWidth": 1826,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 60,
+                "diagramChromePx": 84,
+                "svgPx": 852,
+                "cardsPx": 0,
+                "viewBoxHeight": 594
+              },
+              "viewBoxWidth": 1273,
+              "minimumProjectedNodeTextPx": 8,
+              "minimumProjectedNonEdgeTextPx": 9,
+              "minimumProjectedEdgeTextPx": 8,
+              "minimumProjectedNodeText": "Image / CameraInfo",
+              "minimumProjectedNodeTextDetail": "edge",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "edge",
+                "id": "camera-tracker",
+                "from": "camera",
+                "to": "tracker"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "theme": "light",
+              "innerWidth": 2048,
+              "innerHeight": 1320,
+              "scrollWidth": 2048,
+              "scrollHeight": 1320,
+              "overflowX": false,
+              "overflowY": false,
+              "verticalScrollAccepted": false,
+              "overflowDisposition": "contained",
+              "readerLayout": "adaptive",
+              "readerOverflow": null,
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1920,
+              "diagramWidth": 1870,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 68,
+                "diagramChromePx": 94,
+                "svgPx": 873,
+                "cardsPx": 0,
+                "viewBoxHeight": 594
+              },
+              "viewBoxWidth": 1273,
+              "minimumProjectedNodeTextPx": 8,
+              "minimumProjectedNonEdgeTextPx": 9,
+              "minimumProjectedEdgeTextPx": 8,
+              "minimumProjectedNodeText": "Image / CameraInfo",
+              "minimumProjectedNodeTextDetail": "edge",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "edge",
+                "id": "camera-tracker",
+                "from": "camera",
+                "to": "tracker"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 44,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            }
+          ]
+        },
+        "viewerChrome": {
+          "status": "pass",
+          "viewports": [
+            {
+              "width": 1440,
+              "height": 900,
+              "theme": "light",
+              "innerWidth": 1440,
+              "innerHeight": 900,
+              "scrollWidth": 1440,
+              "scrollHeight": 900,
+              "overflowX": false,
+              "overflowY": false,
+              "verticalScrollAccepted": false,
+              "overflowDisposition": "contained",
+              "readerLayout": "adaptive",
+              "readerOverflow": null,
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1376,
+              "diagramWidth": 1346,
+              "pageComposition": {
+                "bodyPaddingPx": 12,
+                "headerPx": 52,
+                "diagramChromePx": 78,
+                "svgPx": 628,
+                "cardsPx": 0,
+                "viewBoxHeight": 594
+              },
+              "viewBoxWidth": 1273,
+              "minimumProjectedNodeTextPx": 8,
+              "minimumProjectedNonEdgeTextPx": 9,
+              "minimumProjectedEdgeTextPx": 8,
+              "minimumProjectedNodeText": "Image / CameraInfo",
+              "minimumProjectedNodeTextDetail": "edge",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "edge",
+                "id": "camera-tracker",
+                "from": "camera",
+                "to": "tracker"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1600,
+              "height": 1000,
+              "theme": "light",
+              "innerWidth": 1600,
+              "innerHeight": 1000,
+              "scrollWidth": 1600,
+              "scrollHeight": 1000,
+              "overflowX": false,
+              "overflowY": false,
+              "verticalScrollAccepted": false,
+              "overflowDisposition": "contained",
+              "readerLayout": "adaptive",
+              "readerOverflow": null,
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1536,
+              "diagramWidth": 1506,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 60,
+                "diagramChromePx": 84,
+                "svgPx": 703,
+                "cardsPx": 0,
+                "viewBoxHeight": 594
+              },
+              "viewBoxWidth": 1273,
+              "minimumProjectedNodeTextPx": 8,
+              "minimumProjectedNonEdgeTextPx": 9,
+              "minimumProjectedEdgeTextPx": 8,
+              "minimumProjectedNodeText": "Image / CameraInfo",
+              "minimumProjectedNodeTextDetail": "edge",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "edge",
+                "id": "camera-tracker",
+                "from": "camera",
+                "to": "tracker"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1920,
+              "height": 1080,
+              "theme": "light",
+              "innerWidth": 1920,
+              "innerHeight": 1080,
+              "scrollWidth": 1920,
+              "scrollHeight": 1080,
+              "overflowX": false,
+              "overflowY": false,
+              "verticalScrollAccepted": false,
+              "overflowDisposition": "contained",
+              "readerLayout": "adaptive",
+              "readerOverflow": null,
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1856,
+              "diagramWidth": 1826,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 60,
+                "diagramChromePx": 84,
+                "svgPx": 852,
+                "cardsPx": 0,
+                "viewBoxHeight": 594
+              },
+              "viewBoxWidth": 1273,
+              "minimumProjectedNodeTextPx": 8,
+              "minimumProjectedNonEdgeTextPx": 9,
+              "minimumProjectedEdgeTextPx": 8,
+              "minimumProjectedNodeText": "Image / CameraInfo",
+              "minimumProjectedNodeTextDetail": "edge",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "edge",
+                "id": "camera-tracker",
+                "from": "camera",
+                "to": "tracker"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "theme": "light",
+              "innerWidth": 2048,
+              "innerHeight": 1320,
+              "scrollWidth": 2048,
+              "scrollHeight": 1320,
+              "overflowX": false,
+              "overflowY": false,
+              "verticalScrollAccepted": false,
+              "overflowDisposition": "contained",
+              "readerLayout": "adaptive",
+              "readerOverflow": null,
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1920,
+              "diagramWidth": 1870,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 68,
+                "diagramChromePx": 94,
+                "svgPx": 873,
+                "cardsPx": 0,
+                "viewBoxHeight": 594
+              },
+              "viewBoxWidth": 1273,
+              "minimumProjectedNodeTextPx": 8,
+              "minimumProjectedNonEdgeTextPx": 9,
+              "minimumProjectedEdgeTextPx": 8,
+              "minimumProjectedNodeText": "Image / CameraInfo",
+              "minimumProjectedNodeTextDetail": "edge",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "edge",
+                "id": "camera-tracker",
+                "from": "camera",
+                "to": "tracker"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 44,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            }
+          ]
+        },
+        "captures": {
+          "status": "not-requested",
+          "screenshots": [],
+          "contactSheet": null
+        },
+        "sidecars": {
+          "receipt": "02_ros2.browser-check.json",
+          "files": []
+        }
+      }
+    }
+  },
+  "diagnostics": [],
+  "evidence": {
+    "receipt": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/02_ros2.finalize.json",
+    "summaryReceipt": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/02_ros2.finalize-summary.json",
+    "browserCheckReceipt": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/02_ros2.browser-check.json"
+  },
+  "visualReview": "not-requested",
+  "finishedAt": "2026-10-16T02:11:33.892Z",
+  "durationMs": 2184,
+  "update": {
+    "status": "current",
+    "installedVersion": "3.1.0",
+    "availableVersion": "3.1.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-10-16T02:10:42.521Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  }
+}

@@ -1,0 +1,703 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "VOSS 시스템 아키텍처",
+    "locale": "ko",
+    "output": "docs/architecture/01_system.html",
+    "quality_profile": "standard",
+    "repository": {
+      "url": "https://github.com/lambdaramji/rokey_cobot2_VOSS.git",
+      "revision": "70463ef435b50b45d243823b6f7318789728d786",
+      "provider": "github",
+      "link_mode": "web"
+    },
+    "animation": "trace"
+  },
+  "components": [
+    {
+      "id": "browser",
+      "type": "external",
+      "label": "운영자 브라우저",
+      "sublabel": "명령 · 상태 · 이력",
+      "pos": [
+        40,
+        80
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "docker/web/frontend/src/App.tsx",
+          "line": 153,
+          "end_line": 153
+        }
+      ]
+    },
+    {
+      "id": "nginx",
+      "type": "frontend",
+      "label": "Nginx + React",
+      "sublabel": "정적 UI · /api 프록시",
+      "pos": [
+        340,
+        80
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "docker/web/nginx/default.conf",
+          "line": 25,
+          "end_line": 25
+        }
+      ]
+    },
+    {
+      "id": "spring",
+      "type": "backend",
+      "label": "Spring Boot",
+      "sublabel": "REST · SSE · MQTT 연동",
+      "pos": [
+        600,
+        80
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "docker/web/backend/src/main/java/com/voss/web/api/StreamController.java",
+          "line": 21,
+          "end_line": 21
+        }
+      ]
+    },
+    {
+      "id": "postgres",
+      "type": "database",
+      "label": "PostgreSQL 16",
+      "sublabel": "sort · pallet · plan",
+      "pos": [
+        860,
+        80
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "docker/db/init/01_schema.sql",
+          "line": 6,
+          "end_line": 6
+        }
+      ]
+    },
+    {
+      "id": "broker",
+      "type": "messagebus",
+      "label": "Mosquitto 2",
+      "sublabel": "voss/* MQTT",
+      "pos": [
+        860,
+        270
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "docker/mqtt/compose.yml",
+          "line": 4,
+          "end_line": 4
+        }
+      ]
+    },
+    {
+      "id": "bridge",
+      "type": "backend",
+      "label": "hmi_bridge",
+      "sublabel": "ROS ↔ MQTT 변환",
+      "pos": [
+        860,
+        570
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_hmi/voss_hmi/hmi_bridge.py",
+          "line": 84,
+          "end_line": 84
+        }
+      ]
+    },
+    {
+      "id": "manager",
+      "type": "backend",
+      "label": "sort_manager",
+      "sublabel": "분류 · 재확인 · 적재 FSM",
+      "pos": [
+        600,
+        570
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_manager/voss_manager/sort_manager.py",
+          "line": 71,
+          "end_line": 71
+        }
+      ]
+    },
+    {
+      "id": "vision",
+      "type": "backend",
+      "label": "box_tracker + OCR",
+      "sublabel": "box_tracker · GPU OCR",
+      "pos": [
+        340,
+        570
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_vision/voss_vision/label_reader.py",
+          "line": 1,
+          "end_line": 1
+        }
+      ]
+    },
+    {
+      "id": "servo",
+      "type": "backend",
+      "label": "belt_servo",
+      "sublabel": "추적·파지 Action",
+      "pos": [
+        600,
+        770
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_servo/voss_servo/belt_servo.py",
+          "line": 379,
+          "end_line": 379
+        }
+      ]
+    },
+    {
+      "id": "robot",
+      "type": "backend",
+      "label": "robot_gateway",
+      "sublabel": "servo · 이동 · RG2",
+      "pos": [
+        860,
+        770
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_robot/voss_robot/robot_gateway.py",
+          "line": 150,
+          "end_line": 150
+        }
+      ]
+    },
+    {
+      "id": "driver",
+      "type": "external",
+      "label": "Doosan ROS bringup",
+      "sublabel": "Robot PC · DSR/RG2 드라이버",
+      "pos": [
+        860,
+        970
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_robot/voss_robot/doosan.py",
+          "line": 250,
+          "end_line": 250
+        }
+      ]
+    },
+    {
+      "id": "logger",
+      "type": "backend",
+      "label": "sort_logger",
+      "sublabel": "결과 DB 기록 · spool",
+      "pos": [
+        340,
+        770
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_hmi/voss_hmi/sort_logger.py",
+          "line": 1,
+          "end_line": 1
+        }
+      ]
+    },
+    {
+      "id": "voice",
+      "type": "backend",
+      "label": "음성 ROS 노드",
+      "sublabel": "listener · parser · speech",
+      "pos": [
+        340,
+        270
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_voice/voss_voice/voice_listener.py",
+          "line": 174,
+          "end_line": 174
+        }
+      ]
+    },
+    {
+      "id": "ai",
+      "type": "cloud",
+      "label": "FastAPI AI",
+      "sublabel": "STT · intent · TTS HTTP",
+      "pos": [
+        600,
+        270
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "docker/ai/app/main.py",
+          "line": 1,
+          "end_line": 1
+        }
+      ]
+    },
+    {
+      "id": "camera",
+      "type": "backend",
+      "label": "RealSense camera",
+      "sublabel": "Robot PC · 컬러 프레임",
+      "pos": [
+        80,
+        570
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_bringup/launch/voss_host.launch.py",
+          "line": 160,
+          "end_line": 160
+        }
+      ]
+    },
+    {
+      "id": "preview",
+      "type": "backend",
+      "label": "카메라 화면 서버",
+      "sublabel": "8091 RealSense · 8092 C270",
+      "pos": [
+        80,
+        770
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_vision/voss_vision/camera_preview.py",
+          "line": 1,
+          "end_line": 1
+        },
+        {
+          "path": "src/voss_vision/voss_vision/usb_camera_preview.py",
+          "line": 1,
+          "end_line": 1
+        }
+      ]
+    },
+    {
+      "id": "usb_camera",
+      "type": "external",
+      "label": "C270 USB camera",
+      "sublabel": "Robot PC · 현장 영상",
+      "pos": [
+        80,
+        970
+      ],
+      "size": [
+        190,
+        76
+      ],
+      "sources": [
+        {
+          "path": "src/voss_vision/voss_vision/usb_camera_preview.py",
+          "line": 1,
+          "end_line": 1
+        }
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "browser-nginx",
+      "from": "browser",
+      "to": "nginx",
+      "label": "HTTP 요청",
+      "variant": "default"
+    },
+    {
+      "id": "nginx-spring",
+      "from": "nginx",
+      "to": "spring",
+      "label": "REST 요청 · SSE 연결",
+      "variant": "default"
+    },
+    {
+      "id": "spring-postgres",
+      "from": "spring",
+      "to": "postgres",
+      "label": "SQL 요청",
+      "variant": "default"
+    },
+    {
+      "id": "spring-broker",
+      "from": "spring",
+      "to": "broker",
+      "label": "MQTT 명령",
+      "variant": "default"
+    },
+    {
+      "id": "broker-bridge",
+      "from": "broker",
+      "to": "bridge",
+      "label": "MQTT 명령/음성",
+      "variant": "default",
+      "labelAt": [
+        962,
+        360
+      ]
+    },
+    {
+      "id": "bridge-manager",
+      "from": "bridge",
+      "to": "manager",
+      "label": "ROS Command",
+      "variant": "default"
+    },
+    {
+      "id": "manager-bridge",
+      "from": "manager",
+      "to": "bridge",
+      "label": "ROS state/result",
+      "variant": "default"
+    },
+    {
+      "id": "vision-manager",
+      "from": "vision",
+      "to": "manager",
+      "label": "BoxTrack · LabelRead",
+      "variant": "default"
+    },
+    {
+      "id": "manager-servo",
+      "from": "manager",
+      "to": "servo",
+      "label": "Action goal",
+      "variant": "default",
+      "labelAt": [
+        688,
+        660
+      ]
+    },
+    {
+      "id": "servo-robot",
+      "from": "servo",
+      "to": "robot",
+      "label": "servo_cmd · Service 요청",
+      "variant": "default",
+      "labelAt": [
+        814,
+        860
+      ]
+    },
+    {
+      "id": "manager-robot",
+      "from": "manager",
+      "to": "robot",
+      "label": "이동/정지 요청",
+      "variant": "default"
+    },
+    {
+      "id": "robot-driver",
+      "from": "robot",
+      "to": "driver",
+      "label": "제어 요청",
+      "variant": "default",
+      "labelAt": [
+        962,
+        860
+      ]
+    },
+    {
+      "id": "manager-logger",
+      "from": "manager",
+      "to": "logger",
+      "label": "SortResult / PalletResult",
+      "variant": "default"
+    },
+    {
+      "id": "logger-postgres",
+      "from": "logger",
+      "to": "postgres",
+      "label": "SQL INSERT",
+      "variant": "default"
+    },
+    {
+      "id": "voice-ai",
+      "from": "voice",
+      "to": "ai",
+      "label": "AI HTTP 요청",
+      "variant": "default"
+    },
+    {
+      "id": "voice-manager",
+      "from": "voice",
+      "to": "manager",
+      "label": "Intent",
+      "variant": "default"
+    },
+    {
+      "id": "nginx-to-browser-return",
+      "from": "nginx",
+      "to": "browser",
+      "label": "HTML/REST 응답 · SSE",
+      "variant": "default"
+    },
+    {
+      "id": "spring-to-nginx-return",
+      "from": "spring",
+      "to": "nginx",
+      "label": "REST 응답 · SSE",
+      "variant": "default"
+    },
+    {
+      "id": "postgres-to-spring-return",
+      "from": "postgres",
+      "to": "spring",
+      "label": "SQL 결과",
+      "variant": "default"
+    },
+    {
+      "id": "broker-to-spring-return",
+      "from": "broker",
+      "to": "spring",
+      "label": "상태/결과/ACK",
+      "variant": "default"
+    },
+    {
+      "id": "bridge-to-broker-return",
+      "from": "bridge",
+      "to": "broker",
+      "label": "상태/결과/ACK",
+      "variant": "default"
+    },
+    {
+      "id": "servo-to-manager-return",
+      "from": "servo",
+      "to": "manager",
+      "label": "Action feedback/result",
+      "variant": "default"
+    },
+    {
+      "id": "robot-to-manager-return",
+      "from": "robot",
+      "to": "manager",
+      "label": "상태/Service 응답",
+      "variant": "default"
+    },
+    {
+      "id": "robot-to-servo-return",
+      "from": "robot",
+      "to": "servo",
+      "label": "pose/Service 응답",
+      "variant": "default",
+      "labelAt": [
+        836,
+        860
+      ]
+    },
+    {
+      "id": "ai-to-voice-return",
+      "from": "ai",
+      "to": "voice",
+      "label": "AI HTTP 응답",
+      "variant": "default"
+    },
+    {
+      "id": "driver-to-robot-return",
+      "from": "driver",
+      "to": "robot",
+      "label": "Service 응답/상태",
+      "variant": "default"
+    },
+    {
+      "id": "logger-to-manager-return",
+      "from": "logger",
+      "to": "manager",
+      "label": "로그 상태/조회 응답",
+      "variant": "default"
+    },
+    {
+      "id": "camera-vision",
+      "from": "camera",
+      "to": "vision",
+      "label": "컬러 영상",
+      "variant": "default",
+      "labelAt": [
+        189,
+        660
+      ]
+    },
+    {
+      "id": "camera-preview",
+      "from": "camera",
+      "to": "preview",
+      "label": "컬러 영상",
+      "variant": "default",
+      "labelAt": [
+        182,
+        660
+      ]
+    },
+    {
+      "id": "preview-browser",
+      "from": "preview",
+      "to": "browser",
+      "label": "HTTP 영상 · SSH -L",
+      "variant": "default"
+    },
+    {
+      "id": "browser-preview",
+      "from": "browser",
+      "to": "preview",
+      "label": "카메라 요청 · SSH -L",
+      "variant": "default",
+      "labelAt": [
+        68,
+        860
+      ]
+    },
+    {
+      "id": "usb-preview",
+      "from": "usb_camera",
+      "to": "preview",
+      "label": "USB 영상",
+      "variant": "default",
+      "labelAt": [
+        182,
+        952
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Web PC · runo-ros (서비스 실행)",
+      "wraps": [
+        "nginx",
+        "spring",
+        "postgres",
+        "broker",
+        "voice",
+        "ai"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Robot PC · ms-03 (ROS/비전 실행)",
+      "wraps": [
+        "camera",
+        "preview",
+        "vision",
+        "manager",
+        "bridge",
+        "logger",
+        "servo",
+        "robot",
+        "driver",
+        "usb_camera"
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "실행 경계",
+      "items": [
+        "Web PC: React/Nginx · Spring · PostgreSQL · Mosquitto · FastAPI · 음성 노드",
+        "Robot PC: ROS/비전/GPU OCR · 카메라 · sort_logger · hmi_bridge · Doosan bringup",
+        "SSH로 접속해 띄운 sort_logger·hmi_bridge·카메라 화면 서버도 Robot PC 프로세스"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "데이터 소유권",
+      "items": [
+        "Robot PC의 sort_logger가 SSH 역방향 터널로 Web PC DB에 기록",
+        "Spring이 session_plan을 기록하고 이력을 조회",
+        "AI 서비스는 음성 노드가 HTTP로 호출"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "화살표 읽는 법",
+      "items": [
+        "왕복 통신은 요청과 응답·피드백을 각각 반대 방향 화살표로 표시",
+        "ROS Topic은 발행자→구독자 단방향이며 역방향 발행이 실제 있는 경우에만 별도 화살표",
+        "MQTT 상태 경로는 Spring의 adapter가 활성화된 경우에만 동작",
+        "Web PC→Robot PC SSH -R: MQTT 1883 · AI 8000 · DB 5432; 카메라 화면은 SSH -L 8091/8092"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,282 @@
+{
+  "schema_version": 1,
+  "diagram_type": "erd",
+  "meta": {
+    "title": "VOSS PostgreSQL 데이터 모델",
+    "locale": "ko",
+    "output": "docs/architecture/03_erd.html",
+    "quality_profile": "standard",
+    "repository": {
+      "url": "https://github.com/lambdaramji/rokey_cobot2_VOSS.git",
+      "revision": "70463ef435b50b45d243823b6f7318789728d786",
+      "provider": "github",
+      "link_mode": "web"
+    },
+    "animation": "trace"
+  },
+  "entities": [
+    {
+      "id": "sort_log",
+      "label": "sort_log",
+      "tag": "분류 결과",
+      "row": 0,
+      "col": 0,
+      "attributes": [
+        {
+          "name": "box_id",
+          "type": "varchar(32) NOT NULL",
+          "key": "pk"
+        },
+        {
+          "name": "session_id",
+          "type": "varchar(24) NOT NULL"
+        },
+        {
+          "name": "track_id",
+          "type": "integer NULL"
+        },
+        {
+          "name": "code",
+          "type": "varchar(16) NOT NULL"
+        },
+        {
+          "name": "dong",
+          "type": "varchar(16) NOT NULL"
+        },
+        {
+          "name": "confidence",
+          "type": "real NULL"
+        },
+        {
+          "name": "decided_by",
+          "type": "varchar(8) NOT NULL"
+        },
+        {
+          "name": "zone",
+          "type": "varchar(8) NOT NULL"
+        },
+        {
+          "name": "result",
+          "type": "varchar(8) NOT NULL"
+        },
+        {
+          "name": "reason",
+          "type": "varchar(24) NOT NULL"
+        },
+        {
+          "name": "raw_text",
+          "type": "text NOT NULL"
+        },
+        {
+          "name": "second_region",
+          "type": "varchar(16) NOT NULL"
+        },
+        {
+          "name": "rule_version",
+          "type": "varchar(16) NOT NULL"
+        },
+        {
+          "name": "attempts",
+          "type": "smallint NOT NULL"
+        },
+        {
+          "name": "retries",
+          "type": "smallint NULL GENERATED"
+        },
+        {
+          "name": "started_at",
+          "type": "timestamptz NULL"
+        },
+        {
+          "name": "finished_at",
+          "type": "timestamptz NOT NULL"
+        },
+        {
+          "name": "inserted_at",
+          "type": "timestamptz NOT NULL"
+        },
+        {
+          "name": "slot",
+          "type": "smallint NULL"
+        }
+      ],
+      "sources": [
+        {
+          "path": "docker/db/init/01_schema.sql",
+          "line": 6,
+          "end_line": 26
+        }
+      ],
+      "width": 350
+    },
+    {
+      "id": "pallet_log",
+      "label": "pallet_log",
+      "tag": "팔레트 결과",
+      "row": 0,
+      "col": 1,
+      "attributes": [
+        {
+          "name": "run_id",
+          "type": "varchar(24) NOT NULL",
+          "key": "pk"
+        },
+        {
+          "name": "box_id",
+          "type": "varchar(32) NOT NULL",
+          "key": "pk"
+        },
+        {
+          "name": "session_id",
+          "type": "varchar(24) NOT NULL"
+        },
+        {
+          "name": "dong",
+          "type": "varchar(16) NOT NULL"
+        },
+        {
+          "name": "route_index",
+          "type": "smallint NOT NULL"
+        },
+        {
+          "name": "zone",
+          "type": "varchar(8) NOT NULL"
+        },
+        {
+          "name": "slot",
+          "type": "smallint NOT NULL"
+        },
+        {
+          "name": "pallet_slot",
+          "type": "smallint NULL"
+        },
+        {
+          "name": "pallet_col",
+          "type": "smallint NULL"
+        },
+        {
+          "name": "pallet_lane",
+          "type": "smallint NULL"
+        },
+        {
+          "name": "pallet_layer",
+          "type": "smallint NULL"
+        },
+        {
+          "name": "result",
+          "type": "varchar(8) NOT NULL"
+        },
+        {
+          "name": "reason",
+          "type": "varchar(24) NOT NULL"
+        },
+        {
+          "name": "attempts",
+          "type": "smallint NOT NULL"
+        },
+        {
+          "name": "finished_at",
+          "type": "timestamptz NOT NULL"
+        },
+        {
+          "name": "inserted_at",
+          "type": "timestamptz NOT NULL"
+        }
+      ],
+      "sources": [
+        {
+          "path": "docker/db/init/01_schema.sql",
+          "line": 32,
+          "end_line": 50
+        }
+      ],
+      "width": 350
+    },
+    {
+      "id": "session_plan",
+      "label": "session_plan",
+      "tag": "세션 계획",
+      "row": 1,
+      "col": 0,
+      "attributes": [
+        {
+          "name": "session_id",
+          "type": "varchar(24) NOT NULL",
+          "key": "pk"
+        },
+        {
+          "name": "planned",
+          "type": "integer NOT NULL"
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamptz NOT NULL"
+        }
+      ],
+      "sources": [
+        {
+          "path": "docker/db/init/01_schema.sql",
+          "line": 55,
+          "end_line": 59
+        }
+      ],
+      "width": 350
+    }
+  ],
+  "relationships": [
+    {
+      "id": "sort-pallet-box",
+      "from": "sort_log",
+      "to": "pallet_log",
+      "fromCardinality": "one",
+      "fromOptional": true,
+      "toCardinality": "many",
+      "toOptional": true,
+      "identifying": false,
+      "label": "box_id"
+    },
+    {
+      "id": "plan-sort-session",
+      "from": "session_plan",
+      "to": "sort_log",
+      "fromCardinality": "one",
+      "fromOptional": true,
+      "toCardinality": "many",
+      "toOptional": true,
+      "identifying": false,
+      "label": "session_id"
+    },
+    {
+      "id": "plan-pallet-session",
+      "from": "session_plan",
+      "to": "pallet_log",
+      "fromCardinality": "one",
+      "fromOptional": true,
+      "toCardinality": "many",
+      "toOptional": true,
+      "identifying": false,
+      "label": "session_id"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "논리 관계",
+      "items": [
+        "점선은 값 기준 논리 연관을 나타낸다",
+        "sort_log.box_id ↔ pallet_log.box_id: 적재 행 기준 0..1 분류 행, 분류 행 기준 0..N 적재 행",
+        "session_plan.session_id ↔ sort_log/pallet_log.session_id: 결과 행 기준 0..1 계획 행, 계획 행 기준 0..N 결과 행",
+        "누락·지연 기록이 있을 수 있어 관계 최소값은 0이다"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "제약",
+      "items": [
+        "sort_log.box_id PK; pallet_log (run_id, box_id) 복합 PK; session_plan.session_id PK",
+        "CHECK와 DEFAULT 상세는 docker/db/init/01_schema.sql 참조",
+        "실행 DB에 migration 적용 여부는 미검증"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "results": [
+    {
+      "name": "01_system",
+      "motion": "live",
+      "ambient": "running",
+      "flowCount": 192,
+      "flowAnimation": "archify-relay-wake-0",
+      "flowState": "running",
+      "errors": []
+    },
+    {
+      "name": "02_ros2",
+      "motion": "live",
+      "ambient": "running",
+      "flowCount": 126,
+      "flowAnimation": "archify-relay-wake-0",
+      "flowState": "running",
+      "errors": []
+    },
+    {
+      "name": "03_erd",
+      "motion": "live",
+      "ambient": "running",
+      "flowCount": 18,
+      "flowAnimation": "archify-relay-wake-0",
+      "flowState": "running",
+      "errors": []
+    },
+    {
+      "name": "04_flow",
+      "motion": "live",
+      "ambient": "running",
+      "flowCount": 132,
+      "flowAnimation": "archify-relay-wake-0",
+      "flowState": "running",
+      "errors": []
+    }
+  ],
+  "toggle": {
+    "still": "still",
+    "stillAfterReload": "still",
+    "liveAfterReload": "live"
+  },
+  "reducedState": {
+    "mode": "still",
+    "buttonDisabled": true
+  },
+  "wrapperMode": "live",
+  "erdWrapperMode": "live"
+}

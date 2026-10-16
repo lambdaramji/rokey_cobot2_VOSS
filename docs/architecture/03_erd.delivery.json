@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "352a7adb-1393-4351-82b0-3066b7a463a0",
+  "status": "current",
+  "command": "deliver",
+  "type": "erd",
+  "input": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/data/03_erd.json",
+  "output": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/03_erd.html",
+  "specification": {
+    "sha256": "a483caa6c6f92ef6c068d0fdbe69fb8a6a3f02db60615eec85e7ffe1e9c10e20",
+    "bytes": 6625
+  },
+  "artifact": {
+    "sha256": "4b33fc62903d7fe095a5a6d2bddc5ff5dfe4cabcbfddffcba6b5749d94185ee3",
+    "bytes": 837793
+  }
+}

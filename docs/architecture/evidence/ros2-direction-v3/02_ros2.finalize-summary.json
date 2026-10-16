@@ -1,0 +1,305 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "architecture",
+  "quality": "standard",
+  "specification": {
+    "path": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/data/02_ros2.json",
+    "sha256": "4964cf873036536aec9adf6c92d91cf2d2f13d5809145f42aabb3aa9b5d11033",
+    "bytes": 10208
+  },
+  "artifact": {
+    "path": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/02_ros2.html",
+    "sha256": "f490c764d083d9a93825e7eae0515f9fde36304b24c84f91ca77c0ad05318beb",
+    "bytes": 848819
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/evidence/ros2-direction-v3/02_ros2.finalize.json",
+    "summaryReceipt": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/evidence/ros2-direction-v3/02_ros2.finalize-summary.json",
+    "browserCheckReceipt": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/evidence/ros2-direction-v3/02_ros2.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.1.0",
+    "availableVersion": "3.1.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-10-16T02:10:42.521Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 2439,
+  "visualReviewRecommendation": {
+    "action": "inspect-route-readability",
+    "signals": {
+      "resolvedCrossovers": 5,
+      "routesOverSuggestedBends": 7,
+      "routesOverSuggestedStretch": 3
+    },
+    "reason": "Automated gates passed, but crossings or detours still need perceptual review before claiming visual quality.",
+    "affectedRoutes": {
+      "crossings": [
+        {
+          "left": {
+            "id": "servo-gateway",
+            "from": "servo",
+            "to": "gateway",
+            "label": "servo_cmd + srv 요청",
+            "collectionIndex": 6,
+            "artifactIndex": 7
+          },
+          "right": {
+            "id": "manager-bridge",
+            "from": "manager",
+            "to": "bridge",
+            "label": "State/Result + 응답",
+            "collectionIndex": 12,
+            "artifactIndex": 13
+          },
+          "point": [
+            1037,
+            298
+          ]
+        },
+        {
+          "left": {
+            "id": "servo-gateway",
+            "from": "servo",
+            "to": "gateway",
+            "label": "servo_cmd + srv 요청",
+            "collectionIndex": 6,
+            "artifactIndex": 7
+          },
+          "right": {
+            "id": "bridge-manager",
+            "from": "bridge",
+            "to": "manager",
+            "label": "Command 요청",
+            "collectionIndex": 13,
+            "artifactIndex": 14
+          },
+          "point": [
+            983,
+            298
+          ]
+        },
+        {
+          "left": {
+            "id": "gateway-servo",
+            "from": "gateway",
+            "to": "servo",
+            "label": "pose + srv 응답",
+            "collectionIndex": 7,
+            "artifactIndex": 8
+          },
+          "right": {
+            "id": "manager-bridge",
+            "from": "manager",
+            "to": "bridge",
+            "label": "State/Result + 응답",
+            "collectionIndex": 12,
+            "artifactIndex": 13
+          },
+          "point": [
+            1037,
+            298
+          ]
+        },
+        {
+          "left": {
+            "id": "gateway-servo",
+            "from": "gateway",
+            "to": "servo",
+            "label": "pose + srv 응답",
+            "collectionIndex": 7,
+            "artifactIndex": 8
+          },
+          "right": {
+            "id": "bridge-manager",
+            "from": "bridge",
+            "to": "manager",
+            "label": "Command 요청",
+            "collectionIndex": 13,
+            "artifactIndex": 14
+          },
+          "point": [
+            983,
+            298
+          ]
+        },
+        {
+          "left": {
+            "id": "manager-gateway",
+            "from": "manager",
+            "to": "gateway",
+            "label": "MoveToZone/stop 요청",
+            "collectionIndex": 8,
+            "artifactIndex": 9
+          },
+          "right": {
+            "id": "gateway-manager",
+            "from": "gateway",
+            "to": "manager",
+            "label": "Pose/State + 응답",
+            "collectionIndex": 9,
+            "artifactIndex": 10
+          },
+          "point": [
+            1004,
+            115.15384615384616
+          ],
+          "sharedNode": "manager"
+        }
+      ],
+      "detours": [
+        {
+          "relationship": {
+            "id": "tracker-manager",
+            "from": "tracker",
+            "to": "manager",
+            "label": "BoxTrack",
+            "collectionIndex": 2,
+            "artifactIndex": 3
+          },
+          "bends": 4,
+          "stretch": 1.265,
+          "directCorridorBlockers": [
+            {
+              "id": "reader",
+              "label": "label_reader",
+              "box": [
+                540,
+                70,
+                190,
+                76
+              ]
+            }
+          ]
+        },
+        {
+          "relationship": {
+            "id": "manager-logger",
+            "from": "manager",
+            "to": "logger",
+            "label": "Sort/PalletResult",
+            "collectionIndex": 11,
+            "artifactIndex": 12
+          },
+          "bends": 6,
+          "stretch": 1.63,
+          "directCorridorBlockers": [
+            {
+              "id": "servo",
+              "label": "belt_servo",
+              "box": [
+                790,
+                260,
+                190,
+                76
+              ]
+            }
+          ]
+        },
+        {
+          "relationship": {
+            "id": "manager-bridge",
+            "from": "manager",
+            "to": "bridge",
+            "label": "State/Result + 응답",
+            "collectionIndex": 12,
+            "artifactIndex": 13
+          },
+          "bends": 4,
+          "stretch": 1
+        },
+        {
+          "relationship": {
+            "id": "bridge-manager",
+            "from": "bridge",
+            "to": "manager",
+            "label": "Command 요청",
+            "collectionIndex": 13,
+            "artifactIndex": 14
+          },
+          "bends": 4,
+          "stretch": 1
+        },
+        {
+          "relationship": {
+            "id": "parser-speech",
+            "from": "parser",
+            "to": "speech",
+            "label": "/voss/voice/say",
+            "collectionIndex": 17,
+            "artifactIndex": 18
+          },
+          "bends": 3,
+          "stretch": 1.268
+        },
+        {
+          "relationship": {
+            "id": "servo-to-manager-return",
+            "from": "servo",
+            "to": "manager",
+            "label": "Feedback/Result",
+            "collectionIndex": 18,
+            "artifactIndex": 19
+          },
+          "bends": 4,
+          "stretch": 1.463
+        },
+        {
+          "relationship": {
+            "id": "logger-to-manager-return",
+            "from": "logger",
+            "to": "manager",
+            "label": "Log status + 조회 응답",
+            "collectionIndex": 19,
+            "artifactIndex": 20
+          },
+          "bends": 6,
+          "stretch": 1.645,
+          "directCorridorBlockers": [
+            {
+              "id": "servo",
+              "label": "belt_servo",
+              "box": [
+                790,
+                260,
+                190,
+                76
+              ]
+            }
+          ]
+        }
+      ],
+      "truncated": false
+    },
+    "hints": [
+      "servo → gateway crosses manager → bridge: move the node of whichever is a branch, return, or second entrance to the other side of the main path, so that relationship runs through an empty corridor.",
+      "servo → gateway crosses bridge → manager: move the node of whichever is a branch, return, or second entrance to the other side of the main path, so that relationship runs through an empty corridor.",
+      "gateway → servo crosses manager → bridge: move the node of whichever is a branch, return, or second entrance to the other side of the main path, so that relationship runs through an empty corridor.",
+      "gateway → servo crosses bridge → manager: move the node of whichever is a branch, return, or second entrance to the other side of the main path, so that relationship runs through an empty corridor.",
+      "manager → gateway and gateway → manager cross next to manager: move node gateway or gateway so the two reach manager from different sides (for example one level with it, one directly above or below it).",
+      "manager → bridge needs 4 bends: move node manager or bridge so they share a row or column with matching centers, or sit diagonally with a clear corner.",
+      "bridge → manager needs 4 bends: move node bridge or manager so they share a row or column with matching centers, or sit diagonally with a clear corner.",
+      "parser → speech needs 3 bends: move node parser or speech so they share a row or column with matching centers, or sit diagonally with a clear corner."
+    ],
+    "repair": "Trace these relationships at the desktop viewport. For Architecture, use references/architecture-layout-repair.md: reflow a blocked main path or tangled connected scene, and repair an isolated defect locally only when the surrounding composition is accepted. Preserve all semantic content and user-fixed geometry. Rerun finalize once after the edit."
+  }
+}

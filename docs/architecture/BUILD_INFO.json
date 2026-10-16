@@ -1,0 +1,36 @@
+{
+  "project_branch": "webpc-freezing-16thOct",
+  "project_commit": "70463ef435b50b45d243823b6f7318789728d786",
+  "archify_version": "3.1.0",
+  "archify_commit": "f8021f7eee6870a552bbad3373cf6bad32c80f37",
+  "generated_at": "2026-10-16T11:39:26+09:00",
+  "renderer_by_diagram": {
+    "01_system": "official architecture",
+    "02_ros2": "official architecture",
+    "03_erd": "official erd",
+    "04_flow": "architecture + VOSS flow shape extension"
+  },
+  "archify_renderer_patched": true,
+  "viewer_patched": true,
+  "wrapper_created": true,
+  "svg_png_method": "Archify HTML inline SVG + CSS; standalone SVG; Chrome screenshot PNG",
+  "project_runtime_source_modified": false,
+  "documentation_added_under": "docs/architecture",
+  "source_status_before_work": "clean",
+  "public_deployed": false,
+  "github_pushed": false,
+  "reference": {
+    "project": "Weld-Made docs/architecture",
+    "archify_version": "3.0.1",
+    "archify_commit": "bb6f126f1748a4079df1d263302466eb4333e3b0",
+    "compatibility_note": "3.1.0 official erd renderer replaces 3.0.1 extension; 3.0.1 patch not applied"
+  },
+  "direction_revision": "Bidirectional request/response, MQTT command/status, ROS Service and Action feedback edges added to 01_system and 02_ros2",
+  "deployment_revision": "Web PC / Robot PC process boundaries corrected from user 2026-10-16 Robot PC command log and 2026-10-14 Web PC Notion runbook; SSH launch origin distinguished from process host",
+  "deployment_evidence_url": "https://app.notion.com/p/3f9fe8937ec38184a945ced25f041bf1",
+  "deployment_log_commit": "fe11ded",
+  "viewer_patch": "Archify 3.1.0 template defaults to Live motion, persists Still/Live choice; architecture renderer supports flowchart shapes for 04_flow",
+  "renderer_patch_path": "docs/architecture/renderer-extension/archify-voss-ui-shapes.patch",
+  "renderer_patch_sha256": "4464843b56b725cb98979c3842f1c77e7490ed96525cdd052052d4ebbe2aac65",
+  "erd_relation_revision": "Three dashed logical links with 0..1 to 0..N cardinality and concise column labels"
+}

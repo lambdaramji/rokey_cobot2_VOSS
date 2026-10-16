@@ -1,0 +1,258 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "architecture",
+  "quality": "standard",
+  "specification": {
+    "path": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/data/01_system.json",
+    "sha256": "2251211c09c80264f92e0ca84be5bb5874c1e899158ede15d86e641aa4566037",
+    "bytes": 14483
+  },
+  "artifact": {
+    "path": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/01_system.html",
+    "sha256": "73b82cca27645302d4635233a3ed9190b0805a6fd4367aa8fab7ce997ef98511",
+    "bytes": 871325
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/evidence/system-pc-boundary-v4/01_system.finalize.json",
+    "summaryReceipt": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/evidence/system-pc-boundary-v4/01_system.finalize-summary.json",
+    "browserCheckReceipt": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/evidence/system-pc-boundary-v4/01_system.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.1.0",
+    "availableVersion": "3.1.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-10-16T02:10:42.521Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 2436,
+  "visualReviewRecommendation": {
+    "action": "inspect-route-readability",
+    "signals": {
+      "resolvedCrossovers": 5,
+      "routesOverSuggestedBends": 6
+    },
+    "reason": "Automated gates passed, but crossings or detours still need perceptual review before claiming visual quality.",
+    "affectedRoutes": {
+      "crossings": [
+        {
+          "left": {
+            "id": "spring-broker",
+            "from": "spring",
+            "to": "broker",
+            "label": "MQTT 명령",
+            "collectionIndex": 3,
+            "artifactIndex": 4
+          },
+          "right": {
+            "id": "broker-to-spring-return",
+            "from": "broker",
+            "to": "spring",
+            "label": "상태/결과/ACK",
+            "collectionIndex": 19,
+            "artifactIndex": 20
+          },
+          "point": [
+            825,
+            180
+          ],
+          "sharedNode": "spring"
+        },
+        {
+          "left": {
+            "id": "manager-robot",
+            "from": "manager",
+            "to": "robot",
+            "label": "이동/정지 요청",
+            "collectionIndex": 10,
+            "artifactIndex": 11
+          },
+          "right": {
+            "id": "robot-to-manager-return",
+            "from": "robot",
+            "to": "manager",
+            "label": "상태/Service 응답",
+            "collectionIndex": 22,
+            "artifactIndex": 23
+          },
+          "point": [
+            825,
+            629
+          ],
+          "sharedNode": "manager"
+        },
+        {
+          "left": {
+            "id": "robot-driver",
+            "from": "robot",
+            "to": "driver",
+            "label": "제어 요청",
+            "collectionIndex": 11,
+            "artifactIndex": 12
+          },
+          "right": {
+            "id": "logger-postgres",
+            "from": "logger",
+            "to": "postgres",
+            "label": "SQL INSERT",
+            "collectionIndex": 13,
+            "artifactIndex": 14
+          },
+          "point": [
+            955,
+            870
+          ]
+        },
+        {
+          "left": {
+            "id": "manager-logger",
+            "from": "manager",
+            "to": "logger",
+            "label": "SortResult / PalletResult",
+            "collectionIndex": 12,
+            "artifactIndex": 13
+          },
+          "right": {
+            "id": "logger-to-manager-return",
+            "from": "logger",
+            "to": "manager",
+            "label": "로그 상태/조회 응답",
+            "collectionIndex": 26,
+            "artifactIndex": 27
+          },
+          "point": [
+            576,
+            622
+          ],
+          "sharedNode": "manager"
+        },
+        {
+          "left": {
+            "id": "logger-postgres",
+            "from": "logger",
+            "to": "postgres",
+            "label": "SQL INSERT",
+            "collectionIndex": 13,
+            "artifactIndex": 14
+          },
+          "right": {
+            "id": "driver-to-robot-return",
+            "from": "driver",
+            "to": "robot",
+            "label": "Service 응답/상태",
+            "collectionIndex": 25,
+            "artifactIndex": 26
+          },
+          "point": [
+            955,
+            870
+          ]
+        }
+      ],
+      "detours": [
+        {
+          "relationship": {
+            "id": "nginx-spring",
+            "from": "nginx",
+            "to": "spring",
+            "label": "REST 요청 · SSE 연결",
+            "collectionIndex": 1,
+            "artifactIndex": 2
+          },
+          "bends": 3,
+          "stretch": 1.245
+        },
+        {
+          "relationship": {
+            "id": "vision-manager",
+            "from": "vision",
+            "to": "manager",
+            "label": "BoxTrack · LabelRead",
+            "collectionIndex": 7,
+            "artifactIndex": 8
+          },
+          "bends": 3,
+          "stretch": 1.254
+        },
+        {
+          "relationship": {
+            "id": "logger-postgres",
+            "from": "logger",
+            "to": "postgres",
+            "label": "SQL INSERT",
+            "collectionIndex": 13,
+            "artifactIndex": 14
+          },
+          "bends": 3,
+          "stretch": 1.071
+        },
+        {
+          "relationship": {
+            "id": "spring-to-nginx-return",
+            "from": "spring",
+            "to": "nginx",
+            "label": "REST 응답 · SSE",
+            "collectionIndex": 17,
+            "artifactIndex": 18
+          },
+          "bends": 3,
+          "stretch": 1.264
+        },
+        {
+          "relationship": {
+            "id": "broker-to-spring-return",
+            "from": "broker",
+            "to": "spring",
+            "label": "상태/결과/ACK",
+            "collectionIndex": 19,
+            "artifactIndex": 20
+          },
+          "bends": 3,
+          "stretch": 1
+        },
+        {
+          "relationship": {
+            "id": "browser-preview",
+            "from": "browser",
+            "to": "preview",
+            "label": "카메라 요청 · SSH -L",
+            "collectionIndex": 30,
+            "artifactIndex": 31
+          },
+          "bends": 4,
+          "stretch": 1.235
+        }
+      ],
+      "truncated": false
+    },
+    "hints": [
+      "spring → broker and broker → spring cross next to spring: move node broker or broker so the two reach spring from different sides (for example one level with it, one directly above or below it).",
+      "manager → robot and robot → manager cross next to manager: move node robot or robot so the two reach manager from different sides (for example one level with it, one directly above or below it).",
+      "robot → driver crosses logger → postgres: move the node of whichever is a branch, return, or second entrance to the other side of the main path, so that relationship runs through an empty corridor.",
+      "manager → logger and logger → manager cross next to manager: move node logger or logger so the two reach manager from different sides (for example one level with it, one directly above or below it).",
+      "logger → postgres crosses driver → robot: move the node of whichever is a branch, return, or second entrance to the other side of the main path, so that relationship runs through an empty corridor.",
+      "nginx → spring needs 3 bends: move node nginx or spring so they share a row or column with matching centers, or sit diagonally with a clear corner.",
+      "vision → manager needs 3 bends: move node vision or manager so they share a row or column with matching centers, or sit diagonally with a clear corner.",
+      "logger → postgres needs 3 bends: move node logger or postgres so they share a row or column with matching centers, or sit diagonally with a clear corner."
+    ],
+    "repair": "Trace these relationships at the desktop viewport. For Architecture, use references/architecture-layout-repair.md: reflow a blocked main path or tangled connected scene, and repair an isolated defect locally only when the surrounding composition is accepted. Preserve all semantic content and user-fixed geometry. Rerun finalize once after the edit."
+  }
+}

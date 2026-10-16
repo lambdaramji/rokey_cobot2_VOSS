@@ -1,0 +1,3074 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "architecture",
+  "quality": "standard",
+  "startedAt": "2026-10-16T02:29:32.988Z",
+  "specification": {
+    "path": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/data/01_system.json",
+    "sha256": "2251211c09c80264f92e0ca84be5bb5874c1e899158ede15d86e641aa4566037",
+    "bytes": 14483
+  },
+  "artifact": {
+    "path": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/01_system.html",
+    "sha256": "73b82cca27645302d4635233a3ed9190b0805a6fd4367aa8fab7ce997ef98511",
+    "bytes": 871325
+  },
+  "stages": {
+    "validate": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": null,
+      "execution": "embedded-in-deliver",
+      "command": [
+        "/home/runo/.nvm/versions/node/v24.18.0/bin/node",
+        "/tmp/voss-archify/archify/bin/archify.mjs",
+        "deliver",
+        "architecture",
+        "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/data/01_system.json",
+        "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/01_system.html",
+        "--quality",
+        "standard",
+        "--repo-root",
+        "/home/runo/collaboration/rokey_cobot2_VOSS_2",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": true,
+        "command": "validate",
+        "specification": {
+          "sha256": "2251211c09c80264f92e0ca84be5bb5874c1e899158ede15d86e641aa4566037",
+          "bytes": 14483
+        },
+        "validation": {
+          "checksPassed": 9,
+          "checkCount": 9,
+          "compositionProfile": "standard",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 16,
+          "compositionIssues": [
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "MQTT 명령",
+              "labelRelationship": {
+                "id": "spring-broker",
+                "from": "spring",
+                "to": "broker",
+                "label": "MQTT 명령",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "broker-to-spring-return",
+                "from": "broker",
+                "to": "spring",
+                "label": "상태/결과/ACK",
+                "collectionIndex": 19,
+                "artifactIndex": 20
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 798.4,
+                "y": 207,
+                "width": 53.2,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                836,
+                301
+              ],
+              "to": [
+                836,
+                180
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "MQTT 명령/음성",
+              "labelRelationship": {
+                "id": "broker-bridge",
+                "from": "broker",
+                "to": "bridge",
+                "label": "MQTT 명령/음성",
+                "collectionIndex": 4,
+                "artifactIndex": 5
+              },
+              "otherRelationship": {
+                "id": "bridge-to-broker-return",
+                "from": "bridge",
+                "to": "broker",
+                "label": "상태/결과/ACK",
+                "collectionIndex": 20,
+                "artifactIndex": 21
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 923.4,
+                "y": 350,
+                "width": 77.2,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                955,
+                570
+              ],
+              "to": [
+                955,
+                346
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "Action goal",
+              "labelRelationship": {
+                "id": "manager-servo",
+                "from": "manager",
+                "to": "servo",
+                "label": "Action goal",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "otherRelationship": {
+                "id": "servo-to-manager-return",
+                "from": "servo",
+                "to": "manager",
+                "label": "Action feedback/result",
+                "collectionIndex": 21,
+                "artifactIndex": 22
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 656.6,
+                "y": 650,
+                "width": 62.8,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                695,
+                770
+              ],
+              "to": [
+                695,
+                646
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "이동/정지 요청",
+              "labelRelationship": {
+                "id": "manager-robot",
+                "from": "manager",
+                "to": "robot",
+                "label": "이동/정지 요청",
+                "collectionIndex": 10,
+                "artifactIndex": 11
+              },
+              "otherRelationship": {
+                "id": "robot-to-manager-return",
+                "from": "robot",
+                "to": "manager",
+                "label": "상태/Service 응답",
+                "collectionIndex": 22,
+                "artifactIndex": 23
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 786.4,
+                "y": 688,
+                "width": 77.2,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                836,
+                815
+              ],
+              "to": [
+                836,
+                629
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "제어 요청",
+              "labelRelationship": {
+                "id": "robot-driver",
+                "from": "robot",
+                "to": "driver",
+                "label": "제어 요청",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "otherRelationship": {
+                "id": "driver-to-robot-return",
+                "from": "driver",
+                "to": "robot",
+                "label": "Service 응답/상태",
+                "collectionIndex": 25,
+                "artifactIndex": 26
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 935.4,
+                "y": 850,
+                "width": 53.2,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                955,
+                970
+              ],
+              "to": [
+                955,
+                846
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "SortResult / PalletResult",
+              "labelRelationship": {
+                "id": "manager-logger",
+                "from": "manager",
+                "to": "logger",
+                "label": "SortResult / PalletResult",
+                "collectionIndex": 12,
+                "artifactIndex": 13
+              },
+              "otherRelationship": {
+                "id": "logger-to-manager-return",
+                "from": "logger",
+                "to": "manager",
+                "label": "로그 상태/조회 응답",
+                "collectionIndex": 26,
+                "artifactIndex": 27
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 500,
+                "y": 698.5,
+                "width": 130,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                576,
+                801
+              ],
+              "to": [
+                576,
+                608
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "HTML/REST 응답 · SSE",
+              "labelRelationship": {
+                "id": "nginx-to-browser-return",
+                "from": "nginx",
+                "to": "browser",
+                "label": "HTML/REST 응답 · SSE",
+                "collectionIndex": 16,
+                "artifactIndex": 17
+              },
+              "otherRelationship": {
+                "id": "browser-nginx",
+                "from": "browser",
+                "to": "nginx",
+                "label": "HTTP 요청",
+                "collectionIndex": 0,
+                "artifactIndex": 1
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 232,
+                "y": 105,
+                "width": 106,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 106,
+              "threshold": 2,
+              "from": [
+                230,
+                111
+              ],
+              "to": [
+                340,
+                111
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "상태/결과/ACK",
+              "labelRelationship": {
+                "id": "broker-to-spring-return",
+                "from": "broker",
+                "to": "spring",
+                "label": "상태/결과/ACK",
+                "collectionIndex": 19,
+                "artifactIndex": 20
+              },
+              "otherRelationship": {
+                "id": "spring-broker",
+                "from": "spring",
+                "to": "broker",
+                "label": "MQTT 명령",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 799.8,
+                "y": 220.5,
+                "width": 72.4,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                825,
+                139
+              ],
+              "to": [
+                825,
+                315
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "상태/결과/ACK",
+              "labelRelationship": {
+                "id": "bridge-to-broker-return",
+                "from": "bridge",
+                "to": "broker",
+                "label": "상태/결과/ACK",
+                "collectionIndex": 20,
+                "artifactIndex": 21
+              },
+              "otherRelationship": {
+                "id": "broker-bridge",
+                "from": "broker",
+                "to": "bridge",
+                "label": "MQTT 명령/음성",
+                "collectionIndex": 4,
+                "artifactIndex": 5
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 918.8,
+                "y": 550,
+                "width": 72.4,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                955,
+                346
+              ],
+              "to": [
+                955,
+                570
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "상태/결과/ACK",
+              "labelRelationship": {
+                "id": "bridge-to-broker-return",
+                "from": "bridge",
+                "to": "broker",
+                "label": "상태/결과/ACK",
+                "collectionIndex": 20,
+                "artifactIndex": 21
+              },
+              "otherRelationship": {
+                "id": "manager-bridge",
+                "from": "manager",
+                "to": "bridge",
+                "label": "ROS state/result",
+                "collectionIndex": 6,
+                "artifactIndex": 7
+              },
+              "segmentIndex": 2,
+              "labelRect": {
+                "x": 918.8,
+                "y": 550,
+                "width": 72.4,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                941,
+                546
+              ],
+              "to": [
+                941,
+                570
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "Action feedback/result",
+              "labelRelationship": {
+                "id": "servo-to-manager-return",
+                "from": "servo",
+                "to": "manager",
+                "label": "Action feedback/result",
+                "collectionIndex": 21,
+                "artifactIndex": 22
+              },
+              "otherRelationship": {
+                "id": "manager-servo",
+                "from": "manager",
+                "to": "servo",
+                "label": "Action goal",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 637.2,
+                "y": 750,
+                "width": 115.6,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                695,
+                646
+              ],
+              "to": [
+                695,
+                770
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "상태/Service 응답",
+              "labelRelationship": {
+                "id": "robot-to-manager-return",
+                "from": "robot",
+                "to": "manager",
+                "label": "상태/Service 응답",
+                "collectionIndex": 22,
+                "artifactIndex": 23
+              },
+              "otherRelationship": {
+                "id": "manager-robot",
+                "from": "manager",
+                "to": "robot",
+                "label": "이동/정지 요청",
+                "collectionIndex": 10,
+                "artifactIndex": 11
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 790.2,
+                "y": 702,
+                "width": 91.6,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                825,
+                615
+              ],
+              "to": [
+                825,
+                801
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "Service 응답/상태",
+              "labelRelationship": {
+                "id": "driver-to-robot-return",
+                "from": "driver",
+                "to": "robot",
+                "label": "Service 응답/상태",
+                "collectionIndex": 25,
+                "artifactIndex": 26
+              },
+              "otherRelationship": {
+                "id": "robot-driver",
+                "from": "robot",
+                "to": "driver",
+                "label": "제어 요청",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 909.2,
+                "y": 950,
+                "width": 91.6,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                955,
+                846
+              ],
+              "to": [
+                955,
+                970
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "로그 상태/조회 응답",
+              "labelRelationship": {
+                "id": "logger-to-manager-return",
+                "from": "logger",
+                "to": "manager",
+                "label": "로그 상태/조회 응답",
+                "collectionIndex": 26,
+                "artifactIndex": 27
+              },
+              "otherRelationship": {
+                "id": "manager-logger",
+                "from": "manager",
+                "to": "logger",
+                "label": "SortResult / PalletResult",
+                "collectionIndex": 12,
+                "artifactIndex": 13
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 525.4,
+                "y": 684.5,
+                "width": 101.2,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                565,
+                622
+              ],
+              "to": [
+                565,
+                815
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "컬러 영상",
+              "labelRelationship": {
+                "id": "camera-vision",
+                "from": "camera",
+                "to": "vision",
+                "label": "컬러 영상",
+                "collectionIndex": 27,
+                "artifactIndex": 28
+              },
+              "otherRelationship": {
+                "id": "camera-preview",
+                "from": "camera",
+                "to": "preview",
+                "label": "컬러 영상",
+                "collectionIndex": 28,
+                "artifactIndex": 29
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 162.4,
+                "y": 650,
+                "width": 53.2,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                175,
+                646
+              ],
+              "to": [
+                175,
+                770
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-canvas-containment",
+              "label": "HTTP 영상 · SSH -L",
+              "relationship": {
+                "id": "preview-browser",
+                "from": "preview",
+                "to": "browser",
+                "label": "HTTP 영상 · SSH -L",
+                "collectionIndex": 29,
+                "artifactIndex": 30
+              },
+              "labelRect": {
+                "x": -32.2,
+                "y": 443,
+                "width": 96.4,
+                "height": 14
+              },
+              "viewBox": [
+                1120,
+                1134
+              ],
+              "viewBoxOrigin": [
+                0,
+                0
+              ],
+              "overflowPx": {
+                "left": 32.2
+              },
+              "detail": "[composition/label-canvas-containment] standard label \"HTTP 영상 · SSH -L\" on relationship id \"preview-browser\" (\"preview\" -> \"browser\") extends past the left edge by 32.2px (label rect [-32, 443, 96, 14]; viewBox 1120x1134) — use renderer-supported label controls (shorten the label or reorder participants for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or enlarge meta.viewBox."
+            }
+          ]
+        }
+      }
+    },
+    "deliver": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 460,
+      "command": [
+        "/home/runo/.nvm/versions/node/v24.18.0/bin/node",
+        "/tmp/voss-archify/archify/bin/archify.mjs",
+        "deliver",
+        "architecture",
+        "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/data/01_system.json",
+        "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/01_system.html",
+        "--quality",
+        "standard",
+        "--repo-root",
+        "/home/runo/collaboration/rokey_cobot2_VOSS_2",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "receiptId": "157a7f16-e075-4dee-a28e-65c91a20f547",
+        "ok": true,
+        "command": "deliver",
+        "type": "architecture",
+        "input": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/data/01_system.json",
+        "output": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/01_system.html",
+        "specification": {
+          "sha256": "2251211c09c80264f92e0ca84be5bb5874c1e899158ede15d86e641aa4566037",
+          "bytes": 14483
+        },
+        "artifact": {
+          "sha256": "73b82cca27645302d4635233a3ed9190b0805a6fd4367aa8fab7ce997ef98511",
+          "bytes": 871325
+        },
+        "validation": {
+          "checksPassed": 9,
+          "checkCount": 9,
+          "compositionProfile": "standard",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 16,
+          "compositionIssues": [
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "MQTT 명령",
+              "labelRelationship": {
+                "id": "spring-broker",
+                "from": "spring",
+                "to": "broker",
+                "label": "MQTT 명령",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "broker-to-spring-return",
+                "from": "broker",
+                "to": "spring",
+                "label": "상태/결과/ACK",
+                "collectionIndex": 19,
+                "artifactIndex": 20
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 798.4,
+                "y": 207,
+                "width": 53.2,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                836,
+                301
+              ],
+              "to": [
+                836,
+                180
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "MQTT 명령/음성",
+              "labelRelationship": {
+                "id": "broker-bridge",
+                "from": "broker",
+                "to": "bridge",
+                "label": "MQTT 명령/음성",
+                "collectionIndex": 4,
+                "artifactIndex": 5
+              },
+              "otherRelationship": {
+                "id": "bridge-to-broker-return",
+                "from": "bridge",
+                "to": "broker",
+                "label": "상태/결과/ACK",
+                "collectionIndex": 20,
+                "artifactIndex": 21
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 923.4,
+                "y": 350,
+                "width": 77.2,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                955,
+                570
+              ],
+              "to": [
+                955,
+                346
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "Action goal",
+              "labelRelationship": {
+                "id": "manager-servo",
+                "from": "manager",
+                "to": "servo",
+                "label": "Action goal",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "otherRelationship": {
+                "id": "servo-to-manager-return",
+                "from": "servo",
+                "to": "manager",
+                "label": "Action feedback/result",
+                "collectionIndex": 21,
+                "artifactIndex": 22
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 656.6,
+                "y": 650,
+                "width": 62.8,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                695,
+                770
+              ],
+              "to": [
+                695,
+                646
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "이동/정지 요청",
+              "labelRelationship": {
+                "id": "manager-robot",
+                "from": "manager",
+                "to": "robot",
+                "label": "이동/정지 요청",
+                "collectionIndex": 10,
+                "artifactIndex": 11
+              },
+              "otherRelationship": {
+                "id": "robot-to-manager-return",
+                "from": "robot",
+                "to": "manager",
+                "label": "상태/Service 응답",
+                "collectionIndex": 22,
+                "artifactIndex": 23
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 786.4,
+                "y": 688,
+                "width": 77.2,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                836,
+                815
+              ],
+              "to": [
+                836,
+                629
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "제어 요청",
+              "labelRelationship": {
+                "id": "robot-driver",
+                "from": "robot",
+                "to": "driver",
+                "label": "제어 요청",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "otherRelationship": {
+                "id": "driver-to-robot-return",
+                "from": "driver",
+                "to": "robot",
+                "label": "Service 응답/상태",
+                "collectionIndex": 25,
+                "artifactIndex": 26
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 935.4,
+                "y": 850,
+                "width": 53.2,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                955,
+                970
+              ],
+              "to": [
+                955,
+                846
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "SortResult / PalletResult",
+              "labelRelationship": {
+                "id": "manager-logger",
+                "from": "manager",
+                "to": "logger",
+                "label": "SortResult / PalletResult",
+                "collectionIndex": 12,
+                "artifactIndex": 13
+              },
+              "otherRelationship": {
+                "id": "logger-to-manager-return",
+                "from": "logger",
+                "to": "manager",
+                "label": "로그 상태/조회 응답",
+                "collectionIndex": 26,
+                "artifactIndex": 27
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 500,
+                "y": 698.5,
+                "width": 130,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                576,
+                801
+              ],
+              "to": [
+                576,
+                608
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "HTML/REST 응답 · SSE",
+              "labelRelationship": {
+                "id": "nginx-to-browser-return",
+                "from": "nginx",
+                "to": "browser",
+                "label": "HTML/REST 응답 · SSE",
+                "collectionIndex": 16,
+                "artifactIndex": 17
+              },
+              "otherRelationship": {
+                "id": "browser-nginx",
+                "from": "browser",
+                "to": "nginx",
+                "label": "HTTP 요청",
+                "collectionIndex": 0,
+                "artifactIndex": 1
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 232,
+                "y": 105,
+                "width": 106,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 106,
+              "threshold": 2,
+              "from": [
+                230,
+                111
+              ],
+              "to": [
+                340,
+                111
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "상태/결과/ACK",
+              "labelRelationship": {
+                "id": "broker-to-spring-return",
+                "from": "broker",
+                "to": "spring",
+                "label": "상태/결과/ACK",
+                "collectionIndex": 19,
+                "artifactIndex": 20
+              },
+              "otherRelationship": {
+                "id": "spring-broker",
+                "from": "spring",
+                "to": "broker",
+                "label": "MQTT 명령",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 799.8,
+                "y": 220.5,
+                "width": 72.4,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                825,
+                139
+              ],
+              "to": [
+                825,
+                315
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "상태/결과/ACK",
+              "labelRelationship": {
+                "id": "bridge-to-broker-return",
+                "from": "bridge",
+                "to": "broker",
+                "label": "상태/결과/ACK",
+                "collectionIndex": 20,
+                "artifactIndex": 21
+              },
+              "otherRelationship": {
+                "id": "broker-bridge",
+                "from": "broker",
+                "to": "bridge",
+                "label": "MQTT 명령/음성",
+                "collectionIndex": 4,
+                "artifactIndex": 5
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 918.8,
+                "y": 550,
+                "width": 72.4,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                955,
+                346
+              ],
+              "to": [
+                955,
+                570
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "상태/결과/ACK",
+              "labelRelationship": {
+                "id": "bridge-to-broker-return",
+                "from": "bridge",
+                "to": "broker",
+                "label": "상태/결과/ACK",
+                "collectionIndex": 20,
+                "artifactIndex": 21
+              },
+              "otherRelationship": {
+                "id": "manager-bridge",
+                "from": "manager",
+                "to": "bridge",
+                "label": "ROS state/result",
+                "collectionIndex": 6,
+                "artifactIndex": 7
+              },
+              "segmentIndex": 2,
+              "labelRect": {
+                "x": 918.8,
+                "y": 550,
+                "width": 72.4,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                941,
+                546
+              ],
+              "to": [
+                941,
+                570
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "Action feedback/result",
+              "labelRelationship": {
+                "id": "servo-to-manager-return",
+                "from": "servo",
+                "to": "manager",
+                "label": "Action feedback/result",
+                "collectionIndex": 21,
+                "artifactIndex": 22
+              },
+              "otherRelationship": {
+                "id": "manager-servo",
+                "from": "manager",
+                "to": "servo",
+                "label": "Action goal",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 637.2,
+                "y": 750,
+                "width": 115.6,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                695,
+                646
+              ],
+              "to": [
+                695,
+                770
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "상태/Service 응답",
+              "labelRelationship": {
+                "id": "robot-to-manager-return",
+                "from": "robot",
+                "to": "manager",
+                "label": "상태/Service 응답",
+                "collectionIndex": 22,
+                "artifactIndex": 23
+              },
+              "otherRelationship": {
+                "id": "manager-robot",
+                "from": "manager",
+                "to": "robot",
+                "label": "이동/정지 요청",
+                "collectionIndex": 10,
+                "artifactIndex": 11
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 790.2,
+                "y": 702,
+                "width": 91.6,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                825,
+                615
+              ],
+              "to": [
+                825,
+                801
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "Service 응답/상태",
+              "labelRelationship": {
+                "id": "driver-to-robot-return",
+                "from": "driver",
+                "to": "robot",
+                "label": "Service 응답/상태",
+                "collectionIndex": 25,
+                "artifactIndex": 26
+              },
+              "otherRelationship": {
+                "id": "robot-driver",
+                "from": "robot",
+                "to": "driver",
+                "label": "제어 요청",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 909.2,
+                "y": 950,
+                "width": 91.6,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                955,
+                846
+              ],
+              "to": [
+                955,
+                970
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "로그 상태/조회 응답",
+              "labelRelationship": {
+                "id": "logger-to-manager-return",
+                "from": "logger",
+                "to": "manager",
+                "label": "로그 상태/조회 응답",
+                "collectionIndex": 26,
+                "artifactIndex": 27
+              },
+              "otherRelationship": {
+                "id": "manager-logger",
+                "from": "manager",
+                "to": "logger",
+                "label": "SortResult / PalletResult",
+                "collectionIndex": 12,
+                "artifactIndex": 13
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 525.4,
+                "y": 684.5,
+                "width": 101.2,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                565,
+                622
+              ],
+              "to": [
+                565,
+                815
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "컬러 영상",
+              "labelRelationship": {
+                "id": "camera-vision",
+                "from": "camera",
+                "to": "vision",
+                "label": "컬러 영상",
+                "collectionIndex": 27,
+                "artifactIndex": 28
+              },
+              "otherRelationship": {
+                "id": "camera-preview",
+                "from": "camera",
+                "to": "preview",
+                "label": "컬러 영상",
+                "collectionIndex": 28,
+                "artifactIndex": 29
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 162.4,
+                "y": 650,
+                "width": 53.2,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                175,
+                646
+              ],
+              "to": [
+                175,
+                770
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-canvas-containment",
+              "label": "HTTP 영상 · SSH -L",
+              "relationship": {
+                "id": "preview-browser",
+                "from": "preview",
+                "to": "browser",
+                "label": "HTTP 영상 · SSH -L",
+                "collectionIndex": 29,
+                "artifactIndex": 30
+              },
+              "labelRect": {
+                "x": -32.2,
+                "y": 443,
+                "width": 96.4,
+                "height": 14
+              },
+              "viewBox": [
+                1120,
+                1134
+              ],
+              "viewBoxOrigin": [
+                0,
+                0
+              ],
+              "overflowPx": {
+                "left": 32.2
+              },
+              "detail": "[composition/label-canvas-containment] standard label \"HTTP 영상 · SSH -L\" on relationship id \"preview-browser\" (\"preview\" -> \"browser\") extends past the left edge by 32.2px (label rect [-32, 443, 96, 14]; viewBox 1120x1134) — use renderer-supported label controls (shorten the label or reorder participants for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or enlarge meta.viewBox."
+            }
+          ]
+        },
+        "evidence": {
+          "verified": true,
+          "repository": "https://github.com/lambdaramji/rokey_cobot2_VOSS",
+          "revision": "70463ef435b50b45d243823b6f7318789728d786",
+          "references": 18
+        },
+        "update": {
+          "status": "unavailable",
+          "installedVersion": null,
+          "availableVersion": null,
+          "releaseNotes": null,
+          "checkedAt": null,
+          "source": null,
+          "noticeRequired": false,
+          "noticeText": null,
+          "reason": "disabled"
+        }
+      }
+    },
+    "check": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 130,
+      "command": [
+        "/home/runo/.nvm/versions/node/v24.18.0/bin/node",
+        "/tmp/voss-archify/archify/bin/archify.mjs",
+        "check",
+        "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/01_system.html",
+        "--require-provenance"
+      ],
+      "receipt": {
+        "ok": true,
+        "file": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/01_system.html",
+        "artifact": {
+          "sha256": "73b82cca27645302d4635233a3ed9190b0805a6fd4367aa8fab7ce997ef98511",
+          "bytes": 871325
+        },
+        "checks": [
+          {
+            "name": "single_svg",
+            "ok": true,
+            "details": [
+              "found 1 <svg> block(s)"
+            ]
+          },
+          {
+            "name": "finite_svg",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "orthogonal_arrows",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "label_route_clearance",
+            "ok": true,
+            "details": [
+              "[composition/label-route-clearance] standard label \"MQTT 명령\" on relationship id \"spring-broker\" (\"spring\" -> \"broker\") is 0px from relationship id \"broker-to-spring-return\" (\"broker\" -> \"spring\") segment 1 [836, 301] -> [836, 180] with 14px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"MQTT 명령/음성\" on relationship id \"broker-bridge\" (\"broker\" -> \"bridge\") is 0px from relationship id \"bridge-to-broker-return\" (\"bridge\" -> \"broker\") segment 0 [955, 570] -> [955, 346] with 14px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"Action goal\" on relationship id \"manager-servo\" (\"manager\" -> \"servo\") is 0px from relationship id \"servo-to-manager-return\" (\"servo\" -> \"manager\") segment 0 [695, 770] -> [695, 646] with 14px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"이동/정지 요청\" on relationship id \"manager-robot\" (\"manager\" -> \"robot\") is 0px from relationship id \"robot-to-manager-return\" (\"robot\" -> \"manager\") segment 1 [836, 815] -> [836, 629] with 14px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"제어 요청\" on relationship id \"robot-driver\" (\"robot\" -> \"driver\") is 0px from relationship id \"driver-to-robot-return\" (\"driver\" -> \"robot\") segment 0 [955, 970] -> [955, 846] with 14px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"SortResult / PalletResult\" on relationship id \"manager-logger\" (\"manager\" -> \"logger\") is 0px from relationship id \"logger-to-manager-return\" (\"logger\" -> \"manager\") segment 1 [576, 801] -> [576, 608] with 14px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"HTML/REST 응답 · SSE\" on relationship id \"nginx-to-browser-return\" (\"nginx\" -> \"browser\") is 0px from relationship id \"browser-nginx\" (\"browser\" -> \"nginx\") segment 0 [230, 111] -> [340, 111] with 106px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"상태/결과/ACK\" on relationship id \"broker-to-spring-return\" (\"broker\" -> \"spring\") is 0px from relationship id \"spring-broker\" (\"spring\" -> \"broker\") segment 1 [825, 139] -> [825, 315] with 14px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"상태/결과/ACK\" on relationship id \"bridge-to-broker-return\" (\"bridge\" -> \"broker\") is 0px from relationship id \"broker-bridge\" (\"broker\" -> \"bridge\") segment 0 [955, 346] -> [955, 570] with 14px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"상태/결과/ACK\" on relationship id \"bridge-to-broker-return\" (\"bridge\" -> \"broker\") is 0px from relationship id \"manager-bridge\" (\"manager\" -> \"bridge\") segment 2 [941, 546] -> [941, 570] with 14px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"Action feedback/result\" on relationship id \"servo-to-manager-return\" (\"servo\" -> \"manager\") is 0px from relationship id \"manager-servo\" (\"manager\" -> \"servo\") segment 0 [695, 646] -> [695, 770] with 14px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"상태/Service 응답\" on relationship id \"robot-to-manager-return\" (\"robot\" -> \"manager\") is 0px from relationship id \"manager-robot\" (\"manager\" -> \"robot\") segment 1 [825, 615] -> [825, 801] with 14px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"Service 응답/상태\" on relationship id \"driver-to-robot-return\" (\"driver\" -> \"robot\") is 0px from relationship id \"robot-driver\" (\"robot\" -> \"driver\") segment 0 [955, 846] -> [955, 970] with 14px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"로그 상태/조회 응답\" on relationship id \"logger-to-manager-return\" (\"logger\" -> \"manager\") is 0px from relationship id \"manager-logger\" (\"manager\" -> \"logger\") segment 1 [565, 622] -> [565, 815] with 14px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel.",
+              "[composition/label-route-clearance] standard label \"컬러 영상\" on relationship id \"camera-vision\" (\"camera\" -> \"vision\") is 0px from relationship id \"camera-preview\" (\"camera\" -> \"preview\") segment 0 [175, 646] -> [175, 770] with 14px hidden by the mask (minimum 2px) — use renderer-supported label controls (message y for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or adjust the other relationship route/via/channel."
+            ]
+          },
+          {
+            "name": "relationship_crossings",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "relationship_corridors",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "container_border_runs",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "route_rhythm",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "legend_clearance",
+            "ok": true,
+            "details": []
+          }
+        ],
+        "composition": {
+          "schemaVersion": 1,
+          "profile": "standard",
+          "status": "pass",
+          "summary": {
+            "errors": 0,
+            "warnings": 16
+          },
+          "metrics": {
+            "properCrossings": 0,
+            "resolvedCrossovers": 5,
+            "ambiguousCorridors": 0,
+            "arrowheadCollisions": 0,
+            "containerBorderRuns": 0,
+            "labelRouteClearanceIssues": 15,
+            "labelCanvasOverflowIssues": 1,
+            "minLabelRouteClearance": 0,
+            "desktopReadabilityIssues": 0,
+            "viewportHeightIssues": 0,
+            "minProjectedNodeTextPx": 6.642857142857143,
+            "maxBends": 4,
+            "routesOverSuggestedBends": 6,
+            "maxStretch": 1.264,
+            "routesOverSuggestedStretch": 0,
+            "minSegmentPx": 24,
+            "minInteriorSegmentPx": 55,
+            "shortSegmentCount": 0,
+            "shortEndpointSegmentCount": 0,
+            "shortInteriorSegmentCount": 0,
+            "microSegmentCount": 0
+          },
+          "suggestedLimits": {
+            "bendsPerRelationship": 2,
+            "stretch": 1.35,
+            "segmentPx": 16,
+            "microSegmentPx": 8
+          },
+          "routeReview": {
+            "crossings": [
+              {
+                "left": {
+                  "id": "spring-broker",
+                  "from": "spring",
+                  "to": "broker",
+                  "label": "MQTT 명령",
+                  "collectionIndex": 3,
+                  "artifactIndex": 4
+                },
+                "right": {
+                  "id": "broker-to-spring-return",
+                  "from": "broker",
+                  "to": "spring",
+                  "label": "상태/결과/ACK",
+                  "collectionIndex": 19,
+                  "artifactIndex": 20
+                },
+                "point": [
+                  825,
+                  180
+                ],
+                "sharedNode": "spring"
+              },
+              {
+                "left": {
+                  "id": "manager-robot",
+                  "from": "manager",
+                  "to": "robot",
+                  "label": "이동/정지 요청",
+                  "collectionIndex": 10,
+                  "artifactIndex": 11
+                },
+                "right": {
+                  "id": "robot-to-manager-return",
+                  "from": "robot",
+                  "to": "manager",
+                  "label": "상태/Service 응답",
+                  "collectionIndex": 22,
+                  "artifactIndex": 23
+                },
+                "point": [
+                  825,
+                  629
+                ],
+                "sharedNode": "manager"
+              },
+              {
+                "left": {
+                  "id": "robot-driver",
+                  "from": "robot",
+                  "to": "driver",
+                  "label": "제어 요청",
+                  "collectionIndex": 11,
+                  "artifactIndex": 12
+                },
+                "right": {
+                  "id": "logger-postgres",
+                  "from": "logger",
+                  "to": "postgres",
+                  "label": "SQL INSERT",
+                  "collectionIndex": 13,
+                  "artifactIndex": 14
+                },
+                "point": [
+                  955,
+                  870
+                ]
+              },
+              {
+                "left": {
+                  "id": "manager-logger",
+                  "from": "manager",
+                  "to": "logger",
+                  "label": "SortResult / PalletResult",
+                  "collectionIndex": 12,
+                  "artifactIndex": 13
+                },
+                "right": {
+                  "id": "logger-to-manager-return",
+                  "from": "logger",
+                  "to": "manager",
+                  "label": "로그 상태/조회 응답",
+                  "collectionIndex": 26,
+                  "artifactIndex": 27
+                },
+                "point": [
+                  576,
+                  622
+                ],
+                "sharedNode": "manager"
+              },
+              {
+                "left": {
+                  "id": "logger-postgres",
+                  "from": "logger",
+                  "to": "postgres",
+                  "label": "SQL INSERT",
+                  "collectionIndex": 13,
+                  "artifactIndex": 14
+                },
+                "right": {
+                  "id": "driver-to-robot-return",
+                  "from": "driver",
+                  "to": "robot",
+                  "label": "Service 응답/상태",
+                  "collectionIndex": 25,
+                  "artifactIndex": 26
+                },
+                "point": [
+                  955,
+                  870
+                ]
+              }
+            ],
+            "detours": [
+              {
+                "relationship": {
+                  "id": "nginx-spring",
+                  "from": "nginx",
+                  "to": "spring",
+                  "label": "REST 요청 · SSE 연결",
+                  "collectionIndex": 1,
+                  "artifactIndex": 2
+                },
+                "bends": 3,
+                "stretch": 1.245
+              },
+              {
+                "relationship": {
+                  "id": "vision-manager",
+                  "from": "vision",
+                  "to": "manager",
+                  "label": "BoxTrack · LabelRead",
+                  "collectionIndex": 7,
+                  "artifactIndex": 8
+                },
+                "bends": 3,
+                "stretch": 1.254
+              },
+              {
+                "relationship": {
+                  "id": "logger-postgres",
+                  "from": "logger",
+                  "to": "postgres",
+                  "label": "SQL INSERT",
+                  "collectionIndex": 13,
+                  "artifactIndex": 14
+                },
+                "bends": 3,
+                "stretch": 1.071
+              },
+              {
+                "relationship": {
+                  "id": "spring-to-nginx-return",
+                  "from": "spring",
+                  "to": "nginx",
+                  "label": "REST 응답 · SSE",
+                  "collectionIndex": 17,
+                  "artifactIndex": 18
+                },
+                "bends": 3,
+                "stretch": 1.264
+              },
+              {
+                "relationship": {
+                  "id": "broker-to-spring-return",
+                  "from": "broker",
+                  "to": "spring",
+                  "label": "상태/결과/ACK",
+                  "collectionIndex": 19,
+                  "artifactIndex": 20
+                },
+                "bends": 3,
+                "stretch": 1
+              },
+              {
+                "relationship": {
+                  "id": "browser-preview",
+                  "from": "browser",
+                  "to": "preview",
+                  "label": "카메라 요청 · SSH -L",
+                  "collectionIndex": 30,
+                  "artifactIndex": 31
+                },
+                "bends": 4,
+                "stretch": 1.235
+              }
+            ]
+          },
+          "leadingSpace": {
+            "measured": true,
+            "emptyTopPx": 50,
+            "emptyTopRatio": 0.044,
+            "occupiedTop": 50,
+            "viewBoxTop": 0,
+            "canvasHeight": 1134,
+            "typicalNodeHeight": 76,
+            "reviewSuggested": false
+          },
+          "desktopReadability": {
+            "budgetBasis": "legacy-930",
+            "readerContract": "declared-wide-v1",
+            "availableDiagramWidth": 930,
+            "actualBudgetPx": 930,
+            "limit": "legacy",
+            "requestedTargetPx": 7.5,
+            "requestedTargetMet": false,
+            "hardFloorPx": 6,
+            "hardFloorMet": true,
+            "minimumOwner": {
+              "kind": "edge",
+              "id": "browser-nginx",
+              "from": "browser",
+              "to": "nginx"
+            },
+            "minimumSourceTextPx": 8,
+            "minimumProjectedTextPx": 6.642857142857143,
+            "semanticTextCount": 68
+          },
+          "issues": [
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "MQTT 명령",
+              "labelRelationship": {
+                "id": "spring-broker",
+                "from": "spring",
+                "to": "broker",
+                "label": "MQTT 명령",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "broker-to-spring-return",
+                "from": "broker",
+                "to": "spring",
+                "label": "상태/결과/ACK",
+                "collectionIndex": 19,
+                "artifactIndex": 20
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 798.4,
+                "y": 207,
+                "width": 53.2,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                836,
+                301
+              ],
+              "to": [
+                836,
+                180
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "MQTT 명령/음성",
+              "labelRelationship": {
+                "id": "broker-bridge",
+                "from": "broker",
+                "to": "bridge",
+                "label": "MQTT 명령/음성",
+                "collectionIndex": 4,
+                "artifactIndex": 5
+              },
+              "otherRelationship": {
+                "id": "bridge-to-broker-return",
+                "from": "bridge",
+                "to": "broker",
+                "label": "상태/결과/ACK",
+                "collectionIndex": 20,
+                "artifactIndex": 21
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 923.4,
+                "y": 350,
+                "width": 77.2,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                955,
+                570
+              ],
+              "to": [
+                955,
+                346
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "Action goal",
+              "labelRelationship": {
+                "id": "manager-servo",
+                "from": "manager",
+                "to": "servo",
+                "label": "Action goal",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "otherRelationship": {
+                "id": "servo-to-manager-return",
+                "from": "servo",
+                "to": "manager",
+                "label": "Action feedback/result",
+                "collectionIndex": 21,
+                "artifactIndex": 22
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 656.6,
+                "y": 650,
+                "width": 62.8,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                695,
+                770
+              ],
+              "to": [
+                695,
+                646
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "이동/정지 요청",
+              "labelRelationship": {
+                "id": "manager-robot",
+                "from": "manager",
+                "to": "robot",
+                "label": "이동/정지 요청",
+                "collectionIndex": 10,
+                "artifactIndex": 11
+              },
+              "otherRelationship": {
+                "id": "robot-to-manager-return",
+                "from": "robot",
+                "to": "manager",
+                "label": "상태/Service 응답",
+                "collectionIndex": 22,
+                "artifactIndex": 23
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 786.4,
+                "y": 688,
+                "width": 77.2,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                836,
+                815
+              ],
+              "to": [
+                836,
+                629
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "제어 요청",
+              "labelRelationship": {
+                "id": "robot-driver",
+                "from": "robot",
+                "to": "driver",
+                "label": "제어 요청",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "otherRelationship": {
+                "id": "driver-to-robot-return",
+                "from": "driver",
+                "to": "robot",
+                "label": "Service 응답/상태",
+                "collectionIndex": 25,
+                "artifactIndex": 26
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 935.4,
+                "y": 850,
+                "width": 53.2,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                955,
+                970
+              ],
+              "to": [
+                955,
+                846
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "SortResult / PalletResult",
+              "labelRelationship": {
+                "id": "manager-logger",
+                "from": "manager",
+                "to": "logger",
+                "label": "SortResult / PalletResult",
+                "collectionIndex": 12,
+                "artifactIndex": 13
+              },
+              "otherRelationship": {
+                "id": "logger-to-manager-return",
+                "from": "logger",
+                "to": "manager",
+                "label": "로그 상태/조회 응답",
+                "collectionIndex": 26,
+                "artifactIndex": 27
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 500,
+                "y": 698.5,
+                "width": 130,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                576,
+                801
+              ],
+              "to": [
+                576,
+                608
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "HTML/REST 응답 · SSE",
+              "labelRelationship": {
+                "id": "nginx-to-browser-return",
+                "from": "nginx",
+                "to": "browser",
+                "label": "HTML/REST 응답 · SSE",
+                "collectionIndex": 16,
+                "artifactIndex": 17
+              },
+              "otherRelationship": {
+                "id": "browser-nginx",
+                "from": "browser",
+                "to": "nginx",
+                "label": "HTTP 요청",
+                "collectionIndex": 0,
+                "artifactIndex": 1
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 232,
+                "y": 105,
+                "width": 106,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 106,
+              "threshold": 2,
+              "from": [
+                230,
+                111
+              ],
+              "to": [
+                340,
+                111
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "상태/결과/ACK",
+              "labelRelationship": {
+                "id": "broker-to-spring-return",
+                "from": "broker",
+                "to": "spring",
+                "label": "상태/결과/ACK",
+                "collectionIndex": 19,
+                "artifactIndex": 20
+              },
+              "otherRelationship": {
+                "id": "spring-broker",
+                "from": "spring",
+                "to": "broker",
+                "label": "MQTT 명령",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 799.8,
+                "y": 220.5,
+                "width": 72.4,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                825,
+                139
+              ],
+              "to": [
+                825,
+                315
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "상태/결과/ACK",
+              "labelRelationship": {
+                "id": "bridge-to-broker-return",
+                "from": "bridge",
+                "to": "broker",
+                "label": "상태/결과/ACK",
+                "collectionIndex": 20,
+                "artifactIndex": 21
+              },
+              "otherRelationship": {
+                "id": "broker-bridge",
+                "from": "broker",
+                "to": "bridge",
+                "label": "MQTT 명령/음성",
+                "collectionIndex": 4,
+                "artifactIndex": 5
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 918.8,
+                "y": 550,
+                "width": 72.4,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                955,
+                346
+              ],
+              "to": [
+                955,
+                570
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "상태/결과/ACK",
+              "labelRelationship": {
+                "id": "bridge-to-broker-return",
+                "from": "bridge",
+                "to": "broker",
+                "label": "상태/결과/ACK",
+                "collectionIndex": 20,
+                "artifactIndex": 21
+              },
+              "otherRelationship": {
+                "id": "manager-bridge",
+                "from": "manager",
+                "to": "bridge",
+                "label": "ROS state/result",
+                "collectionIndex": 6,
+                "artifactIndex": 7
+              },
+              "segmentIndex": 2,
+              "labelRect": {
+                "x": 918.8,
+                "y": 550,
+                "width": 72.4,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                941,
+                546
+              ],
+              "to": [
+                941,
+                570
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "Action feedback/result",
+              "labelRelationship": {
+                "id": "servo-to-manager-return",
+                "from": "servo",
+                "to": "manager",
+                "label": "Action feedback/result",
+                "collectionIndex": 21,
+                "artifactIndex": 22
+              },
+              "otherRelationship": {
+                "id": "manager-servo",
+                "from": "manager",
+                "to": "servo",
+                "label": "Action goal",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 637.2,
+                "y": 750,
+                "width": 115.6,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                695,
+                646
+              ],
+              "to": [
+                695,
+                770
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "상태/Service 응답",
+              "labelRelationship": {
+                "id": "robot-to-manager-return",
+                "from": "robot",
+                "to": "manager",
+                "label": "상태/Service 응답",
+                "collectionIndex": 22,
+                "artifactIndex": 23
+              },
+              "otherRelationship": {
+                "id": "manager-robot",
+                "from": "manager",
+                "to": "robot",
+                "label": "이동/정지 요청",
+                "collectionIndex": 10,
+                "artifactIndex": 11
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 790.2,
+                "y": 702,
+                "width": 91.6,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                825,
+                615
+              ],
+              "to": [
+                825,
+                801
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "Service 응답/상태",
+              "labelRelationship": {
+                "id": "driver-to-robot-return",
+                "from": "driver",
+                "to": "robot",
+                "label": "Service 응답/상태",
+                "collectionIndex": 25,
+                "artifactIndex": 26
+              },
+              "otherRelationship": {
+                "id": "robot-driver",
+                "from": "robot",
+                "to": "driver",
+                "label": "제어 요청",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 909.2,
+                "y": 950,
+                "width": 91.6,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                955,
+                846
+              ],
+              "to": [
+                955,
+                970
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "로그 상태/조회 응답",
+              "labelRelationship": {
+                "id": "logger-to-manager-return",
+                "from": "logger",
+                "to": "manager",
+                "label": "로그 상태/조회 응답",
+                "collectionIndex": 26,
+                "artifactIndex": 27
+              },
+              "otherRelationship": {
+                "id": "manager-logger",
+                "from": "manager",
+                "to": "logger",
+                "label": "SortResult / PalletResult",
+                "collectionIndex": 12,
+                "artifactIndex": 13
+              },
+              "segmentIndex": 1,
+              "labelRect": {
+                "x": 525.4,
+                "y": 684.5,
+                "width": 101.2,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                565,
+                622
+              ],
+              "to": [
+                565,
+                815
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-route-clearance",
+              "label": "컬러 영상",
+              "labelRelationship": {
+                "id": "camera-vision",
+                "from": "camera",
+                "to": "vision",
+                "label": "컬러 영상",
+                "collectionIndex": 27,
+                "artifactIndex": 28
+              },
+              "otherRelationship": {
+                "id": "camera-preview",
+                "from": "camera",
+                "to": "preview",
+                "label": "컬러 영상",
+                "collectionIndex": 28,
+                "artifactIndex": 29
+              },
+              "segmentIndex": 0,
+              "labelRect": {
+                "x": 162.4,
+                "y": 650,
+                "width": 53.2,
+                "height": 14
+              },
+              "clearance": 0,
+              "intersectionLength": 14,
+              "threshold": 2,
+              "from": [
+                175,
+                646
+              ],
+              "to": [
+                175,
+                770
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/label-canvas-containment",
+              "label": "HTTP 영상 · SSH -L",
+              "relationship": {
+                "id": "preview-browser",
+                "from": "preview",
+                "to": "browser",
+                "label": "HTTP 영상 · SSH -L",
+                "collectionIndex": 29,
+                "artifactIndex": 30
+              },
+              "labelRect": {
+                "x": -32.2,
+                "y": 443,
+                "width": 96.4,
+                "height": 14
+              },
+              "viewBox": [
+                1120,
+                1134
+              ],
+              "viewBoxOrigin": [
+                0,
+                0
+              ],
+              "overflowPx": {
+                "left": 32.2
+              },
+              "detail": "[composition/label-canvas-containment] standard label \"HTTP 영상 · SSH -L\" on relationship id \"preview-browser\" (\"preview\" -> \"browser\") extends past the left edge by 32.2px (label rect [-32, 443, 96, 14]; viewBox 1120x1134) — use renderer-supported label controls (shorten the label or reorder participants for sequence; otherwise labelAt, labelDx, labelDy, or labelSegment), or enlarge meta.viewBox."
+            }
+          ]
+        },
+        "provenance": "current",
+        "deliveryReceiptId": "157a7f16-e075-4dee-a28e-65c91a20f547"
+      }
+    },
+    "browser-check": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 1702,
+      "command": [
+        "/home/runo/.nvm/versions/node/v24.18.0/bin/node",
+        "/tmp/voss-archify/archify/bin/archify.mjs",
+        "browser-check",
+        "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/01_system.html",
+        "--json",
+        "--require-provenance",
+        "--out-dir",
+        "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/evidence/system-pc-boundary-v4"
+      ],
+      "execution": "in-process",
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": true,
+        "command": "browser-check",
+        "evidenceKind": "automated-browser",
+        "status": "pass",
+        "visualReview": "not-requested",
+        "provenance": "current",
+        "deliveryReceiptId": "157a7f16-e075-4dee-a28e-65c91a20f547",
+        "artifact": {
+          "path": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/01_system.html",
+          "sha256": "73b82cca27645302d4635233a3ed9190b0805a6fd4367aa8fab7ce997ef98511",
+          "bytes": 871325
+        },
+        "state": {
+          "detail": "read",
+          "motion": "still"
+        },
+        "chrome": {
+          "status": "available",
+          "executable": "/usr/bin/google-chrome"
+        },
+        "diagnostics": [],
+        "containment": {
+          "status": "pass",
+          "policy": "fit-or-reader-declared-readable-vertical-scroll",
+          "viewports": [
+            {
+              "width": 1440,
+              "height": 900,
+              "theme": "light",
+              "innerWidth": 1440,
+              "innerHeight": 900,
+              "scrollWidth": 1440,
+              "scrollHeight": 1088,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 964,
+              "diagramWidth": 934,
+              "pageComposition": {
+                "bodyPaddingPx": 12,
+                "headerPx": 52,
+                "diagramChromePx": 78,
+                "svgPx": 946,
+                "cardsPx": 0,
+                "viewBoxHeight": 1134
+              },
+              "viewBoxWidth": 1120,
+              "minimumProjectedNodeTextPx": 6.671428571428572,
+              "minimumProjectedNonEdgeTextPx": 7.505357142857143,
+              "minimumProjectedEdgeTextPx": 6.671428571428572,
+              "minimumProjectedNodeText": "HTTP 요청",
+              "minimumProjectedNodeTextDetail": "edge",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "edge",
+                "id": "browser-nginx",
+                "from": "browser",
+                "to": "nginx"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1600,
+              "height": 1000,
+              "theme": "light",
+              "innerWidth": 1600,
+              "innerHeight": 1000,
+              "scrollWidth": 1600,
+              "scrollHeight": 1154,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 964,
+              "diagramWidth": 934,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 60,
+                "diagramChromePx": 84,
+                "svgPx": 946,
+                "cardsPx": 0,
+                "viewBoxHeight": 1134
+              },
+              "viewBoxWidth": 1120,
+              "minimumProjectedNodeTextPx": 6.671428571428572,
+              "minimumProjectedNonEdgeTextPx": 7.505357142857143,
+              "minimumProjectedEdgeTextPx": 6.671428571428572,
+              "minimumProjectedNodeText": "HTTP 요청",
+              "minimumProjectedNodeTextDetail": "edge",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "edge",
+                "id": "browser-nginx",
+                "from": "browser",
+                "to": "nginx"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1920,
+              "height": 1080,
+              "theme": "light",
+              "innerWidth": 1920,
+              "innerHeight": 1080,
+              "scrollWidth": 1920,
+              "scrollHeight": 1154,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 964,
+              "diagramWidth": 934,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 60,
+                "diagramChromePx": 84,
+                "svgPx": 946,
+                "cardsPx": 0,
+                "viewBoxHeight": 1134
+              },
+              "viewBoxWidth": 1120,
+              "minimumProjectedNodeTextPx": 6.671428571428572,
+              "minimumProjectedNonEdgeTextPx": 7.505357142857143,
+              "minimumProjectedEdgeTextPx": 6.671428571428572,
+              "minimumProjectedNodeText": "HTTP 요청",
+              "minimumProjectedNodeTextDetail": "edge",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "edge",
+                "id": "browser-nginx",
+                "from": "browser",
+                "to": "nginx"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "theme": "light",
+              "innerWidth": 2048,
+              "innerHeight": 1320,
+              "scrollWidth": 2048,
+              "scrollHeight": 1320,
+              "overflowX": false,
+              "overflowY": false,
+              "verticalScrollAccepted": false,
+              "overflowDisposition": "contained",
+              "readerLayout": "adaptive",
+              "readerOverflow": null,
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1119,
+              "diagramWidth": 1069,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 68,
+                "diagramChromePx": 94,
+                "svgPx": 1082,
+                "cardsPx": 0,
+                "viewBoxHeight": 1134
+              },
+              "viewBoxWidth": 1120,
+              "minimumProjectedNodeTextPx": 7.635714285714286,
+              "minimumProjectedNonEdgeTextPx": 8.590178571428572,
+              "minimumProjectedEdgeTextPx": 7.635714285714286,
+              "minimumProjectedNodeText": "HTTP 요청",
+              "minimumProjectedNodeTextDetail": "edge",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "edge",
+                "id": "browser-nginx",
+                "from": "browser",
+                "to": "nginx"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 44,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            }
+          ]
+        },
+        "themeStates": {
+          "status": "pass",
+          "viewports": [
+            {
+              "width": 1440,
+              "height": 900,
+              "requestedTheme": "light",
+              "resolvedTheme": "light",
+              "ok": true
+            },
+            {
+              "width": 1600,
+              "height": 1000,
+              "requestedTheme": "light",
+              "resolvedTheme": "light",
+              "ok": true
+            },
+            {
+              "width": 1920,
+              "height": 1080,
+              "requestedTheme": "light",
+              "resolvedTheme": "light",
+              "ok": true
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "requestedTheme": "light",
+              "resolvedTheme": "light",
+              "ok": true
+            },
+            {
+              "width": 1440,
+              "height": 900,
+              "requestedTheme": "dark",
+              "resolvedTheme": "dark",
+              "ok": true
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "requestedTheme": "dark",
+              "resolvedTheme": "dark",
+              "ok": true
+            }
+          ]
+        },
+        "readability": {
+          "status": "pass",
+          "minimumProjectedNodeTextPx": 6,
+          "viewports": [
+            {
+              "width": 1440,
+              "height": 900,
+              "theme": "light",
+              "innerWidth": 1440,
+              "innerHeight": 900,
+              "scrollWidth": 1440,
+              "scrollHeight": 1088,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 964,
+              "diagramWidth": 934,
+              "pageComposition": {
+                "bodyPaddingPx": 12,
+                "headerPx": 52,
+                "diagramChromePx": 78,
+                "svgPx": 946,
+                "cardsPx": 0,
+                "viewBoxHeight": 1134
+              },
+              "viewBoxWidth": 1120,
+              "minimumProjectedNodeTextPx": 6.671428571428572,
+              "minimumProjectedNonEdgeTextPx": 7.505357142857143,
+              "minimumProjectedEdgeTextPx": 6.671428571428572,
+              "minimumProjectedNodeText": "HTTP 요청",
+              "minimumProjectedNodeTextDetail": "edge",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "edge",
+                "id": "browser-nginx",
+                "from": "browser",
+                "to": "nginx"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1600,
+              "height": 1000,
+              "theme": "light",
+              "innerWidth": 1600,
+              "innerHeight": 1000,
+              "scrollWidth": 1600,
+              "scrollHeight": 1154,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 964,
+              "diagramWidth": 934,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 60,
+                "diagramChromePx": 84,
+                "svgPx": 946,
+                "cardsPx": 0,
+                "viewBoxHeight": 1134
+              },
+              "viewBoxWidth": 1120,
+              "minimumProjectedNodeTextPx": 6.671428571428572,
+              "minimumProjectedNonEdgeTextPx": 7.505357142857143,
+              "minimumProjectedEdgeTextPx": 6.671428571428572,
+              "minimumProjectedNodeText": "HTTP 요청",
+              "minimumProjectedNodeTextDetail": "edge",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "edge",
+                "id": "browser-nginx",
+                "from": "browser",
+                "to": "nginx"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1920,
+              "height": 1080,
+              "theme": "light",
+              "innerWidth": 1920,
+              "innerHeight": 1080,
+              "scrollWidth": 1920,
+              "scrollHeight": 1154,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 964,
+              "diagramWidth": 934,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 60,
+                "diagramChromePx": 84,
+                "svgPx": 946,
+                "cardsPx": 0,
+                "viewBoxHeight": 1134
+              },
+              "viewBoxWidth": 1120,
+              "minimumProjectedNodeTextPx": 6.671428571428572,
+              "minimumProjectedNonEdgeTextPx": 7.505357142857143,
+              "minimumProjectedEdgeTextPx": 6.671428571428572,
+              "minimumProjectedNodeText": "HTTP 요청",
+              "minimumProjectedNodeTextDetail": "edge",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "edge",
+                "id": "browser-nginx",
+                "from": "browser",
+                "to": "nginx"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "theme": "light",
+              "innerWidth": 2048,
+              "innerHeight": 1320,
+              "scrollWidth": 2048,
+              "scrollHeight": 1320,
+              "overflowX": false,
+              "overflowY": false,
+              "verticalScrollAccepted": false,
+              "overflowDisposition": "contained",
+              "readerLayout": "adaptive",
+              "readerOverflow": null,
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1119,
+              "diagramWidth": 1069,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 68,
+                "diagramChromePx": 94,
+                "svgPx": 1082,
+                "cardsPx": 0,
+                "viewBoxHeight": 1134
+              },
+              "viewBoxWidth": 1120,
+              "minimumProjectedNodeTextPx": 7.635714285714286,
+              "minimumProjectedNonEdgeTextPx": 8.590178571428572,
+              "minimumProjectedEdgeTextPx": 7.635714285714286,
+              "minimumProjectedNodeText": "HTTP 요청",
+              "minimumProjectedNodeTextDetail": "edge",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "edge",
+                "id": "browser-nginx",
+                "from": "browser",
+                "to": "nginx"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 44,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            }
+          ]
+        },
+        "viewerChrome": {
+          "status": "pass",
+          "viewports": [
+            {
+              "width": 1440,
+              "height": 900,
+              "theme": "light",
+              "innerWidth": 1440,
+              "innerHeight": 900,
+              "scrollWidth": 1440,
+              "scrollHeight": 1088,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 964,
+              "diagramWidth": 934,
+              "pageComposition": {
+                "bodyPaddingPx": 12,
+                "headerPx": 52,
+                "diagramChromePx": 78,
+                "svgPx": 946,
+                "cardsPx": 0,
+                "viewBoxHeight": 1134
+              },
+              "viewBoxWidth": 1120,
+              "minimumProjectedNodeTextPx": 6.671428571428572,
+              "minimumProjectedNonEdgeTextPx": 7.505357142857143,
+              "minimumProjectedEdgeTextPx": 6.671428571428572,
+              "minimumProjectedNodeText": "HTTP 요청",
+              "minimumProjectedNodeTextDetail": "edge",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "edge",
+                "id": "browser-nginx",
+                "from": "browser",
+                "to": "nginx"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1600,
+              "height": 1000,
+              "theme": "light",
+              "innerWidth": 1600,
+              "innerHeight": 1000,
+              "scrollWidth": 1600,
+              "scrollHeight": 1154,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 964,
+              "diagramWidth": 934,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 60,
+                "diagramChromePx": 84,
+                "svgPx": 946,
+                "cardsPx": 0,
+                "viewBoxHeight": 1134
+              },
+              "viewBoxWidth": 1120,
+              "minimumProjectedNodeTextPx": 6.671428571428572,
+              "minimumProjectedNonEdgeTextPx": 7.505357142857143,
+              "minimumProjectedEdgeTextPx": 6.671428571428572,
+              "minimumProjectedNodeText": "HTTP 요청",
+              "minimumProjectedNodeTextDetail": "edge",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "edge",
+                "id": "browser-nginx",
+                "from": "browser",
+                "to": "nginx"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1920,
+              "height": 1080,
+              "theme": "light",
+              "innerWidth": 1920,
+              "innerHeight": 1080,
+              "scrollWidth": 1920,
+              "scrollHeight": 1154,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 964,
+              "diagramWidth": 934,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 60,
+                "diagramChromePx": 84,
+                "svgPx": 946,
+                "cardsPx": 0,
+                "viewBoxHeight": 1134
+              },
+              "viewBoxWidth": 1120,
+              "minimumProjectedNodeTextPx": 6.671428571428572,
+              "minimumProjectedNonEdgeTextPx": 7.505357142857143,
+              "minimumProjectedEdgeTextPx": 6.671428571428572,
+              "minimumProjectedNodeText": "HTTP 요청",
+              "minimumProjectedNodeTextDetail": "edge",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "edge",
+                "id": "browser-nginx",
+                "from": "browser",
+                "to": "nginx"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "theme": "light",
+              "innerWidth": 2048,
+              "innerHeight": 1320,
+              "scrollWidth": 2048,
+              "scrollHeight": 1320,
+              "overflowX": false,
+              "overflowY": false,
+              "verticalScrollAccepted": false,
+              "overflowDisposition": "contained",
+              "readerLayout": "adaptive",
+              "readerOverflow": null,
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1119,
+              "diagramWidth": 1069,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 68,
+                "diagramChromePx": 94,
+                "svgPx": 1082,
+                "cardsPx": 0,
+                "viewBoxHeight": 1134
+              },
+              "viewBoxWidth": 1120,
+              "minimumProjectedNodeTextPx": 7.635714285714286,
+              "minimumProjectedNonEdgeTextPx": 8.590178571428572,
+              "minimumProjectedEdgeTextPx": 7.635714285714286,
+              "minimumProjectedNodeText": "HTTP 요청",
+              "minimumProjectedNodeTextDetail": "edge",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "edge",
+                "id": "browser-nginx",
+                "from": "browser",
+                "to": "nginx"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 44,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            }
+          ]
+        },
+        "captures": {
+          "status": "not-requested",
+          "screenshots": [],
+          "contactSheet": null
+        },
+        "sidecars": {
+          "directory": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/evidence/system-pc-boundary-v4",
+          "receipt": "01_system.browser-check.json",
+          "files": []
+        }
+      }
+    }
+  },
+  "diagnostics": [],
+  "evidence": {
+    "receipt": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/evidence/system-pc-boundary-v4/01_system.finalize.json",
+    "summaryReceipt": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/evidence/system-pc-boundary-v4/01_system.finalize-summary.json",
+    "browserCheckReceipt": "/home/runo/collaboration/rokey_cobot2_VOSS_2/docs/architecture/evidence/system-pc-boundary-v4/01_system.browser-check.json"
+  },
+  "visualReview": "not-requested",
+  "finishedAt": "2026-10-16T02:29:35.424Z",
+  "durationMs": 2436,
+  "update": {
+    "status": "current",
+    "installedVersion": "3.1.0",
+    "availableVersion": "3.1.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-10-16T02:10:42.521Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  }
+}
