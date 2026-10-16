@@ -1,0 +1,331 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2420" height="1560" viewBox="0 0 2420 1560" font-family="Noto Sans CJK KR, Noto Sans KR, sans-serif">
+<defs>
+<marker id="arr-topic" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9 z" fill="#94a3b8"/></marker>
+<marker id="arr-srv" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9 z" fill="#34d399"/></marker>
+<marker id="arr-action" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9 z" fill="#34d399"/></marker>
+<marker id="arr-stop" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9 z" fill="#f472b6"/></marker>
+<marker id="arr-http" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9 z" fill="#38bdf8"/></marker>
+<marker id="arr-mqtt" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9 z" fill="#f59e0b"/></marker>
+<marker id="arr-sql" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9 z" fill="#a78bfa"/></marker>
+<marker id="arr-bus" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9 z" fill="#cbd5e1"/></marker>
+<marker id="arr-ghost" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9 z" fill="#475569"/></marker>
+<pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0 H0 V40" fill="none" stroke="#0b1220" stroke-width="1"/></pattern>
+</defs>
+<rect width="2420" height="1560" fill="#020617"/>
+<rect width="2420" height="1560" fill="url(#grid)"/>
+<text x="40" y="46" font-size="26" font-weight="700" fill="#f8fafc">VOSS 시스템 배포 아키텍처 — 공용 PC(호스트 프로세스 + 컨테이너 5종) · 로봇 셀 · Web PC (레포 main 기준)</text>
+<g transform="translate(0,70)">
+<rect x="60" y="60" width="1900" height="270" rx="18" fill="#60a5fa" fill-opacity="0.035" stroke="#60a5fa" stroke-width="2" stroke-dasharray="10 7"/>
+<rect x="74" y="46" width="768.3200000000006" height="28" rx="6" fill="#020617" stroke="#60a5fa" stroke-width="1.2"/>
+<text x="86" y="65" font-size="16" font-weight="700" fill="#60a5fa">공용 PC (Nodes PC) — Docker 컨테이너 5종 · network_mode: host · 같은 ROS_DOMAIN_ID 30</text>
+<rect x="60" y="410" width="1900" height="560" rx="18" fill="#f5c542" fill-opacity="0.035" stroke="#f5c542" stroke-width="2" stroke-dasharray="10 7"/>
+<rect x="74" y="396" width="902.720000000001" height="28" rx="6" fill="#020617" stroke="#f5c542" stroke-width="1.2"/>
+<text x="86" y="415" font-size="16" font-weight="700" fill="#f5c542">공용 PC (Nodes PC) — 호스트 프로세스 · Ubuntu 24.04 · ROS 2 Jazzy · rmw_cyclonedds_cpp · Python 3.12</text>
+<rect x="60" y="1020" width="1900" height="250" rx="18" fill="#fb923c" fill-opacity="0.035" stroke="#fb923c" stroke-width="2" stroke-dasharray="10 7"/>
+<rect x="74" y="1006" width="646.0799999999997" height="28" rx="6" fill="#020617" stroke="#fb923c" stroke-width="1.2"/>
+<text x="86" y="1025" font-size="16" font-weight="700" fill="#fb923c">로봇 셀 — 로봇 컨트롤러 유선 전용 서브넷 · 카메라 USB 3.0 · 아두이노 시리얼</text>
+<rect x="2080" y="410" width="320" height="560" rx="18" fill="#a78bfa" fill-opacity="0.035" stroke="#a78bfa" stroke-width="2" stroke-dasharray="10 7"/>
+<rect x="2094" y="396" width="271.04000000000013" height="28" rx="6" fill="#020617" stroke="#a78bfa" stroke-width="1.2"/>
+<text x="2106" y="415" font-size="16" font-weight="700" fill="#a78bfa">Web PC (선택) — Ubuntu 24.04</text>
+<path d="M 235.0 230.0 L 235.0 450.0" fill="none" stroke="#94a3b8" stroke-width="2.0" stroke-linejoin="round" marker-end="url(#arr-topic)" marker-start="url(#arr-topic)"/>
+<path d="M 380.0 230.0 L 380.0 300.0 L 545.0 300.0 L 545.0 450.0" fill="none" stroke="#94a3b8" stroke-width="2.0" stroke-linejoin="round" marker-end="url(#arr-topic)"/>
+<path d="M 855.0 230.0 L 855.0 450.0" fill="none" stroke="#38bdf8" stroke-width="2.0" stroke-linejoin="round" stroke-dasharray="2 5" marker-end="url(#arr-http)"/>
+<path d="M 1165.0 230.0 L 1165.0 450.0" fill="none" stroke="#f59e0b" stroke-width="2.0" stroke-linejoin="round" marker-end="url(#arr-mqtt)" marker-start="url(#arr-mqtt)"/>
+<path d="M 1475.0 230.0 L 1475.0 450.0" fill="none" stroke="#a78bfa" stroke-width="2.0" stroke-linejoin="round" marker-end="url(#arr-sql)"/>
+<path d="M 1600.0 230.0 L 1600.0 300.0 L 1340.0 300.0 L 1340.0 230.0" fill="none" stroke="#f59e0b" stroke-width="2.0" stroke-linejoin="round" marker-end="url(#arr-mqtt)" marker-start="url(#arr-mqtt)"/>
+<path d="M 1310.0 165.0 L 1330.0 165.0" fill="none" stroke="#a78bfa" stroke-width="2.0" stroke-linejoin="round" marker-end="url(#arr-sql)"/>
+<path d="M 1620.0 165.0 L 1640.0 165.0" fill="none" stroke="#38bdf8" stroke-width="2.0" stroke-linejoin="round" stroke-dasharray="2 5" marker-end="url(#arr-http)"/>
+<path d="M 1700.0 230.0 L 1700.0 340.0 L 320.0 340.0 L 320.0 450.0" fill="none" stroke="#38bdf8" stroke-width="2.0" stroke-linejoin="round" stroke-dasharray="2 5" marker-end="url(#arr-http)"/>
+<path d="M 690.0 165.0 L 710.0 165.0" fill="none" stroke="#38bdf8" stroke-width="2.0" stroke-linejoin="round" stroke-dasharray="2 5" marker-end="url(#arr-http)"/>
+<path d="M 710.0 515.0 L 690.0 515.0" fill="none" stroke="#94a3b8" stroke-width="2.0" stroke-linejoin="round" marker-end="url(#arr-topic)"/>
+<path d="M 1000.0 515.0 L 1020.0 515.0" fill="none" stroke="#94a3b8" stroke-width="2.0" stroke-linejoin="round" marker-end="url(#arr-topic)"/>
+<path d="M 1310.0 515.0 L 1330.0 515.0" fill="none" stroke="#94a3b8" stroke-width="2.0" stroke-linejoin="round" marker-end="url(#arr-topic)"/>
+<path d="M 545.0 580.0 L 545.0 640.0 L 855.0 640.0 L 855.0 700.0" fill="none" stroke="#34d399" stroke-width="3" stroke-linejoin="round" marker-end="url(#arr-srv)"/>
+<path d="M 470.0 580.0 L 470.0 700.0" fill="none" stroke="#34d399" stroke-width="3" stroke-linejoin="round" marker-end="url(#arr-srv)" marker-start="url(#arr-srv)"/>
+<path d="M 690.0 765.0 L 710.0 765.0" fill="none" stroke="#94a3b8" stroke-width="2.0" stroke-linejoin="round" marker-end="url(#arr-topic)" marker-start="url(#arr-topic)"/>
+<path d="M 380.0 765.0 L 400.0 765.0" fill="none" stroke="#34d399" stroke-width="3" stroke-linejoin="round" marker-end="url(#arr-srv)" marker-start="url(#arr-srv)"/>
+<path d="M 1785.0 580.0 L 1785.0 640.0 L 1490.0 640.0 L 1490.0 700.0" fill="none" stroke="#475569" stroke-width="2.0" stroke-linejoin="round" stroke-dasharray="4 6" marker-end="url(#arr-ghost)"/>
+<path d="M 235.0 830.0 L 235.0 1060.0" fill="none" stroke="#cbd5e1" stroke-width="2.0" stroke-linejoin="round" marker-end="url(#arr-bus)" marker-start="url(#arr-bus)"/>
+<path d="M 380.0 1125.0 L 400.0 1125.0" fill="none" stroke="#cbd5e1" stroke-width="2.0" stroke-linejoin="round" marker-end="url(#arr-bus)" marker-start="url(#arr-bus)"/>
+<path d="M 690.0 1125.0 L 710.0 1125.0" fill="none" stroke="#cbd5e1" stroke-width="2.0" stroke-linejoin="round" marker-end="url(#arr-bus)"/>
+<path d="M 470.0 830.0 L 470.0 900.0 L 855.0 900.0 L 855.0 1060.0" fill="none" stroke="#f59e0b" stroke-width="2.0" stroke-linejoin="round" marker-end="url(#arr-mqtt)" marker-start="url(#arr-mqtt)"/>
+<path d="M 1165.0 1060.0 L 1165.0 920.0 L 170.0 920.0 L 170.0 580.0" fill="none" stroke="#cbd5e1" stroke-width="2.0" stroke-linejoin="round" marker-end="url(#arr-bus)"/>
+<path d="M 1785.0 1060.0 L 1785.0 985.0 L 280.0 985.0 L 280.0 580.0" fill="none" stroke="#cbd5e1" stroke-width="2.0" stroke-linejoin="round" marker-end="url(#arr-bus)"/>
+<path d="M 1475.0 1060.0 L 1475.0 1010.0 L 1180.0 1010.0 L 1180.0 830.0" fill="none" stroke="#475569" stroke-width="2.0" stroke-linejoin="round" stroke-dasharray="4 6" marker-end="url(#arr-ghost)"/>
+<path d="M 1000.0 1125.0 L 1020.0 1125.0" fill="none" stroke="#cbd5e1" stroke-width="2.0" stroke-linejoin="round" marker-end="url(#arr-bus)"/>
+<path d="M 1930.0 165.0 L 2110.0 165.0" fill="none" stroke="#38bdf8" stroke-width="2.0" stroke-linejoin="round" stroke-dasharray="2 5" marker-end="url(#arr-http)"/>
+<path d="M 1930.0 515.0 L 2110.0 515.0" fill="none" stroke="#38bdf8" stroke-width="2.0" stroke-linejoin="round" stroke-dasharray="2 5" marker-end="url(#arr-http)"/>
+<path d="M 1930.0 765.0 L 2110.0 765.0" fill="none" stroke="#38bdf8" stroke-width="2.0" stroke-linejoin="round" stroke-dasharray="2 5" marker-end="url(#arr-http)" marker-start="url(#arr-http)"/>
+<rect x="242.0" y="358.5" width="474.6" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#94a3b8" stroke-opacity="0.45" stroke-width="1"/>
+<text x="250.0" y="374.5" font-size="13" fill="#cbd5e1">S1 · DDS /camera/color/image_raw ↑ · /voss/vision/box · label ↓</text>
+<rect x="552.0" y="284.5" width="380.0" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#94a3b8" stroke-opacity="0.45" stroke-width="1"/>
+<text x="560.0" y="300.5" font-size="13" fill="#cbd5e1">S2 · /voss/vision/box · label → sort_manager (DDS)</text>
+<rect x="862.0" y="340.5" width="307.2" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#38bdf8" stroke-opacity="0.45" stroke-width="1"/>
+<text x="870.0" y="356.5" font-size="13" fill="#7dd3fc">S5 · HTTP /ai/stt · intent · tts (:8000)</text>
+<rect x="1172.0" y="366.5" width="430.4" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#f59e0b" stroke-opacity="0.45" stroke-width="1"/>
+<text x="1180.0" y="382.5" font-size="13" fill="#fcd34d">S6 · MQTT voss/* 발행 12 · 구독 3 (QoS 0/1 · retained 3종)</text>
+<rect x="1482.0" y="340.5" width="321.8" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#a78bfa" stroke-opacity="0.45" stroke-width="1"/>
+<text x="1490.0" y="356.5" font-size="13" fill="#c4b5fd">S7 · psycopg2 INSERT sort_log · pallet_log</text>
+<rect x="1343.4" y="288.5" width="253.1" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#f59e0b" stroke-opacity="0.45" stroke-width="1"/>
+<text x="1351.4" y="304.5" font-size="13" fill="#fcd34d">S8 · MQTT JSON ↔ (Paho, web 계정)</text>
+<rect x="1159.1" y="246.5" width="321.8" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#a78bfa" stroke-opacity="0.45" stroke-width="1"/>
+<text x="1167.1" y="262.5" font-size="13" fill="#c4b5fd">S9 · JDBC SELECT · session_plan (voss_web)</text>
+<rect x="1541.9" y="246.5" width="176.2" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#38bdf8" stroke-opacity="0.45" stroke-width="1"/>
+<text x="1549.9" y="262.5" font-size="13" fill="#7dd3fc">S10 · proxy /api · SSE</text>
+<rect x="775.4" y="312.5" width="489.2" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#38bdf8" stroke-opacity="0.45" stroke-width="1"/>
+<text x="783.4" y="328.5" font-size="13" fill="#7dd3fc">S11 · /camera/gripper → :8091 · /camera/usb → :8092 (Nginx proxy)</text>
+<rect x="611.9" y="246.5" width="176.2" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#38bdf8" stroke-opacity="0.45" stroke-width="1"/>
+<text x="619.9" y="262.5" font-size="13" fill="#7dd3fc">S12 · HTTP /ai (voice)</text>
+<rect x="652.8" y="424.5" width="234.4" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#94a3b8" stroke-opacity="0.45" stroke-width="1"/>
+<text x="660.8" y="440.5" font-size="13" fill="#cbd5e1">S13 · /voss/voice/intent · say</text>
+<rect x="976.4" y="424.5" width="227.1" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#94a3b8" stroke-opacity="0.45" stroke-width="1"/>
+<text x="984.4" y="440.5" font-size="13" fill="#cbd5e1">S14 · /voss/sort/* · pallet/*</text>
+<rect x="1308.3" y="424.5" width="183.4" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#94a3b8" stroke-opacity="0.45" stroke-width="1"/>
+<text x="1316.3" y="440.5" font-size="13" fill="#cbd5e1">S15 · /voss/sort/result</text>
+<rect x="590.1" y="656.5" width="219.8" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#34d399" stroke-opacity="0.45" stroke-width="1"/>
+<text x="598.1" y="672.5" font-size="13" fill="#6ee7b7">S16 · action track_and_grasp</text>
+<rect x="477.0" y="600.5" width="365.4" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#34d399" stroke-opacity="0.45" stroke-width="1"/>
+<text x="485.0" y="616.5" font-size="13" fill="#6ee7b7">S17 · srv move_to_zone · stop ↓ · pose · state ↑</text>
+<rect x="638.2" y="848.5" width="263.5" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#94a3b8" stroke-opacity="0.45" stroke-width="1"/>
+<text x="646.2" y="864.5" font-size="13" fill="#cbd5e1">S18 · servo_cmd 30 Hz · pose 50 Hz</text>
+<rect x="213.3" y="848.5" width="273.4" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#34d399" stroke-opacity="0.45" stroke-width="1"/>
+<text x="221.3" y="864.5" font-size="13" fill="#6ee7b7">S19 · DDS speedl_stream · dsr 서비스</text>
+<rect x="1443.8" y="628.5" width="312.4" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#475569" stroke-opacity="0.45" stroke-width="1"/>
+<text x="1451.8" y="644.5" font-size="13" fill="#94a3b8">S20 · 설정 읽기 (config_dir · launch 인자)</text>
+<rect x="222.0" y="968.5" width="370.6" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#cbd5e1" stroke-opacity="0.45" stroke-width="1"/>
+<text x="230.0" y="984.5" font-size="13" fill="#e2e8f0">S21 · 유선 TCP :12345 (dsr_controller2 ↔ 컨트롤러)</text>
+<rect x="331.1" y="1203.5" width="37.8" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#cbd5e1" stroke-opacity="0.45" stroke-width="1"/>
+<text x="339.1" y="1219.5" font-size="13" fill="#e2e8f0">S22</text>
+<rect x="720.7" y="1203.5" width="98.7" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#cbd5e1" stroke-opacity="0.45" stroke-width="1"/>
+<text x="728.7" y="1219.5" font-size="13" fill="#e2e8f0">S23 · 플랜지</text>
+<rect x="502.7" y="888.5" width="394.6" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#f59e0b" stroke-opacity="0.45" stroke-width="1"/>
+<text x="510.7" y="904.5" font-size="13" fill="#fcd34d">S24 · Modbus TCP 192.168.1.1:502 (pymodbus, unit 65)</text>
+<rect x="571.9" y="908.5" width="256.2" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#cbd5e1" stroke-opacity="0.45" stroke-width="1"/>
+<text x="579.9" y="924.5" font-size="13" fill="#e2e8f0">S25 · USB 3.0 → realsense2_camera</text>
+<rect x="881.0" y="973.5" width="278.1" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#cbd5e1" stroke-opacity="0.45" stroke-width="1"/>
+<text x="889.0" y="989.5" font-size="13" fill="#e2e8f0">S26 · USB → usb_camera_preview :8092</text>
+<rect x="1230.8" y="998.5" width="338.4" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#475569" stroke-opacity="0.45" stroke-width="1"/>
+<text x="1238.8" y="1014.5" font-size="13" fill="#94a3b8">S27 · 시리얼 9600 (tools/arduino, 속도 설정만)</text>
+<rect x="1030.5" y="1203.5" width="119.0" height="23" rx="5" fill="#020617" fill-opacity="0.93" stroke="#cbd5e1" stroke-opacity="0.45" stroke-width="1"/>
+<text x="1038.5" y="1219.5" font-size="13" fill="#e2e8f0">S28 · 손목 장착</text>
+<rect x="1972.0" y="90.0" width="96.1" height="40" rx="5" fill="#020617" fill-opacity="0.93" stroke="#38bdf8" stroke-opacity="0.45" stroke-width="1"/>
+<text x="1980.0" y="106.0" font-size="13" fill="#7dd3fc">S29 · HTTPS</text>
+<text x="1980.0" y="123.0" font-size="13" fill="#7dd3fc">(별도 NIC)</text>
+<rect x="1961.0" y="450.0" width="117.9" height="40" rx="5" fill="#020617" fill-opacity="0.93" stroke="#38bdf8" stroke-opacity="0.45" stroke-width="1"/>
+<text x="1969.0" y="466.0" font-size="13" fill="#7dd3fc">S30 · HTTP :80</text>
+<text x="1969.0" y="483.0" font-size="13" fill="#7dd3fc">(원격 STOP 만)</text>
+<rect x="1931.9" y="700.0" width="176.2" height="40" rx="5" fill="#020617" fill-opacity="0.93" stroke="#38bdf8" stroke-opacity="0.45" stroke-width="1"/>
+<text x="1939.9" y="716.0" font-size="13" fill="#7dd3fc">S31 · SSH -L 8000·8080</text>
+<text x="1939.9" y="733.0" font-size="13" fill="#7dd3fc">1883·5432 → REST · /ai</text>
+<rect x="90" y="100" width="290" height="130" rx="12" fill="#0f1f2e" stroke="#60a5fa" stroke-width="2.2"/>
+<text x="102" y="122" font-size="15" fill="#60a5fa">▣</text>
+<text x="235.0" y="134" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">vision</text>
+<text x="235.0" y="156" font-size="13.5" fill="#cbd5e1" text-anchor="middle">box_tracker · label_reader</text>
+<text x="235.0" y="173" font-size="12.5" fill="#94a3b8" text-anchor="middle">ros:jazzy-ros-base-noble</text>
+<text x="235.0" y="190" font-size="12.5" fill="#94a3b8" text-anchor="middle">PaddleOCR 3.7 · paddle 3.3.1 (cu126)</text>
+<text x="235.0" y="207" font-size="12.5" fill="#94a3b8" text-anchor="middle">compose.gpu.yml → OCR GPU</text>
+<rect x="360" y="100" width="290" height="130" rx="12" fill="#2a1f4f" stroke="#c084fc" stroke-width="2.2"/>
+<text x="372" y="122" font-size="15" fill="#c084fc">✦</text>
+<text x="505.0" y="134" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">ai (GPU)</text>
+<text x="505.0" y="156" font-size="13.5" fill="#cbd5e1" text-anchor="middle">FastAPI · uvicorn :8000</text>
+<text x="505.0" y="173" font-size="12.5" fill="#94a3b8" text-anchor="middle">nvidia/cuda:12.6.3 · Python 3.12</text>
+<text x="505.0" y="190" font-size="12.5" fill="#94a3b8" text-anchor="middle">faster-whisper small (fp16)</text>
+<text x="505.0" y="207" font-size="12.5" fill="#94a3b8" text-anchor="middle">LangChain + OpenAI gpt-4o · tts</text>
+<rect x="630" y="100" width="290" height="130" rx="12" fill="#3b2a12" stroke="#f59e0b" stroke-width="2.2"/>
+<text x="642" y="122" font-size="15" fill="#f59e0b">≡</text>
+<text x="775.0" y="134" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">mqtt</text>
+<text x="775.0" y="156" font-size="13.5" fill="#cbd5e1" text-anchor="middle">Mosquitto 2 · 127.0.0.1:1883</text>
+<text x="775.0" y="173" font-size="12.5" fill="#94a3b8" text-anchor="middle">allow_anonymous false · ACL</text>
+<text x="775.0" y="190" font-size="12.5" fill="#94a3b8" text-anchor="middle">web · bridge · debug · voice_*</text>
+<text x="775.0" y="207" font-size="12.5" fill="#94a3b8" text-anchor="middle">persistence · retained 3종</text>
+<rect x="900" y="100" width="290" height="130" rx="12" fill="#2b1a5c" stroke="#a78bfa" stroke-width="2.2"/>
+<text x="912" y="122" font-size="15" fill="#a78bfa">⛁</text>
+<text x="1045.0" y="134" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">db</text>
+<text x="1045.0" y="156" font-size="13.5" fill="#cbd5e1" text-anchor="middle">PostgreSQL 16 · 127.0.0.1:5432</text>
+<text x="1045.0" y="173" font-size="12.5" fill="#94a3b8" text-anchor="middle">sort_log · pallet_log · session_plan</text>
+<text x="1045.0" y="190" font-size="12.5" fill="#94a3b8" text-anchor="middle">voss_logger INSERT · voss_web SELECT</text>
+<text x="1045.0" y="207" font-size="12.5" fill="#94a3b8" text-anchor="middle">/var/lib/voss/pgdata 볼륨</text>
+<rect x="1170" y="100" width="290" height="130" rx="12" fill="#0b2545" stroke="#38bdf8" stroke-width="2.2"/>
+<text x="1182" y="122" font-size="15" fill="#38bdf8">▭</text>
+<text x="1315.0" y="134" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">web / backend</text>
+<text x="1315.0" y="156" font-size="13.5" fill="#cbd5e1" text-anchor="middle">Spring Boot 3.5 · Java 21 · :8080</text>
+<text x="1315.0" y="173" font-size="12.5" fill="#94a3b8" text-anchor="middle">REST /api · SSE /api/stream</text>
+<text x="1315.0" y="190" font-size="12.5" fill="#94a3b8" text-anchor="middle">spring-integration-mqtt (Paho)</text>
+<text x="1315.0" y="207" font-size="12.5" fill="#94a3b8" text-anchor="middle">JDBC 읽기 · session_plan 쓰기</text>
+<rect x="1440" y="100" width="290" height="130" rx="12" fill="#0b2545" stroke="#38bdf8" stroke-width="2.2"/>
+<text x="1452" y="122" font-size="15" fill="#38bdf8">▭</text>
+<text x="1585.0" y="134" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">web / frontend</text>
+<text x="1585.0" y="156" font-size="13.5" fill="#cbd5e1" text-anchor="middle">Nginx 1.27 · :80</text>
+<text x="1585.0" y="173" font-size="12.5" fill="#94a3b8" text-anchor="middle">React 19 · Vite 6 · TypeScript 5.7</text>
+<text x="1585.0" y="190" font-size="12.5" fill="#94a3b8" text-anchor="middle">/api → 8080 · /camera/* → 8091/8092</text>
+<text x="1585.0" y="207" font-size="12.5" fill="#94a3b8" text-anchor="middle">원격 브라우저는 STOP 만</text>
+<rect x="90" y="450" width="290" height="130" rx="12" fill="#06241f" stroke="#34d399" stroke-width="2.2"/>
+<text x="102" y="472" font-size="15" fill="#34d399">‹›</text>
+<text x="235.0" y="484" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">realsense2_camera</text>
+<text x="235.0" y="506" font-size="13.5" fill="#cbd5e1" text-anchor="middle">color 1920×1080×30 · 노출 6 ms</text>
+<text x="235.0" y="523" font-size="12.5" fill="#94a3b8" text-anchor="middle">depth/infra/imu off · WB 4600</text>
+<text x="235.0" y="540" font-size="12.5" fill="#94a3b8" text-anchor="middle">camera_preview :8091 · usb :8092</text>
+<rect x="360" y="450" width="290" height="130" rx="12" fill="#0a2d26" stroke="#6ee7b7" stroke-width="2.2"/>
+<text x="372" y="472" font-size="15" fill="#6ee7b7">‹›</text>
+<text x="505.0" y="484" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">sort_manager</text>
+<text x="505.0" y="506" font-size="13.5" fill="#cbd5e1" text-anchor="middle">작업 상태기계 · 준비 5항목 검사</text>
+<text x="505.0" y="523" font-size="12.5" fill="#94a3b8" text-anchor="middle">voss_config.yaml 유일 독자</text>
+<text x="505.0" y="540" font-size="12.5" fill="#94a3b8" text-anchor="middle">pallet_fsm · pallet_plan · readiness</text>
+<rect x="630" y="450" width="290" height="130" rx="12" fill="#06241f" stroke="#34d399" stroke-width="2.2"/>
+<text x="642" y="472" font-size="15" fill="#34d399">‹›</text>
+<text x="775.0" y="484" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">voss_voice 3노드</text>
+<text x="775.0" y="506" font-size="13.5" fill="#cbd5e1" text-anchor="middle">voice_listener · intent_parser · speech_out</text>
+<text x="775.0" y="523" font-size="12.5" fill="#94a3b8" text-anchor="middle">sounddevice 16 kHz · aplay 24 kHz</text>
+<text x="775.0" y="540" font-size="12.5" fill="#94a3b8" text-anchor="middle">HTTP → ai 컨테이너</text>
+<rect x="900" y="450" width="290" height="130" rx="12" fill="#06241f" stroke="#34d399" stroke-width="2.2"/>
+<text x="912" y="472" font-size="15" fill="#34d399">‹›</text>
+<text x="1045.0" y="484" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">hmi_bridge</text>
+<text x="1045.0" y="506" font-size="13.5" fill="#cbd5e1" text-anchor="middle">ROS ↔ MQTT JSON · paho-mqtt</text>
+<text x="1045.0" y="523" font-size="12.5" fill="#94a3b8" text-anchor="middle">구독 11 토픽 → 발행 12 MQTT</text>
+<text x="1045.0" y="540" font-size="12.5" fill="#94a3b8" text-anchor="middle">voss/command → srv sort/command</text>
+<rect x="1170" y="450" width="290" height="130" rx="12" fill="#06241f" stroke="#34d399" stroke-width="2.2"/>
+<text x="1182" y="472" font-size="15" fill="#34d399">‹›</text>
+<text x="1315.0" y="484" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">sort_logger</text>
+<text x="1315.0" y="506" font-size="13.5" fill="#cbd5e1" text-anchor="middle">SortResult · PalletResult → DB</text>
+<text x="1315.0" y="523" font-size="12.5" fill="#94a3b8" text-anchor="middle">psycopg2 · 스풀 /var/lib/voss/spool</text>
+<text x="1315.0" y="540" font-size="12.5" fill="#94a3b8" text-anchor="middle">/voss/log/status 1 Hz</text>
+<rect x="1440" y="450" width="290" height="130" rx="12" fill="#2b1a5c" stroke="#a78bfa" stroke-width="2.2"/>
+<text x="1452" y="472" font-size="15" fill="#a78bfa">⛁</text>
+<text x="1585.0" y="484" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">config/ · 레포 밖 실값</text>
+<text x="1585.0" y="506" font-size="13.5" fill="#cbd5e1" text-anchor="middle">voss_config.yaml · hand_eye.yaml</text>
+<text x="1585.0" y="523" font-size="12.5" fill="#94a3b8" text-anchor="middle">belt_homography.yaml</text>
+<text x="1585.0" y="540" font-size="12.5" fill="#94a3b8" text-anchor="middle">~/voss_ws/config/belt_servo_real.yaml</text>
+<text x="1585.0" y="557" font-size="12.5" fill="#94a3b8" text-anchor="middle">deploy/node/.env (비밀값)</text>
+<rect x="90" y="700" width="290" height="130" rx="12" fill="#111827" stroke="#94a3b8" stroke-width="2.2"/>
+<text x="102" y="722" font-size="15" fill="#94a3b8">⧉</text>
+<text x="235.0" y="734" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">두산 브링업</text>
+<text x="235.0" y="756" font-size="13.5" fill="#cbd5e1" text-anchor="middle">m0609_rg2_bringup · dsr_controller2</text>
+<text x="235.0" y="773" font-size="12.5" fill="#94a3b8" text-anchor="middle">doosan-robot2 (레포 밖 ws_cobot_pjt)</text>
+<text x="235.0" y="790" font-size="12.5" fill="#94a3b8" text-anchor="middle">mode:=real host:=$VOSS_ROBOT_HOST :12345</text>
+<rect x="360" y="700" width="290" height="130" rx="12" fill="#06241f" stroke="#34d399" stroke-width="2.2"/>
+<text x="372" y="722" font-size="15" fill="#34d399">‹›</text>
+<text x="505.0" y="734" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">robot_gateway</text>
+<text x="505.0" y="756" font-size="13.5" fill="#cbd5e1" text-anchor="middle">두산 서비스 단일 직렬 큐</text>
+<text x="505.0" y="773" font-size="12.5" fill="#94a3b8" text-anchor="middle">servo guard · watchdog 200 ms</text>
+<text x="505.0" y="790" font-size="12.5" fill="#94a3b8" text-anchor="middle">pose 50 Hz (joint_states + fkin)</text>
+<text x="505.0" y="807" font-size="12.5" fill="#94a3b8" text-anchor="middle">RG2 pymodbus 직접</text>
+<rect x="630" y="700" width="290" height="130" rx="12" fill="#06241f" stroke="#34d399" stroke-width="2.2"/>
+<text x="642" y="722" font-size="15" fill="#34d399">‹›</text>
+<text x="775.0" y="734" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">belt_servo</text>
+<text x="775.0" y="756" font-size="13.5" fill="#cbd5e1" text-anchor="middle">30 Hz 폐루프 비주얼 서보</text>
+<text x="775.0" y="773" font-size="12.5" fill="#94a3b8" text-anchor="middle">v = v_belt + Kp·e · 사다리꼴 z</text>
+<text x="775.0" y="790" font-size="12.5" fill="#94a3b8" text-anchor="middle">action track_and_grasp 서버</text>
+<text x="775.0" y="807" font-size="12.5" fill="#94a3b8" text-anchor="middle">JSONL 틱·시도 로그 data/servo</text>
+<rect x="900" y="700" width="290" height="130" rx="12" fill="#111827" stroke="#94a3b8" stroke-width="2.2"/>
+<text x="912" y="722" font-size="15" fill="#94a3b8">⧉</text>
+<text x="1045.0" y="734" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">scripts/voss_up.py</text>
+<text x="1045.0" y="756" font-size="13.5" fill="#cbd5e1" text-anchor="middle">T1 브링업 → T2 gateway → T3 카메라</text>
+<text x="1045.0" y="773" font-size="12.5" fill="#94a3b8" text-anchor="middle">→ T4 logger → T5 비전 → T7 servo</text>
+<text x="1045.0" y="790" font-size="12.5" fill="#94a3b8" text-anchor="middle">→ T8 manager → 음성 3 → hmi_bridge</text>
+<text x="1045.0" y="807" font-size="12.5" fill="#94a3b8" text-anchor="middle">준비 로그 대기 · 역순 종료</text>
+<rect x="1170" y="700" width="290" height="130" rx="12" fill="#111827" stroke="#94a3b8" stroke-width="2.2"/>
+<text x="1182" y="722" font-size="15" fill="#94a3b8">⧉</text>
+<text x="1315.0" y="734" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">검증 3단계</text>
+<text x="1315.0" y="756" font-size="13.5" fill="#cbd5e1" text-anchor="middle">dry_run + 녹화 재생 (개인 PC)</text>
+<text x="1315.0" y="773" font-size="12.5" fill="#94a3b8" text-anchor="middle">두산 에뮬레이터 virtual_node</text>
+<text x="1315.0" y="790" font-size="12.5" fill="#94a3b8" text-anchor="middle">실기 (공용 PC, 비상정지 옆)</text>
+<text x="1315.0" y="807" font-size="12.5" fill="#94a3b8" text-anchor="middle">DOMAIN 30 에선 dry_run 거부</text>
+<rect x="1440" y="700" width="290" height="130" rx="12" fill="#111827" stroke="#94a3b8" stroke-width="2.2"/>
+<text x="1452" y="722" font-size="15" fill="#94a3b8">⧉</text>
+<text x="1585.0" y="734" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">CI · 규칙</text>
+<text x="1585.0" y="756" font-size="13.5" fill="#cbd5e1" text-anchor="middle">.github/workflows/ci.yml</text>
+<text x="1585.0" y="773" font-size="12.5" fill="#94a3b8" text-anchor="middle">ruff → colcon build → test</text>
+<text x="1585.0" y="790" font-size="12.5" fill="#94a3b8" text-anchor="middle">voss_msgs·config 변경 시 docs 강제</text>
+<text x="1585.0" y="807" font-size="12.5" fill="#94a3b8" text-anchor="middle">ADR 16 · docs/interfaces 계약 우선</text>
+<rect x="90" y="1060" width="290" height="130" rx="12" fill="#1f2937" stroke="#cbd5e1" stroke-width="2.2"/>
+<text x="102" y="1082" font-size="15" fill="#cbd5e1">⚙</text>
+<text x="235.0" y="1094" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">두산 컨트롤러</text>
+<text x="235.0" y="1116" font-size="13.5" fill="#cbd5e1" text-anchor="middle">M0609 · TCP :12345</text>
+<text x="235.0" y="1133" font-size="12.5" fill="#94a3b8" text-anchor="middle">유선 전용 서브넷</text>
+<text x="235.0" y="1150" font-size="12.5" fill="#94a3b8" text-anchor="middle">툴·TCP 등록은 펜던트</text>
+<rect x="360" y="1060" width="290" height="130" rx="12" fill="#1f2937" stroke="#cbd5e1" stroke-width="2.2"/>
+<text x="372" y="1082" font-size="15" fill="#cbd5e1">⚙</text>
+<text x="505.0" y="1094" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">두산 M0609</text>
+<text x="505.0" y="1116" font-size="13.5" fill="#cbd5e1" text-anchor="middle">6축 · 가반 6 kg · 도달 900 mm</text>
+<text x="505.0" y="1133" font-size="12.5" fill="#94a3b8" text-anchor="middle">speedl_stream TCP 속도 제어</text>
+<text x="505.0" y="1150" font-size="12.5" fill="#94a3b8" text-anchor="middle">MoveToZone 300 mm/s · 900 mm/s²</text>
+<rect x="630" y="1060" width="290" height="130" rx="12" fill="#1f2937" stroke="#cbd5e1" stroke-width="2.2"/>
+<text x="642" y="1082" font-size="15" fill="#cbd5e1">⚙</text>
+<text x="775.0" y="1094" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">OnRobot RG2</text>
+<text x="775.0" y="1116" font-size="13.5" fill="#cbd5e1" text-anchor="middle">Compute Box 192.168.1.1:502</text>
+<text x="775.0" y="1133" font-size="12.5" fill="#94a3b8" text-anchor="middle">폭 0~110 mm · 힘 3~40 N</text>
+<text x="775.0" y="1150" font-size="12.5" fill="#94a3b8" text-anchor="middle">31 mm 파지 · 39 mm · 14 N</text>
+<rect x="900" y="1060" width="290" height="130" rx="12" fill="#1f2937" stroke="#cbd5e1" stroke-width="2.2"/>
+<text x="912" y="1082" font-size="15" fill="#cbd5e1">⚙</text>
+<text x="1045.0" y="1094" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">RealSense D435i</text>
+<text x="1045.0" y="1116" font-size="13.5" fill="#cbd5e1" text-anchor="middle">손목 Eye-in-Hand · USB 3.0</text>
+<text x="1045.0" y="1133" font-size="12.5" fill="#94a3b8" text-anchor="middle">RGB 만 (깊이 미사용)</text>
+<text x="1045.0" y="1150" font-size="12.5" fill="#94a3b8" text-anchor="middle">핸드아이 PARK + 터치 보정</text>
+<rect x="1170" y="1060" width="290" height="130" rx="12" fill="#1f2937" stroke="#cbd5e1" stroke-width="2.2"/>
+<text x="1182" y="1082" font-size="15" fill="#cbd5e1">⚙</text>
+<text x="1315.0" y="1094" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">탁상 컨베이어</text>
+<text x="1315.0" y="1116" font-size="13.5" fill="#cbd5e1" text-anchor="middle">벨트 1040×70 mm · 약 4.6 cm/s</text>
+<text x="1315.0" y="1133" font-size="12.5" fill="#94a3b8" text-anchor="middle">스텝모터 + Arduino Uno</text>
+<text x="1315.0" y="1150" font-size="12.5" fill="#94a3b8" text-anchor="middle">시리얼 9600 (속도 설정)</text>
+<rect x="1440" y="1060" width="290" height="130" rx="12" fill="#1f2937" stroke="#cbd5e1" stroke-width="2.2"/>
+<text x="1452" y="1082" font-size="15" fill="#cbd5e1">⚙</text>
+<text x="1585.0" y="1094" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">Logitech C270 + 작업대</text>
+<text x="1585.0" y="1116" font-size="13.5" fill="#cbd5e1" text-anchor="middle">USB 웹캠 · 120×65 cm 작업대</text>
+<text x="1585.0" y="1133" font-size="12.5" fill="#94a3b8" text-anchor="middle">A·B·C 3×2×2 · 재확인·보류 2×1</text>
+<text x="1585.0" y="1150" font-size="12.5" fill="#94a3b8" text-anchor="middle">팔레트 4×2×2 · 박스 46×31×27 mm</text>
+<rect x="2110" y="450" width="270" height="130" rx="12" fill="#0b2545" stroke="#38bdf8" stroke-width="2.2"/>
+<text x="2122" y="472" font-size="15" fill="#38bdf8">▭</text>
+<text x="2245.0" y="484" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">브라우저 HMI</text>
+<text x="2245.0" y="506" font-size="13.5" fill="#cbd5e1" text-anchor="middle">http://&lt;Nodes PC&gt;:80</text>
+<text x="2245.0" y="523" font-size="12.5" fill="#94a3b8" text-anchor="middle">운전·분류·답변·팔레트 버튼</text>
+<text x="2245.0" y="540" font-size="12.5" fill="#94a3b8" text-anchor="middle">3D 팔레트 · 카메라 · 음성 표시등</text>
+<rect x="2110" y="700" width="270" height="130" rx="12" fill="#06241f" stroke="#34d399" stroke-width="2.2"/>
+<text x="2122" y="722" font-size="15" fill="#34d399">‹›</text>
+<text x="2245.0" y="734" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">scripts/web_pc_voice.sh</text>
+<text x="2245.0" y="756" font-size="13.5" fill="#cbd5e1" text-anchor="middle">마이크·스피커 음성 노드 (ROS, DOMAIN 30)</text>
+<text x="2245.0" y="773" font-size="12.5" fill="#94a3b8" text-anchor="middle">command_transport=web_api</text>
+<text x="2245.0" y="790" font-size="12.5" fill="#94a3b8" text-anchor="middle">hmi_bridge voice_status_only</text>
+<text x="2245.0" y="807" font-size="12.5" fill="#94a3b8" text-anchor="middle">SSH -L 8000·8080·1883·5432</text>
+<rect x="2110" y="100" width="270" height="130" rx="12" fill="#111827" stroke="#94a3b8" stroke-width="2.2"/>
+<text x="2122" y="122" font-size="15" fill="#94a3b8">⧉</text>
+<text x="2245.0" y="134" font-size="19" font-weight="700" fill="#f8fafc" text-anchor="middle">OpenAI API</text>
+<text x="2245.0" y="156" font-size="13.5" fill="#cbd5e1" text-anchor="middle">gpt-4o intent · gpt-4o-mini-tts</text>
+<text x="2245.0" y="173" font-size="12.5" fill="#94a3b8" text-anchor="middle">별도 Wi-Fi NIC</text>
+<text x="2245.0" y="190" font-size="12.5" fill="#94a3b8" text-anchor="middle">temperature 0 · 3 s timeout</text>
+</g>
+<text x="40" y="1454" font-size="15" font-weight="700" fill="#f8fafc">Legend</text>
+<rect x="40" y="1464" width="34" height="16" rx="4" fill="#06241f" stroke="#34d399" stroke-width="1.5"/>
+<text x="82" y="1477" font-size="14" fill="#cbd5e1">호스트 ROS 2 노드</text>
+<rect x="242.88000000000002" y="1464" width="34" height="16" rx="4" fill="#0a2d26" stroke="#6ee7b7" stroke-width="1.5"/>
+<text x="284.88" y="1477" font-size="14" fill="#cbd5e1">작업 관리자</text>
+<rect x="398.72" y="1464" width="34" height="16" rx="4" fill="#0f1f2e" stroke="#60a5fa" stroke-width="1.5"/>
+<text x="440.72" y="1477" font-size="14" fill="#cbd5e1">비전 컨테이너</text>
+<rect x="568.5600000000001" y="1464" width="34" height="16" rx="4" fill="#2a1f4f" stroke="#c084fc" stroke-width="1.5"/>
+<text x="610.5600000000001" y="1477" font-size="14" fill="#cbd5e1">AI 컨테이너</text>
+<rect x="726.08" y="1464" width="34" height="16" rx="4" fill="#3b2a12" stroke="#f59e0b" stroke-width="1.5"/>
+<text x="768.08" y="1477" font-size="14" fill="#cbd5e1">브로커</text>
+<rect x="846.08" y="1464" width="34" height="16" rx="4" fill="#2b1a5c" stroke="#a78bfa" stroke-width="1.5"/>
+<text x="888.08" y="1477" font-size="14" fill="#cbd5e1">DB · 설정 파일</text>
+<rect x="40" y="1488" width="34" height="16" rx="4" fill="#0b2545" stroke="#38bdf8" stroke-width="1.5"/>
+<text x="82" y="1501" font-size="14" fill="#cbd5e1">웹</text>
+<rect x="132.0" y="1488" width="34" height="16" rx="4" fill="#111827" stroke="#94a3b8" stroke-width="1.5"/>
+<text x="174.0" y="1501" font-size="14" fill="#cbd5e1">외부 · 스크립트</text>
+<rect x="317.52" y="1488" width="34" height="16" rx="4" fill="#1f2937" stroke="#cbd5e1" stroke-width="1.5"/>
+<text x="359.52" y="1501" font-size="14" fill="#cbd5e1">장치</text>
+<path d="M423.52 1496 L457.52 1496" stroke="#94a3b8" stroke-width="2.5"/>
+<text x="465.52" y="1501" font-size="14" fill="#cbd5e1">ROS 토픽 (DDS)</text>
+<path d="M607.9200000000001 1496 L641.9200000000001 1496" stroke="#34d399" stroke-width="2.5"/>
+<text x="649.9200000000001" y="1501" font-size="14" fill="#cbd5e1">서비스 · 액션</text>
+<path d="M779.44 1496 L813.44 1496" stroke="#38bdf8" stroke-width="2.5" stroke-dasharray="2 5"/>
+<text x="821.44" y="1501" font-size="14" fill="#cbd5e1">HTTP · SSE</text>
+<path d="M40 1520 L74 1520" stroke="#f59e0b" stroke-width="2.5"/>
+<text x="82" y="1525" font-size="14" fill="#cbd5e1">MQTT · Modbus</text>
+<path d="M219.92000000000002 1520 L253.92000000000002 1520" stroke="#a78bfa" stroke-width="2.5"/>
+<text x="261.92" y="1525" font-size="14" fill="#cbd5e1">SQL</text>
+<path d="M321.44000000000005 1520 L355.44000000000005 1520" stroke="#cbd5e1" stroke-width="2.5"/>
+<text x="363.44000000000005" y="1525" font-size="14" fill="#cbd5e1">유선 · USB</text>
+<path d="M474.4800000000001 1520 L508.4800000000001 1520" stroke="#475569" stroke-width="2.5" stroke-dasharray="4 6"/>
+<text x="516.48" y="1525" font-size="14" fill="#cbd5e1">시리얼</text>
+<text x="2380" y="1516" font-size="13" fill="#64748b" text-anchor="end">공식 배치는 공용 PC 한 대(ADR-0006). Web PC 는 비구동 통합 시험·시연 보조용(SSH 포트 포워딩, deployment_two_pc_trial.md)</text>
+<text x="2380" y="1536" font-size="13" fill="#64748b" text-anchor="end">근거: docker/*/compose.yml · src/voss_bringup/launch/voss_host.launch.py · scripts/voss_up.py · docs/architecture.md</text>
+</svg>

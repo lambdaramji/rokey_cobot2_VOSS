@@ -1,0 +1,65 @@
+flowchart TB
+  classDef st fill:#0a2d26,stroke:#6ee7b7,color:#ffffff,stroke-width:3px
+  classDef step fill:#0b2545,stroke:#38bdf8,color:#f8fafc
+  classDef dec fill:#3b2a12,stroke:#f59e0b,color:#fef3c7
+  classDef exc fill:#4a1631,stroke:#f472b6,color:#fce7f3
+  classDef pal fill:#2b1a5c,stroke:#a78bfa,color:#ede9fe
+
+  IDLE([IDLE]):::st
+  START["start — 준비 5항목 검사<br/>ROBOT · SERVO · VISION · OCR · LOG"]:::dec
+  OBS["'작업을 시작합니다.'<br/>MoveToZone(OBSERVE) 관측 자세"]:::step
+  RUN([RUNNING — 관측·판단]):::st
+  OCR1["1차 OCR (입구 관측)<br/>코드·동 교차 검증 · 자모 편집거리 퍼지 매칭"]:::step
+  Q1{"판독 결과?"}:::dec
+  PASS["집지 않고 벨트 끝으로<br/>SortResult PASSED (NON_TARGET)"]:::step
+  FULL{"구역 가득?<br/>A/B/C 12칸 · RECHECK/HOLD 2칸"}:::dec
+  PICK([PICKING — 추종·파지·적재]):::st
+  SERVO["TrackAndGrasp 액션<br/>PREPARE → TRACK → DESCEND → GRASP → LIFT → VERIFY<br/>추종 중 2차 OCR 다수결 (같은 동 2장 + 반대표 0)"]:::step
+  Q2{"파지 결과?"}:::dec
+  PLACE["MoveToZone(zone, slot, PLACE)<br/>A 역삼 · B 대치 · C 청담 격자 칸 → 개방 50 mm → OBSERVE"]:::step
+  DONE["SortResult PLACED → sort_log · HMI ≤ 1 s"]:::step
+  RC([RECHECK — 정지 재판독]):::st
+  RC1["재확인 칸 PLACE → MoveToZone(RECHECK, VIEW)<br/>srv read_label(slot) 3차 OCR"]:::step
+  Q3{"확정?"}:::dec
+  RC2["MoveToZone(RECHECK, slot, PICK)<br/>→ 목적 구역 PLACE (decided_by RECHECK)"]:::step
+  ASK([ASKING — 작업자 질문]):::st
+  ASK1["'NNN번 박스 송장을 확인하지 못했습니다.<br/>역삼동, 청담동 중 어디입니까? 보류하려면 보류라고 말해 주세요.'"]:::exc
+  Q4{"답변?"}:::dec
+  ANS["answer <box_id>|<동> → 목적 구역 PLACE<br/>(decided_by OPERATOR)"]:::step
+  HOLD["30 s 무응답 / '보류' → HOLD<br/>SortResult HELD (NO_ANSWER)"]:::exc
+  PAUSE([PAUSED]):::st
+  STOP["stop — /voss/robot/stop 최우선<br/>→ goal 취소 (어느 상태에서나)"]:::exc
+  FAIL["FAILED (GRASP_FAILED · LOST ·<br/>OUT_OF_REACH · STALE_INPUT · DEVICE_ERROR)<br/>자동 복귀·개방 없음"]:::exc
+  RESUME["resume — resume_to<br/>RECHECK · ASKING · PICK · PLACE 이어가기 또는 OBSERVE"]:::dec
+  RESET["reset_zone A|B|C|RECHECK|HOLD|PALLET<br/>칸 카운터 0"]:::dec
+  PAL([PALLETIZING]):::st
+  PAL1["palletize <동,동,동><br/>srv list_placements → pallet_plan (순수 함수)<br/>16칸 배치 · 초과 OVERFLOW · 되읽기 TTS"]:::pal
+  PAL2["박스마다 MoveToZone(zone, slot, PICK) ≤3회<br/>→ MoveToZone(PALLET, cell, DROP)<br/>PalletState · PalletResult → pallet_log"]:::pal
+  PAL3["완료 안내 · 빈 구역 카운터 0<br/>→ 시작 전 상태"]:::pal
+
+  IDLE --> START --> OBS --> RUN
+  RUN --> OCR1 --> Q1
+  Q1 -- "priority 비대상" --> PASS --> RUN
+  Q1 -- "확정 (코드=동 · conf ≥ 0.6) → 목적 구역 칸<br/>불확실 (LOW_CONF · 불일치) → 재확인 칸" --> FULL
+  FULL -- "예 (full_zone)" --> PAUSE
+  FULL -- "아니오" --> PICK
+  PICK --> SERVO --> Q2
+  Q2 -- "OK · 목적 구역" --> PLACE --> DONE --> RUN
+  Q2 -- "OK · 재확인 칸" --> RC
+  Q2 -- "실패" --> FAIL --> PAUSE
+  RC --> RC1 --> Q3
+  Q3 -- "예" --> RC2 --> DONE
+  Q3 -- "아니오" --> ASK --> ASK1 --> Q4
+  Q4 -- "동 이름" --> ANS --> DONE
+  Q4 -- "보류 / 30 s 무응답" --> HOLD --> RUN
+  RUN -. stop .-> STOP
+  PICK -. stop .-> STOP
+  RC -. stop .-> STOP
+  ASK -. stop .-> STOP
+  STOP --> PAUSE
+  PAUSE --> RESUME --> RUN
+  PAUSE --> RESET --> PAUSE
+  RUN -- "palletize" --> PAL
+  PAUSE -- "palletize" --> PAL
+  PAL --> PAL1 --> PAL2 --> PAL3 --> RUN
+  PAL -. "stop · 2층 GRIP_FAIL 3회" .-> PAUSE

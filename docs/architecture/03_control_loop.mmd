@@ -1,0 +1,40 @@
+flowchart TB
+  classDef node fill:#06241f,stroke:#34d399,color:#f8fafc
+  classDef ext fill:#111827,stroke:#94a3b8,color:#e2e8f0
+  classDef guard fill:#4a1631,stroke:#f472b6,color:#fce7f3
+  classDef fsm fill:#0b2545,stroke:#38bdf8,color:#f8fafc
+
+  CAM[("D435i RGB<br/>1920×1080 30 fps")]:::ext
+  subgraph BT["box_tracker (비전 컨테이너) — 검출 p95 4 ms · 카메라→발행 p95 49 ms"]
+    direction LR
+    D1["HSV 분할<br/>흰 송장 검출"] --> D2["등속 예측<br/>탐욕 매칭 추적<br/>min_hits 5"] --> D3["촬영 시각 pose 보간<br/>pose_lag 15 ms"] --> D4["핸드아이<br/>픽셀 → 베이스 좌표<br/>박스 높이 27 mm 가정"]
+  end
+  subgraph BS["belt_servo (호스트) — 30 Hz 틱 평균 33.3 ms · 최대 38.3 ms"]
+    direction LR
+    C1["예측<br/>관측 + 벨트속도 × 경과"] --> C2["v = v_belt (FF)<br/>+ Kp · e (P)<br/>벨트 상류로는 안 감"] --> C3["clamp<br/>0.08 m/s · 0.1 m/s²<br/>x 여유 검사"]
+    F["FSM<br/>PREPARE 90 mm 개방 → TRACK → DESCEND (윗면 −19 mm, 사다리꼴)<br/>→ GRASP 39 mm · 14 N → LIFT (grip_detected · 폭 39.5~44) → VERIFY 재닫기"]:::fsm
+  end
+  subgraph RG["robot_gateway (호스트)"]
+    direction LR
+    G1["servo guard<br/>stop 이전 stamp · 0.2 s 초과 · pose 0.1 s 초과 → 거부<br/>100 mm/s 초과 → 축소<br/>z ≤ 78 mm · x ∉ [−107, 638] → 성분 0 (감속 거리 포함)"]:::guard
+    G2["watchdog 50 Hz<br/>200 ms 만료 → 0 속도 + move_stop"]:::guard
+    G3["pose 50 Hz<br/>/dsr01/joint_states + fkin<br/>→ TCP(핑거 끝)"]
+  end
+  DSR[("두산 dsr_controller2<br/>speedl_stream (TCP 속도)")]:::ext
+  ROBOT[("M0609 + RG2")]:::ext
+
+  CAM -- "image_raw" --> D1
+  D4 -- "/voss/vision/box BoxTrack ~30 Hz" --> C1
+  C3 -- "/voss/robot/servo_cmd TwistStamped 30 Hz" --> G1
+  G1 --> G2
+  G2 -- "speedl_stream" --> DSR
+  DSR --> ROBOT
+  ROBOT -- "/dsr01/joint_states 100 Hz" --> G3
+  G3 -- "/voss/robot/pose 50 Hz" --> D3
+  G3 -- "/voss/robot/pose" --> C1
+  F -- "srv /voss/robot/gripper<br/>(Modbus TCP, 폭·힘·grip_detected)" --> RG
+  F -. "cancel → srv /voss/robot/stop" .-> G2
+  SM["sort_manager"]:::node == "action goal (track_id)" ==> F
+  F == "result grasped · reason · attempts<br/>feedback phase" ==> SM
+
+  class D1,D2,D3,D4,C1,C2,C3,G3 node
