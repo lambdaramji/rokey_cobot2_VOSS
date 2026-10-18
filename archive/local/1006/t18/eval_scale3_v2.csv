@@ -1,0 +1,51 @@
+file,truth,blur,code,dong,confidence,reason,dong_alt,correct,accepted,raw_text
+BLUR_S0701_01.png,S07-01,True,S07-01,역삼동,0.9975,AGREE,,True,True,S07-01 | 역상동 | .
+BLUR_S0701_02.png,S07-01,True,S07-01,역삼동,0.9993,AGREE,,True,True,S07-01 | 역상용 | Ub
+BLUR_S0701_03.png,S07-01,True,S07-01,역삼동,0.9963,AGREE,,True,True,S07-01 | 역심동 | U
+BLUR_S0701_04.png,S07-01,True,S07-01,역삼동,0.9967,AGREE,,True,True,S07-01 | 역상동 | 1
+BLUR_S0701_05.png,S07-01,True,S07-01,역삼동,0.9969,AGREE,,True,True,S07-01 | 역상동
+S0701_01.png,S07-01,False,S07-01,역삼동,1.0,AGREE,,True,True,S07-01 | 역삼동 | 받는분 바병후
+S0701_02.png,S07-01,False,S07-01,역삼동,1.0,AGREE,,True,True,S07-01 | 역삼동 | 방는분 박병후
+S0701_03.png,S07-01,False,S07-01,역삼동,1.0,AGREE,,True,True,S07-01 | 역삼동 | 받는분 박병후
+S0701_04.png,S07-01,False,S07-01,역삼동,1.0,AGREE,,True,True,S07-01 | 역삼동 | 받는분 박병후
+S0701_05.png,S07-01,False,S07-01,역삼동,1.0,AGREE,,True,True,S07-01 | 역삼동 | 반는분 박병후
+S0701_06.png,S07-01,False,S07-01,역삼동,1.0,AGREE,,True,True,S07-01 | 역삼동 | 받는분 박병후
+S0701_07.png,S07-01,False,S07-01,역삼동,1.0,AGREE,,True,True,S07-01 | 역삼동 | 받는분 박병후
+S0701_08.png,S07-01,False,S07-01,역삼동,1.0,AGREE,,True,True,S07-01 | 역삼동 | 받는분 박병후
+S0701_09.png,S07-01,False,S07-01,역삼동,1.0,AGREE,,True,True,S07-01 | 역삼동 | 방는분 박병후
+S0701_10.png,S07-01,False,S07-01,역삼동,1.0,AGREE,,True,True,S07-01 | 역삼동 | 받는분 박병후
+S0701_11.png,S07-01,False,S07-01,역삼동,1.0,AGREE,,True,True,S07-01 | 역삼동 | 받는분 박병후
+S0701_12.png,S07-01,False,S07-01,역삼동,1.0,AGREE,,True,True,S07-01 | 역삼동 | 받는분 박병주
+S0701_13.png,S07-01,False,S07-01,역삼동,1.0,AGREE,,True,True,S07-01 | 역삼동 | 반는분 박병후
+S0701_14.png,S07-01,False,S07-01,역삼동,1.0,AGREE,,True,True,S07-01 | 역삼동 | 받는분 박병후
+S0701_15.png,S07-01,False,S07-01,역삼동,1.0,AGREE,,True,True,S07-01 | 역삼동 | 받는분 박병후
+S0702_01.png,S07-02,False,S07-02,대치동,1.0,AGREE,,True,True,S07-02 | 대치동 | 받는분 박병후
+S0702_02.png,S07-02,False,S07-02,대치동,1.0,AGREE,,True,True,S07-02 | 대치동 | 받는분 박병후
+S0702_03.png,S07-02,False,S07-02,대치동,1.0,AGREE,,True,True,S07-02 | 대치동 | 받는분 박병후
+S0702_04.png,S07-02,False,S07-02,대치동,1.0,AGREE,,True,True,S07-02 | 대치동 | 방는분 박병후
+S0702_05.png,S07-02,False,S07-02,대치동,1.0,AGREE,,True,True,S07-02 | 대치동 | 반는분 박병후
+S0702_06.png,S07-02,False,S07-02,대치동,1.0,AGREE,,True,True,S07-02 | 대치동 | 받는분 박병후
+S0702_07.png,S07-02,False,S07-02,대치동,1.0,AGREE,,True,True,S07-02 | 대치동 | 받는분 박병후
+S0702_08.png,S07-02,False,S07-02,대치동,1.0,AGREE,,True,True,S07-02 | 대치동 | 받는분 박병후
+S0702_09.png,S07-02,False,S07-02,대치동,1.0,AGREE,,True,True,S07-02 | 대치동 | 반는분 박병후
+S0702_10.png,S07-02,False,S07-02,대치동,1.0,AGREE,,True,True,S07-02 | 대치동 | 방는분 박병후
+S0702_11.png,S07-02,False,S07-02,대치동,1.0,AGREE,,True,True,S07-02 | 대치동 | 받는분 박병후
+S0702_12.png,S07-02,False,S07-02,대치동,1.0,AGREE,,True,True,S07-02 | 대치동 | 받는분 박병후
+S0702_13.png,S07-02,False,S07-02,대치동,1.0,AGREE,,True,True,S07-02 | 대치동 | 반는분 박병후
+S0702_14.png,S07-02,False,S07-02,대치동,1.0,AGREE,,True,True,S07-02 | 대치동 | 방는분 박병후
+S0702_15.png,S07-02,False,S07-02,대치동,1.0,AGREE,,True,True,S07-02 | 대치동 | 발는분 박병후
+S0703_01.png,S07-03,False,S07-03,청담동,1.0,AGREE,,True,True,S07-03 | 청담동 | 받는분 남현지
+S0703_02.png,S07-03,False,S07-03,청담동,1.0,AGREE,,True,True,S07-03 | 청담동 | 받는분 남현지
+S0703_03.png,S07-03,False,S07-03,청담동,1.0,AGREE,,True,True,S07-03 | 청담동 | 받는분 남현지
+S0703_04.png,S07-03,False,S07-03,청담동,1.0,AGREE,,True,True,S07-03 | 청담동 | 받는분 남현지
+S0703_05.png,S07-03,False,S07-03,청담동,1.0,AGREE,,True,True,S07-03 | 청담동 | 받는분 남현지
+S0703_06.png,S07-03,False,S07-03,청담동,1.0,AGREE,,True,True,S07-03 | 청담동 | 받는분 남현지
+S0703_07.png,S07-03,False,S07-03,청담동,1.0,AGREE,,True,True,S07-03 | 청담동 | 받는분 남현지
+S0703_08.png,S07-03,False,S07-03,청담동,1.0,AGREE,,True,True,S07-03 | 청담동 | 받는분 남현지
+S0703_09.png,S07-03,False,S07-03,청담동,1.0,AGREE,,True,True,S07-03 | 청담동 | 받는분 남현지
+S0703_10.png,S07-03,False,S07-03,청담동,1.0,AGREE,,True,True,S07-03 | 청담동 | 방는분 남현지
+S0703_11.png,S07-03,False,S07-03,청담동,1.0,AGREE,,True,True,S07-03 | 청담동 | 받는분 남현지
+S0703_12.png,S07-03,False,S07-03,청담동,1.0,AGREE,,True,True,S07-03 | 청담동 | 받는분 남현지
+S0703_13.png,S07-03,False,S07-03,청담동,1.0,AGREE,,True,True,S07-03 | 청담동 | 받는분 남현지
+S0703_14.png,S07-03,False,S07-03,청담동,1.0,AGREE,,True,True,S07-03 | 청담동 | 받는분 남현지
+S0703_15.png,S07-03,False,S07-03,청담동,1.0,AGREE,,True,True,S07-03 | 청담동 | 받는문 남현지

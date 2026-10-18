@@ -1,0 +1,144 @@
+[INFO] [1791602990.790932010] [camera]: RealSense ROS v4.58.4
+[INFO] [1791602990.790975997] [camera]: Built with LibRealSense v2.58.4
+[INFO] [1791602990.790983638] [camera]: Running with LibRealSense v2.58.4
+[INFO] [1791602990.879823848] [camera]: Device with serial number 207222073252 was found.
+
+[INFO] [1791602990.879862016] [camera]: Device with physical ID /sys/devices/pci0000:00/0000:00:14.0/usb2/2-2/2-2:1.0/video4linux/video0 was found.
+[INFO] [1791602990.879868151] [camera]: Device with name RealSense D435I was found.
+[INFO] [1791602990.879978079] [camera]: Device with port number 2-2 was found.
+[INFO] [1791602990.879983135] [camera]: Device USB type: 3.2
+[INFO] [1791602990.879986938] [camera]: Resetting device...
+[INFO] [1791602996.887786906] [camera]: Device with serial number 207222073252 was found.
+
+[INFO] [1791602996.887822664] [camera]: Device with physical ID /sys/devices/pci0000:00/0000:00:14.0/usb2/2-2/2-2:1.0/video4linux/video0 was found.
+[INFO] [1791602996.887830651] [camera]: Device with name RealSense D435I was found.
+[INFO] [1791602996.887974889] [camera]: Device with port number 2-2 was found.
+[INFO] [1791602996.887981648] [camera]: Device USB type: 3.2
+[INFO] [1791602996.887989010] [camera]: Starting device RealSense D435I (Product ID: 0x0B3A)
+[INFO] [1791602996.890448571] [camera]: getParameters...
+[INFO] [1791602996.891042307] [camera]: JSON file is not provided
+[INFO] [1791602996.891052959] [camera]: Device Name: RealSense D435I
+[INFO] [1791602996.891058352] [camera]: Device Serial No: 207222073252
+[INFO] [1791602996.891063625] [camera]: Device physical port: /sys/devices/pci0000:00/0000:00:14.0/usb2/2-2/2-2:1.0/video4linux/video0
+[INFO] [1791602996.891070106] [camera]: Device FW version: 5.17.3.10
+[INFO] [1791602996.891075210] [camera]: Device Product ID: 0x0B3A
+[INFO] [1791602996.891080057] [camera]: Sync Mode: Off
+[WARN] [1791602996.984797155] [camera]: re-enable the stream for the change to take effect.
+[INFO] [1791602996.988190043] [camera]: Stopping Sensor: RGB Camera
+[INFO] [1791602997.009425988] [camera]: Starting Sensor: RGB Camera
+[INFO] [1791602997.016185604] [camera]: Open profile: stream_type: Color(0), Format: RGB8, Width: 1920, Height: 1080, FPS: 30
+[INFO] [1791602997.018747139] [camera]: RealSense Node Is Up!
+[WARN] [1791609902.713503693] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791609907.718465907] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791609912.723360192] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791609917.728394394] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791609922.733373556] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791609927.738378042] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791609932.743432070] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791609937.748531408] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791609942.753419250] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791609947.758425015] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791609952.763895567] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791609957.768487057] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791609962.773425169] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791609967.778435216] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791609972.783440201] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791609977.788438340] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791609982.793411748] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791609987.798375964] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791609992.803352389] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791609997.808474898] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610002.813353521] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610007.818458772] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610012.823357693] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610017.828462664] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610022.833356817] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610027.838549746] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610032.843353534] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610037.848520249] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610042.853367846] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610047.858350802] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610052.863353368] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610057.868341699] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610062.873414088] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610067.878525240] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610072.883401588] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610077.888542202] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610082.893362799] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610087.898475673] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610092.903358890] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610097.908480247] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610102.913415695] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610107.918405051] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610112.923368067] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610117.928499294] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610122.933361610] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610127.938459785] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610132.941319078] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610137.945494022] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610142.950353020] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610147.955504505] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610152.960379191] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610157.965397178] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610162.970459222] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610167.975387975] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610172.980468115] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610177.985469910] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610182.990445288] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610187.995456564] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610193.000426416] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610198.005355901] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610203.010763663] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610208.015395461] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610213.020437901] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610218.025354267] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610223.030435721] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610228.035545608] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610233.040379346] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610238.045419970] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610243.050392767] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610248.055527110] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610253.060391004] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610258.065515812] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610263.070569459] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610268.075358667] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610273.080354161] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610278.085361772] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610283.090457726] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610288.095514606] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610293.100361240] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610298.105354621] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610303.110525191] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610308.115429402] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610313.120539112] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610318.125375705] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610323.130386809] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610328.135491200] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610333.140470246] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610338.145403446] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610343.150414025] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610348.155353983] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610353.160392593] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610358.165443758] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610363.170532439] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610368.175516498] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610373.180452083] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610378.185355203] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610383.190410310] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610388.195389477] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610393.200399853] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610398.201998691] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610403.206538150] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610408.211448411] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610413.216428794] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610418.221422603] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610423.226406095] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610428.231509184] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610433.236395029] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610438.241516853] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610443.246407310] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610448.251394422] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610453.256482889] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610458.261399266] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[WARN] [1791610463.266451862] [camera]: XXX Hardware Notification:Frames didn't arrived within 5 seconds,1.79161e+12,Warn,Frames Timeout
+[INFO] [1791610465.141818509] [rclcpp]: signal_handler(SIGINT/SIGTERM)

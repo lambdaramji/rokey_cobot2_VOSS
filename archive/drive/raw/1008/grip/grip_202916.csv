@@ -1,0 +1,6 @@
+trial,angle_deg,width_cmd,force,ok,message,width_actual,grip_detected,close_s,dent,slip,note
+1,30.0,39.0,14.0,True,OK,42.2,True,2.18,False,False,
+2,30.0,39.0,14.0,True,OK,42.5,True,2.11,False,False,
+3,30.0,39.0,14.0,True,OK,42.3,True,2.07,False,False,
+4,30.0,39.0,14.0,True,OK,42.0,True,2.18,False,False,
+5,30.0,39.0,14.0,True,OK,42.3,True,2.12,False,False,

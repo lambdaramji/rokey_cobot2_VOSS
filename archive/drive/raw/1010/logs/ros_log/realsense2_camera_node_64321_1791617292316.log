@@ -1,0 +1,33 @@
+[INFO] [1791617292.369913355] [camera]: RealSense ROS v4.58.4
+[INFO] [1791617292.369964415] [camera]: Built with LibRealSense v2.58.4
+[INFO] [1791617292.369973085] [camera]: Running with LibRealSense v2.58.4
+[INFO] [1791617292.458502402] [camera]: Device with serial number 207222073252 was found.
+
+[INFO] [1791617292.458538566] [camera]: Device with physical ID /sys/devices/pci0000:00/0000:00:14.0/usb2/2-2/2-2:1.0/video4linux/video0 was found.
+[INFO] [1791617292.458544867] [camera]: Device with name RealSense D435I was found.
+[INFO] [1791617292.458663451] [camera]: Device with port number 2-2 was found.
+[INFO] [1791617292.458670706] [camera]: Device USB type: 3.2
+[INFO] [1791617292.458675667] [camera]: Resetting device...
+[INFO] [1791617298.465774025] [camera]: Device with serial number 207222073252 was found.
+
+[INFO] [1791617298.465804186] [camera]: Device with physical ID /sys/devices/pci0000:00/0000:00:14.0/usb2/2-2/2-2:1.0/video4linux/video0 was found.
+[INFO] [1791617298.465809667] [camera]: Device with name RealSense D435I was found.
+[INFO] [1791617298.465912213] [camera]: Device with port number 2-2 was found.
+[INFO] [1791617298.465917292] [camera]: Device USB type: 3.2
+[INFO] [1791617298.465923198] [camera]: Starting device RealSense D435I (Product ID: 0x0B3A)
+[INFO] [1791617298.465966609] [camera]: getParameters...
+[INFO] [1791617298.466506252] [camera]: JSON file is not provided
+[INFO] [1791617298.466519409] [camera]: Device Name: RealSense D435I
+[INFO] [1791617298.466523932] [camera]: Device Serial No: 207222073252
+[INFO] [1791617298.466528306] [camera]: Device physical port: /sys/devices/pci0000:00/0000:00:14.0/usb2/2-2/2-2:1.0/video4linux/video0
+[INFO] [1791617298.466533287] [camera]: Device FW version: 5.17.3.10
+[INFO] [1791617298.466537328] [camera]: Device Product ID: 0x0B3A
+[INFO] [1791617298.466540917] [camera]: Sync Mode: Off
+[WARN] [1791617298.559972588] [camera]: re-enable the stream for the change to take effect.
+[INFO] [1791617298.562914403] [camera]: Stopping Sensor: RGB Camera
+[INFO] [1791617298.575920249] [camera]: Starting Sensor: RGB Camera
+[INFO] [1791617298.584724456] [camera]: Open profile: stream_type: Color(0), Format: RGB8, Width: 1920, Height: 1080, FPS: 30
+[INFO] [1791617298.588328209] [camera]: RealSense Node Is Up!
+[WARN] [1791619302.064386798] [camera]: XXX Hardware Notification:Incomplete video frame detected!
+Size 3785480 out of 4147455 bytes (91%),1.79162e+12,Warn,Frame Corrupted
+[INFO] [1791620018.628231460] [rclcpp]: signal_handler(SIGINT/SIGTERM)

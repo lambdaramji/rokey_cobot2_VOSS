@@ -1,0 +1,5 @@
+[INFO] [1791615537.671188000] [belt_servo]: config_version=1 config_sha256=db97243ec6ef params_sha256=215e6274f074e54fde6321f1cc991718b422ddfbce6a577d2f05bbf917a64896
+[INFO] [1791615537.671446063] [belt_servo]: READY
+[INFO] [1791615537.671655913] [belt_servo]: pose_lag_ms=0.0 — gateway pose_source: service 기준 측정(measurements-1008 #6). joint_states 로 바꾸면 다시 잰다
+[INFO] [1791615537.671966108] [belt_servo]: x 여유: 하강 예상 2.64 s + 닫힘 2.10 s → 정렬 때 x_max 까지 237 mm 이상 남아야 DESCEND
+[INFO] [1791615537.672355973] [belt_servo]: 로그: ticks=/home/ms-03/voss_ws/src/rokey_cobot2_VOSS/data/servo/ticks/servo_ticks_20261010_155857.jsonl attempts=/home/ms-03/voss_ws/src/rokey_cobot2_VOSS/data/servo/attempts/servo_attempts_20261010_155857.jsonl

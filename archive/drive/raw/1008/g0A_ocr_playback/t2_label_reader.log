@@ -1,0 +1,51 @@
+[INFO] [1791445423.907420527] [label_reader]: voss_config /home/ms-03/voss_g0/config/voss_config.yaml version 1 sha256 f5563de2851d, confidence_min 0.6, OCR cpu, stage1_enough 2
+[INFO] [1791445423.951115055] [label_reader]: zone_map v1 후보 S07-01 역삼동, S07-02 대치동, S07-03 청담동
+Creating model: ('PP-OCRv5_server_det', None, None)
+Model files already exist. Using cached files. To redownload, please delete the directory manually: `/home/ms-03/.paddlex/official_models/PP-OCRv5_server_det`.
+/home/ms-03/.venvs/voss_ocr/lib/python3.12/site-packages/paddle/utils/cpp_extension/extension_utils.py:712: UserWarning: No ccache found. Please be aware that recompiling all source files may be required. You can download and install ccache from: https://github.com/ccache/ccache/blob/master/doc/INSTALL.md
+  warnings.warn(warning_message)
+Creating model: ('korean_PP-OCRv5_mobile_rec', None, None)
+Model files already exist. Using cached files. To redownload, please delete the directory manually: `/home/ms-03/.paddlex/official_models/korean_PP-OCRv5_mobile_rec`.
+[INFO] [1791445426.663166177] [label_reader]: OCR 엔진 준비 cpu 2.7 s
+[INFO] [1791445426.937931543] [label_reader]: 판독 준비 완료 — /voss/vision/label 발행 시작
+[INFO] [1791445428.937640093] [label_reader]: crop 입력 s1 0·s2 0·s3 0, 판독 0(송장 못 찾음 0, 글자 없음 0, 180° 0), 교체 0, 확실해서 건너뜀 0, 준비 전 버림 0, OCR 중앙값 -·p95 - ms, 대기 0
+[INFO] [1791445433.937788706] [label_reader]: crop 입력 s1 0·s2 0·s3 0, 판독 0(송장 못 찾음 0, 글자 없음 0, 180° 0), 교체 0, 확실해서 건너뜀 0, 준비 전 버림 0, OCR 중앙값 -·p95 - ms, 대기 0
+[INFO] [1791445438.937647749] [label_reader]: crop 입력 s1 0·s2 0·s3 0, 판독 0(송장 못 찾음 0, 글자 없음 0, 180° 0), 교체 0, 확실해서 건너뜀 0, 준비 전 버림 0, OCR 중앙값 -·p95 - ms, 대기 0
+[INFO] [1791445443.937658096] [label_reader]: crop 입력 s1 0·s2 0·s3 0, 판독 0(송장 못 찾음 0, 글자 없음 0, 180° 0), 교체 0, 확실해서 건너뜀 0, 준비 전 버림 0, OCR 중앙값 -·p95 - ms, 대기 0
+[INFO] [1791445447.803848215] [label_reader]: track 1 s1: S07-02 대치동 1.00 AGREE → 투표 대치동 1.00 (1/1, 처리 1), OCR 1968 ms
+[INFO] [1791445449.569341279] [label_reader]: crop 입력 s1 7·s2 0·s3 0, 판독 1(송장 못 찾음 0, 글자 없음 0, 180° 0), 교체 5, 확실해서 건너뜀 0, 준비 전 버림 0, OCR 중앙값 1968·p95 1968 ms, 대기 0
+[INFO] [1791445449.855084909] [label_reader]: track 1 s1: S07-02 대치동 1.00 AGREE → 투표 대치동 1.00 (2/2, 처리 2), OCR 2039 ms
+[INFO] [1791445454.760821102] [label_reader]: crop 입력 s1 2·s2 0·s3 0, 판독 1(송장 못 찾음 0, 글자 없음 0, 180° 0), 교체 0, 확실해서 건너뜀 0, 준비 전 버림 0, OCR 중앙값 2039·p95 2039 ms, 대기 1
+[INFO] [1791445455.004695204] [label_reader]: track 2 s1: S07-02 대치동 1.00 AGREE → 투표 대치동 1.00 (1/1, 처리 1), OCR 1904 ms
+[INFO] [1791445457.033060352] [label_reader]: track 2 s1: S07-02 대치동 1.00 AGREE → 투표 대치동 1.00 (2/2, 처리 2), OCR 2017 ms
+[INFO] [1791445458.944131351] [label_reader]: crop 입력 s1 6·s2 0·s3 0, 판독 2(송장 못 찾음 0, 글자 없음 0, 180° 0), 교체 5, 확실해서 건너뜀 0, 준비 전 버림 0, OCR 중앙값 1961·p95 2012 ms, 대기 0
+[INFO] [1791445459.184628362] [label_reader]: track 3 s1: S07-01 역삼동 1.00 AGREE → 투표 역삼동 1.00 (1/1, 처리 1), OCR 1882 ms
+[INFO] [1791445461.128587599] [label_reader]: track 3 s1: S07-01 역삼동 1.00 AGREE → 투표 역삼동 1.00 (2/2, 처리 2), OCR 1933 ms
+[INFO] [1791445464.303440189] [label_reader]: crop 입력 s1 7·s2 0·s3 0, 판독 2(송장 못 찾음 0, 글자 없음 0, 180° 0), 교체 5, 확실해서 건너뜀 0, 준비 전 버림 0, OCR 중앙값 1908·p95 1930 ms, 대기 0
+[INFO] [1791445464.818843163] [label_reader]: track 4 s1: S07-03 청담동 1.00 AGREE → 투표 청담동 1.00 (1/1, 처리 1), OCR 2545 ms
+[INFO] [1791445467.002836047] [label_reader]: track 4 s1: S07-03 청담동 1.00 AGREE → 투표 청담동 1.00 (2/2, 처리 2), OCR 2172 ms
+[INFO] [1791445469.974596612] [label_reader]: crop 입력 s1 6·s2 0·s3 0, 판독 2(송장 못 찾음 0, 글자 없음 0, 180° 0), 교체 4, 확실해서 건너뜀 0, 준비 전 버림 0, OCR 중앙값 2358·p95 2526 ms, 대기 0
+[INFO] [1791445470.263465092] [label_reader]: track 5 s1: S07-03 청담동 1.00 AGREE → 투표 청담동 1.00 (1/1, 처리 1), OCR 1953 ms
+[INFO] [1791445472.304026253] [label_reader]: track 5 s1: S07-03 청담동 1.00 AGREE → 투표 청담동 1.00 (2/2, 처리 2), OCR 2002 ms
+[INFO] [1791445474.655041203] [label_reader]: crop 입력 s1 7·s2 0·s3 0, 판독 2(송장 못 찾음 0, 글자 없음 0, 180° 0), 교체 5, 확실해서 건너뜀 0, 준비 전 버림 0, OCR 중앙값 1977·p95 2000 ms, 대기 0
+[INFO] [1791445474.939590595] [label_reader]: track 6 s1: S07-01 역삼동 1.00 AGREE → 투표 역삼동 1.00 (1/1, 처리 1), OCR 2026 ms
+[INFO] [1791445476.872574459] [label_reader]: track 6 s1: S07-01 역삼동 1.00 AGREE → 투표 역삼동 1.00 (2/2, 처리 2), OCR 1921 ms
+[INFO] [1791445479.082919026] [label_reader]: crop 입력 s1 14·s2 0·s3 0, 판독 2(송장 못 찾음 0, 글자 없음 0, 180° 0), 교체 11, 확실해서 건너뜀 0, 준비 전 버림 0, OCR 중앙값 1973·p95 2020 ms, 대기 1
+[INFO] [1791445479.094044615] [label_reader]: track 7 s1: S07-03 청담동 1.00 AGREE → 투표 청담동 1.00 (1/1, 처리 1), OCR 2209 ms
+[INFO] [1791445481.081211014] [label_reader]: track 7 s1: S07-03 청담동 1.00 AGREE → 투표 청담동 1.00 (2/2, 처리 2), OCR 1976 ms
+[INFO] [1791445483.184124870] [label_reader]: track 8 s1: S07-01 역삼동 1.00 AGREE → 투표 역삼동 1.00 (1/1, 처리 1), OCR 2092 ms
+[INFO] [1791445484.887704492] [label_reader]: crop 입력 s1 13·s2 0·s3 0, 판독 3(송장 못 찾음 0, 글자 없음 0, 180° 0), 교체 10, 확실해서 건너뜀 0, 준비 전 버림 0, OCR 중앙값 2092·p95 2197 ms, 대기 1, 지운 트랙 1
+[INFO] [1791445485.162870739] [label_reader]: track 9 s1: S07-01 역삼동 0.50 CODE_ONLY → 투표 역삼동 0.50 (1/1, 처리 1), OCR 1968 ms
+[INFO] [1791445487.333394485] [label_reader]: track 9 s1: S07-01 역삼동 0.54 CODE_ONLY → 투표 역삼동 0.52 (2/2, 처리 2), OCR 2160 ms
+[INFO] [1791445489.124517478] [label_reader]: crop 입력 s1 10·s2 0·s3 0, 판독 2(송장 못 찾음 0, 글자 없음 0, 180° 0), 교체 9, 확실해서 건너뜀 0, 준비 전 버림 0, OCR 중앙값 2064·p95 2150 ms, 대기 0, 지운 트랙 1
+[INFO] [1791445489.648706638] [label_reader]: track 10 s1: S07-02 대치동 1.00 AGREE → 투표 대치동 1.00 (1/1, 처리 1), OCR 2301 ms
+[INFO] [1791445493.937886915] [label_reader]: crop 입력 s1 0·s2 0·s3 0, 판독 1(송장 못 찾음 0, 글자 없음 0, 180° 0), 교체 0, 확실해서 건너뜀 0, 준비 전 버림 0, OCR 중앙값 2301·p95 2301 ms, 대기 0, 지운 트랙 1
+[INFO] [1791445498.937962085] [label_reader]: crop 입력 s1 0·s2 0·s3 0, 판독 0(송장 못 찾음 0, 글자 없음 0, 180° 0), 교체 0, 확실해서 건너뜀 0, 준비 전 버림 0, OCR 중앙값 -·p95 - ms, 대기 0, 지운 트랙 1
+[INFO] [1791445503.937935074] [label_reader]: crop 입력 s1 0·s2 0·s3 0, 판독 0(송장 못 찾음 0, 글자 없음 0, 180° 0), 교체 0, 확실해서 건너뜀 0, 준비 전 버림 0, OCR 중앙값 -·p95 - ms, 대기 0, 지운 트랙 1
+[INFO] [1791445508.937924205] [label_reader]: crop 입력 s1 0·s2 0·s3 0, 판독 0(송장 못 찾음 0, 글자 없음 0, 180° 0), 교체 0, 확실해서 건너뜀 0, 준비 전 버림 0, OCR 중앙값 -·p95 - ms, 대기 0, 지운 트랙 1
+[INFO] [1791445513.937913531] [label_reader]: crop 입력 s1 0·s2 0·s3 0, 판독 0(송장 못 찾음 0, 글자 없음 0, 180° 0), 교체 0, 확실해서 건너뜀 0, 준비 전 버림 0, OCR 중앙값 -·p95 - ms, 대기 0, 지운 트랙 2
+[INFO] [1791445518.937920427] [label_reader]: crop 입력 s1 0·s2 0·s3 0, 판독 0(송장 못 찾음 0, 글자 없음 0, 180° 0), 교체 0, 확실해서 건너뜀 0, 준비 전 버림 0, OCR 중앙값 -·p95 - ms, 대기 0, 지운 트랙 1
+
+(재생 끝난 뒤 시험 스크립트가 SIGTERM 으로 종료 — 아래 C++ Traceback 은 그 종료 메시지)
+FatalError: `Termination signal` is detected by the operating system.
+  [SignalInfo: *** SIGTERM received by PID 58772 from PID 58755 ***]

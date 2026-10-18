@@ -1,0 +1,6 @@
+1791615904.3413880 [INFO] [launch]: All log files can be found below /home/ms-03/.ros/log/2026-10-10-16-05-04-340338-ms-03-55197
+1791615904.3415270 [INFO] [launch]: Default logging verbosity is set to INFO
+1791615904.4024329 [INFO] [launch.user]: belt_servo launch: params=/home/ms-03/voss_ws/config/belt_servo_real.yaml overrides=- config=/home/ms-03/voss_ws/config/voss_config.yaml config_sha256=db97243ec6ef 넘김 38개, null 로 뺀 키 0개 []
+1791615904.4059279 [INFO] [belt_servo-1]: process started with pid [55200]
+1791618101.7399099 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+1791618101.9938545 [INFO] [belt_servo-1]: process has finished cleanly [pid 55200]

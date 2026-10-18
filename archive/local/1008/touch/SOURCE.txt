@@ -1,0 +1,3 @@
+touch.csv 는 김학민 Drive raw/1008/touch_moving/README_touch_moving.md (10/08 오전) 의 "터치 검증" 표를 옮긴 것.
+사진은 관측 자세 TCP [-14.49, -276.54, 203.58, 85.25, -179.07, -6.03], P4_60 은 TCP z -60 mm(143.58).
+x,y,z = 핑거 끝 터치 좌표(그리퍼 닫힘), 평면 z = 터치 z. 픽셀은 송장 흰 영역 minAreaRect 중심(touch_eval.py).

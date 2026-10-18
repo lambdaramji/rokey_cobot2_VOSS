@@ -1,0 +1,5 @@
+1791602404.4994833 [INFO] [launch]: All log files can be found below /home/ms-03/.ros/log/2026-10-10-12-20-04-498754-ms-03-16912
+1791602404.4995842 [INFO] [launch]: Default logging verbosity is set to INFO
+1791602404.5513904 [INFO] [robot_gateway-1]: process started with pid [16918]
+1791602972.8071878 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+1791602973.1566119 [INFO] [robot_gateway-1]: process has finished cleanly [pid 16918]

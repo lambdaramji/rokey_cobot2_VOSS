@@ -1,0 +1,99 @@
+version: 1
+method: hand_eye
+created: '2026-10-07T21:24:58'
+status: CANDIDATE — fit_hand_eye.py 의 1 px 필터(공장 K, d=0)로는 27장 전부 제외되어, 보드 27장으로 K·왜곡을
+  재추정해 푼 후보값. 채택 여부는 남현지 결정
+solver: PARK
+board:
+  inner_corners:
+  - 10
+  - 7
+  square_mm: 25.0
+  square_measured: 가로 275 mm/11칸, 세로 200 mm/8칸 (김학민 10/08)
+image_size:
+- 1920
+- 1080
+camera:
+  k:
+  - 1358.121
+  - 0.0
+  - 975.9921
+  - 0.0
+  - 1357.5085
+  - 551.4451
+  - 0.0
+  - 0.0
+  - 1.0
+  d:
+  - 0.055208
+  - 0.302449
+  - -0.000143
+  - -0.000348
+  - -1.16131
+  source: board_reestimate (cv2.calibrateCamera, 27장, rms 0.262 px)
+camera_factory:
+  k:
+  - 1367.4627685546875
+  - 0.0
+  - 978.511474609375
+  - 0.0
+  - 1367.723876953125
+  - 552.0377807617188
+  - 0.0
+  - 0.0
+  - 1.0
+  d:
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+pose_frame: tcp
+tcp_offset_mm:
+- 1.382
+- 2.684
+- 246.642
+T_tcp_camera:
+- - -0.999835
+  - 0.017603
+  - 0.004479
+  - 30.310717
+- - -0.017586
+  - -0.999838
+  - 0.003902
+  - 73.862267
+- - 0.004547
+  - 0.003822
+  - 0.999982
+  - -221.658383
+- - 0.0
+  - 0.0
+  - 0.0
+  - 1.0
+moving_verified: false
+errors:
+  n_used: 27
+  n_rejected: 0
+  reproj_px_max: 1.276
+  board_spread_mm: 0.85
+  board_spread_deg: 0.227
+  method_spread_mm: 0.82
+  method_spread_deg: 0.101
+  t16_val:
+    C1: 1.11
+    C2: 0.81
+    C3: 2.27
+    C4: 3.88
+    C5: 2.5
+    C6: 4.58
+    C7: 2.98
+    C8: 1.89
+    C9: 5.67
+    C10: 5.52
+    V1: 0.36
+    V2: 1.77
+    V3R: 5.02
+    V4: 3.05
+    V5: 5.2
+  t16_val_max_mm: 5.67
+  t16_val_mean_mm: 3.11

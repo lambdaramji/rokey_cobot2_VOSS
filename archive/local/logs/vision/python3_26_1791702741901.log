@@ -1,0 +1,26 @@
+[WARN] [1791702741.958930670] [box_tracker]: 재생 모드: 녹화 좌표가 /voss/vision/box 로 나간다 — 운용과 다른 ROS_DOMAIN_ID 에서만
+[INFO] [1791702741.959806170] [box_tracker]: box_tracker started: detector=seg min_hits=5 homography=homography v1 2026-10-07T14:49 sha256:95d28cdf hand_eye=hand_eye v1 2026-10-08T11:21:40 sha256:0d73dffd moving_verified=True pose_lag=15 ms observe_source=hand_eye input=playback /data/1006_raw/voss_data/1006/t17/A_MIX_01
+[INFO] [1791702742.080807137] [box_tracker]: camera_info 확인 [1920, 1080]: homography_ok=True hand_eye_ok=True
+[INFO] [1791702746.950662785] [box_tracker]: 29.4 Hz, 검출 평균 2.5·p95 3.2 ms, 루프 p95 3.3 ms, box 0(무효 0; -), crop 0
+[INFO] [1791702751.951849840] [box_tracker]: 30.0 Hz, 검출 평균 2.9·p95 3.4 ms, 루프 p95 3.5 ms, box 0(무효 0; -), crop 0
+[INFO] [1791702756.951194807] [box_tracker]: 30.0 Hz, 검출 평균 2.4·p95 2.7 ms, 루프 p95 2.7 ms, box 0(무효 0; -), crop 0
+[INFO] [1791702761.950517194] [box_tracker]: 30.0 Hz, 검출 평균 2.4·p95 2.7 ms, 루프 p95 2.8 ms, box 0(무효 0; -), crop 0
+[INFO] [1791702766.950446006] [box_tracker]: 30.0 Hz, 검출 평균 2.5·p95 2.9 ms, 루프 p95 2.9 ms, box 0(무효 0; -), crop 0
+[INFO] [1791702771.951191106] [box_tracker]: 30.0 Hz, 검출 평균 2.6·p95 3.4 ms, 루프 p95 3.4 ms, box 0(무효 0; -), crop 0
+[INFO] [1791702776.950383095] [box_tracker]: 30.0 Hz, 검출 평균 3.2·p95 3.6 ms, 루프 p95 3.6 ms, box 0(무효 0; -), crop 0
+[INFO] [1791702781.950440946] [box_tracker]: 29.8 Hz, 검출 평균 3.5·p95 4.3 ms, 루프 p95 5.3 ms, box 106(무효 0; hand_eye 106), crop 10, 호모그래피↔핸드아이 최대 2.0 mm
+[INFO] [1791702786.951847818] [box_tracker]: 30.0 Hz, 검출 평균 3.2·p95 4.8 ms, 루프 p95 5.9 ms, box 108(무효 0; hand_eye 108), crop 10, 호모그래피↔핸드아이 최대 2.2 mm
+[INFO] [1791702791.951302063] [box_tracker]: 30.0 Hz, 검출 평균 3.2·p95 4.8 ms, 루프 p95 6.4 ms, box 98(무효 0; hand_eye 98), crop 10, 호모그래피↔핸드아이 최대 2.2 mm
+[INFO] [1791702796.950048074] [box_tracker]: 30.0 Hz, 검출 평균 3.4·p95 4.5 ms, 루프 p95 5.9 ms, box 131(무효 0; hand_eye 131), crop 10, 호모그래피↔핸드아이 최대 2.2 mm
+[INFO] [1791702801.950518403] [box_tracker]: 30.0 Hz, 검출 평균 3.3·p95 4.7 ms, 루프 p95 6.0 ms, box 133(무효 0; hand_eye 133), crop 10, 호모그래피↔핸드아이 최대 2.1 mm
+[INFO] [1791702806.953916936] [box_tracker]: 30.0 Hz, 검출 평균 3.3·p95 4.7 ms, 루프 p95 5.8 ms, box 108(무효 0; hand_eye 108), crop 10, 호모그래피↔핸드아이 최대 2.0 mm
+[INFO] [1791702811.950245035] [box_tracker]: 30.0 Hz, 검출 평균 3.3·p95 4.5 ms, 루프 p95 5.8 ms, box 121(무효 0; hand_eye 121), crop 9, 호모그래피↔핸드아이 최대 2.1 mm
+[INFO] [1791702816.952276350] [box_tracker]: 30.0 Hz, 검출 평균 2.7·p95 3.4 ms, 루프 p95 4.5 ms, box 89(무효 0; hand_eye 89), crop 4, 호모그래피↔핸드아이 최대 2.1 mm
+[INFO] [1791702821.950350649] [box_tracker]: 30.0 Hz, 검출 평균 3.1·p95 4.4 ms, 루프 p95 5.8 ms, box 110(무효 0; hand_eye 110), crop 7, 호모그래피↔핸드아이 최대 2.0 mm
+[INFO] [1791702826.951731753] [box_tracker]: 29.8 Hz, 검출 평균 3.3·p95 4.8 ms, 루프 p95 6.0 ms, box 126(무효 0; hand_eye 126), crop 10, 호모그래피↔핸드아이 최대 2.1 mm
+[INFO] [1791702831.950787450] [box_tracker]: 30.0 Hz, 검출 평균 2.8·p95 3.4 ms, 루프 p95 3.9 ms, box 110(무효 0; hand_eye 110), crop 10, 호모그래피↔핸드아이 최대 2.0 mm
+[INFO] [1791702836.950958129] [box_tracker]: 30.0 Hz, 검출 평균 3.0·p95 3.6 ms, 루프 p95 3.6 ms, box 16(무효 0; hand_eye 16), crop 0, 호모그래피↔핸드아이 최대 1.2 mm
+[INFO] [1791702841.951184630] [box_tracker]: 30.0 Hz, 검출 평균 3.1·p95 3.7 ms, 루프 p95 3.7 ms, box 0(무효 0; -), crop 0
+[INFO] [1791702846.951413011] [box_tracker]: 30.0 Hz, 검출 평균 2.5·p95 2.8 ms, 루프 p95 2.8 ms, box 0(무효 0; -), crop 0
+[INFO] [1791702850.666527179] [box_tracker]: 재생 끝: 영상 3257 프레임 (/data/1006_raw/voss_data/1006/t17/A_MIX_01)
+[INFO] [1791702850.666923231] [box_tracker]: 22.4 Hz, 검출 평균 2.6·p95 2.8 ms, 루프 p95 2.8 ms, box 0(무효 0; -), crop 0

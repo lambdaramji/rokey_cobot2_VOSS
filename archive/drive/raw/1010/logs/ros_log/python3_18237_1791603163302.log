@@ -1,0 +1,15 @@
+[INFO] [1791603163.313990966] [rosbag2_recorder]: Press SPACE for pausing/resuming
+[INFO] [1791603163.314001425] [rosbag2_recorder]: Event publisher thread: Started
+[INFO] [1791603163.317430091] [rosbag2_recorder]: Starting recording to '/home/ms-03/voss_data/1010/pose_lag_js_01'
+[INFO] [1791603163.324607317] [rosbag2_recorder]: Subscribed to topic '/voss/robot/state'
+[INFO] [1791603163.326671247] [rosbag2_recorder]: Subscribed to topic '/voss/robot/pose'
+[INFO] [1791603163.327955474] [rosbag2_recorder]: Subscribed to topic '/camera/color/image_raw/compressed'
+[INFO] [1791603163.329703245] [rosbag2_recorder]: Subscribed to topic '/camera/color/camera_info'
+[INFO] [1791603163.329862045] [rosbag2_recorder]: Listening for topics...
+[INFO] [1791603163.329883142] [rosbag2_recorder]: Recording...
+[INFO] [1791603163.329896254] [rosbag2_recorder]: Topics discovery started.
+[INFO] [1791603163.329923668] [rosbag2_recorder]: All requested topics are subscribed. Stopping discovery...
+[INFO] [1791603163.329930265] [rosbag2_recorder]: Topics discovery stopped.
+[INFO] [1791603234.312429954] [rosbag2_recorder]: Pausing recording.
+[INFO] [1791603234.312464620] [rosbag2_cpp]: Writing remaining messages from cache to the bag. It may take a while
+[INFO] [1791603234.318012300] [rosbag2_recorder]: Recording stopped

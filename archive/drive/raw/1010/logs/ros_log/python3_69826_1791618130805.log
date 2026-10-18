@@ -1,0 +1,146 @@
+[INFO] [1791618130.865506202] [belt_servo]: config_version=1 config_sha256=db97243ec6ef params_sha256=215e6274f074e54fde6321f1cc991718b422ddfbce6a577d2f05bbf917a64896
+[INFO] [1791618130.865775909] [belt_servo]: READY
+[INFO] [1791618130.865990546] [belt_servo]: pose_lag_ms=0.0 — gateway pose_source: service 기준 측정(measurements-1008 #6). joint_states 로 바꾸면 다시 잰다
+[INFO] [1791618130.866351016] [belt_servo]: x 여유: 하강 예상 2.64 s + 닫힘 2.10 s → 정렬 때 x_max 까지 237 mm 이상 남아야 DESCEND
+[INFO] [1791618130.866745336] [belt_servo]: 로그: ticks=/home/ms-03/voss_ws/src/rokey_cobot2_VOSS/data/servo/ticks/servo_ticks_20261010_164210.jsonl attempts=/home/ms-03/voss_ws/src/rokey_cobot2_VOSS/data/servo/attempts/servo_attempts_20261010_164210.jsonl
+[INFO] [1791618259.644938677] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791618259.837697522] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[INFO] [1791618265.903958750] [belt_servo]: gripper 요청 CLOSE 39.0 mm 14.0 N seq=2 attempt=1
+[INFO] [1791618267.537491551] [belt_servo]: gripper 응답 CLOSE seq=2 → OK 폭 41.4 mm grip True (원문: OK)
+[INFO] [1791618270.237773971] [belt_servo]: gripper 요청 VERIFY 39.0 mm 14.0 N seq=3 attempt=1
+[INFO] [1791618270.437224773] [belt_servo]: gripper 응답 VERIFY seq=3 → OK 폭 41.4 mm grip True (원문: OK)
+[INFO] [1791618296.685277510] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791618296.870640713] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[INFO] [1791618303.037225194] [belt_servo]: gripper 요청 CLOSE 39.0 mm 14.0 N seq=2 attempt=1
+[INFO] [1791618304.870575192] [belt_servo]: gripper 응답 CLOSE seq=2 → OK 폭 40.7 mm grip True (원문: OK)
+[INFO] [1791618307.570580437] [belt_servo]: gripper 요청 VERIFY 39.0 mm 14.0 N seq=3 attempt=1
+[INFO] [1791618307.770367349] [belt_servo]: gripper 응답 VERIFY seq=3 → OK 폭 40.7 mm grip True (원문: OK)
+[INFO] [1791618333.670238495] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791618333.870466599] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[INFO] [1791618339.904240071] [belt_servo]: gripper 요청 CLOSE 39.0 mm 14.0 N seq=2 attempt=1
+[INFO] [1791618342.237053468] [belt_servo]: gripper 응답 CLOSE seq=2 → OK 폭 40.9 mm grip True (원문: OK)
+[INFO] [1791618344.937348701] [belt_servo]: gripper 요청 VERIFY 39.0 mm 14.0 N seq=3 attempt=1
+[INFO] [1791618345.137120228] [belt_servo]: gripper 응답 VERIFY seq=3 → OK 폭 40.9 mm grip True (원문: OK)
+[INFO] [1791618369.407200895] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791618369.604012117] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[INFO] [1791618375.571094969] [belt_servo]: gripper 요청 CLOSE 39.0 mm 14.0 N seq=2 attempt=1
+[INFO] [1791618377.203781319] [belt_servo]: gripper 응답 CLOSE seq=2 → OK 폭 40.7 mm grip True (원문: OK)
+[INFO] [1791618379.937730802] [belt_servo]: gripper 요청 VERIFY 39.0 mm 14.0 N seq=3 attempt=1
+[INFO] [1791618380.137029194] [belt_servo]: gripper 응답 VERIFY seq=3 → OK 폭 40.7 mm grip True (원문: OK)
+[INFO] [1791618402.885453878] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791618403.070647237] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[INFO] [1791618409.304292672] [belt_servo]: gripper 요청 CLOSE 39.0 mm 14.0 N seq=2 attempt=1
+[INFO] [1791618411.437198870] [belt_servo]: gripper 응답 CLOSE seq=2 → OK 폭 40.7 mm grip True (원문: OK)
+[INFO] [1791618414.137713751] [belt_servo]: gripper 요청 VERIFY 39.0 mm 14.0 N seq=3 attempt=1
+[INFO] [1791618414.303700694] [belt_servo]: gripper 응답 VERIFY seq=3 → OK 폭 40.6 mm grip True (원문: OK)
+[INFO] [1791618437.891202604] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791618438.071870236] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[INFO] [1791618443.903924683] [belt_servo]: gripper 요청 CLOSE 39.0 mm 14.0 N seq=2 attempt=1
+[INFO] [1791618446.070847096] [belt_servo]: gripper 응답 CLOSE seq=2 → OK 폭 40.7 mm grip True (원문: OK)
+[INFO] [1791618448.770647888] [belt_servo]: gripper 요청 VERIFY 39.0 mm 14.0 N seq=3 attempt=1
+[INFO] [1791618448.970844698] [belt_servo]: gripper 응답 VERIFY seq=3 → OK 폭 40.7 mm grip True (원문: OK)
+[INFO] [1791618473.164903730] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791618473.370998149] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[INFO] [1791618479.170615050] [belt_servo]: gripper 요청 CLOSE 39.0 mm 14.0 N seq=2 attempt=1
+[INFO] [1791618480.870497466] [belt_servo]: gripper 응답 CLOSE seq=2 → OK 폭 40.7 mm grip True (원문: OK)
+[INFO] [1791618483.603954908] [belt_servo]: gripper 요청 VERIFY 39.0 mm 14.0 N seq=3 attempt=1
+[INFO] [1791618483.804096120] [belt_servo]: gripper 응답 VERIFY seq=3 → OK 폭 40.7 mm grip True (원문: OK)
+[INFO] [1791618508.349711684] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791618508.537175742] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[INFO] [1791618514.537275955] [belt_servo]: gripper 요청 CLOSE 39.0 mm 14.0 N seq=2 attempt=1
+[INFO] [1791618516.603734347] [belt_servo]: gripper 응답 CLOSE seq=2 → OK 폭 40.9 mm grip True (원문: OK)
+[INFO] [1791618519.337649878] [belt_servo]: gripper 요청 VERIFY 39.0 mm 14.0 N seq=3 attempt=1
+[INFO] [1791618519.537067878] [belt_servo]: gripper 응답 VERIFY seq=3 → OK 폭 40.9 mm grip True (원문: OK)
+[INFO] [1791618544.959254736] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791618545.172955207] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[INFO] [1791618550.937298175] [belt_servo]: gripper 요청 CLOSE 39.0 mm 14.0 N seq=2 attempt=1
+[INFO] [1791618552.670414214] [belt_servo]: gripper 응답 CLOSE seq=2 → OK 폭 40.6 mm grip True (원문: OK)
+[INFO] [1791618555.403986689] [belt_servo]: gripper 요청 VERIFY 39.0 mm 14.0 N seq=3 attempt=1
+[INFO] [1791618555.603754280] [belt_servo]: gripper 응답 VERIFY seq=3 → OK 폭 40.6 mm grip True (원문: OK)
+[INFO] [1791618591.574633375] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791618591.770583973] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[INFO] [1791618597.937388140] [belt_servo]: gripper 요청 CLOSE 39.0 mm 14.0 N seq=2 attempt=1
+[INFO] [1791618599.603782403] [belt_servo]: gripper 응답 CLOSE seq=2 → OK 폭 40.9 mm grip True (원문: OK)
+[INFO] [1791618602.337221235] [belt_servo]: gripper 요청 VERIFY 39.0 mm 14.0 N seq=3 attempt=1
+[INFO] [1791618602.537127824] [belt_servo]: gripper 응답 VERIFY seq=3 → OK 폭 40.9 mm grip True (원문: OK)
+[INFO] [1791618934.519629934] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791618934.703843227] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[INFO] [1791618940.437275339] [belt_servo]: gripper 요청 CLOSE 39.0 mm 14.0 N seq=2 attempt=1
+[INFO] [1791618942.070431902] [belt_servo]: gripper 응답 CLOSE seq=2 → OK 폭 40.9 mm grip True (원문: OK)
+[INFO] [1791618944.804047689] [belt_servo]: gripper 요청 VERIFY 39.0 mm 14.0 N seq=3 attempt=1
+[INFO] [1791618945.003878331] [belt_servo]: gripper 응답 VERIFY seq=3 → OK 폭 40.9 mm grip True (원문: OK)
+[INFO] [1791618971.713296105] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791618971.903824128] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[INFO] [1791618977.803882063] [belt_servo]: gripper 요청 CLOSE 39.0 mm 14.0 N seq=2 attempt=1
+[INFO] [1791618979.504448809] [belt_servo]: gripper 응답 CLOSE seq=2 → OK 폭 40.9 mm grip True (원문: OK)
+[INFO] [1791618982.237237866] [belt_servo]: gripper 요청 VERIFY 39.0 mm 14.0 N seq=3 attempt=1
+[INFO] [1791618982.437352891] [belt_servo]: gripper 응답 VERIFY seq=3 → OK 폭 40.9 mm grip True (원문: OK)
+[INFO] [1791619005.091984562] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791619005.304789804] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[INFO] [1791619011.070731269] [belt_servo]: gripper 요청 CLOSE 39.0 mm 14.0 N seq=2 attempt=1
+[INFO] [1791619012.770434000] [belt_servo]: gripper 응답 CLOSE seq=2 → OK 폭 40.6 mm grip True (원문: OK)
+[INFO] [1791619015.470791504] [belt_servo]: gripper 요청 VERIFY 39.0 mm 14.0 N seq=3 attempt=1
+[INFO] [1791619015.670463585] [belt_servo]: gripper 응답 VERIFY seq=3 → OK 폭 40.6 mm grip True (원문: OK)
+[INFO] [1791619038.491519082] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791619038.670472389] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[INFO] [1791619044.403979430] [belt_servo]: gripper 요청 CLOSE 39.0 mm 14.0 N seq=2 attempt=1
+[INFO] [1791619046.070419479] [belt_servo]: gripper 응답 CLOSE seq=2 → OK 폭 41.7 mm grip True (원문: OK)
+[INFO] [1791619048.770478370] [belt_servo]: gripper 요청 VERIFY 39.0 mm 14.0 N seq=3 attempt=1
+[INFO] [1791619048.970381164] [belt_servo]: gripper 응답 VERIFY seq=3 → OK 폭 41.5 mm grip True (원문: OK)
+[INFO] [1791619074.843382707] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791619075.037250303] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[INFO] [1791619081.070719531] [belt_servo]: gripper 요청 CLOSE 39.0 mm 14.0 N seq=2 attempt=1
+[INFO] [1791619082.903785495] [belt_servo]: gripper 응답 CLOSE seq=2 → OK 폭 40.7 mm grip True (원문: OK)
+[INFO] [1791619085.637291016] [belt_servo]: gripper 요청 VERIFY 39.0 mm 14.0 N seq=3 attempt=1
+[INFO] [1791619085.837392665] [belt_servo]: gripper 응답 VERIFY seq=3 → OK 폭 40.7 mm grip True (원문: OK)
+[INFO] [1791619124.198707399] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791619124.370951955] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[INFO] [1791619130.303918585] [belt_servo]: gripper 요청 CLOSE 39.0 mm 14.0 N seq=2 attempt=1
+[INFO] [1791619132.003694524] [belt_servo]: gripper 응답 CLOSE seq=2 → OK 폭 41.2 mm grip True (원문: OK)
+[INFO] [1791619134.737209580] [belt_servo]: gripper 요청 VERIFY 39.0 mm 14.0 N seq=3 attempt=1
+[INFO] [1791619134.937538863] [belt_servo]: gripper 응답 VERIFY seq=3 → OK 폭 41.2 mm grip True (원문: OK)
+[INFO] [1791619159.011223179] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791619159.203784583] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[INFO] [1791619165.037404654] [belt_servo]: gripper 요청 CLOSE 39.0 mm 14.0 N seq=2 attempt=1
+[INFO] [1791619166.670578476] [belt_servo]: gripper 응답 CLOSE seq=2 → OK 폭 41.2 mm grip True (원문: OK)
+[INFO] [1791619169.404037428] [belt_servo]: gripper 요청 VERIFY 39.0 mm 14.0 N seq=3 attempt=1
+[INFO] [1791619169.603894412] [belt_servo]: gripper 응답 VERIFY seq=3 → OK 폭 41.1 mm grip True (원문: OK)
+[INFO] [1791619194.159546401] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791619194.370486841] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[INFO] [1791619200.170596161] [belt_servo]: gripper 요청 CLOSE 39.0 mm 14.0 N seq=2 attempt=1
+[INFO] [1791619201.903815193] [belt_servo]: gripper 응답 CLOSE seq=2 → OK 폭 40.6 mm grip True (원문: OK)
+[INFO] [1791619204.603858640] [belt_servo]: gripper 요청 VERIFY 39.0 mm 14.0 N seq=3 attempt=1
+[INFO] [1791619204.803782808] [belt_servo]: gripper 응답 VERIFY seq=3 → OK 폭 40.6 mm grip True (원문: OK)
+[INFO] [1791619229.632862813] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791619229.837167834] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[INFO] [1791619235.737185564] [belt_servo]: gripper 요청 CLOSE 39.0 mm 14.0 N seq=2 attempt=1
+[INFO] [1791619237.437385762] [belt_servo]: gripper 응답 CLOSE seq=2 → OK 폭 40.6 mm grip True (원문: OK)
+[INFO] [1791619240.170621948] [belt_servo]: gripper 요청 VERIFY 39.0 mm 14.0 N seq=3 attempt=1
+[INFO] [1791619240.370435151] [belt_servo]: gripper 응답 VERIFY seq=3 → OK 폭 40.6 mm grip True (원문: OK)
+[INFO] [1791619276.739121125] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791619276.937269299] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[WARN] [1791619281.071163498] [belt_servo]: goal 종료 reason=LOST cause=BOX_MISSING
+[INFO] [1791619617.882114295] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791619618.070580186] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[WARN] [1791619618.405128288] [belt_servo]: goal 종료 reason=LOST cause=BOX_MISSING
+[INFO] [1791619652.144808557] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791619652.337274957] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[WARN] [1791619652.670802902] [belt_servo]: goal 종료 reason=LOST cause=BOX_MISSING
+[INFO] [1791619693.200947407] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791619693.404605133] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[WARN] [1791619697.204084718] [belt_servo]: goal 종료 reason=LOST cause=BOX_MISSING
+[INFO] [1791619770.925266775] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791619771.103726875] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[INFO] [1791619776.904328304] [belt_servo]: gripper 요청 CLOSE 39.0 mm 14.0 N seq=2 attempt=1
+[INFO] [1791619779.104205870] [belt_servo]: gripper 응답 CLOSE seq=2 → OK 폭 41.2 mm grip True (원문: OK)
+[INFO] [1791619781.837215407] [belt_servo]: gripper 요청 VERIFY 39.0 mm 14.0 N seq=3 attempt=1
+[INFO] [1791619782.003989337] [belt_servo]: gripper 응답 VERIFY seq=3 → OK 폭 41.1 mm grip True (원문: OK)
+[INFO] [1791619806.301126877] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791619806.503752776] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[WARN] [1791619810.237510608] [belt_servo]: goal 종료 reason=LOST cause=BOX_MISSING
+[INFO] [1791620089.331144381] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791620089.537096389] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[INFO] [1791620095.137204932] [belt_servo]: gripper 요청 CLOSE 39.0 mm 14.0 N seq=2 attempt=1
+[INFO] [1791620097.270609139] [belt_servo]: gripper 응답 CLOSE seq=2 → OK 폭 40.7 mm grip True (원문: OK)
+[INFO] [1791620099.970614529] [belt_servo]: gripper 요청 VERIFY 39.0 mm 14.0 N seq=3 attempt=1
+[INFO] [1791620100.170421917] [belt_servo]: gripper 응답 VERIFY seq=3 → OK 폭 40.7 mm grip True (원문: OK)

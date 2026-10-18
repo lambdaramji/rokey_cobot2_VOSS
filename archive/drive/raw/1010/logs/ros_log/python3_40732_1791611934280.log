@@ -1,0 +1,11 @@
+[INFO] [1791611934.341207925] [belt_servo]: config_version=1 config_sha256=db97243ec6ef params_sha256=01a6fc1f866c2992954f0708c7e6ffbb4a57dccc67cfde93f25fddcb2757ca4a
+[INFO] [1791611934.341796037] [belt_servo]: READY
+[INFO] [1791611934.342304031] [belt_servo]: pose_lag_ms=0.0 — gateway pose_source: service 기준 측정(measurements-1008 #6). joint_states 로 바꾸면 다시 잰다
+[INFO] [1791611934.342916770] [belt_servo]: x 여유: 하강 예상 2.64 s + 닫힘 2.10 s → 정렬 때 x_max 까지 237 mm 이상 남아야 DESCEND
+[INFO] [1791611934.343591171] [belt_servo]: 로그: ticks=/home/ms-03/voss_ws/src/rokey_cobot2_VOSS/data/servo/ticks/servo_ticks_20261010_145854.jsonl attempts=/home/ms-03/voss_ws/src/rokey_cobot2_VOSS/data/servo/attempts/servo_attempts_20261010_145854.jsonl
+[INFO] [1791613562.894933163] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791613563.082241810] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[INFO] [1791613569.182491707] [belt_servo]: gripper 요청 CLOSE 39.0 mm 14.0 N seq=2 attempt=1
+[INFO] [1791613570.882193220] [belt_servo]: gripper 응답 CLOSE seq=2 → OK 폭 41.4 mm grip True (원문: OK)
+[INFO] [1791613573.582531567] [belt_servo]: gripper 요청 VERIFY 39.0 mm 14.0 N seq=3 attempt=1
+[INFO] [1791613573.782662495] [belt_servo]: gripper 응답 VERIFY seq=3 → OK 폭 41.4 mm grip True (원문: OK)

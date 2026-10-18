@@ -1,0 +1,17 @@
+[INFO] [1791617317.479928286] [sort_manager]: voss_config /home/ms-03/voss_ws/config/voss_config.yaml version 1 sha256 db97243ec6ef, 구역 칸 {'A': 3, 'B': 3, 'C': 3, 'RECHECK': 2, 'HOLD': 2}, confidence_min 0.6, home_first True
+[INFO] [1791617602.848503702] [sort_manager]: MoveToZone OBSERVE 칸 0 이동
+[INFO] [1791617602.848827287] [sort_manager]: 세션 20261010T163322-4e00 시작, 우선 전체
+[INFO] [1791617602.962817329] [sort_manager]: OBSERVE 도착, 관측 시작
+[INFO] [1791617647.763785204] [sort_manager]: 20261010T163322-4e00-001 track 4 청담동→C 칸 0 파지 시작
+[INFO] [1791617647.767449772] [sort_manager]: servo PREPARE
+[INFO] [1791617647.955331727] [sort_manager]: servo TRACK
+[INFO] [1791617651.154714572] [sort_manager]: servo DESCEND
+[INFO] [1791617653.755323628] [sort_manager]: servo GRASP
+[INFO] [1791617655.455046545] [sort_manager]: servo LIFT
+[INFO] [1791617658.188925352] [sort_manager]: servo VERIFY
+[INFO] [1791617658.390010945] [sort_manager]: MoveToZone C 칸 0 mode PLACE
+[INFO] [1791617658.390523822] [sort_manager]: 20261010T163322-4e00-001 파지 완료(시도 1) → C 칸 0 적재
+[ERROR] [1791617718.390133779] [sort_manager]: MoveToZone 응답 시간 초과
+[INFO] [1791617718.390648278] [sort_manager]: SortResult 20261010T163322-4e00-001 FAILED - reason=DEVICE_ERROR attempts=1
+[ERROR] [1791617718.390843443] [sort_manager]: 20261010T163322-4e00-001 적재 응답 ok=False TIMEOUT placed=False
+[ERROR] [1791617718.689523786] [sort_manager]: 시간 초과 뒤 늦은 MoveToZone(C) 응답: ok=True OK placed_stamp=1791617686838026647 — 칸 수를 사람이 확인

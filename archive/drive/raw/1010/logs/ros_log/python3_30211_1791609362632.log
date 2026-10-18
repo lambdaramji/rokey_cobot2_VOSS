@@ -1,0 +1,23 @@
+[INFO] [1791609362.692362004] [belt_servo]: config_version=1 config_sha256=db97243ec6ef params_sha256=708358ba6bf9ae78d8b9764634da5d5511caa4b913e157078cea7056602fd7c2
+[INFO] [1791609362.692618607] [belt_servo]: READY
+[INFO] [1791609362.692846669] [belt_servo]: pose_lag_ms=0.0 — gateway pose_source: service 기준 측정(measurements-1008 #6). joint_states 로 바꾸면 다시 잰다
+[INFO] [1791609362.693168905] [belt_servo]: x 여유: 하강 예상 2.64 s + 닫힘 2.10 s → 정렬 때 x_max 까지 237 mm 이상 남아야 DESCEND
+[INFO] [1791609362.693529561] [belt_servo]: 로그: ticks=/home/ms-03/voss_ws/src/rokey_cobot2_VOSS/data/servo/ticks/servo_ticks_20261010_141602.jsonl attempts=/home/ms-03/voss_ws/src/rokey_cobot2_VOSS/data/servo/attempts/servo_attempts_20261010_141602.jsonl
+[INFO] [1791609536.995831073] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791609537.197254847] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[WARN] [1791609539.531136533] [belt_servo]: goal 종료 reason=LOST cause=BOX_MISSING
+[INFO] [1791610604.701195985] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791610604.897227772] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[WARN] [1791610618.597575676] [belt_servo]: goal 종료 reason=OUT_OF_REACH cause=REACH_X_MAX
+[INFO] [1791610821.986301124] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791610822.164318304] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[WARN] [1791610835.864190432] [belt_servo]: goal 종료 reason=OUT_OF_REACH cause=REACH_X_MAX
+[INFO] [1791610993.316789882] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791610993.497114242] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[WARN] [1791610994.664084868] [belt_servo]: goal 종료 reason=LOST cause=BOX_MISSING
+[INFO] [1791611194.217889952] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791611194.397508183] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[WARN] [1791611197.264735601] [belt_servo]: goal 종료 reason=CANCELED cause=STOP_OK
+[INFO] [1791611768.195801604] [belt_servo]: gripper 요청 OPEN 90.0 mm 14.0 N seq=1 attempt=0
+[INFO] [1791611768.397083192] [belt_servo]: gripper 응답 OPEN seq=1 → OK 폭 90.4 mm grip False (원문: OK)
+[WARN] [1791611774.264181259] [belt_servo]: goal 종료 reason=CANCELED cause=STOP_OK

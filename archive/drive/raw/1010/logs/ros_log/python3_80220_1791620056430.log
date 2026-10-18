@@ -1,0 +1,15 @@
+[INFO] [1791620056.493577149] [sort_manager]: voss_config /home/ms-03/voss_ws/config/voss_config.yaml version 1 sha256 db97243ec6ef, 구역 칸 {'A': 3, 'B': 3, 'C': 3, 'RECHECK': 2, 'HOLD': 2}, confidence_min 0.6, home_first True
+[INFO] [1791620062.293653931] [sort_manager]: MoveToZone OBSERVE 칸 0 이동
+[INFO] [1791620062.293901887] [sort_manager]: 세션 20261010T171422-3407 시작, 우선 전체
+[INFO] [1791620066.230932394] [sort_manager]: OBSERVE 도착, 관측 시작
+[INFO] [1791620089.330143499] [sort_manager]: 20261010T171422-3407-001 track 34 대치동→B 칸 0 파지 시작
+[INFO] [1791620089.332722189] [sort_manager]: servo PREPARE
+[INFO] [1791620089.539026658] [sort_manager]: servo TRACK
+[INFO] [1791620092.537312004] [sort_manager]: servo DESCEND
+[INFO] [1791620095.138217085] [sort_manager]: servo GRASP
+[INFO] [1791620097.271455886] [sort_manager]: servo LIFT
+[INFO] [1791620099.971601927] [sort_manager]: servo VERIFY
+[INFO] [1791620100.172094886] [sort_manager]: MoveToZone B 칸 0 mode PLACE
+[INFO] [1791620100.172345707] [sort_manager]: 20261010T171422-3407-001 파지 완료(시도 1) → B 칸 0 적재
+[INFO] [1791620120.426513528] [sort_manager]: SortResult 20261010T171422-3407-001 PLACED B reason=- attempts=1
+[INFO] [1791620120.426744880] [sort_manager]: 20261010T171422-3407-001 B 칸 0 적재 완료 (OCR)

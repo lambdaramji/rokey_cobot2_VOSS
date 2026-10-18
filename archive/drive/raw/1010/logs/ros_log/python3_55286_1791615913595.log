@@ -1,0 +1,18 @@
+[INFO] [1791615913.658431384] [sort_manager]: voss_config /home/ms-03/voss_ws/config/voss_config.yaml version 1 sha256 db97243ec6ef, 구역 칸 {'A': 3, 'B': 3, 'C': 3, 'RECHECK': 2, 'HOLD': 2}, confidence_min 0.6, home_first True
+[INFO] [1791616115.139201079] [sort_manager]: MoveToZone OBSERVE 칸 0 이동
+[INFO] [1791616115.139485945] [sort_manager]: 세션 20261010T160835-e8c7 시작, 우선 전체
+[INFO] [1791616115.580076471] [sort_manager]: OBSERVE 도착, 관측 시작
+[INFO] [1791616326.957256899] [sort_manager]: 20261010T160835-e8c7-001 track 1 대치동→B 칸 0 파지 시작
+[INFO] [1791616326.969931886] [sort_manager]: servo PREPARE
+[INFO] [1791616327.161376348] [sort_manager]: servo TRACK
+[INFO] [1791616329.688626533] [sort_manager]: servo DESCEND
+[INFO] [1791616332.321704801] [sort_manager]: servo GRASP
+[INFO] [1791616334.322371481] [sort_manager]: servo LIFT
+[INFO] [1791616337.055252414] [sort_manager]: servo VERIFY
+[INFO] [1791616337.259924157] [sort_manager]: MoveToZone B 칸 0 mode PLACE
+[INFO] [1791616337.260169804] [sort_manager]: 20261010T160835-e8c7-001 파지 완료(시도 1) → B 칸 0 적재
+[INFO] [1791616390.124240216] [sort_manager]: SortResult 20261010T160835-e8c7-001 PLACED B reason=- attempts=1
+[INFO] [1791616390.124527228] [sort_manager]: 20261010T160835-e8c7-001 B 칸 0 적재 완료 (OCR)
+[INFO] [1791616401.594959073] [sort_manager]: stop: RUNNING → PAUSED
+[INFO] [1791616401.603459665] [sort_manager]: 로봇 정지 요청 성공
+[WARN] [1791616859.640335734] [sort_manager]: 명령 거부: PAUSED 에서는 resume

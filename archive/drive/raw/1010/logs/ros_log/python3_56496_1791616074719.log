@@ -1,0 +1,26 @@
+[INFO] [1791616074.729989260] [rosbag2_recorder]: Press SPACE for pausing/resuming
+[INFO] [1791616074.729993275] [rosbag2_recorder]: Event publisher thread: Started
+[INFO] [1791616074.733822851] [rosbag2_recorder]: Starting recording to '/home/ms-03/voss_data/1010/g0_01'
+[INFO] [1791616074.738579221] [rosbag2_recorder]: Subscribed to topic '/voss/vision/label'
+[INFO] [1791616074.739252039] [rosbag2_recorder]: Subscribed to topic '/voss/vision/box'
+[WARN] [1791616074.739303179] [rosbag2_cpp]: Message definition for topic '/voss/servo/track_and_grasp/_action/status' with type 'action_msgs/msg/GoalStatusArray' not found. Message definition will be left empty in bag.
+[INFO] [1791616074.739902052] [rosbag2_recorder]: Subscribed to topic '/voss/servo/track_and_grasp/_action/status'
+[INFO] [1791616074.740417419] [rosbag2_recorder]: Subscribed to topic '/voss/sort/result'
+[WARN] [1791616074.740453804] [rosbag2_cpp]: Message definition for topic '/voss/servo/track_and_grasp/_action/feedback' with type 'voss_msgs/action/TrackAndGrasp_FeedbackMessage' not found. Message definition will be left empty in bag.
+[INFO] [1791616074.740883651] [rosbag2_recorder]: Subscribed to topic '/voss/servo/track_and_grasp/_action/feedback'
+[INFO] [1791616074.741328611] [rosbag2_recorder]: Subscribed to topic '/voss/sort/state'
+[INFO] [1791616074.741957358] [rosbag2_recorder]: Subscribed to topic '/voss/robot/state'
+[INFO] [1791616074.742872453] [rosbag2_recorder]: Subscribed to topic '/voss/log/status'
+[INFO] [1791616074.743727752] [rosbag2_recorder]: Subscribed to topic '/voss/robot/servo_cmd'
+[INFO] [1791616074.744535944] [rosbag2_recorder]: Subscribed to topic '/voss/robot/pose'
+[INFO] [1791616074.746513930] [rosbag2_recorder]: Subscribed to topic '/rosout'
+[INFO] [1791616074.746619426] [rosbag2_recorder]: Listening for topics...
+[INFO] [1791616074.746631161] [rosbag2_recorder]: Recording...
+[INFO] [1791616074.746665028] [rosbag2_recorder]: Topics discovery started.
+[INFO] [1791616074.748967391] [rosbag2_recorder]: Subscribed to topic '/camera/color/camera_info'
+[INFO] [1791616074.749698506] [rosbag2_recorder]: Subscribed to topic '/camera/color/image_raw/compressed'
+[INFO] [1791616074.749723912] [rosbag2_recorder]: All requested topics are subscribed. Stopping discovery...
+[INFO] [1791616074.749731207] [rosbag2_recorder]: Topics discovery stopped.
+[INFO] [1791616595.509230392] [rosbag2_recorder]: Pausing recording.
+[INFO] [1791616595.509276445] [rosbag2_cpp]: Writing remaining messages from cache to the bag. It may take a while
+[INFO] [1791616595.521124317] [rosbag2_recorder]: Recording stopped

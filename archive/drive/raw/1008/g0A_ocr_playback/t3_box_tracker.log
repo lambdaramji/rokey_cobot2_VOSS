@@ -1,0 +1,21 @@
+[WARN] [1791445428.123991160] [box_tracker]: 재생 모드: 녹화 좌표가 /voss/vision/box 로 나간다 — 운용과 다른 ROS_DOMAIN_ID 에서만
+[INFO] [1791445428.124859812] [box_tracker]: box_tracker started: detector=seg min_hits=5 homography=homography v1 2026-10-07T14:49 sha256:95d28cdf hand_eye=hand_eye v1 2026-10-08T11:21:40 sha256:0d73dffd moving_verified=True pose_lag=60 ms observe_source=hand_eye input=playback /home/ms-03/voss_data/1008/t17_live_02
+[INFO] [1791445428.168090706] [box_tracker]: camera_info 확인 [1920, 1080]: homography_ok=True hand_eye_ok=True
+[INFO] [1791445433.116109332] [box_tracker]: 29.8 Hz, 검출 평균 2.7·p95 3.0 ms, 루프 p95 3.3 ms, box 0(무효 0; -), crop 0, pose 149·외삽 149(최대 38 ms)·실패 0
+[INFO] [1791445438.116284726] [box_tracker]: 30.0 Hz, 검출 평균 2.7·p95 3.0 ms, 루프 p95 3.3 ms, box 0(무효 0; -), crop 0, pose 150·외삽 150(최대 39 ms)·실패 0
+[INFO] [1791445443.115634418] [box_tracker]: 30.0 Hz, 검출 평균 2.6·p95 2.9 ms, 루프 p95 3.1 ms, box 0(무효 0; -), crop 0, pose 150·외삽 150(최대 37 ms)·실패 0
+[INFO] [1791445448.116095280] [box_tracker]: 29.8 Hz, 검출 평균 3.6·p95 5.1 ms, 루프 p95 6.3 ms, box 69(무효 0; hand_eye 69), crop 10, 호모그래피↔핸드아이 최대 0.9 mm, pose 149·외삽 149(최대 38 ms)·실패 0
+[INFO] [1791445453.116635926] [box_tracker]: 30.0 Hz, 검출 평균 3.5·p95 5.1 ms, 루프 p95 5.9 ms, box 58(무효 0; hand_eye 58), crop 1, 호모그래피↔핸드아이 최대 2.1 mm, pose 150·외삽 150(최대 38 ms)·실패 0
+[INFO] [1791445458.116479821] [box_tracker]: 30.0 Hz, 검출 평균 4.6·p95 5.6 ms, 루프 p95 6.5 ms, box 150(무효 0; hand_eye 150), crop 14, 호모그래피↔핸드아이 최대 2.2 mm, pose 150·외삽 150(최대 39 ms)·실패 0
+[INFO] [1791445463.116007514] [box_tracker]: 30.0 Hz, 검출 평균 4.1·p95 5.5 ms, 루프 p95 6.4 ms, box 127(무효 0; hand_eye 127), crop 10, 호모그래피↔핸드아이 최대 2.1 mm, pose 150·외삽 150(최대 38 ms)·실패 0
+[INFO] [1791445468.116397995] [box_tracker]: 30.0 Hz, 검출 평균 4.0·p95 5.4 ms, 루프 p95 6.3 ms, box 100(무효 0; hand_eye 100), crop 5, 호모그래피↔핸드아이 최대 2.1 mm, pose 150·외삽 150(최대 36 ms)·실패 0
+[INFO] [1791445473.116295112] [box_tracker]: 29.8 Hz, 검출 평균 4.3·p95 5.7 ms, 루프 p95 6.4 ms, box 131(무효 0; hand_eye 131), crop 12, 호모그래피↔핸드아이 최대 2.1 mm, pose 149·외삽 149(최대 38 ms)·실패 0
+[INFO] [1791445478.116028855] [box_tracker]: 30.0 Hz, 검출 평균 4.6·p95 6.7 ms, 루프 p95 8.0 ms, box 168(무효 0; hand_eye 168), crop 17, 호모그래피↔핸드아이 최대 2.1 mm, pose 150·외삽 150(최대 37 ms)·실패 0
+[INFO] [1791445483.116407751] [box_tracker]: 30.0 Hz, 검출 평균 4.8·p95 6.3 ms, 루프 p95 7.5 ms, box 217(무효 0; hand_eye 217), crop 16, 호모그래피↔핸드아이 최대 2.1 mm, pose 150·외삽 150(최대 38 ms)·실패 0
+[INFO] [1791445488.118554026] [box_tracker]: 29.8 Hz, 검출 평균 5.1·p95 8.9 ms, 루프 p95 11.6 ms, box 200(무효 0; hand_eye 200), crop 15, 호모그래피↔핸드아이 최대 2.0 mm, pose 149·외삽 149(최대 38 ms)·실패 0
+[INFO] [1791445493.116479027] [box_tracker]: 30.0 Hz, 검출 평균 3.5·p95 5.2 ms, 루프 p95 5.9 ms, box 35(무효 0; hand_eye 35), crop 0, 호모그래피↔핸드아이 최대 2.0 mm, pose 150·외삽 150(최대 38 ms)·실패 0
+[INFO] [1791445498.116015808] [box_tracker]: 29.4 Hz, 검출 평균 2.8·p95 3.9 ms, 루프 p95 4.2 ms, box 0(무효 0; -), crop 0, pose 147·외삽 147(최대 38 ms)·실패 0
+[INFO] [1791445503.115860260] [box_tracker]: 30.0 Hz, 검출 평균 2.8·p95 3.3 ms, 루프 p95 3.5 ms, box 0(무효 0; -), crop 0, pose 150·외삽 150(최대 36 ms)·실패 0
+[INFO] [1791445507.060698234] [box_tracker]: 재생 끝: 영상 2362 프레임 (/home/ms-03/voss_data/1008/t17_live_02)
+[INFO] [1791445507.061183113] [box_tracker]: 23.8 Hz, 검출 평균 2.7·p95 3.0 ms, 루프 p95 3.3 ms, box 0(무효 0; -), crop 0, pose 119·외삽 119(최대 38 ms)·실패 0
+The following exception was never retrieved: cannot use Destroyable because destruction was requested

@@ -1,0 +1,4 @@
+1791702137.2374554 [INFO] [launch]: All log files can be found below /root/.ros/log/2026-10-11-07-02-17-236845-hyeonji-ubuntu-1
+1791702137.2375433 [INFO] [launch]: Default logging verbosity is set to INFO
+1791702137.2726684 [INFO] [box_tracker-1]: process started with pid [26]
+1791702246.5017159 [INFO] [box_tracker-1]: process has finished cleanly [pid 26]
