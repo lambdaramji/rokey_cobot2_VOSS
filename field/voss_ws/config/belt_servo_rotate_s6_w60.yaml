@@ -1,0 +1,29 @@
+# S2-T18(U14) J6 회전 파지 실기 — belt_servo_real.yaml 위에 덮어쓰기(overrides:=). 레포 밖, 커밋 금지.
+# 10/15 U14 6단계: + 70° 넘는 박스는 반대(−110~−90)로, 회전 중 LOST 1.2 s. gateway 한계 130 필요(−110 + 0.2·60 + 여유).
+# still_dps·pose_fresh_s 는 R1(정지 로봇 직접 회전) 측정으로 갱신. 끄기 = overrides 인자를 뺀다.
+belt_servo:
+  ros__parameters:
+    input:
+      pose_lag_ms: 0.0
+    rotate:
+      enable: true
+      deadband_deg: 4
+      min_deg: 10
+      max_deg: 110
+      n_min: 5
+      buffer_n: 15
+      r_min: 0.97
+      decide_max_s: 0.5
+      start_tol_deg: 3
+      omega_max_dps: 60
+      alpha_dps2: 90
+      tol_deg: 1.5
+      omega_floor_dps: 3
+      hold_dz_mm: 50
+      settle_s: 0.3
+      stall_s: 0.6
+      still_dps: 2
+      return_min_dz_mm: 10
+      pose_fresh_s: 0.05
+      flip_above_deg: 70            # + Δ > 70 → Δ − 180 (10/15 실기: + 회전 67° 이상 LOST 9/18, − 쪽 15/15)
+      lost_timeout_s: 1.2           # 회전을 쓴 goal 의 PREPARE·TRACK 에서만 (input 0.5). 끊김 0.5~0.6 s 회차 대비

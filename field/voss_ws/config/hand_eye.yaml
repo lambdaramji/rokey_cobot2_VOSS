@@ -1,0 +1,120 @@
+version: 1
+method: hand_eye
+created: '2026-10-08T11:21:40'
+solver: PARK + touch_translation
+board:
+  inner_corners:
+  - 10
+  - 7
+  square_mm: 25.0
+image_size:
+- 1920
+- 1080
+camera:
+  k:
+  - 1358.1112
+  - 0.0
+  - 975.9706
+  - 0.0
+  - 1357.4988
+  - 551.4376
+  - 0.0
+  - 0.0
+  - 1.0
+  d:
+  - 0.05525
+  - 0.301808
+  - -0.000143
+  - -0.000354
+  - -1.159605
+  source: board_reestimate (cv2.calibrateCamera, 27장, rms 0.262 px)
+camera_factory:
+  k:
+  - 1367.4627685546875
+  - 0.0
+  - 978.511474609375
+  - 0.0
+  - 1367.723876953125
+  - 552.0377807617188
+  - 0.0
+  - 0.0
+  - 1.0
+  d:
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+pose_frame: tcp
+tcp_offset_mm:
+- 1.382
+- 2.684
+- 246.642
+T_tcp_camera:
+- - -0.999835
+  - 0.017589
+  - 0.004492
+  - 31.07065
+- - -0.017571
+  - -0.999838
+  - 0.003907
+  - 74.398205
+- - 0.00456
+  - 0.003828
+  - 0.999982
+  - -212.471647
+- - 0.0
+  - 0.0
+  - 0.0
+  - 1.0
+touch_correction:
+  offset_camera_mm:
+  - -0.73
+  - -0.49
+  - 9.19
+  solver_translation_mm:
+  - 30.31
+  - 73.86
+  - -221.66
+  n_t16: 15
+  n_touch: 5
+  source: touch.csv + T16 t16
+moving_verified: true
+errors:
+  n_used: 27
+  n_rejected: 0
+  reproj_px_max: 1.268
+  board_spread_mm: 0.85
+  board_spread_deg: 0.227
+  method_spread_mm: 0.81
+  method_spread_deg: 0.101
+  board_spread_corrected_mm: 4.09
+  t16_val:
+    C1: 0.73
+    C2: 1.46
+    C3: 3.26
+    C4: 2.72
+    C5: 2.44
+    C6: 4.56
+    C7: 1.98
+    C8: 0.53
+    C9: 2.2
+    C10: 1.89
+    V1: 2.28
+    V2: 3.89
+    V3R: 1.54
+    V4: 1.12
+    V5: 1.56
+  t16_val_max_mm: 4.56
+  touch_val:
+    P1: 1.73
+    P2: 2.44
+    P3: 2.36
+    P4: 1.7
+    P4_60: 1.58
+  touch_val_max_mm: 2.44
+  moving_spread_mm: 4.08
+  moving_spread_lag_mm: 2.73
+  pose_lag_ms_measured: 60.0
+  moving_note: 'he_moving_01 (10/08 김학민): 박스 P4 정지, 로봇 z-50·x±40 mm, 20 mm/s, 1601
+    프레임(베이스 판 오검출 28장 제외), P4 터치 대비'
