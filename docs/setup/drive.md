@@ -12,7 +12,7 @@
 > | `models/box_yolo11n_v1.onnx` | Release `models_box_yolo11n_v1.onnx` |
 > | `colab/t17/runs/` | 결과표·그림 `archive/drive/colab/t17/runs/`, 가중치 Release `colab_t17_y11n_best.pt`·`_last.pt` |
 > | `docs/handoff/` | `archive/drive/docs/handoff/` |
-> | `docs/presentations/` | `docs/presentations/` (#213) |
+> | `docs/presentations/` | `docs/presentations/` — 중간발표 PDF·10/18 정리본 pptx(#213), 10/16 발표 당일본 pptx(#210). 따로 떨어진 영상은 Release (ADR-0017 결정 6) |
 > | `docs/requirements/`, `reference/_archive/` | `archive/drive/docs/requirements/`, `archive/drive/reference/_archive/` (레포 이력에 같은 파일이 있으면 뺌) |
 > | `reference/lectures·samples·hardware/` | 옮기지 않음 — 남이 만든 자료 |
 
