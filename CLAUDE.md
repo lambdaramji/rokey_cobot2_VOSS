@@ -19,7 +19,7 @@
 5. `voss_config.yaml`을 쓰는 노드는 sort_manager 뿐. 다른 노드는 `/voss/sort/zone_map` 토픽(transient_local)을 구독한다.
 6. **실로봇·벨트·그리퍼를 움직이는 명령(launch, 서비스 호출, 스크립트)은 Claude가 실행하지 않는다.** 코드를 만들고 실행 명령을 보여주기만 한다. 실행은 사람이 비상정지 옆에서 한다.
 7. 자기 담당 패키지 밖을 고쳐야 하면 먼저 사용자에게 알리고, 해당 담당자에게 이슈로 요청하는 쪽을 우선 제안한다.
-8. 모델 가중치(.pt, .onnx), 녹음, 촬영 데이터는 커밋하지 않는다 (.gitignore 참고). 경로와 다운로드 방법만 README에 적는다.
+8. 모델 가중치(.pt, .onnx), 녹음, 촬영 데이터는 커밋하지 않는다 (.gitignore 참고). 경로와 다운로드 방법만 README에 적는다. 10/18 팀 Drive 폐기 뒤 보존본은 GitHub Release `drive-archive-20261018`, 글·표 기록은 `archive/` (ADR-0017).
 
 ## 자주 쓰는 명령
 ```bash

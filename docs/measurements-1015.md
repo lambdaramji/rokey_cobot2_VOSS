@@ -92,7 +92,7 @@ ADR-0014 조건 ② MQTT·HMI 버튼·3D 배치도 ✅, 되읽기 TTS ✅(bag), 
 | bag | `~/voss_data/1015/demo2` — mcap 1개 8.5 MB, **11:58:46 ~ 12:16:21 (17.59 분)** (메타데이터 대조) |
 | 기록표 | `~/voss_data/1015/demo2_rows.md` |
 | 영상 | **없음** — 시연 영상은 찍지 않았다(김학민 10/15 14:12) |
-| 팀 Drive | `1015/` 폴더에 bag·기록표 같은 파일 |
+| 보존 (10/18 Drive 폐기, ADR-0017) | bag → Release `drive-archive-20261018` 의 `raw_1015_demo2_bag.tar`, 기록표 → `archive/drive/raw/1015/demo2_rows.md`. §6 의 `t19s2/`(1차)는 Drive 에 없었고 공용 PC 반납으로 사라졌다 — 고친 판 `t19s2b` 만 Release `raw_1015_t19s2b.zip` |
 
 ## 5. 남은 일
 

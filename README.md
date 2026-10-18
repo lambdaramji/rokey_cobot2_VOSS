@@ -8,7 +8,7 @@
 
 ## 시연 영상
 
-시연 녹화(ROS bag `~/voss_data/1015/demo2`, 17.6분)와 기록표는 레포 밖 팀 Drive `1015/` 에 있다(CLAUDE.md 규칙 8 — 촬영 데이터는 커밋하지 않는다). 영상 파일을 올리면 아래 자리에 링크한다.
+시연 녹화(ROS bag `demo2`, 17.6분)는 GitHub Release `drive-archive-20261018` 의 `raw_1015_demo2_bag.tar`, 기록표는 `archive/drive/raw/1015/demo2_rows.md` 에 있다(CLAUDE.md 규칙 8·ADR-0017 — 녹화는 git 이 아니라 Release). 영상 파일을 올리면 아래 자리에 링크한다.
 
 | 분류 스토리 | 팔레타이징 스토리 |
 |---|---|
