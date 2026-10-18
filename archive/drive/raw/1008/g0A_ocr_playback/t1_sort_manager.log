@@ -1,0 +1,1 @@
+[INFO] [1791445423.936570706] [sort_manager]: voss_config /home/ms-03/voss_g0/config/voss_config.yaml version 1 sha256 f5563de2851d, 구역 칸 {'A': 3, 'B': 3, 'C': 3, 'RECHECK': 2, 'HOLD': 2}, confidence_min 0.6, home_first False

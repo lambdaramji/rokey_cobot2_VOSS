@@ -1,0 +1,14 @@
+t_s,zone,slot,close,close_width,ok,message,dur_s,tilt_max_deg
+1.4,A,0,OK,38.5,True,OK,17.7,0.9
+20.6,A,1,OK,38.2,True,OK,18.1,0.9
+40.1,A,2,OK,38.0,True,OK,18.7,0.9
+60.3,B,0,OK,38.3,True,OK,20.0,0.9
+81.6,B,1,OK,38.5,True,OK,20.9,0.9
+104.0,B,2,OK,38.5,True,OK,21.6,0.9
+127.0,C,0,OK,38.7,True,OK,23.1,0.9
+151.5,C,1,OK,38.0,True,OK,23.8,0.9
+176.8,C,2,OK,38.2,True,OK,32.6,0.9
+210.8,RECHECK,0,OK,38.5,True,OK,17.6,0.9
+229.8,RECHECK,1,OK,38.5,True,OK,18.7,0.9
+249.9,HOLD,0,OK,38.2,True,OK,21.7,0.9
+273.0,HOLD,1,OK,38.5,True,OK,30.2,0.9

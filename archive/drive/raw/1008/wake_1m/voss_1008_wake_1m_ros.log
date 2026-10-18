@@ -1,0 +1,11 @@
+[INFO] [1791443386.230582287] [voice_listener]: voice_listener: mic 모드 — '헬로, 로키' 뒤에 말하세요
+[INFO] [1791443394.601725983] [voice_listener]: transcript [mic stt=338ms]: 작업 시작해
+[INFO] [1791443402.626558954] [voice_listener]: transcript [mic stt=341ms]: 역삼동부터 분류해
+[INFO] [1791443410.645802823] [voice_listener]: transcript [mic stt=339ms]: 대치동 먼저 처리해
+[INFO] [1791443418.633954226] [voice_listener]: transcript [mic stt=348ms]: 청담동 먼저 해
+[INFO] [1791443426.649602575] [voice_listener]: transcript [mic stt=342ms]: 헬로우 로키. 작업 일시정지.
+[INFO] [1791443434.665047729] [voice_listener]: transcript [mic stt=336ms]: 작업 재개해
+[INFO] [1791443442.701044951] [voice_listener]: transcript [mic stt=350ms]: 이 박스 보류 회
+[INFO] [1791443450.651832048] [voice_listener]: transcript [mic stt=322ms]: 현재 작업 상태 알려줘
+[INFO] [1791443458.682673808] [voice_listener]: transcript [mic stt=331ms]: 오늘 작업 이력 알려줘
+[INFO] [1791443466.781405143] [voice_listener]: transcript [mic stt=323ms]: 보류 구역으로 보내

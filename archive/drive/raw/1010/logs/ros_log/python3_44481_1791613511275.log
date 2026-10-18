@@ -1,0 +1,22 @@
+[INFO] [1791613511.286019864] [rosbag2_recorder]: Press SPACE for pausing/resuming
+[INFO] [1791613511.286028821] [rosbag2_recorder]: Event publisher thread: Started
+[INFO] [1791613511.289156221] [rosbag2_recorder]: Starting recording to '/home/ms-03/voss_data/1010/track_grasp_05'
+[WARN] [1791613511.291178796] [rosbag2_cpp]: Message definition for topic '/voss/servo/track_and_grasp/_action/status' with type 'action_msgs/msg/GoalStatusArray' not found. Message definition will be left empty in bag.
+[INFO] [1791613511.292179979] [rosbag2_recorder]: Subscribed to topic '/voss/servo/track_and_grasp/_action/status'
+[WARN] [1791613511.292220434] [rosbag2_cpp]: Message definition for topic '/voss/servo/track_and_grasp/_action/feedback' with type 'voss_msgs/action/TrackAndGrasp_FeedbackMessage' not found. Message definition will be left empty in bag.
+[INFO] [1791613511.294679343] [rosbag2_recorder]: Subscribed to topic '/voss/servo/track_and_grasp/_action/feedback'
+[INFO] [1791613511.296289183] [rosbag2_recorder]: Subscribed to topic '/voss/robot/state'
+[INFO] [1791613511.297975653] [rosbag2_recorder]: Subscribed to topic '/voss/robot/servo_cmd'
+[INFO] [1791613511.299474662] [rosbag2_recorder]: Subscribed to topic '/voss/robot/pose'
+[INFO] [1791613511.302600403] [rosbag2_recorder]: Subscribed to topic '/rosout'
+[INFO] [1791613511.303769532] [rosbag2_recorder]: Subscribed to topic '/camera/color/image_raw/compressed'
+[INFO] [1791613511.304237612] [rosbag2_recorder]: Subscribed to topic '/voss/vision/box'
+[INFO] [1791613511.305286186] [rosbag2_recorder]: Subscribed to topic '/camera/color/camera_info'
+[INFO] [1791613511.305386814] [rosbag2_recorder]: Listening for topics...
+[INFO] [1791613511.305397938] [rosbag2_recorder]: Recording...
+[INFO] [1791613511.305422169] [rosbag2_recorder]: Topics discovery started.
+[INFO] [1791613511.305443294] [rosbag2_recorder]: All requested topics are subscribed. Stopping discovery...
+[INFO] [1791613511.305447496] [rosbag2_recorder]: Topics discovery stopped.
+[INFO] [1791614031.415769067] [rosbag2_recorder]: Pausing recording.
+[INFO] [1791614031.415826136] [rosbag2_cpp]: Writing remaining messages from cache to the bag. It may take a while
+[INFO] [1791614031.430295636] [rosbag2_recorder]: Recording stopped

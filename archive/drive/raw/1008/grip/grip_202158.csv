@@ -1,0 +1,11 @@
+trial,angle_deg,width_cmd,force,ok,message,width_actual,grip_detected,close_s,dent,slip,note
+1,0.0,39.0,14.0,True,OK,41.2,True,1.66,False,False,"박스를 잡았는데, 박스 윗면이 그리퍼 중간쯤까지만 왔어."
+2,0.0,39.0,14.0,True,OK,41.1,True,1.67,False,False,1번째랑 동일한 현상이야.
+3,0.0,39.0,14.0,True,OK,41.1,True,1.87,False,False,같은현상.
+4,0.0,39.0,14.0,True,OK,40.9,True,1.63,False,False,
+5,0.0,39.0,14.0,True,OK,40.9,True,1.69,False,False,
+6,0.0,39.0,14.0,True,OK,40.9,True,1.68,False,False,
+7,0.0,39.0,14.0,True,OK,40.9,True,1.68,False,False,
+8,0.0,39.0,14.0,True,OK,40.7,True,2.06,False,False,
+9,0.0,39.0,14.0,True,OK,40.7,True,2.05,False,False,
+10,0.0,39.0,14.0,True,OK,40.7,True,2.01,False,False,10번 모두 1번같아. 이 부분만 확인해줘.

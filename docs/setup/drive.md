@@ -1,5 +1,21 @@
 # 팀 Google Drive 구조와 규칙
 
+> **폐기 (2026-10-18, ADR-0017).** 프로젝트가 끝나 팀 Drive 를 닫았다. 내용은 git `archive/`(글·표·작은 그림)와 GitHub Release `drive-archive-20261018`(큰 바이너리)로 옮겼다 — 목록·SHA-256·뺀 것은 `archive/README.md`. 문서 속 `Drive raw/<MMDD>/…` 는 아래 표로 찾는다. 이 아래 본문은 당시 규칙 기록이다.
+>
+> | 옛 Drive 경로 | 지금 위치 |
+> |---|---|
+> | `raw/<MMDD>/` 의 md·csv·yaml·txt·py·log·사진, bag 폴더의 `metadata.yaml` | `archive/drive/raw/<MMDD>/` (같은 하위 경로) |
+> | `raw/<MMDD>/*.tar(.gz)`·`*.zip`, bag `*.mcap` | Release 자산 `raw_<MMDD>_<원래 이름>` — yaw 관측 bag 은 `raw_1014_yaw_obs_bags_A.tar`·`_B.tar`, 시연 bag 은 `raw_1015_demo2_bag.tar`, `voss_1006_t17.tar` 는 `.part0`+`.part1` |
+> | `raw/1010/logs/servo/ticks/`, `raw/1012/ticks/` | Release `raw_1010_1012_servo_ticks.tar.gz` |
+> | `raw/1010/logs/servo/attempts/`, `raw/1012/attempts/` | `data/servo/attempts/` (게이트 증거, #110·#213) |
+> | `datasets/t17_yolo_v1/` | Release `datasets_t17_yolo_v1.zip`, `check.csv` 는 `archive/drive/datasets/t17_yolo_v1/` |
+> | `models/box_yolo11n_v1.onnx` | Release `models_box_yolo11n_v1.onnx` |
+> | `colab/t17/runs/` | 결과표·그림 `archive/drive/colab/t17/runs/`, 가중치 Release `colab_t17_y11n_best.pt`·`_last.pt` |
+> | `docs/handoff/` | `archive/drive/docs/handoff/` |
+> | `docs/presentations/` | `docs/presentations/` — 중간발표 PDF·10/18 정리본 pptx(#213), 10/16 발표 당일본 pptx(#210). 따로 떨어진 영상은 Release (ADR-0017 결정 6) |
+> | `docs/requirements/`, `reference/_archive/` | `archive/drive/docs/requirements/`, `archive/drive/reference/_archive/` (레포 이력에 같은 파일이 있으면 뺌) |
+> | `reference/lectures·samples·hardware/` | 옮기지 않음 — 남이 만든 자료 |
+
 레포에 넣지 않는 것(규칙 8: 녹화·촬영 원본, 학습 세트, 모델 가중치, 발표·결과 영상)은 팀 Drive 한 곳에 둔다. **팀 공용 Google 계정** 하나를 모두 로그인해서 쓴다(따로 공유 설정 없음). 루트는 그 계정의 `내 드라이브/rokey_cobot2_VOSS/`. 레포가 공개라 이 문서에는 계정·링크·폴더 ID 를 적지 않는다.
 
 ```

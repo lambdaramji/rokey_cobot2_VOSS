@@ -1,0 +1,109 @@
+[INFO] [1791618906.346937070] [sort_manager]: voss_config /home/ms-03/voss_ws/config/voss_config.yaml version 1 sha256 db97243ec6ef, 구역 칸 {'A': 3, 'B': 3, 'C': 3, 'RECHECK': 2, 'HOLD': 2}, confidence_min 0.6, home_first True
+[INFO] [1791618918.089661413] [sort_manager]: MoveToZone OBSERVE 칸 0 이동
+[INFO] [1791618918.089901541] [sort_manager]: 세션 20261010T165518-45d2 시작, 우선 전체
+[INFO] [1791618926.111778804] [sort_manager]: OBSERVE 도착, 관측 시작
+[INFO] [1791618934.518635253] [sort_manager]: 20261010T165518-45d2-001 track 17 청담동→C 칸 0 파지 시작
+[INFO] [1791618934.521359346] [sort_manager]: servo PREPARE
+[INFO] [1791618934.705561954] [sort_manager]: servo TRACK
+[INFO] [1791618937.838073736] [sort_manager]: servo DESCEND
+[INFO] [1791618940.438057299] [sort_manager]: servo GRASP
+[INFO] [1791618942.071267764] [sort_manager]: servo LIFT
+[INFO] [1791618944.804792930] [sort_manager]: servo VERIFY
+[INFO] [1791618945.006424668] [sort_manager]: MoveToZone C 칸 0 mode PLACE
+[INFO] [1791618945.006698706] [sort_manager]: 20261010T165518-45d2-001 파지 완료(시도 1) → C 칸 0 적재
+[INFO] [1791618967.518728679] [sort_manager]: SortResult 20261010T165518-45d2-001 PLACED C reason=- attempts=1
+[INFO] [1791618967.518993640] [sort_manager]: 20261010T165518-45d2-001 C 칸 0 적재 완료 (OCR)
+[INFO] [1791618971.711779246] [sort_manager]: 20261010T165518-45d2-002 track 18 역삼동→A 칸 0 파지 시작
+[INFO] [1791618971.715664002] [sort_manager]: servo PREPARE
+[INFO] [1791618971.908035586] [sort_manager]: servo TRACK
+[INFO] [1791618975.204583844] [sort_manager]: servo DESCEND
+[INFO] [1791618977.804711097] [sort_manager]: servo GRASP
+[INFO] [1791618979.505977630] [sort_manager]: servo LIFT
+[INFO] [1791618982.238296310] [sort_manager]: servo VERIFY
+[INFO] [1791618982.440306306] [sort_manager]: MoveToZone A 칸 0 mode PLACE
+[INFO] [1791618982.440583786] [sort_manager]: 20261010T165518-45d2-002 파지 완료(시도 1) → A 칸 0 적재
+[INFO] [1791619001.719380065] [sort_manager]: SortResult 20261010T165518-45d2-002 PLACED A reason=- attempts=1
+[INFO] [1791619001.719634080] [sort_manager]: 20261010T165518-45d2-002 A 칸 0 적재 완료 (OCR)
+[INFO] [1791619005.089663849] [sort_manager]: 20261010T165518-45d2-003 track 19 역삼동→A 칸 1 파지 시작
+[INFO] [1791619005.094944257] [sort_manager]: servo PREPARE
+[INFO] [1791619005.306721848] [sort_manager]: servo TRACK
+[INFO] [1791619008.437800175] [sort_manager]: servo DESCEND
+[INFO] [1791619011.071741295] [sort_manager]: servo GRASP
+[INFO] [1791619012.771211494] [sort_manager]: servo LIFT
+[INFO] [1791619015.471568661] [sort_manager]: servo VERIFY
+[INFO] [1791619015.672206402] [sort_manager]: MoveToZone A 칸 1 mode PLACE
+[INFO] [1791619015.672446467] [sort_manager]: 20261010T165518-45d2-003 파지 완료(시도 1) → A 칸 1 적재
+[INFO] [1791619035.082401960] [sort_manager]: SortResult 20261010T165518-45d2-003 PLACED A reason=- attempts=1
+[INFO] [1791619035.082805431] [sort_manager]: 20261010T165518-45d2-003 A 칸 1 적재 완료 (OCR)
+[INFO] [1791619038.483981977] [sort_manager]: 20261010T165518-45d2-004 track 20 청담동→C 칸 1 파지 시작
+[INFO] [1791619038.493397534] [sort_manager]: servo PREPARE
+[INFO] [1791619038.673938175] [sort_manager]: servo TRACK
+[INFO] [1791619041.803963657] [sort_manager]: servo DESCEND
+[INFO] [1791619044.404824062] [sort_manager]: servo GRASP
+[INFO] [1791619046.071352177] [sort_manager]: servo LIFT
+[INFO] [1791619048.771465970] [sort_manager]: servo VERIFY
+[INFO] [1791619048.972198505] [sort_manager]: MoveToZone C 칸 1 mode PLACE
+[INFO] [1791619048.972423725] [sort_manager]: 20261010T165518-45d2-004 파지 완료(시도 1) → C 칸 1 적재
+[INFO] [1791619071.279682242] [sort_manager]: SortResult 20261010T165518-45d2-004 PLACED C reason=- attempts=1
+[INFO] [1791619071.280060542] [sort_manager]: 20261010T165518-45d2-004 C 칸 1 적재 완료 (OCR)
+[INFO] [1791619074.839870385] [sort_manager]: 20261010T165518-45d2-005 track 21 청담동→C 칸 2 파지 시작
+[INFO] [1791619074.845204418] [sort_manager]: servo PREPARE
+[INFO] [1791619075.039061064] [sort_manager]: servo TRACK
+[INFO] [1791619078.470723823] [sort_manager]: servo DESCEND
+[INFO] [1791619081.071499456] [sort_manager]: servo GRASP
+[INFO] [1791619082.905312569] [sort_manager]: servo LIFT
+[INFO] [1791619085.638097471] [sort_manager]: servo VERIFY
+[INFO] [1791619085.840183819] [sort_manager]: MoveToZone C 칸 2 mode PLACE
+[INFO] [1791619085.840740102] [sort_manager]: 20261010T165518-45d2-005 파지 완료(시도 1) → C 칸 2 적재
+[INFO] [1791619117.795472692] [sort_manager]: SortResult 20261010T165518-45d2-005 PLACED C reason=- attempts=1
+[INFO] [1791619117.795968642] [sort_manager]: 20261010T165518-45d2-005 C 칸 2 적재 완료 (OCR)
+[INFO] [1791619124.195082602] [sort_manager]: 20261010T165518-45d2-006 track 22 대치동→B 칸 0 파지 시작
+[INFO] [1791619124.199843634] [sort_manager]: servo PREPARE
+[INFO] [1791619124.371992833] [sort_manager]: servo TRACK
+[INFO] [1791619127.704196517] [sort_manager]: servo DESCEND
+[INFO] [1791619130.304652057] [sort_manager]: servo GRASP
+[INFO] [1791619132.004477788] [sort_manager]: servo LIFT
+[INFO] [1791619134.738082092] [sort_manager]: servo VERIFY
+[INFO] [1791619134.939626331] [sort_manager]: MoveToZone B 칸 0 mode PLACE
+[INFO] [1791619134.939914196] [sort_manager]: 20261010T165518-45d2-006 파지 완료(시도 1) → B 칸 0 적재
+[INFO] [1791619155.146725512] [sort_manager]: SortResult 20261010T165518-45d2-006 PLACED B reason=- attempts=1
+[INFO] [1791619155.146970786] [sort_manager]: 20261010T165518-45d2-006 B 칸 0 적재 완료 (OCR)
+[INFO] [1791619159.008235650] [sort_manager]: 20261010T165518-45d2-007 track 23 대치동→B 칸 1 파지 시작
+[INFO] [1791619159.012552795] [sort_manager]: servo PREPARE
+[INFO] [1791619159.207637687] [sort_manager]: servo TRACK
+[INFO] [1791619162.437452026] [sort_manager]: servo DESCEND
+[INFO] [1791619165.038496256] [sort_manager]: servo GRASP
+[INFO] [1791619166.671387575] [sort_manager]: servo LIFT
+[INFO] [1791619169.405066413] [sort_manager]: servo VERIFY
+[INFO] [1791619169.605808952] [sort_manager]: MoveToZone B 칸 1 mode PLACE
+[INFO] [1791619169.606085856] [sort_manager]: 20261010T165518-45d2-007 파지 완료(시도 1) → B 칸 1 적재
+[INFO] [1791619190.285350806] [sort_manager]: SortResult 20261010T165518-45d2-007 PLACED B reason=- attempts=1
+[INFO] [1791619190.285581695] [sort_manager]: 20261010T165518-45d2-007 B 칸 1 적재 완료 (OCR)
+[INFO] [1791619194.152979212] [sort_manager]: 20261010T165518-45d2-008 track 24 역삼동→A 칸 2 파지 시작
+[INFO] [1791619194.161163310] [sort_manager]: servo PREPARE
+[INFO] [1791619194.372116353] [sort_manager]: servo TRACK
+[INFO] [1791619197.571083657] [sort_manager]: servo DESCEND
+[INFO] [1791619200.171647533] [sort_manager]: servo GRASP
+[INFO] [1791619201.904869375] [sort_manager]: servo LIFT
+[INFO] [1791619204.604908316] [sort_manager]: servo VERIFY
+[INFO] [1791619204.806564898] [sort_manager]: MoveToZone A 칸 2 mode PLACE
+[INFO] [1791619204.807058584] [sort_manager]: 20261010T165518-45d2-008 파지 완료(시도 1) → A 칸 2 적재
+[INFO] [1791619224.402424851] [sort_manager]: SortResult 20261010T165518-45d2-008 PLACED A reason=- attempts=1
+[INFO] [1791619224.402913825] [sort_manager]: 20261010T165518-45d2-008 A 칸 2 적재 완료 (OCR)
+[INFO] [1791619229.630260865] [sort_manager]: 20261010T165518-45d2-009 track 25 대치동→B 칸 2 파지 시작
+[INFO] [1791619229.638655166] [sort_manager]: servo PREPARE
+[INFO] [1791619229.838156205] [sort_manager]: servo TRACK
+[INFO] [1791619233.137853703] [sort_manager]: servo DESCEND
+[INFO] [1791619235.738207612] [sort_manager]: servo GRASP
+[INFO] [1791619237.438441413] [sort_manager]: servo LIFT
+[INFO] [1791619240.171666350] [sort_manager]: servo VERIFY
+[INFO] [1791619240.372724301] [sort_manager]: MoveToZone B 칸 2 mode PLACE
+[INFO] [1791619240.373069177] [sort_manager]: 20261010T165518-45d2-009 파지 완료(시도 1) → B 칸 2 적재
+[INFO] [1791619261.874202528] [sort_manager]: SortResult 20261010T165518-45d2-009 PLACED B reason=- attempts=1
+[INFO] [1791619261.874425287] [sort_manager]: 20261010T165518-45d2-009 B 칸 2 적재 완료 (OCR)
+[INFO] [1791619276.736137358] [sort_manager]: 20261010T165518-45d2-010 track 26 역삼동→RECHECK 칸 0 파지 시작 (LOW_CONF → 재확인)
+[INFO] [1791619276.740438963] [sort_manager]: servo PREPARE
+[INFO] [1791619276.938976719] [sort_manager]: servo TRACK
+[INFO] [1791619280.204479398] [sort_manager]: servo DESCEND
+[INFO] [1791619281.072984997] [sort_manager]: SortResult 20261010T165518-45d2-010 FAILED - reason=LOST attempts=0
+[WARN] [1791619281.073258826] [sort_manager]: 20261010T165518-45d2-010 파지 실패 LOST(시도 0) → PAUSED

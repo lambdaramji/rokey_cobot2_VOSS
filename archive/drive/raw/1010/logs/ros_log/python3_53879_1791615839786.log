@@ -1,0 +1,511 @@
+[INFO] [1791615839.844308181] [robot_gateway]: voss_config version=1 sha256=db97243ec6ef
+[INFO] [1791615840.016114387] [robot_gateway]: RG2 192.168.1.1:502 폭 90.4 mm, grip False, safety_err False
+[INFO] [1791615840.020094165] [robot_gateway]: MoveToZone 구역 ['A', 'B', 'C', 'RECHECK', 'HOLD'], safe z 446.6 mm(플랜지), vel [30.0, 45.0], acc [200.0, 90.0]
+[INFO] [1791615840.021073419] [robot_gateway]: robot_gateway started: real /dsr01/dsr_controller2/, pose 50 Hz, servo watchdog 200 ms, max 100 mm/s, TCP z ≥ 78.0 mm, x -107~638 mm, acc [100.0, 10.0]
+[WARN] [1791615840.024989394] [robot_gateway]: pose 조회 실패: joint_states 없음·0.1 s 넘게 오래됨
+[INFO] [1791615840.539193402] [robot_gateway]: RobotState READY connected=True action=- error=- (controller ?)
+[INFO] [1791615841.025966714] [robot_gateway]: 컨트롤러 TCP 등록 voss_config 와 같음 (차 0.0 mm)
+[INFO] [1791615841.035265028] [robot_gateway]: pose_source joint_states 확인: 서비스 플랜지와 0.00 mm → 사용 (guard pose 지연 20 ms)
+[INFO] [1791615844.972650530] [robot_gateway]: pose 49.4 Hz, rtt avg 2.5 max 4.3 ms, queue wait max 1.2 ms, fail 1, skip 0
+[INFO] [1791615849.972603030] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791615854.972818751] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.1 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791615859.972523464] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.9 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791615864.972503557] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.2 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791615869.973265737] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 7.5 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791615874.972856997] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.2 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791615879.972671039] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791615884.972874999] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.9 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791615889.973483058] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791615894.972244810] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791615899.972311375] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 6.4 ms, queue wait max 1.7 ms, fail 0, skip 0
+[INFO] [1791615904.972840714] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.8 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791615909.973797341] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.1 ms, queue wait max 2.7 ms, fail 0, skip 0
+[INFO] [1791615914.973151045] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791615919.972365335] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791615924.971940077] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.1 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791615929.972375580] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 5.2 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791615934.973218670] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791615939.972551860] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.2 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791615944.972513144] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.3 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791615949.972356452] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791615954.972550327] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 6.1 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791615959.973131079] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.5 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791615964.974007075] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.4 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791615969.973382769] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791615974.972541311] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.3 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791615979.972755669] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791615984.972011809] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.9 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791615989.972391968] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.0 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791615994.972856186] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.2 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791615999.972667168] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.7 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791616004.972883178] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 10.9 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616009.973089535] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791616014.972581208] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 9.0 ms, queue wait max 5.1 ms, fail 0, skip 0
+[INFO] [1791616019.972785182] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.3 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791616024.971922144] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616029.972693346] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791616034.972704936] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791616039.972418579] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.2 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616044.972626326] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791616049.972870774] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616054.973118564] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.2 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616059.973616536] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616064.972776713] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791616069.972444381] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.6 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791616074.972777861] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 7.3 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616079.972258743] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.9 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616084.973184317] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.1 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616089.972754125] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.7 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616094.972756800] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791616099.972560362] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.2 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616104.972706182] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.2 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616109.972966246] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 6.3 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616114.972746787] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.4 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616115.140100384] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:OBSERVE error=- (controller STANDBY)
+[INFO] [1791616115.140614049] [robot_gateway]: move_to_zone OBSERVE 칸 0 MOVE 시작
+[INFO] [1791616115.578599616] [robot_gateway]: move_to_zone OBSERVE 칸 0 MOVE → OK, 0.4 s
+[INFO] [1791616115.579271564] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791616119.972423845] [robot_gateway]: pose 49.4 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 25.7 ms, fail 0, skip 3
+[INFO] [1791616124.972845307] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.3 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616129.972583344] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.0 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791616134.973308816] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 6.5 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616139.973120548] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.5 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791616144.972966210] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.0 ms, queue wait max 1.7 ms, fail 0, skip 0
+[INFO] [1791616149.973096505] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616154.972912366] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.3 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616159.972785452] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616164.973134154] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616169.972805669] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 9.9 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791616174.973279724] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.3 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616179.972914023] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.3 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791616184.973130629] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.2 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791616189.972620694] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.1 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616194.972552646] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 9.2 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616199.972651512] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616204.972828672] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 5.0 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791616209.972689148] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.9 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616214.972493215] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.1 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616219.972380654] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 7.7 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791616224.973459919] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.0 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616229.973114802] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 6.4 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791616234.972693295] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616239.973452264] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.2 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616244.973161957] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791616249.972372121] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 7.8 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791616254.972428142] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791616259.973289527] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791616264.972145851] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791616269.973872279] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.5 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791616274.972691310] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.0 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616279.973195037] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.5 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616284.973536537] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616289.972861389] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791616294.973137166] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.6 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791616299.972312863] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616304.972489614] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.7 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616309.972434952] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616314.972857074] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 8.0 ms, queue wait max 1.8 ms, fail 0, skip 0
+[INFO] [1791616319.972970191] [robot_gateway]: pose 50.0 Hz, rtt avg 3.9 max 11.7 ms, queue wait max 3.8 ms, fail 0, skip 0
+[INFO] [1791616324.972166790] [robot_gateway]: pose 49.4 Hz, rtt avg 3.6 max 60.2 ms, queue wait max 2.0 ms, fail 0, skip 3
+[INFO] [1791616326.995126989] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791616327.003029818] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791616327.139277068] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 173 ms
+[INFO] [1791616329.971907183] [robot_gateway]: pose 49.6 Hz, rtt avg 5.4 max 20.5 ms, queue wait max 2.7 ms, fail 0, skip 2
+[INFO] [1791616329.974534574] [robot_gateway]: servo rx 18.0 Hz, speedl 90, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791616334.319349180] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.7 mm, grip True, 1998 ms
+[INFO] [1791616334.328104369] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791616334.973162548] [robot_gateway]: pose 50.0 Hz, rtt avg 3.3 max 8.6 ms, queue wait max 2.0 ms, fail 0, skip 0
+[INFO] [1791616334.973830842] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791616337.238047618] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.7 mm, grip True, 182 ms
+[INFO] [1791616337.993186141] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[WARN] [1791616337.994597469] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791616338.009309607] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:B error=- (controller STANDBY)
+[INFO] [1791616338.010068605] [robot_gateway]: move_to_zone B 칸 0 PLACE 시작
+[INFO] [1791616339.972595119] [robot_gateway]: pose 49.4 Hz, rtt avg 3.3 max 15.1 ms, queue wait max 22.8 ms, fail 0, skip 3
+[INFO] [1791616339.972962217] [robot_gateway]: servo rx 17.0 Hz, speedl 85, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791616344.972781999] [robot_gateway]: pose 49.8 Hz, rtt avg 3.1 max 14.4 ms, queue wait max 23.7 ms, fail 0, skip 1
+[INFO] [1791616349.971910595] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 9.0 ms, queue wait max 2.0 ms, fail 0, skip 0
+[INFO] [1791616354.974217211] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 8.0 ms, queue wait max 1.8 ms, fail 0, skip 0
+[INFO] [1791616359.974033954] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 8.6 ms, queue wait max 7.7 ms, fail 0, skip 0
+[INFO] [1791616364.972784204] [robot_gateway]: pose 49.4 Hz, rtt avg 3.2 max 8.8 ms, queue wait max 26.4 ms, fail 0, skip 3
+[INFO] [1791616369.972624599] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 13.1 ms, queue wait max 2.0 ms, fail 0, skip 0
+[INFO] [1791616374.972984676] [robot_gateway]: pose 50.0 Hz, rtt avg 3.8 max 9.3 ms, queue wait max 12.1 ms, fail 0, skip 0
+[INFO] [1791616379.976143586] [robot_gateway]: pose 50.0 Hz, rtt avg 4.1 max 11.2 ms, queue wait max 7.0 ms, fail 0, skip 0
+[INFO] [1791616384.972984968] [robot_gateway]: pose 50.0 Hz, rtt avg 3.7 max 16.5 ms, queue wait max 4.0 ms, fail 0, skip 0
+[INFO] [1791616389.972522983] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 9.1 ms, queue wait max 2.0 ms, fail 0, skip 0
+[INFO] [1791616390.122359535] [robot_gateway]: move_to_zone B 칸 0 PLACE → OK, 52.9 s
+[INFO] [1791616390.123232051] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791616394.973002699] [robot_gateway]: pose 50.0 Hz, rtt avg 3.3 max 13.8 ms, queue wait max 4.5 ms, fail 0, skip 0
+[INFO] [1791616399.973122477] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 8.2 ms, queue wait max 9.5 ms, fail 0, skip 0
+[INFO] [1791616401.597440354] [robot_gateway]: RobotState STOPPED connected=True action=- error=- (controller STANDBY)
+[INFO] [1791616401.602652446] [robot_gateway]: /voss/robot/stop → OK
+[INFO] [1791616404.972345996] [robot_gateway]: pose 50.0 Hz, rtt avg 3.7 max 13.6 ms, queue wait max 1.9 ms, fail 0, skip 0
+[INFO] [1791616404.972657167] [robot_gateway]: servo rx 0.0 Hz, speedl 0, 거부 0, 자름 0, watchdog 0, stop 1, move_stop 1 ok / 0 fail
+[INFO] [1791616409.972608205] [robot_gateway]: pose 50.0 Hz, rtt avg 3.3 max 10.5 ms, queue wait max 3.8 ms, fail 0, skip 0
+[INFO] [1791616414.972724419] [robot_gateway]: pose 50.0 Hz, rtt avg 3.3 max 8.1 ms, queue wait max 2.0 ms, fail 0, skip 0
+[INFO] [1791616419.972559542] [robot_gateway]: pose 50.0 Hz, rtt avg 3.4 max 10.4 ms, queue wait max 3.2 ms, fail 0, skip 0
+[INFO] [1791616424.972827372] [robot_gateway]: pose 50.0 Hz, rtt avg 3.6 max 12.3 ms, queue wait max 4.0 ms, fail 0, skip 0
+[INFO] [1791616429.972854446] [robot_gateway]: pose 50.0 Hz, rtt avg 3.4 max 9.2 ms, queue wait max 2.0 ms, fail 0, skip 0
+[INFO] [1791616434.972500995] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 8.1 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791616439.972144662] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616444.972378659] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616449.972954835] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616454.972382099] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 8.7 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791616459.972923718] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616464.972505467] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.2 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616469.972972552] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791616474.972773172] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791616479.971815456] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 9.5 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616484.972918864] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.6 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616489.973055709] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.2 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616494.972581548] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 9.8 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616499.971896537] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616504.972545755] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.8 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791616509.972729715] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.3 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791616514.973184028] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.2 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791616519.972325565] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.3 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616524.972291606] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616529.972790332] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.2 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791616534.972399124] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791616539.973443708] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.3 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616544.972750636] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.1 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791616549.973006489] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616554.972314568] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 9.1 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616559.972787490] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.4 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791616564.972850235] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.3 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616569.973200036] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616574.972705557] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791616579.971943029] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.1 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616584.972719471] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.8 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791616589.972643728] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.6 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791616594.972523120] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.9 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616599.972582874] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791616604.972898786] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616609.972971539] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791616614.972655258] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 8.1 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616619.972521340] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616624.972574410] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.9 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616629.971889965] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616634.972732843] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791616639.972505945] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.9 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791616644.972124831] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791616649.972685856] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616654.972673210] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791616659.973247630] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616664.972565568] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616669.972524224] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.9 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616674.972551587] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791616679.972608386] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 6.8 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791616684.972604099] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616689.973098176] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.4 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791616694.972351276] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616699.972257659] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.8 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791616704.972997662] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791616709.973410789] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791616714.972829567] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616719.973122446] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.3 ms, queue wait max 1.9 ms, fail 0, skip 0
+[INFO] [1791616724.972336617] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.2 ms, queue wait max 2.9 ms, fail 0, skip 0
+[INFO] [1791616729.972903623] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616734.972484793] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791616739.972077306] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616744.972366313] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616749.972963454] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791616754.973083679] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616759.972764297] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791616764.972447893] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791616769.973184907] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 0.5 ms, fail 0, skip 0
+[INFO] [1791616774.973149427] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 0.5 ms, fail 0, skip 0
+[INFO] [1791616779.972592444] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.9 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791616784.972725830] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 5.2 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791616789.973002547] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616794.972476926] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.3 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791616799.972031076] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616804.972451993] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.5 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791616809.972794770] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616814.973058141] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 6.0 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791616819.972518750] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.7 ms, queue wait max 0.5 ms, fail 0, skip 0
+[INFO] [1791616824.971897784] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.7 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616829.972426636] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.4 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791616834.972901251] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.4 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791616839.972640690] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616844.972533756] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.3 ms, queue wait max 2.8 ms, fail 0, skip 0
+[INFO] [1791616849.972740435] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.2 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616854.972978164] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.4 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616859.971903985] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.3 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616864.972494590] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791616869.972594795] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.7 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616874.972608784] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.2 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616879.972958529] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.7 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616884.973046948] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616889.973025427] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616894.972771315] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.1 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616899.972493772] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.8 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616904.972619757] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 5.1 ms, queue wait max 3.6 ms, fail 0, skip 0
+[INFO] [1791616909.973031719] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.5 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616914.972868102] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.4 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791616919.972735786] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 5.4 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791616924.971956776] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 5.2 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791616929.973275045] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.3 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791616934.972884822] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 8.7 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616939.972513081] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.8 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791616944.972692806] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.2 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616949.972750385] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.2 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616954.972810259] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 5.2 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616959.972842876] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 7.0 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791616964.972314412] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.9 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616969.973223714] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.3 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616974.972447803] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.8 ms, queue wait max 2.2 ms, fail 0, skip 0
+[INFO] [1791616979.973222254] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.7 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791616984.972530538] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 8.4 ms, queue wait max 1.9 ms, fail 0, skip 0
+[INFO] [1791616989.973370432] [robot_gateway]: pose 50.0 Hz, rtt avg 3.5 max 9.5 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616994.972894402] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 5.1 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791616999.972479394] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.7 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617004.972600020] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.2 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617009.973017791] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.1 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617014.972795011] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617019.972339013] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617024.973020805] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.0 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617029.973434536] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.7 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791617034.972418891] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 7.3 ms, queue wait max 2.9 ms, fail 0, skip 0
+[INFO] [1791617039.972840553] [robot_gateway]: pose 50.0 Hz, rtt avg 3.3 max 11.5 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791617044.972821358] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.9 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617049.973100676] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617054.972405684] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.7 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617059.972694045] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617064.972910854] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791617069.973096034] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.0 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617074.973084229] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791617079.973347076] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617084.972986177] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.5 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617089.972853277] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791617094.972959242] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.2 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617099.972549499] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.7 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617104.973082055] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.4 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617109.972573926] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.0 ms, queue wait max 1.6 ms, fail 0, skip 0
+[INFO] [1791617114.972737559] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617119.972950829] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.0 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791617124.972872839] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 6.5 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617129.973064979] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617134.972803308] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617139.973123946] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791617144.972942753] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791617149.972898382] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 7.3 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617154.972845893] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.9 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617159.972811793] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617164.972734074] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617169.972781164] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.0 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617174.972985645] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.9 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617179.972378740] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.5 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791617184.973091425] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617189.972359680] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 8.0 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617194.972506545] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617199.972352806] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617204.972733106] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.3 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617209.972252356] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 8.5 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617214.972743410] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617219.973046288] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.4 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791617224.972767093] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.2 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617229.972585750] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617234.972532574] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.7 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791617239.972665855] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.5 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617244.972394670] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791617249.973125096] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617254.972405439] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.5 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617259.973194666] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.0 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617264.973450383] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.9 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617269.973451176] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 6.2 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617274.972565681] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617279.972626467] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.3 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617284.972913186] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.0 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617289.973081445] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791617294.972449240] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791617299.972838021] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.9 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617304.972804125] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617309.972245033] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791617314.972224241] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791617319.972797797] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.1 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617324.972536549] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617329.972675576] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.5 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617334.972316527] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.0 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617339.972849393] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791617344.972457551] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.3 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617349.973021965] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.1 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791617354.972393927] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 7.0 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617359.972466567] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 6.1 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617364.972516504] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.8 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791617369.972842067] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791617374.972149717] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617379.972907196] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791617384.973022734] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.1 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617389.973195245] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.2 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617394.972910452] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 9.1 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617399.972613489] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.3 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791617404.972259671] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617409.972835081] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617414.972631900] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617419.972377968] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.5 ms, fail 0, skip 0
+[INFO] [1791617424.972686554] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617429.972992691] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617434.972228106] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.5 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617439.973018666] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.1 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617444.972413800] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.0 ms, queue wait max 4.3 ms, fail 0, skip 0
+[INFO] [1791617449.972812837] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617454.972728283] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617459.973051929] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.9 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617464.972393163] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.5 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617469.973274313] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.4 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791617474.972948578] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617479.973261652] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617484.972835971] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 10.3 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617489.972822928] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617494.972591870] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617499.972399839] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617504.972499750] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.3 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617509.973171042] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617514.972529517] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.9 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617519.973063957] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.1 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617524.973197977] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617529.973219848] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617534.972691710] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 9.0 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617539.972676042] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617544.971968590] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.9 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617549.972438236] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 8.9 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617554.972922988] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.9 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791617559.972741478] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617564.973040633] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.9 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791617569.972968401] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.3 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617574.973106553] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.4 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791617579.972436592] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617584.972459867] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 7.2 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791617589.972651679] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617594.972538678] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617599.972529288] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617602.849233170] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:OBSERVE error=- (controller STANDBY)
+[INFO] [1791617602.850078844] [robot_gateway]: move_to_zone OBSERVE 칸 0 MOVE 시작
+[INFO] [1791617602.960232448] [robot_gateway]: move_to_zone OBSERVE 칸 0 MOVE → OK, 0.1 s
+[INFO] [1791617602.962123766] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791617604.972394006] [robot_gateway]: pose 49.6 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 27.8 ms, fail 0, skip 2
+[INFO] [1791617609.973239212] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617614.972636652] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617619.972954099] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617624.972758452] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.0 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617629.972603969] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791617634.972626619] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.2 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791617639.972525288] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617644.973099964] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617647.789117968] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791617647.796566934] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791617647.940673550] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 170 ms
+[INFO] [1791617649.972714282] [robot_gateway]: pose 50.0 Hz, rtt avg 4.0 max 10.7 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791617649.974575213] [robot_gateway]: servo rx 13.2 Hz, speedl 66, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791617654.972935442] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617654.974203002] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791617655.425566066] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 41.2 mm, grip True, 1671 ms
+[INFO] [1791617655.483032973] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0334 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791617658.358062216] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 41.2 mm, grip True, 170 ms
+[INFO] [1791617659.133217162] [robot_gateway]: RobotState READY connected=True action=- error=- (controller MOVING)
+[WARN] [1791617659.133697012] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791617659.136265422] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:C error=- (controller MOVING)
+[INFO] [1791617659.138629719] [robot_gateway]: move_to_zone C 칸 0 PLACE 시작
+[INFO] [1791617659.972686773] [robot_gateway]: pose 49.4 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 26.7 ms, fail 0, skip 3
+[INFO] [1791617659.973291852] [robot_gateway]: servo rx 23.8 Hz, speedl 119, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791617664.973016606] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.2 ms, queue wait max 7.0 ms, fail 0, skip 0
+[INFO] [1791617669.972885449] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 6.1 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791617674.972458119] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791617677.582439557] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791617678.936742740] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791617679.973222840] [robot_gateway]: pose 49.8 Hz, rtt avg 3.1 max 5.1 ms, queue wait max 20.6 ms, fail 0, skip 1
+[INFO] [1791617680.182340034] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791617684.972677901] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791617689.973061922] [robot_gateway]: pose 49.4 Hz, rtt avg 2.9 max 5.0 ms, queue wait max 31.6 ms, fail 0, skip 3
+[INFO] [1791617692.084510760] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791617693.505307408] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791617694.435438418] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791617694.972990800] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 9.4 ms, fail 0, skip 0
+[INFO] [1791617699.972744957] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.2 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617704.973271674] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 6.6 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791617709.972903130] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.2 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617714.972699778] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.2 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617718.687313839] [robot_gateway]: move_to_zone C 칸 0 PLACE → OK, 60.3 s
+[INFO] [1791617718.688352938] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791617719.972683606] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.2 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617724.972386594] [robot_gateway]: pose 49.8 Hz, rtt avg 4.0 max 16.5 ms, queue wait max 4.1 ms, fail 0, skip 1
+[INFO] [1791617729.973050367] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 9.5 ms, queue wait max 2.3 ms, fail 0, skip 0
+[INFO] [1791617734.972701641] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.3 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617739.972793905] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 6.6 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791617744.972371985] [robot_gateway]: pose 50.0 Hz, rtt avg 3.8 max 11.0 ms, queue wait max 1.9 ms, fail 0, skip 0
+[INFO] [1791617749.972724556] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.8 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617754.972372838] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.6 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617759.973144417] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617764.972705810] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617769.972682362] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.3 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617774.973091423] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.5 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791617779.972916652] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791617784.972856974] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.1 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617789.973000767] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791617794.972790414] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617799.972737834] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 5.0 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617804.972594147] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.1 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791617809.972789038] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 8.1 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791617814.972424157] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.9 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791617819.972972753] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.2 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617824.972140083] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.3 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791617829.972533230] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791617834.972835647] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617839.972349493] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 5.0 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791617844.972313043] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617849.972971978] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.2 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617854.972814338] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617859.973262034] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.2 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617864.972909884] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791617869.972411202] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.1 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617874.972277770] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791617879.972994795] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.7 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791617884.972309518] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 6.5 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617889.973024064] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.3 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617894.972318581] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617899.973052256] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791617904.972927427] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.2 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617909.973085244] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.6 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791617914.972860230] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.0 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617919.972645821] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.6 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791617924.972137339] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791617929.972603163] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.2 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617934.972744865] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.1 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617939.972775825] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.3 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617944.972755019] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.2 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617949.973032320] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617954.972664257] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617959.972641806] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791617964.972742471] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617969.972840169] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 6.8 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791617974.972439837] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791617979.973175930] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.5 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617984.972837718] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.0 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791617989.972813649] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.9 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791617994.973006134] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791617999.972801226] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791618004.972530205] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791618009.972963761] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.1 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791618014.972401704] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791618019.972729251] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791618024.973051713] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 7.7 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791618029.973682337] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791618034.972738009] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791618039.972528290] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.9 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791618044.971879425] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.9 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791618049.972678086] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791618054.972814298] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.8 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791618059.972643741] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.0 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791618064.972819981] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.3 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791618069.973192230] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.6 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791618074.972395815] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791618079.972583507] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.2 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791618084.972685776] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.3 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791618089.973385125] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.9 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791618094.972914202] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791618099.972428745] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791618101.755745162] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791618101.972779374] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[WARN] [1791618101.973054294] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[WARN] [1791618104.252806354] [robot_gateway]: pose 조회 실패: TIMEOUT 0.50s: /dsr01/dsr_controller2/motion/fkin

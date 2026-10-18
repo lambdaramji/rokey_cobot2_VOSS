@@ -1,0 +1,9 @@
+[INFO] [1791619594.317459301] [sort_manager]: voss_config /home/ms-03/voss_ws/config/voss_config.yaml version 1 sha256 db97243ec6ef, 구역 칸 {'A': 3, 'B': 3, 'C': 3, 'RECHECK': 2, 'HOLD': 2}, confidence_min 0.6, home_first True
+[INFO] [1791619599.911072265] [sort_manager]: MoveToZone OBSERVE 칸 0 이동
+[INFO] [1791619599.911343149] [sort_manager]: 세션 20261010T170639-e4bd 시작, 우선 전체
+[INFO] [1791619603.831260459] [sort_manager]: OBSERVE 도착, 관측 시작
+[INFO] [1791619617.880252041] [sort_manager]: 20261010T170639-e4bd-001 track 28 역삼동→A 칸 0 파지 시작
+[INFO] [1791619617.883254085] [sort_manager]: servo PREPARE
+[INFO] [1791619618.072118760] [sort_manager]: servo TRACK
+[INFO] [1791619618.410828549] [sort_manager]: SortResult 20261010T170639-e4bd-001 FAILED - reason=LOST attempts=0
+[WARN] [1791619618.411742047] [sort_manager]: 20261010T170639-e4bd-001 파지 실패 LOST(시도 0) → PAUSED

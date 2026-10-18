@@ -1,0 +1,2 @@
+track,first,frames,yaw_valid,x_start,x_end,vision_yaw,vision_yaw_ref,box_angle,box_edges,diff,note
+37,12:10:09,170,170,-90,-90,0.99,0.99,nan,nanxnan,,프레임 없음

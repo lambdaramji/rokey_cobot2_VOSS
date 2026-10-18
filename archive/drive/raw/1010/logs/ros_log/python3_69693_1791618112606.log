@@ -1,0 +1,1428 @@
+[INFO] [1791618112.662735659] [robot_gateway]: voss_config version=1 sha256=db97243ec6ef
+[INFO] [1791618112.857673320] [robot_gateway]: RG2 192.168.1.1:502 폭 90.4 mm, grip False, safety_err False
+[INFO] [1791618112.861958169] [robot_gateway]: MoveToZone 구역 ['A', 'B', 'C', 'RECHECK', 'HOLD'], safe z 446.6 mm(플랜지), vel [100.0, 45.0], acc [200.0, 90.0]
+[INFO] [1791618112.862894157] [robot_gateway]: robot_gateway started: real /dsr01/dsr_controller2/, pose 50 Hz, servo watchdog 200 ms, max 100 mm/s, TCP z ≥ 78.0 mm, x -107~638 mm, acc [100.0, 10.0]
+[WARN] [1791618112.865771875] [robot_gateway]: pose 조회 실패: joint_states 없음·0.1 s 넘게 오래됨
+[INFO] [1791618113.380562522] [robot_gateway]: RobotState READY connected=True action=- error=- (controller ?)
+[INFO] [1791618113.868195370] [robot_gateway]: 컨트롤러 TCP 등록 voss_config 와 같음 (차 0.0 mm)
+[INFO] [1791618113.880328208] [robot_gateway]: pose_source joint_states 확인: 서비스 플랜지와 0.00 mm → 사용 (guard pose 지연 20 ms)
+[INFO] [1791618117.817004499] [robot_gateway]: pose 49.4 Hz, rtt avg 2.5 max 4.4 ms, queue wait max 1.7 ms, fail 1, skip 0
+[INFO] [1791618122.817260703] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791618127.816735139] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791618132.817318570] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791618137.817391803] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.7 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791618142.817275297] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.3 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791618147.816800571] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791618152.816323637] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.8 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791618157.816978138] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791618162.816107291] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.4 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791618167.817522463] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 8.7 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791618172.817482454] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791618177.817319357] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.5 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791618182.816836986] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791618187.816846413] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.6 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791618192.816538171] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.1 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791618197.816819241] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791618202.816760407] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.1 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791618207.817268882] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.7 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791618212.817479617] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 12.0 ms, queue wait max 1.9 ms, fail 0, skip 0
+[INFO] [1791618217.817145865] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.4 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791618222.816937540] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791618227.816814997] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791618232.816738053] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.4 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791618237.817162480] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.0 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791618242.817350940] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.9 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791618247.817166205] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.9 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791618247.899954561] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:OBSERVE error=- (controller STANDBY)
+[INFO] [1791618247.900333063] [robot_gateway]: move_to_zone OBSERVE 칸 0 MOVE 시작
+[INFO] [1791618248.007937550] [robot_gateway]: move_to_zone OBSERVE 칸 0 MOVE → OK, 0.1 s
+[INFO] [1791618248.009146809] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791618252.817419599] [robot_gateway]: pose 49.6 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 30.9 ms, fail 0, skip 2
+[INFO] [1791618257.817452856] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 7.6 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791618259.673395304] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791618259.683118736] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791618259.819913743] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 175 ms
+[INFO] [1791618262.816265554] [robot_gateway]: pose 50.0 Hz, rtt avg 3.9 max 11.9 ms, queue wait max 2.5 ms, fail 0, skip 0
+[INFO] [1791618262.817086880] [robot_gateway]: servo rx 19.0 Hz, speedl 95, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618267.523079387] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 41.4 mm, grip True, 1619 ms
+[INFO] [1791618267.544279479] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791618267.816075293] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.2 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791618267.816921486] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618270.404922400] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 41.4 mm, grip True, 166 ms
+[INFO] [1791618271.159021153] [robot_gateway]: RobotState READY connected=True action=- error=- (controller MOVING)
+[WARN] [1791618271.159362272] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791618271.163494424] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:C error=- (controller MOVING)
+[INFO] [1791618271.163949657] [robot_gateway]: move_to_zone C 칸 0 PLACE 시작
+[INFO] [1791618272.816732357] [robot_gateway]: pose 49.2 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 26.1 ms, fail 0, skip 4
+[INFO] [1791618272.817608149] [robot_gateway]: servo rx 18.8 Hz, speedl 94, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791618277.592880468] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791618277.816577337] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.5 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791618278.930138511] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791618282.816424247] [robot_gateway]: pose 49.2 Hz, rtt avg 2.8 max 4.6 ms, queue wait max 25.6 ms, fail 0, skip 4
+[INFO] [1791618284.127634695] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791618285.381010804] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791618287.816262151] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 5.1 ms, queue wait max 7.8 ms, fail 0, skip 0
+[INFO] [1791618292.817457768] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791618292.943536716] [robot_gateway]: move_to_zone C 칸 0 PLACE → OK, 22.5 s
+[INFO] [1791618292.944386230] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791618296.706783478] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791618296.729695763] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791618296.864380737] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 176 ms
+[INFO] [1791618297.817049795] [robot_gateway]: pose 50.0 Hz, rtt avg 3.4 max 12.2 ms, queue wait max 2.3 ms, fail 0, skip 0
+[INFO] [1791618297.817598074] [robot_gateway]: servo rx 6.8 Hz, speedl 34, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618302.816766307] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 6.0 ms, queue wait max 2.3 ms, fail 0, skip 0
+[INFO] [1791618302.817183184] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618304.845679868] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.7 mm, grip True, 1808 ms
+[INFO] [1791618304.881348349] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0334 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791618307.741218495] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.7 mm, grip True, 170 ms
+[INFO] [1791618307.816564142] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.1 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791618307.816939233] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618308.479200277] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791618308.479698546] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:C error=- (controller STANDBY)
+[WARN] [1791618308.480115291] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791618308.481071013] [robot_gateway]: move_to_zone C 칸 1 PLACE 시작
+[INFO] [1791618308.983825681] [robot_gateway]: 수평 이동 높이 플랜지 z 396.6 (TCP 150) — safe_z 에서 안 닿음
+[INFO] [1791618312.816501245] [robot_gateway]: pose 46.2 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 102.8 ms, fail 0, skip 19
+[INFO] [1791618312.816943655] [robot_gateway]: servo rx 2.8 Hz, speedl 14, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791618314.489628075] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791618316.431237047] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791618317.816804888] [robot_gateway]: pose 49.8 Hz, rtt avg 3.1 max 4.3 ms, queue wait max 12.1 ms, fail 0, skip 1
+[INFO] [1791618319.330227181] [robot_gateway]: 수평 이동 높이 플랜지 z 396.6 (TCP 150) — safe_z 에서 안 닿음
+[INFO] [1791618320.231425549] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791618321.385227880] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791618322.084061644] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791618322.816677121] [robot_gateway]: pose 46.2 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 101.2 ms, fail 0, skip 19
+[INFO] [1791618327.816725135] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791618329.899448614] [robot_gateway]: move_to_zone C 칸 1 PLACE → OK, 22.1 s
+[INFO] [1791618329.900063029] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791618332.816375843] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 10.5 ms, queue wait max 4.3 ms, fail 0, skip 0
+[INFO] [1791618333.673554804] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791618333.684475949] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791618333.842186462] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 172 ms
+[INFO] [1791618337.816946678] [robot_gateway]: pose 49.8 Hz, rtt avg 3.6 max 11.9 ms, queue wait max 6.0 ms, fail 0, skip 1
+[INFO] [1791618337.817568621] [robot_gateway]: servo rx 25.0 Hz, speedl 125, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618342.220753667] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.9 mm, grip True, 2316 ms
+[INFO] [1791618342.241637374] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0334 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791618342.816623652] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.4 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791618342.817259386] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618345.102963122] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.9 mm, grip True, 165 ms
+[INFO] [1791618345.857948209] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[WARN] [1791618345.860057555] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791618345.865530083] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:B error=- (controller STANDBY)
+[INFO] [1791618345.865929247] [robot_gateway]: move_to_zone B 칸 0 PLACE 시작
+[INFO] [1791618347.817191869] [robot_gateway]: pose 49.2 Hz, rtt avg 2.9 max 5.1 ms, queue wait max 28.1 ms, fail 0, skip 4
+[INFO] [1791618347.818395393] [robot_gateway]: servo rx 17.0 Hz, speedl 85, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791618352.817130260] [robot_gateway]: pose 49.8 Hz, rtt avg 2.8 max 4.9 ms, queue wait max 21.1 ms, fail 0, skip 1
+[INFO] [1791618357.817134246] [robot_gateway]: pose 49.4 Hz, rtt avg 3.0 max 4.3 ms, queue wait max 23.8 ms, fail 0, skip 3
+[INFO] [1791618362.817338552] [robot_gateway]: pose 49.8 Hz, rtt avg 3.2 max 6.1 ms, queue wait max 22.2 ms, fail 0, skip 1
+[INFO] [1791618365.285566167] [robot_gateway]: move_to_zone B 칸 0 PLACE → OK, 20.1 s
+[INFO] [1791618365.286412232] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791618367.817346934] [robot_gateway]: pose 50.0 Hz, rtt avg 3.3 max 10.9 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791618369.440579329] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791618369.443086619] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791618369.581523277] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 172 ms
+[INFO] [1791618372.818059923] [robot_gateway]: pose 50.0 Hz, rtt avg 3.9 max 10.9 ms, queue wait max 3.9 ms, fail 0, skip 0
+[INFO] [1791618372.819310923] [robot_gateway]: servo rx 20.4 Hz, speedl 102, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618377.199385129] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.7 mm, grip True, 1628 ms
+[INFO] [1791618377.208092310] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791618377.817573174] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791618377.819848629] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618380.104618469] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.7 mm, grip True, 166 ms
+[INFO] [1791618380.857801265] [robot_gateway]: RobotState READY connected=True action=- error=- (controller MOVING)
+[WARN] [1791618380.858799834] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791618380.864087433] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:A error=- (controller MOVING)
+[INFO] [1791618380.864485496] [robot_gateway]: move_to_zone A 칸 0 PLACE 시작
+[INFO] [1791618382.817329820] [robot_gateway]: pose 49.2 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 24.3 ms, fail 0, skip 4
+[INFO] [1791618382.817689834] [robot_gateway]: servo rx 17.0 Hz, speedl 85, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791618387.817114563] [robot_gateway]: pose 49.8 Hz, rtt avg 3.2 max 5.3 ms, queue wait max 18.4 ms, fail 0, skip 1
+[INFO] [1791618392.816899383] [robot_gateway]: pose 49.4 Hz, rtt avg 3.0 max 4.9 ms, queue wait max 29.9 ms, fail 0, skip 3
+[INFO] [1791618395.206784917] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791618397.735246805] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791618397.816963618] [robot_gateway]: pose 49.8 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 20.7 ms, fail 0, skip 1
+[INFO] [1791618399.434531557] [robot_gateway]: move_to_zone A 칸 0 PLACE → OK, 19.3 s
+[INFO] [1791618399.437479153] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791618402.816236598] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 9.1 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791618402.905048586] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791618402.908252731] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791618403.059817573] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 168 ms
+[INFO] [1791618407.816734152] [robot_gateway]: pose 50.0 Hz, rtt avg 3.5 max 12.9 ms, queue wait max 3.8 ms, fail 0, skip 0
+[INFO] [1791618407.817351565] [robot_gateway]: servo rx 29.6 Hz, speedl 148, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618411.420125585] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.7 mm, grip True, 2115 ms
+[INFO] [1791618411.442898930] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791618412.816858704] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791618412.817487325] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618414.302835925] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.6 mm, grip True, 165 ms
+[INFO] [1791618415.018073694] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[WARN] [1791618415.019795261] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791618415.029645583] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:A error=- (controller STANDBY)
+[INFO] [1791618415.030044627] [robot_gateway]: move_to_zone A 칸 1 PLACE 시작
+[INFO] [1791618417.816616537] [robot_gateway]: pose 49.4 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 29.6 ms, fail 0, skip 3
+[INFO] [1791618417.817169319] [robot_gateway]: servo rx 12.0 Hz, speedl 60, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791618422.817006022] [robot_gateway]: pose 49.8 Hz, rtt avg 2.9 max 4.7 ms, queue wait max 12.7 ms, fail 0, skip 1
+[INFO] [1791618427.817464686] [robot_gateway]: pose 49.4 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 29.1 ms, fail 0, skip 3
+[INFO] [1791618429.837869733] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791618431.837159949] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791618432.817398779] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 9.0 ms, fail 0, skip 0
+[INFO] [1791618433.666045428] [robot_gateway]: move_to_zone A 칸 1 PLACE → OK, 19.4 s
+[INFO] [1791618433.667617816] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791618437.818675863] [robot_gateway]: pose 50.0 Hz, rtt avg 3.4 max 10.9 ms, queue wait max 2.7 ms, fail 0, skip 0
+[INFO] [1791618437.905114622] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791618437.912163521] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791618438.063045883] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 170 ms
+[INFO] [1791618442.816592427] [robot_gateway]: pose 50.0 Hz, rtt avg 3.5 max 12.3 ms, queue wait max 1.8 ms, fail 0, skip 0
+[INFO] [1791618442.816937864] [robot_gateway]: servo rx 29.6 Hz, speedl 148, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618446.045300812] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.7 mm, grip True, 2141 ms
+[INFO] [1791618446.088087921] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0334 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791618447.816576244] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.8 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791618447.816908095] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618448.938988058] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.7 mm, grip True, 166 ms
+[INFO] [1791618449.720015051] [robot_gateway]: RobotState READY connected=True action=- error=- (controller MOVING)
+[INFO] [1791618449.720406946] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:B error=- (controller MOVING)
+[INFO] [1791618449.720960161] [robot_gateway]: move_to_zone B 칸 1 PLACE 시작
+[WARN] [1791618449.722791498] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791618452.817294288] [robot_gateway]: pose 49.2 Hz, rtt avg 2.9 max 5.2 ms, queue wait max 23.1 ms, fail 0, skip 4
+[INFO] [1791618452.818481731] [robot_gateway]: servo rx 10.2 Hz, speedl 51, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791618457.816955040] [robot_gateway]: pose 49.8 Hz, rtt avg 3.1 max 5.2 ms, queue wait max 17.1 ms, fail 0, skip 1
+[INFO] [1791618462.816514127] [robot_gateway]: pose 49.4 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 24.2 ms, fail 0, skip 3
+[INFO] [1791618467.817457492] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791618469.673375428] [robot_gateway]: move_to_zone B 칸 1 PLACE → OK, 20.7 s
+[INFO] [1791618469.674035190] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791618472.815942326] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 9.8 ms, queue wait max 1.8 ms, fail 0, skip 0
+[INFO] [1791618473.173586775] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791618473.189119659] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791618473.338811750] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 170 ms
+[INFO] [1791618477.817309459] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 7.8 ms, queue wait max 3.7 ms, fail 0, skip 0
+[INFO] [1791618477.818161001] [robot_gateway]: servo rx 28.0 Hz, speedl 140, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618480.843412460] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.7 mm, grip True, 1672 ms
+[INFO] [1791618480.888600153] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791618482.816504180] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791618482.816858703] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618483.778260519] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.7 mm, grip True, 173 ms
+[INFO] [1791618484.518046668] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[WARN] [1791618484.518700880] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791618484.530279168] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:A error=- (controller STANDBY)
+[INFO] [1791618484.530668032] [robot_gateway]: move_to_zone A 칸 2 PLACE 시작
+[INFO] [1791618487.816708934] [robot_gateway]: pose 49.2 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 32.7 ms, fail 0, skip 4
+[INFO] [1791618487.817956510] [robot_gateway]: servo rx 9.0 Hz, speedl 45, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791618492.816877695] [robot_gateway]: pose 49.8 Hz, rtt avg 3.0 max 4.9 ms, queue wait max 22.5 ms, fail 0, skip 1
+[INFO] [1791618497.816808287] [robot_gateway]: pose 49.2 Hz, rtt avg 2.9 max 4.7 ms, queue wait max 25.1 ms, fail 0, skip 4
+[INFO] [1791618500.039997931] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791618501.239513104] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791618502.817278279] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791618503.323333672] [robot_gateway]: move_to_zone A 칸 2 PLACE → OK, 19.5 s
+[INFO] [1791618503.323828960] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791618507.816870931] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 6.7 ms, queue wait max 3.2 ms, fail 0, skip 0
+[INFO] [1791618508.364079532] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791618508.373325512] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791618508.391245963] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791618508.523260751] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 171 ms
+[INFO] [1791618512.816645873] [robot_gateway]: pose 50.0 Hz, rtt avg 3.5 max 10.5 ms, queue wait max 3.5 ms, fail 0, skip 0
+[INFO] [1791618512.817355462] [robot_gateway]: servo rx 26.8 Hz, speedl 134, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618516.600336872] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.9 mm, grip True, 2063 ms
+[INFO] [1791618516.608866528] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791618517.817132422] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.9 ms, queue wait max 1.8 ms, fail 0, skip 0
+[INFO] [1791618517.817454372] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618519.503303632] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.9 mm, grip True, 165 ms
+[INFO] [1791618520.278629326] [robot_gateway]: RobotState READY connected=True action=- error=- (controller MOVING)
+[WARN] [1791618520.279086303] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791618520.283705472] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:B error=- (controller MOVING)
+[INFO] [1791618520.284133832] [robot_gateway]: move_to_zone B 칸 2 PLACE 시작
+[INFO] [1791618522.816777429] [robot_gateway]: pose 49.2 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 28.5 ms, fail 0, skip 4
+[INFO] [1791618522.817122222] [robot_gateway]: servo rx 13.6 Hz, speedl 68, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791618527.816001124] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.9 ms, queue wait max 10.9 ms, fail 0, skip 0
+[INFO] [1791618532.816893396] [robot_gateway]: pose 49.4 Hz, rtt avg 2.9 max 5.2 ms, queue wait max 28.7 ms, fail 0, skip 3
+[INFO] [1791618537.816859109] [robot_gateway]: pose 49.8 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 18.3 ms, fail 0, skip 1
+[INFO] [1791618540.889784916] [robot_gateway]: move_to_zone B 칸 2 PLACE → OK, 21.3 s
+[INFO] [1791618540.890644416] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791618542.816594919] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791618544.971984382] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791618544.993031196] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791618545.139413568] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 175 ms
+[INFO] [1791618547.817441582] [robot_gateway]: pose 50.0 Hz, rtt avg 3.8 max 12.6 ms, queue wait max 1.8 ms, fail 0, skip 0
+[INFO] [1791618547.817756951] [robot_gateway]: servo rx 17.2 Hz, speedl 86, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618552.639289704] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.6 mm, grip True, 1702 ms
+[INFO] [1791618552.690689862] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791618552.816934560] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.1 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791618552.818759489] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618555.579245060] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.6 mm, grip True, 173 ms
+[INFO] [1791618556.358830346] [robot_gateway]: RobotState READY connected=True action=- error=- (controller MOVING)
+[WARN] [1791618556.359444759] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791618556.370305955] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:C error=- (controller MOVING)
+[INFO] [1791618556.371034624] [robot_gateway]: move_to_zone C 칸 2 PLACE 시작
+[INFO] [1791618557.817045459] [robot_gateway]: pose 38.4 Hz, rtt avg 2.8 max 4.3 ms, queue wait max 100.3 ms, fail 0, skip 58
+[INFO] [1791618557.817503975] [robot_gateway]: servo rx 20.0 Hz, speedl 100, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791618558.903007260] [robot_gateway]: 트레이 안 이동: 칸 0 위 거쳐 TCP 60 높이로 옆으로
+[INFO] [1791618562.817163647] [robot_gateway]: pose 41.4 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 101.5 ms, fail 0, skip 43
+[INFO] [1791618565.193924038] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791618566.541153734] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791618567.816001667] [robot_gateway]: pose 49.8 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 15.0 ms, fail 0, skip 1
+[INFO] [1791618568.792646879] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791618572.815953398] [robot_gateway]: pose 44.4 Hz, rtt avg 3.1 max 4.9 ms, queue wait max 101.5 ms, fail 0, skip 28
+[INFO] [1791618574.681512385] [robot_gateway]: 트레이 안 이동: 칸 0 위 거쳐 TCP 60 높이로 옆으로
+[INFO] [1791618574.711937193] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791618575.847139928] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791618576.515213982] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791618577.816910066] [robot_gateway]: pose 35.0 Hz, rtt avg 3.0 max 4.3 ms, queue wait max 103.3 ms, fail 0, skip 75
+[INFO] [1791618578.792827278] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791618580.042219253] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791618582.816820398] [robot_gateway]: pose 49.8 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 20.6 ms, fail 0, skip 1
+[INFO] [1791618587.599433888] [robot_gateway]: move_to_zone C 칸 2 PLACE → OK, 32.0 s
+[INFO] [1791618587.600563146] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791618587.816992352] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791618591.607554372] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791618591.610052072] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791618591.743419146] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 168 ms
+[INFO] [1791618592.816047181] [robot_gateway]: pose 50.0 Hz, rtt avg 3.4 max 9.9 ms, queue wait max 2.8 ms, fail 0, skip 0
+[INFO] [1791618592.816464807] [robot_gateway]: servo rx 7.4 Hz, speedl 37, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618597.816816358] [robot_gateway]: pose 50.0 Hz, rtt avg 3.3 max 10.1 ms, queue wait max 1.7 ms, fail 0, skip 0
+[INFO] [1791618597.817145169] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618599.579094473] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.9 mm, grip True, 1639 ms
+[INFO] [1791618599.608633699] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791618602.518033612] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.9 mm, grip True, 180 ms
+[INFO] [1791618602.816865141] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 4.6 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791618602.817439636] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618603.277954884] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[WARN] [1791618603.280042987] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791618603.283730444] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:RECHECK error=- (controller STANDBY)
+[INFO] [1791618603.284157876] [robot_gateway]: move_to_zone RECHECK 칸 0 PLACE 시작
+[INFO] [1791618607.817178819] [robot_gateway]: pose 49.2 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 25.4 ms, fail 0, skip 4
+[INFO] [1791618607.817580021] [robot_gateway]: servo rx 1.6 Hz, speedl 8, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791618612.817329168] [robot_gateway]: pose 49.4 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 30.8 ms, fail 0, skip 3
+[INFO] [1791618617.817089608] [robot_gateway]: pose 49.8 Hz, rtt avg 2.9 max 4.7 ms, queue wait max 24.2 ms, fail 0, skip 1
+[INFO] [1791618619.479810990] [robot_gateway]: move_to_zone RECHECK 칸 0 PLACE → OK, 16.9 s
+[INFO] [1791618619.480295807] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791618619.481641861] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:RECHECK error=- (controller STANDBY)
+[INFO] [1791618619.482040679] [robot_gateway]: move_to_zone RECHECK 칸 0 VIEW 시작
+[INFO] [1791618622.816704594] [robot_gateway]: pose 49.4 Hz, rtt avg 3.0 max 5.0 ms, queue wait max 23.9 ms, fail 0, skip 3
+[INFO] [1791618627.500551304] [robot_gateway]: move_to_zone RECHECK 칸 0 VIEW → OK, 8.0 s
+[INFO] [1791618627.501375064] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791618627.816577756] [robot_gateway]: pose 49.8 Hz, rtt avg 3.1 max 4.5 ms, queue wait max 12.4 ms, fail 0, skip 1
+[INFO] [1791618632.816396564] [robot_gateway]: pose 50.0 Hz, rtt avg 3.7 max 12.5 ms, queue wait max 2.1 ms, fail 0, skip 0
+[INFO] [1791618637.816820788] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 7.8 ms, queue wait max 3.0 ms, fail 0, skip 0
+[INFO] [1791618642.817527138] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791618647.816817256] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791618652.817316133] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791618657.816985171] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791618662.816046571] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 1.4 ms, fail 0, skip 0
+[WARN] [1791618663.739213934] [robot_gateway]: move_to_zone RECHECK 칸 0 PICK → NOT_CONFIGURED: PICK 은 아직 구현 전 (10/13 재확인 흐름)
+[INFO] [1791618667.816761444] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791618672.817619570] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791618677.817502825] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.2 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791618682.816766254] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791618687.816668219] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.9 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791618692.816901080] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791618697.816798063] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791618702.816858586] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791618707.816820943] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791618712.816725810] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791618717.817375925] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.7 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791618722.816793242] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791618727.817316441] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.5 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791618732.816740050] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791618737.817327545] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.0 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791618742.816813412] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.9 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791618747.817010169] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791618752.816848433] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.0 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791618757.816638703] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 6.7 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791618762.816813203] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 4.6 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791618767.817026707] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 5.9 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791618772.816780788] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791618777.816853739] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791618782.817327034] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 7.3 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791618787.816888424] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.9 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791618792.816474778] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 7.0 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791618797.817087714] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.4 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791618802.817525128] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.0 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791618807.816507879] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791618812.817384207] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.0 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791618817.817157245] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.3 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791618822.816975024] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 11.1 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791618827.816804943] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.7 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791618832.816634077] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.4 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791618837.816622883] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.4 ms, queue wait max 2.0 ms, fail 0, skip 0
+[INFO] [1791618842.816863165] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791618847.816910979] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.2 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791618852.816843610] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.6 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791618857.817406827] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.9 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791618862.816971727] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 4.6 ms, fail 0, skip 0
+[INFO] [1791618867.816939818] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791618872.817219124] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.3 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791618877.817409902] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791618882.816560214] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791618887.816866963] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.9 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791618892.817130534] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.1 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791618897.816963108] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.1 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791618902.817429351] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 3.9 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791618907.816964297] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791618912.817249898] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.5 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791618917.817231308] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.0 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791618918.090682243] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:OBSERVE error=- (controller STANDBY)
+[INFO] [1791618918.091202516] [robot_gateway]: move_to_zone OBSERVE 칸 0 MOVE 시작
+[INFO] [1791618922.816974311] [robot_gateway]: pose 49.2 Hz, rtt avg 3.1 max 4.3 ms, queue wait max 32.0 ms, fail 0, skip 4
+[INFO] [1791618926.110554312] [robot_gateway]: move_to_zone OBSERVE 칸 0 MOVE → OK, 8.0 s
+[INFO] [1791618926.111049660] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791618927.816702593] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.0 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791618932.817920841] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 8.3 ms, queue wait max 1.6 ms, fail 0, skip 0
+[INFO] [1791618934.538962644] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791618934.552889465] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791618934.698295857] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 176 ms
+[INFO] [1791618937.816711936] [robot_gateway]: pose 50.0 Hz, rtt avg 3.8 max 11.6 ms, queue wait max 3.6 ms, fail 0, skip 0
+[INFO] [1791618937.817005974] [robot_gateway]: servo rx 19.8 Hz, speedl 99, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618942.064909862] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.9 mm, grip True, 1627 ms
+[INFO] [1791618942.074343652] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791618942.816776897] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791618942.817076302] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618944.979540475] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.9 mm, grip True, 174 ms
+[INFO] [1791618945.718148778] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[WARN] [1791618945.718572539] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791618945.730464157] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:C error=- (controller STANDBY)
+[INFO] [1791618945.731087804] [robot_gateway]: move_to_zone C 칸 0 PLACE 시작
+[INFO] [1791618947.817241846] [robot_gateway]: pose 49.4 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 31.0 ms, fail 0, skip 3
+[INFO] [1791618947.817572157] [robot_gateway]: servo rx 16.2 Hz, speedl 81, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791618952.152213771] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791618952.817382065] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 4.7 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791618953.471032732] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791618957.817224426] [robot_gateway]: pose 49.4 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 32.2 ms, fail 0, skip 3
+[INFO] [1791618958.674906254] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791618959.951826999] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791618962.817127045] [robot_gateway]: pose 49.8 Hz, rtt avg 3.2 max 4.8 ms, queue wait max 22.7 ms, fail 0, skip 1
+[INFO] [1791618967.516060182] [robot_gateway]: move_to_zone C 칸 0 PLACE → OK, 22.5 s
+[INFO] [1791618967.517830430] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791618967.816352907] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791618971.740187786] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791618971.752683555] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791618971.883291769] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 168 ms
+[INFO] [1791618972.819095026] [robot_gateway]: pose 50.0 Hz, rtt avg 3.5 max 11.6 ms, queue wait max 3.3 ms, fail 0, skip 0
+[INFO] [1791618972.819524265] [robot_gateway]: servo rx 6.6 Hz, speedl 33, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618977.817041350] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 11.8 ms, queue wait max 2.8 ms, fail 0, skip 0
+[INFO] [1791618977.817625090] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618979.483935774] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.9 mm, grip True, 1680 ms
+[INFO] [1791618979.509937735] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0334 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791618982.419346837] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.9 mm, grip True, 179 ms
+[INFO] [1791618982.816528265] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791618982.816842441] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791618983.177909159] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[WARN] [1791618983.179940124] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791618983.183866997] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:A error=- (controller STANDBY)
+[INFO] [1791618983.184625273] [robot_gateway]: move_to_zone A 칸 0 PLACE 시작
+[INFO] [1791618987.817146902] [robot_gateway]: pose 49.2 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 23.9 ms, fail 0, skip 4
+[INFO] [1791618987.818426866] [robot_gateway]: servo rx 1.0 Hz, speedl 5, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791618992.817327651] [robot_gateway]: pose 49.8 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 16.9 ms, fail 0, skip 1
+[INFO] [1791618997.507138078] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791618997.817351831] [robot_gateway]: pose 49.4 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 27.0 ms, fail 0, skip 3
+[INFO] [1791619000.022704805] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791619001.717934119] [robot_gateway]: move_to_zone A 칸 0 PLACE → OK, 19.3 s
+[INFO] [1791619001.718466960] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791619002.817796615] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 6.0 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791619005.107372723] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791619005.111870718] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791619005.279168906] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 181 ms
+[INFO] [1791619007.816765903] [robot_gateway]: pose 50.0 Hz, rtt avg 3.8 max 12.6 ms, queue wait max 1.8 ms, fail 0, skip 0
+[INFO] [1791619007.818129250] [robot_gateway]: servo rx 16.4 Hz, speedl 82, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791619012.760314360] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.6 mm, grip True, 1689 ms
+[INFO] [1791619012.775194733] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0334 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791619012.816869207] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791619012.817468012] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791619015.639461146] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.6 mm, grip True, 168 ms
+[INFO] [1791619016.379993388] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[WARN] [1791619016.381157393] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791619016.399187478] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:A error=- (controller STANDBY)
+[INFO] [1791619016.400033464] [robot_gateway]: move_to_zone A 칸 1 PLACE 시작
+[INFO] [1791619017.817087905] [robot_gateway]: pose 49.2 Hz, rtt avg 2.9 max 5.1 ms, queue wait max 23.1 ms, fail 0, skip 4
+[INFO] [1791619017.817561267] [robot_gateway]: servo rx 20.2 Hz, speedl 101, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791619022.817050600] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791619027.817273633] [robot_gateway]: pose 49.4 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 22.0 ms, fail 0, skip 3
+[INFO] [1791619031.254206296] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791619032.816229994] [robot_gateway]: pose 49.8 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 23.5 ms, fail 0, skip 1
+[INFO] [1791619033.228020994] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791619035.080911347] [robot_gateway]: move_to_zone A 칸 1 PLACE → OK, 19.4 s
+[INFO] [1791619035.081434343] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791619037.817469495] [robot_gateway]: pose 50.0 Hz, rtt avg 3.3 max 7.4 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791619038.505609705] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791619038.511708471] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791619038.663303735] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 169 ms
+[INFO] [1791619042.816669734] [robot_gateway]: pose 50.0 Hz, rtt avg 3.6 max 11.2 ms, queue wait max 2.1 ms, fail 0, skip 0
+[INFO] [1791619042.817079494] [robot_gateway]: servo rx 26.0 Hz, speedl 130, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791619046.039410433] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 41.7 mm, grip True, 1635 ms
+[INFO] [1791619046.075431852] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0334 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791619047.817034894] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 6.3 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791619047.817347702] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791619048.939268338] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 41.5 mm, grip True, 168 ms
+[INFO] [1791619049.718069532] [robot_gateway]: RobotState READY connected=True action=- error=- (controller MOVING)
+[WARN] [1791619049.719991493] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791619049.737882927] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:C error=- (controller MOVING)
+[INFO] [1791619049.739618013] [robot_gateway]: move_to_zone C 칸 1 PLACE 시작
+[INFO] [1791619050.241163375] [robot_gateway]: 수평 이동 높이 플랜지 z 396.6 (TCP 150) — safe_z 에서 안 닿음
+[INFO] [1791619052.817264470] [robot_gateway]: pose 46.2 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 99.0 ms, fail 0, skip 19
+[INFO] [1791619052.818292952] [robot_gateway]: servo rx 10.2 Hz, speedl 51, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791619055.907753460] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791619057.809051211] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791619057.816521798] [robot_gateway]: pose 49.8 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 11.6 ms, fail 0, skip 1
+[INFO] [1791619060.725315909] [robot_gateway]: 수평 이동 높이 플랜지 z 396.6 (TCP 150) — safe_z 에서 안 닿음
+[INFO] [1791619061.617186927] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791619062.758344696] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791619062.816709494] [robot_gateway]: pose 46.2 Hz, rtt avg 2.8 max 4.3 ms, queue wait max 105.0 ms, fail 0, skip 19
+[INFO] [1791619063.454759270] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791619067.816663048] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.3 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791619071.278040368] [robot_gateway]: move_to_zone C 칸 1 PLACE → OK, 22.3 s
+[INFO] [1791619071.278870395] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791619072.820288714] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.3 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791619074.864963367] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791619074.872768040] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791619074.878602812] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791619075.021406316] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 177 ms
+[INFO] [1791619077.816922341] [robot_gateway]: pose 50.0 Hz, rtt avg 3.7 max 9.6 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791619077.817244566] [robot_gateway]: servo rx 17.8 Hz, speedl 89, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791619082.816892714] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791619082.817203642] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791619082.883083869] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.7 mm, grip True, 1812 ms
+[INFO] [1791619082.909268130] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791619085.803303496] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.7 mm, grip True, 166 ms
+[INFO] [1791619086.557795189] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[WARN] [1791619086.559309126] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791619086.563308784] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:C error=- (controller STANDBY)
+[INFO] [1791619086.564013152] [robot_gateway]: move_to_zone C 칸 2 PLACE 시작
+[INFO] [1791619087.815889120] [robot_gateway]: pose 40.2 Hz, rtt avg 3.1 max 4.9 ms, queue wait max 101.0 ms, fail 0, skip 49
+[INFO] [1791619087.816876217] [robot_gateway]: servo rx 21.2 Hz, speedl 106, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791619089.094474179] [robot_gateway]: 트레이 안 이동: 칸 0 위 거쳐 TCP 60 높이로 옆으로
+[INFO] [1791619092.816818869] [robot_gateway]: pose 39.6 Hz, rtt avg 3.1 max 5.0 ms, queue wait max 100.3 ms, fail 0, skip 52
+[INFO] [1791619095.364311877] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791619096.705709683] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791619097.817423309] [robot_gateway]: pose 49.8 Hz, rtt avg 3.0 max 5.6 ms, queue wait max 27.3 ms, fail 0, skip 1
+[INFO] [1791619098.969865411] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791619102.815942411] [robot_gateway]: pose 46.2 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 103.3 ms, fail 0, skip 19
+[INFO] [1791619104.891925764] [robot_gateway]: 트레이 안 이동: 칸 0 위 거쳐 TCP 60 높이로 옆으로
+[INFO] [1791619104.924688363] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791619106.058452861] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791619106.727928554] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791619107.816046738] [robot_gateway]: pose 33.2 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 104.6 ms, fail 0, skip 84
+[INFO] [1791619108.979877823] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791619110.226706316] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791619112.817239992] [robot_gateway]: pose 49.8 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 17.8 ms, fail 0, skip 1
+[INFO] [1791619117.793636455] [robot_gateway]: move_to_zone C 칸 2 PLACE → OK, 32.0 s
+[INFO] [1791619117.794249888] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791619117.816744655] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.0 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791619122.817456764] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 7.0 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791619124.207093338] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791619124.212363622] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791619124.365083841] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 167 ms
+[INFO] [1791619127.816949508] [robot_gateway]: pose 50.0 Hz, rtt avg 3.7 max 14.7 ms, queue wait max 2.3 ms, fail 0, skip 0
+[INFO] [1791619127.817306717] [robot_gateway]: servo rx 21.8 Hz, speedl 109, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791619131.984195017] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 41.2 mm, grip True, 1680 ms
+[INFO] [1791619132.008987569] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791619132.817143764] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791619132.817566842] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791619134.903113552] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 41.2 mm, grip True, 166 ms
+[INFO] [1791619135.679398112] [robot_gateway]: RobotState READY connected=True action=- error=- (controller MOVING)
+[WARN] [1791619135.680040339] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791619135.683540095] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:B error=- (controller MOVING)
+[INFO] [1791619135.684931517] [robot_gateway]: move_to_zone B 칸 0 PLACE 시작
+[INFO] [1791619137.816977154] [robot_gateway]: pose 49.2 Hz, rtt avg 3.1 max 5.0 ms, queue wait max 26.1 ms, fail 0, skip 4
+[INFO] [1791619137.817564993] [robot_gateway]: servo rx 16.0 Hz, speedl 80, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791619142.817192435] [robot_gateway]: pose 49.8 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 17.4 ms, fail 0, skip 1
+[INFO] [1791619147.815966041] [robot_gateway]: pose 49.4 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 22.1 ms, fail 0, skip 3
+[INFO] [1791619152.815987502] [robot_gateway]: pose 49.8 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 22.6 ms, fail 0, skip 1
+[INFO] [1791619155.144875495] [robot_gateway]: move_to_zone B 칸 0 PLACE → OK, 20.2 s
+[INFO] [1791619155.145433293] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791619157.816052339] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 8.4 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791619159.042312610] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791619159.060895805] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791619159.184099578] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 169 ms
+[INFO] [1791619162.816995407] [robot_gateway]: pose 50.0 Hz, rtt avg 3.6 max 13.7 ms, queue wait max 1.8 ms, fail 0, skip 0
+[INFO] [1791619162.817298862] [robot_gateway]: servo rx 22.8 Hz, speedl 114, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791619166.657438080] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 41.2 mm, grip True, 1619 ms
+[INFO] [1791619166.675160376] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0334 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791619167.816393210] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.9 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791619167.817487367] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791619169.577499901] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 41.1 mm, grip True, 173 ms
+[INFO] [1791619170.357484738] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[WARN] [1791619170.358263122] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791619170.369991754] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:B error=- (controller STANDBY)
+[INFO] [1791619170.371006770] [robot_gateway]: move_to_zone B 칸 1 PLACE 시작
+[INFO] [1791619172.817528121] [robot_gateway]: pose 49.4 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 31.5 ms, fail 0, skip 3
+[INFO] [1791619172.819127710] [robot_gateway]: servo rx 14.0 Hz, speedl 70, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791619177.817184052] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.1 ms, queue wait max 11.4 ms, fail 0, skip 0
+[INFO] [1791619182.816822017] [robot_gateway]: pose 49.4 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 25.9 ms, fail 0, skip 3
+[INFO] [1791619187.817178994] [robot_gateway]: pose 49.8 Hz, rtt avg 3.1 max 5.2 ms, queue wait max 16.6 ms, fail 0, skip 1
+[INFO] [1791619190.282941940] [robot_gateway]: move_to_zone B 칸 1 PLACE → OK, 20.7 s
+[INFO] [1791619190.283483280] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791619192.817019676] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 8.1 ms, queue wait max 1.7 ms, fail 0, skip 0
+[INFO] [1791619194.172998917] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791619194.180911925] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791619194.340472916] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 178 ms
+[INFO] [1791619197.817323235] [robot_gateway]: pose 50.0 Hz, rtt avg 3.7 max 10.0 ms, queue wait max 2.7 ms, fail 0, skip 0
+[INFO] [1791619197.817676993] [robot_gateway]: servo rx 22.0 Hz, speedl 110, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791619201.879321456] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.6 mm, grip True, 1708 ms
+[INFO] [1791619201.909335859] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791619202.816054792] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791619202.816443241] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791619204.778913345] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.6 mm, grip True, 174 ms
+[INFO] [1791619205.518529575] [robot_gateway]: RobotState READY connected=True action=- error=- (controller MOVING)
+[WARN] [1791619205.519903204] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791619205.530312051] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:A error=- (controller MOVING)
+[INFO] [1791619205.530862013] [robot_gateway]: move_to_zone A 칸 2 PLACE 시작
+[INFO] [1791619207.817396339] [robot_gateway]: pose 49.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 32.8 ms, fail 0, skip 5
+[INFO] [1791619207.819053685] [robot_gateway]: servo rx 15.0 Hz, speedl 75, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791619212.817097117] [robot_gateway]: pose 49.8 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 13.2 ms, fail 0, skip 1
+[INFO] [1791619217.817058694] [robot_gateway]: pose 49.4 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 31.1 ms, fail 0, skip 3
+[INFO] [1791619221.079567703] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791619222.308996959] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791619222.817098179] [robot_gateway]: pose 49.8 Hz, rtt avg 3.1 max 4.9 ms, queue wait max 22.0 ms, fail 0, skip 1
+[INFO] [1791619224.400342639] [robot_gateway]: move_to_zone A 칸 2 PLACE → OK, 19.6 s
+[INFO] [1791619224.401190881] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791619227.816762936] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 6.9 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791619229.638887388] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791619229.659378912] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791619229.803150241] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 170 ms
+[INFO] [1791619232.816623228] [robot_gateway]: pose 50.0 Hz, rtt avg 3.7 max 9.9 ms, queue wait max 2.0 ms, fail 0, skip 0
+[INFO] [1791619232.817181248] [robot_gateway]: servo rx 19.2 Hz, speedl 96, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791619237.425647288] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.6 mm, grip True, 1688 ms
+[INFO] [1791619237.459897771] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0334 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791619237.816681684] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791619237.817009027] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791619240.339866298] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.6 mm, grip True, 166 ms
+[INFO] [1791619241.118637974] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[WARN] [1791619241.119213557] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791619241.139168418] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:B error=- (controller STANDBY)
+[INFO] [1791619241.140358580] [robot_gateway]: move_to_zone B 칸 2 PLACE 시작
+[INFO] [1791619242.816943338] [robot_gateway]: pose 49.2 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 26.0 ms, fail 0, skip 4
+[INFO] [1791619242.817451319] [robot_gateway]: servo rx 18.6 Hz, speedl 93, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791619247.816901493] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.9 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791619252.817009632] [robot_gateway]: pose 49.2 Hz, rtt avg 2.9 max 5.0 ms, queue wait max 31.7 ms, fail 0, skip 4
+[INFO] [1791619257.817179040] [robot_gateway]: pose 49.8 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 21.7 ms, fail 0, skip 1
+[INFO] [1791619261.872923770] [robot_gateway]: move_to_zone B 칸 2 PLACE → OK, 21.5 s
+[INFO] [1791619261.873495033] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791619262.817049385] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791619267.816634616] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791619272.817066568] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.9 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791619276.772075398] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791619276.775323258] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791619276.918411035] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 170 ms
+[INFO] [1791619277.817278759] [robot_gateway]: pose 50.0 Hz, rtt avg 3.6 max 12.0 ms, queue wait max 4.3 ms, fail 0, skip 0
+[INFO] [1791619277.817881384] [robot_gateway]: servo rx 6.4 Hz, speedl 32, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791619281.778520814] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[WARN] [1791619281.779199051] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791619282.816678051] [robot_gateway]: pose 50.0 Hz, rtt avg 3.5 max 8.2 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791619282.818046100] [robot_gateway]: servo rx 22.6 Hz, speedl 113, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791619287.816762034] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791619292.815924949] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 8.5 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791619297.816787230] [robot_gateway]: pose 50.0 Hz, rtt avg 3.6 max 9.6 ms, queue wait max 2.0 ms, fail 0, skip 0
+[INFO] [1791619302.816639313] [robot_gateway]: pose 50.0 Hz, rtt avg 3.7 max 9.6 ms, queue wait max 3.6 ms, fail 0, skip 0
+[INFO] [1791619307.816977693] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 12.8 ms, queue wait max 2.2 ms, fail 0, skip 0
+[INFO] [1791619312.817380235] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791619317.816657493] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 10.6 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791619322.816618222] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791619327.816486004] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791619332.817345761] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.3 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791619337.816820418] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791619342.816184544] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791619347.817268357] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.7 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791619352.817338514] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.6 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791619357.816674031] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.4 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791619362.816805809] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791619367.817309773] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791619372.817028993] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.0 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791619377.816667418] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.3 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791619382.816687359] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.9 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791619387.816466922] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.9 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791619392.816929504] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791619397.817380314] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 8.5 ms, queue wait max 2.4 ms, fail 0, skip 0
+[INFO] [1791619402.817358114] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.7 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791619407.816931073] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 5.2 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791619412.816884411] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.8 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791619417.817036166] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.3 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791619422.816667211] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791619427.817430497] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.5 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791619432.817003877] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 9.1 ms, queue wait max 1.8 ms, fail 0, skip 0
+[INFO] [1791619437.817757818] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 4.8 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791619442.816971376] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 4.6 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791619447.817054716] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.2 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791619452.817226469] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.8 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791619457.817023480] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.1 ms, queue wait max 1.7 ms, fail 0, skip 0
+[INFO] [1791619462.816596035] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791619467.816151911] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791619472.817397820] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791619477.816477894] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.3 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791619482.817079745] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791619487.816742721] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 4.7 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791619492.816957011] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 4.2 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791619497.816571003] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.2 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791619502.816817951] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791619507.816789618] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.0 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791619512.817238414] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.3 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791619517.816993794] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.6 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791619522.817022597] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791619527.816698269] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791619532.817252587] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791619537.817476690] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.0 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791619542.816851772] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791619547.816057158] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791619552.817632136] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.1 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791619557.817020423] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791619562.816445466] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791619567.816779505] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.0 ms, queue wait max 2.0 ms, fail 0, skip 0
+[INFO] [1791619572.816689208] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.7 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791619577.817459955] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 8.8 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791619582.816985298] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791619587.816824748] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791619592.816862751] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791619597.816153864] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791619599.912402278] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:OBSERVE error=- (controller STANDBY)
+[INFO] [1791619599.912817774] [robot_gateway]: move_to_zone OBSERVE 칸 0 MOVE 시작
+[INFO] [1791619602.816691487] [robot_gateway]: pose 49.2 Hz, rtt avg 3.2 max 4.6 ms, queue wait max 28.9 ms, fail 0, skip 4
+[INFO] [1791619603.829587906] [robot_gateway]: move_to_zone OBSERVE 칸 0 MOVE → OK, 3.9 s
+[INFO] [1791619603.830186725] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791619607.816334173] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.4 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791619612.816823464] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791619617.817126041] [robot_gateway]: pose 50.0 Hz, rtt avg 3.5 max 11.0 ms, queue wait max 3.6 ms, fail 0, skip 0
+[INFO] [1791619617.906252534] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791619617.917300321] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791619618.058607495] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 173 ms
+[INFO] [1791619619.118776475] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[WARN] [1791619619.119161332] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791619622.817606079] [robot_gateway]: pose 50.0 Hz, rtt avg 3.7 max 10.4 ms, queue wait max 4.0 ms, fail 0, skip 0
+[INFO] [1791619622.818063114] [robot_gateway]: servo rx 6.2 Hz, speedl 31, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791619627.815976509] [robot_gateway]: pose 50.0 Hz, rtt avg 3.9 max 12.8 ms, queue wait max 2.9 ms, fail 0, skip 0
+[INFO] [1791619632.817217115] [robot_gateway]: pose 50.0 Hz, rtt avg 3.7 max 11.5 ms, queue wait max 2.2 ms, fail 0, skip 0
+[INFO] [1791619637.817227143] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791619641.123323055] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:OBSERVE error=- (controller STANDBY)
+[INFO] [1791619641.124083321] [robot_gateway]: move_to_zone OBSERVE 칸 0 MOVE 시작
+[INFO] [1791619642.652532668] [robot_gateway]: move_to_zone OBSERVE 칸 0 MOVE → OK, 1.5 s
+[INFO] [1791619642.653222335] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791619642.817018676] [robot_gateway]: pose 49.4 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 23.7 ms, fail 0, skip 3
+[INFO] [1791619647.817326887] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.0 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791619652.174012795] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791619652.177661711] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791619652.318069061] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 170 ms
+[INFO] [1791619652.816840213] [robot_gateway]: pose 50.0 Hz, rtt avg 3.9 max 12.9 ms, queue wait max 4.7 ms, fail 0, skip 0
+[INFO] [1791619652.817277337] [robot_gateway]: servo rx 4.0 Hz, speedl 20, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791619653.380406637] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[WARN] [1791619653.380755135] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791619657.816989384] [robot_gateway]: pose 50.0 Hz, rtt avg 3.7 max 10.5 ms, queue wait max 2.0 ms, fail 0, skip 0
+[INFO] [1791619657.817276423] [robot_gateway]: servo rx 2.2 Hz, speedl 11, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791619662.817150500] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791619667.817199984] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791619672.817334611] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.0 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791619677.816736553] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791619682.816999701] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791619685.947308747] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:OBSERVE error=- (controller STANDBY)
+[INFO] [1791619685.947791678] [robot_gateway]: move_to_zone OBSERVE 칸 0 MOVE 시작
+[INFO] [1791619687.516872970] [robot_gateway]: move_to_zone OBSERVE 칸 0 MOVE → OK, 1.6 s
+[INFO] [1791619687.519197194] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791619687.817388352] [robot_gateway]: pose 49.2 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 27.8 ms, fail 0, skip 4
+[INFO] [1791619692.816026118] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 9.2 ms, queue wait max 1.7 ms, fail 0, skip 0
+[INFO] [1791619693.206005205] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791619693.218791951] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791619693.378249306] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 176 ms
+[INFO] [1791619697.817046389] [robot_gateway]: pose 50.0 Hz, rtt avg 3.3 max 10.0 ms, queue wait max 1.7 ms, fail 0, skip 0
+[INFO] [1791619697.817757985] [robot_gateway]: servo rx 27.4 Hz, speedl 137, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791619697.958938491] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[WARN] [1791619697.959262277] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791619702.816776805] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.0 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791619702.817075536] [robot_gateway]: servo rx 0.0 Hz, speedl 0, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791619707.817173574] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.1 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791619712.817104549] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 5.3 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791619717.816631963] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 5.1 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791619722.817411636] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.1 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791619727.817159274] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.9 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791619732.816952776] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791619737.817345407] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.7 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791619742.816574184] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791619747.816762543] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.4 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791619752.817079859] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791619756.930107342] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:OBSERVE error=- (controller STANDBY)
+[INFO] [1791619756.930872567] [robot_gateway]: move_to_zone OBSERVE 칸 0 MOVE 시작
+[INFO] [1791619757.816777323] [robot_gateway]: pose 49.4 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 31.4 ms, fail 0, skip 3
+[INFO] [1791619760.913596492] [robot_gateway]: move_to_zone OBSERVE 칸 0 MOVE → OK, 4.0 s
+[INFO] [1791619760.914144395] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791619762.816994005] [robot_gateway]: pose 49.8 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 23.6 ms, fail 0, skip 1
+[INFO] [1791619767.817033422] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791619770.939902706] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791619770.943082866] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791619771.099194093] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 174 ms
+[INFO] [1791619772.817172362] [robot_gateway]: pose 50.0 Hz, rtt avg 3.8 max 11.2 ms, queue wait max 3.2 ms, fail 0, skip 0
+[INFO] [1791619772.819476488] [robot_gateway]: servo rx 11.4 Hz, speedl 57, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791619777.817516623] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 7.7 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791619777.818100402] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791619779.085711103] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 41.2 mm, grip True, 2181 ms
+[INFO] [1791619779.119888946] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0334 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791619782.002735114] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 41.1 mm, grip True, 165 ms
+[INFO] [1791619782.759025978] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[WARN] [1791619782.759637300] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791619782.770474239] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:A error=- (controller STANDBY)
+[INFO] [1791619782.771271964] [robot_gateway]: move_to_zone A 칸 0 PLACE 시작
+[INFO] [1791619782.815832261] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.3 ms, queue wait max 14.2 ms, fail 0, skip 0
+[INFO] [1791619782.816368497] [robot_gateway]: servo rx 28.4 Hz, speedl 142, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791619787.816555807] [robot_gateway]: pose 49.4 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 29.4 ms, fail 0, skip 3
+[INFO] [1791619792.817130244] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.2 ms, queue wait max 10.4 ms, fail 0, skip 0
+[INFO] [1791619797.170865550] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791619797.817653249] [robot_gateway]: pose 49.2 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 24.8 ms, fail 0, skip 4
+[INFO] [1791619799.686577216] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791619801.398801110] [robot_gateway]: move_to_zone A 칸 0 PLACE → OK, 19.4 s
+[INFO] [1791619801.399292754] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791619802.817261040] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.9 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791619806.305345137] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791619806.322062789] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791619806.481364213] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 180 ms
+[INFO] [1791619807.816197060] [robot_gateway]: pose 50.0 Hz, rtt avg 3.7 max 14.5 ms, queue wait max 2.4 ms, fail 0, skip 0
+[INFO] [1791619807.818811042] [robot_gateway]: servo rx 9.2 Hz, speedl 46, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791619810.959716869] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[WARN] [1791619810.960306067] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791619812.817221369] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 11.8 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791619812.817870007] [robot_gateway]: servo rx 17.6 Hz, speedl 88, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791619817.817266732] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791619822.816988269] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.2 ms, queue wait max 2.2 ms, fail 0, skip 0
+[INFO] [1791619827.817031763] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.9 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791619832.815749230] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.3 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791619837.817234364] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.0 ms, queue wait max 1.8 ms, fail 0, skip 0
+[INFO] [1791619842.816639387] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791619847.816220338] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.3 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791619852.817013971] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 5.1 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791619857.817417805] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 5.0 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791619862.816469367] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.8 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791619867.816691910] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.9 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791619872.816045917] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791619877.816893672] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 1.6 ms, fail 0, skip 0
+[INFO] [1791619882.817193173] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791619887.817143710] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791619892.817217686] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.9 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791619897.816798226] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791619902.817186331] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791619907.815928285] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791619912.816711489] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 3.8 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791619917.816815187] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.5 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791619922.816227912] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 5.0 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791619927.817141147] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.2 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791619932.816729111] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.2 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791619937.817047065] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.0 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791619942.816940837] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.7 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791619947.817267496] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.1 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791619952.816665663] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.2 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791619957.817018340] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.2 ms, queue wait max 1.6 ms, fail 0, skip 0
+[INFO] [1791619962.816930733] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791619967.817115515] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.1 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791619972.816800528] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791619977.817241469] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791619982.816834293] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791619987.816949969] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.8 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791619992.816910423] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791619997.817097992] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.3 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791620002.816623310] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.2 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791620007.816910798] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791620012.816594077] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791620017.817040385] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791620022.817275834] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791620027.817105468] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.9 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791620032.817045227] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791620037.817055232] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.2 ms, queue wait max 1.8 ms, fail 0, skip 0
+[INFO] [1791620042.815935667] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.3 ms, queue wait max 1.6 ms, fail 0, skip 0
+[INFO] [1791620047.817061604] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.1 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791620052.816940622] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.7 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791620057.816992511] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.0 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791620062.294570976] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:OBSERVE error=- (controller STANDBY)
+[INFO] [1791620062.296042909] [robot_gateway]: move_to_zone OBSERVE 칸 0 MOVE 시작
+[INFO] [1791620062.816996676] [robot_gateway]: pose 49.4 Hz, rtt avg 3.0 max 5.1 ms, queue wait max 22.1 ms, fail 0, skip 3
+[INFO] [1791620066.229460675] [robot_gateway]: move_to_zone OBSERVE 칸 0 MOVE → OK, 3.9 s
+[INFO] [1791620066.230241727] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791620067.816031007] [robot_gateway]: pose 49.8 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 17.3 ms, fail 0, skip 1
+[INFO] [1791620072.816921441] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.1 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791620077.817237583] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.3 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791620082.816871800] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791620087.816872446] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 12.5 ms, queue wait max 1.7 ms, fail 0, skip 0
+[INFO] [1791620089.339647045] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791620089.344188803] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791620089.504557906] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 167 ms
+[INFO] [1791620092.816038018] [robot_gateway]: pose 50.0 Hz, rtt avg 3.6 max 9.4 ms, queue wait max 3.4 ms, fail 0, skip 0
+[INFO] [1791620092.816988361] [robot_gateway]: servo rx 21.0 Hz, speedl 105, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791620097.263871046] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.7 mm, grip True, 2126 ms
+[INFO] [1791620097.277462557] [robot_gateway]: 두산 안내: 1/2/1216 [SpeedL] Time adjusted automatically considering acceleration limit you set. (t= 0.0000-> 0.0333 [s], a=(100.0000[mm/s^2], 10.0000[deg/s^2]))
+[INFO] [1791620097.816873474] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791620097.817403352] [robot_gateway]: servo rx 30.0 Hz, speedl 150, 거부 0, 자름 0, watchdog 0, stop 0, move_stop 0 ok / 0 fail
+[INFO] [1791620100.139260494] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.7 mm, grip True, 167 ms
+[INFO] [1791620100.917515440] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[WARN] [1791620100.919200139] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791620100.938794973] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:B error=- (controller STANDBY)
+[INFO] [1791620100.939841057] [robot_gateway]: move_to_zone B 칸 0 PLACE 시작
+[INFO] [1791620102.816852034] [robot_gateway]: pose 49.2 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 33.3 ms, fail 0, skip 4
+[INFO] [1791620102.817127591] [robot_gateway]: servo rx 17.4 Hz, speedl 87, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791620107.816900067] [robot_gateway]: pose 49.8 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 15.7 ms, fail 0, skip 1
+[INFO] [1791620112.817155048] [robot_gateway]: pose 49.4 Hz, rtt avg 3.0 max 9.2 ms, queue wait max 25.6 ms, fail 0, skip 3
+[INFO] [1791620117.817101675] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 1.8 ms, fail 0, skip 0
+[INFO] [1791620120.424824713] [robot_gateway]: move_to_zone B 칸 0 PLACE → OK, 20.3 s
+[INFO] [1791620120.425574623] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791620122.817248428] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.9 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620127.816922798] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.4 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620132.817211527] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791620137.816428768] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791620142.816629175] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.0 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791620147.816862635] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.1 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620152.816970163] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791620157.816942246] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.8 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791620162.816975475] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.9 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791620167.817162016] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791620172.817261911] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791620177.817243705] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.3 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791620182.816909245] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.7 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791620187.816698147] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.9 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791620192.817655542] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791620197.817243030] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.1 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620202.816951966] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.9 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791620207.817134777] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791620212.817078131] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.2 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791620217.817255513] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791620222.816268782] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791620227.817186227] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 7.9 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791620232.817175602] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.9 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791620237.816706855] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.7 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791620242.816963380] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.1 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791620247.816542741] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791620252.816907463] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.2 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791620257.817344461] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.8 ms, queue wait max 3.5 ms, fail 0, skip 0
+[INFO] [1791620262.816869916] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.0 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620267.816631339] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.4 ms, queue wait max 5.7 ms, fail 0, skip 0
+[INFO] [1791620272.817028738] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.8 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791620277.816858997] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620282.816675671] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 8.9 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791620287.817080614] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.8 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791620292.816731058] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.9 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791620297.817117583] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.9 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791620302.817379706] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791620307.817032019] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791620312.816834359] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.5 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791620317.816683251] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 4.6 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791620322.816749263] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 6.1 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620327.816947250] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.9 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791620332.817116161] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791620337.816933889] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.0 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620342.817007397] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.8 ms, queue wait max 1.7 ms, fail 0, skip 0
+[INFO] [1791620347.817215141] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791620352.818134545] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.2 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620357.816993166] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.2 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791620362.816636282] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791620367.816911788] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791620372.816808070] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791620377.816999857] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.5 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791620382.816650680] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791620387.816493363] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791620392.817021195] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.7 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791620397.816653295] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.0 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791620402.817033689] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.2 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791620407.816711558] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.3 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791620412.817025628] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791620417.817336109] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791620422.816869118] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791620427.817293988] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.2 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791620432.817195346] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.4 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791620437.817144956] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791620442.817069628] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791620447.816717748] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.3 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791620452.816668226] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620457.817353773] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.3 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791620462.816779459] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.7 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620467.815994020] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.9 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620472.817217125] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.7 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620477.816913129] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 7.2 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791620482.817757501] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 5.9 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791620487.816787607] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791620492.816335019] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.7 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791620497.816465791] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 1.8 ms, fail 0, skip 0
+[INFO] [1791620502.816687052] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791620507.816684413] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791620512.816857260] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791620517.816851565] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791620522.816669830] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791620527.817296089] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 5.2 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791620532.816916397] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 6.4 ms, queue wait max 2.1 ms, fail 0, skip 0
+[INFO] [1791620537.816804111] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.6 ms, queue wait max 4.6 ms, fail 0, skip 0
+[INFO] [1791620542.817038215] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.3 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791620547.816010418] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.3 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791620552.816917050] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620557.817288028] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791620562.817114879] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791620567.816830169] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791620572.816952527] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.0 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791620577.817517474] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.1 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791620582.816785081] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620587.815925943] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.9 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791620592.816318458] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.3 ms, queue wait max 1.9 ms, fail 0, skip 0
+[INFO] [1791620597.816240832] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620602.817233083] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.7 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791620607.816895575] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 5.6 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791620612.817298520] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791620617.816681757] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791620622.817575154] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.3 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791620627.817249216] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.9 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620632.816020310] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791620637.817053800] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791620642.816992546] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.9 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620647.817407208] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.8 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791620652.817495408] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.1 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791620657.816761183] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791620662.817206839] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791620667.816990095] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.8 ms, queue wait max 1.7 ms, fail 0, skip 0
+[INFO] [1791620672.817324934] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.5 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791620677.817077249] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791620682.816794138] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 6.0 ms, queue wait max 1.9 ms, fail 0, skip 0
+[INFO] [1791620687.816601868] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 7.6 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791620692.816219141] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.4 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620697.816547274] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791620702.817132607] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 6.5 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791620707.816880285] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.3 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791620712.817270669] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791620717.817223618] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 7.2 ms, queue wait max 1.6 ms, fail 0, skip 0
+[INFO] [1791620722.816845591] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.6 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791620727.816607755] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 7.6 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791620732.816620960] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.0 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791620737.817011278] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791620742.816271318] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 6.4 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791620747.816728691] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 1.6 ms, fail 0, skip 0
+[INFO] [1791620752.817072546] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.5 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791620757.817424020] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 5.0 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791620762.817044663] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791620767.816958308] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.9 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791620772.816675954] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.3 ms, queue wait max 1.9 ms, fail 0, skip 0
+[INFO] [1791620777.816859762] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.9 ms, queue wait max 1.6 ms, fail 0, skip 0
+[INFO] [1791620782.816045945] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.7 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791620787.816578053] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791620792.817017340] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 7.0 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791620797.817232593] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 6.7 ms, queue wait max 1.6 ms, fail 0, skip 0
+[INFO] [1791620802.816781137] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.3 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791620807.817552714] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620812.817314762] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620817.817034211] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620822.816545406] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 11.1 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791620827.816722214] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791620832.817001629] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620837.816685256] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791620842.817855278] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.2 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791620844.881607863] [robot_gateway]: RobotState BUSY connected=True action=SERVO error=- (controller STANDBY)
+[INFO] [1791620845.097971876] [robot_gateway]: RobotState READY connected=True action=- error=- (controller MOVING)
+[WARN] [1791620845.099632610] [robot_gateway]: servo_cmd 끊김(watchdog) → 0 속도 + move_stop
+[INFO] [1791620847.815955960] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.2 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791620847.816691649] [robot_gateway]: servo rx 0.2 Hz, speedl 1, 거부 0, 자름 0, watchdog 1, stop 0, move_stop 1 ok / 0 fail
+[INFO] [1791620852.816170045] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 5.1 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791620857.816869053] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.0 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791620862.816762399] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791620867.816539386] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791620872.816646673] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791620877.816478051] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.2 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791620882.816787193] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791620883.534710418] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:RECHECK error=- (controller STANDBY)
+[INFO] [1791620883.535257484] [robot_gateway]: move_to_zone RECHECK 칸 0 VIEW 시작
+[INFO] [1791620887.816694340] [robot_gateway]: pose 49.4 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 32.1 ms, fail 0, skip 3
+[INFO] [1791620891.578759211] [robot_gateway]: move_to_zone RECHECK 칸 0 VIEW → OK, 8.0 s
+[INFO] [1791620891.580649142] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791620892.816754510] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 10.6 ms, fail 0, skip 0
+[INFO] [1791620893.383108260] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:OBSERVE error=- (controller STANDBY)
+[INFO] [1791620893.383652713] [robot_gateway]: move_to_zone OBSERVE 칸 0 MOVE 시작
+[INFO] [1791620897.816949811] [robot_gateway]: pose 49.2 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 25.5 ms, fail 0, skip 4
+[INFO] [1791620901.418826634] [robot_gateway]: move_to_zone OBSERVE 칸 0 MOVE → OK, 8.0 s
+[INFO] [1791620901.419631299] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791620902.816593457] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791620907.816581502] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.3 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791620912.816082653] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.3 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791620915.550018006] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791620916.926200357] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791620916.927561052] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 38.0 mm, grip False, 1426 ms
+[INFO] [1791620917.816730048] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 7.4 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620922.816751875] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.6 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791620927.815987560] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.3 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620932.815980415] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620937.817380717] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791620942.816668267] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620947.817092922] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620948.863144389] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791620950.304287614] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791620950.304558478] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 1484 ms
+[INFO] [1791620952.815903825] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.0 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620957.816494405] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620962.816518106] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791620963.102322531] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791620964.983132020] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791620964.983408617] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.6 mm, grip True, 1931 ms
+[INFO] [1791620967.815961154] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791620972.816719470] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791620977.816897346] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791620982.816229895] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791620984.218186095] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791620985.599367134] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791620985.599634790] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.4 mm, grip False, 1433 ms
+[INFO] [1791620987.816093202] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.7 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791620989.537705915] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791620991.166318326] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791620991.167313081] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.3 mm, grip True, 1680 ms
+[INFO] [1791620992.816587059] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791620994.959424939] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791620996.337572699] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791620996.337852233] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.3 mm, grip False, 1429 ms
+[INFO] [1791620997.816642311] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 1.6 ms, fail 0, skip 0
+[INFO] [1791621002.815973344] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621005.192393100] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791621007.073348568] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621007.073624049] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.1 mm, grip True, 1931 ms
+[INFO] [1791621007.817022694] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.0 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621012.815953576] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621017.816721661] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791621019.798565934] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791621021.165795756] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621021.166064678] [robot_gateway]: gripper 요청 90.0 mm·14.0 N → OK, 폭 90.3 mm, grip False, 1419 ms
+[INFO] [1791621022.816294597] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791621026.617786713] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791621027.816917321] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.3 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791621028.246363077] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621028.247817066] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.7 mm, grip True, 1678 ms
+[INFO] [1791621032.816801895] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.3 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791621037.816857956] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791621042.816939443] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.2 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621047.817394890] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.2 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621052.816803110] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 5.7 ms, queue wait max 4.6 ms, fail 0, skip 0
+[INFO] [1791621057.816803042] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621062.816964189] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621067.815865700] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.2 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621072.817204326] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.9 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621075.679259154] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:A error=- (controller STANDBY)
+[INFO] [1791621075.679679983] [robot_gateway]: move_to_zone A 칸 0 PLACE 시작
+[INFO] [1791621077.397153220] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621077.816893300] [robot_gateway]: pose 49.4 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 27.6 ms, fail 0, skip 3
+[INFO] [1791621079.913607044] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791621082.816880590] [robot_gateway]: pose 49.8 Hz, rtt avg 3.0 max 5.0 ms, queue wait max 17.3 ms, fail 0, skip 1
+[INFO] [1791621087.816748093] [robot_gateway]: pose 49.2 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 29.4 ms, fail 0, skip 4
+[INFO] [1791621088.847808695] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621091.364000562] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791621092.816697621] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.4 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791621093.073807109] [robot_gateway]: move_to_zone A 칸 0 PLACE → OK, 17.4 s
+[INFO] [1791621093.074215509] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621097.817140677] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.8 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621102.816708438] [robot_gateway]: pose 50.0 Hz, rtt avg 2.6 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621107.816742124] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.8 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621108.859310837] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791621110.699179520] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621110.699688831] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.3 mm, grip True, 1891 ms
+[INFO] [1791621112.816697062] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.9 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621117.817216714] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.3 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621118.142045460] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:A error=- (controller STANDBY)
+[INFO] [1791621118.142759692] [robot_gateway]: move_to_zone A 칸 1 PLACE 시작
+[INFO] [1791621119.998570783] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621121.994611578] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791621122.816743804] [robot_gateway]: pose 49.4 Hz, rtt avg 2.8 max 4.3 ms, queue wait max 29.0 ms, fail 0, skip 3
+[INFO] [1791621127.816185677] [robot_gateway]: pose 49.6 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 15.4 ms, fail 0, skip 2
+[INFO] [1791621132.189510918] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621132.816527964] [robot_gateway]: pose 49.4 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 28.8 ms, fail 0, skip 3
+[INFO] [1791621134.189752216] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791621136.019494522] [robot_gateway]: move_to_zone A 칸 1 PLACE → OK, 17.9 s
+[INFO] [1791621136.019936802] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621137.817024354] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621140.363893720] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791621142.002940255] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621142.003203574] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.6 mm, grip True, 1643 ms
+[INFO] [1791621142.816651600] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621147.816059330] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621147.889484831] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:A error=- (controller STANDBY)
+[INFO] [1791621147.889860408] [robot_gateway]: move_to_zone A 칸 2 PLACE 시작
+[INFO] [1791621150.012217732] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621151.241289035] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791621152.816823475] [robot_gateway]: pose 49.4 Hz, rtt avg 2.8 max 4.7 ms, queue wait max 30.5 ms, fail 0, skip 3
+[INFO] [1791621157.816614821] [robot_gateway]: pose 49.8 Hz, rtt avg 2.7 max 4.2 ms, queue wait max 18.6 ms, fail 0, skip 1
+[INFO] [1791621162.817220725] [robot_gateway]: pose 49.2 Hz, rtt avg 2.7 max 4.2 ms, queue wait max 30.3 ms, fail 0, skip 4
+[INFO] [1791621163.057101498] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621164.264750815] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791621166.378315875] [robot_gateway]: move_to_zone A 칸 2 PLACE → OK, 18.5 s
+[INFO] [1791621166.378705936] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621167.816525196] [robot_gateway]: pose 50.0 Hz, rtt avg 2.6 max 6.6 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791621172.435000272] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791621172.815952689] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.3 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791621174.379285332] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621174.379579316] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.4 mm, grip True, 1995 ms
+[INFO] [1791621177.816873136] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.6 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791621182.816882670] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791621184.337173022] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:B error=- (controller STANDBY)
+[INFO] [1791621184.337717294] [robot_gateway]: move_to_zone B 칸 0 PLACE 시작
+[INFO] [1791621187.816642346] [robot_gateway]: pose 49.4 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 32.1 ms, fail 0, skip 3
+[INFO] [1791621192.817117523] [robot_gateway]: pose 49.8 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 16.2 ms, fail 0, skip 1
+[INFO] [1791621197.816788210] [robot_gateway]: pose 49.2 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 24.0 ms, fail 0, skip 4
+[INFO] [1791621202.816602102] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.9 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791621204.127321584] [robot_gateway]: move_to_zone B 칸 0 PLACE → OK, 19.8 s
+[INFO] [1791621204.128075998] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621207.817007201] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621210.500204027] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791621212.099612103] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621212.099886756] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.9 mm, grip True, 1650 ms
+[INFO] [1791621212.817054234] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.3 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791621217.816798045] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.2 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791621221.632705778] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:B error=- (controller STANDBY)
+[INFO] [1791621221.633068757] [robot_gateway]: move_to_zone B 칸 1 PLACE 시작
+[INFO] [1791621222.816801904] [robot_gateway]: pose 49.4 Hz, rtt avg 2.8 max 4.8 ms, queue wait max 29.9 ms, fail 0, skip 3
+[INFO] [1791621227.816671649] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 16.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621232.815845813] [robot_gateway]: pose 49.4 Hz, rtt avg 2.9 max 5.3 ms, queue wait max 24.8 ms, fail 0, skip 3
+[INFO] [1791621237.816632745] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.2 ms, queue wait max 7.3 ms, fail 0, skip 0
+[INFO] [1791621242.255631391] [robot_gateway]: move_to_zone B 칸 1 PLACE → OK, 20.6 s
+[INFO] [1791621242.257617145] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621242.817114126] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.1 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791621246.053632564] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791621247.815981047] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.2 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621247.881229641] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621247.881758767] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.1 mm, grip True, 1878 ms
+[INFO] [1791621252.816494510] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621254.208844807] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:B error=- (controller STANDBY)
+[INFO] [1791621254.209530313] [robot_gateway]: move_to_zone B 칸 2 PLACE 시작
+[INFO] [1791621257.817191525] [robot_gateway]: pose 49.4 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 33.1 ms, fail 0, skip 3
+[INFO] [1791621262.816818983] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 7.9 ms, fail 0, skip 0
+[INFO] [1791621267.816652121] [robot_gateway]: pose 49.4 Hz, rtt avg 3.2 max 4.6 ms, queue wait max 23.2 ms, fail 0, skip 3
+[INFO] [1791621272.816793164] [robot_gateway]: pose 49.8 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 23.4 ms, fail 0, skip 1
+[INFO] [1791621275.752139033] [robot_gateway]: move_to_zone B 칸 2 PLACE → OK, 21.5 s
+[INFO] [1791621275.752830921] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621277.817036845] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621282.333561555] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791621282.817098297] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.3 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791621283.961464181] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621283.961748246] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.7 mm, grip True, 1678 ms
+[INFO] [1791621287.816626428] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.4 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621292.816898885] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.7 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621297.817121920] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 1.6 ms, fail 0, skip 0
+[INFO] [1791621302.816729513] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.1 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791621304.782628583] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:C error=- (controller STANDBY)
+[INFO] [1791621304.783302782] [robot_gateway]: move_to_zone C 칸 0 PLACE 시작
+[INFO] [1791621307.816040856] [robot_gateway]: pose 49.4 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 26.2 ms, fail 0, skip 3
+[INFO] [1791621312.393082030] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621312.817054073] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621313.643079163] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791621317.816682105] [robot_gateway]: pose 49.4 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 29.9 ms, fail 0, skip 3
+[INFO] [1791621318.843971892] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621320.092640753] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791621322.817166211] [robot_gateway]: pose 49.8 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 19.3 ms, fail 0, skip 1
+[INFO] [1791621327.652330110] [robot_gateway]: move_to_zone C 칸 0 PLACE → OK, 22.9 s
+[INFO] [1791621327.652725927] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621327.816569617] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621331.069635911] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791621332.644394536] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621332.644914202] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 41.4 mm, grip True, 1625 ms
+[INFO] [1791621332.816835479] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.2 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621337.816749691] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621340.783343214] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:C error=- (controller STANDBY)
+[INFO] [1791621340.784018892] [robot_gateway]: move_to_zone C 칸 1 PLACE 시작
+[INFO] [1791621341.291092952] [robot_gateway]: 수평 이동 높이 플랜지 z 396.6 (TCP 150) — safe_z 에서 안 닿음
+[INFO] [1791621342.816278714] [robot_gateway]: pose 46.4 Hz, rtt avg 3.0 max 5.1 ms, queue wait max 104.4 ms, fail 0, skip 18
+[INFO] [1791621347.816904610] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621349.044033907] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621350.892846539] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791621352.816437084] [robot_gateway]: pose 49.8 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 15.7 ms, fail 0, skip 1
+[INFO] [1791621353.767777572] [robot_gateway]: 수평 이동 높이 플랜지 z 396.6 (TCP 150) — safe_z 에서 안 닿음
+[INFO] [1791621354.659521038] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621355.818700802] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621356.508152070] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791621357.816996395] [robot_gateway]: pose 46.2 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 99.7 ms, fail 0, skip 19
+[INFO] [1791621362.816666791] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621364.339097568] [robot_gateway]: move_to_zone C 칸 1 PLACE → OK, 23.6 s
+[INFO] [1791621364.339779988] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621367.816504227] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.2 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791621369.678191383] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791621371.421266894] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621371.421813881] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.6 mm, grip True, 1794 ms
+[INFO] [1791621372.816881979] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.9 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791621375.843971944] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:C error=- (controller STANDBY)
+[INFO] [1791621375.844326364] [robot_gateway]: move_to_zone C 칸 2 PLACE 시작
+[INFO] [1791621377.816651400] [robot_gateway]: pose 34.2 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 102.7 ms, fail 0, skip 79
+[INFO] [1791621378.368337581] [robot_gateway]: 트레이 안 이동: 칸 0 위 거쳐 TCP 60 높이로 옆으로
+[INFO] [1791621382.816842025] [robot_gateway]: pose 46.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 98.2 ms, fail 0, skip 20
+[INFO] [1791621385.848934480] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621387.099774306] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791621387.816675218] [robot_gateway]: pose 49.8 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 14.3 ms, fail 0, skip 1
+[INFO] [1791621389.354312732] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621392.816884733] [robot_gateway]: pose 49.2 Hz, rtt avg 3.2 max 5.0 ms, queue wait max 22.9 ms, fail 0, skip 4
+[INFO] [1791621395.269262143] [robot_gateway]: 트레이 안 이동: 칸 0 위 거쳐 TCP 60 높이로 옆으로
+[INFO] [1791621395.298912680] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621396.448551961] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621397.100546322] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791621397.817255866] [robot_gateway]: pose 30.2 Hz, rtt avg 3.2 max 4.5 ms, queue wait max 106.4 ms, fail 0, skip 99
+[INFO] [1791621399.393337794] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621400.644917639] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791621402.816033513] [robot_gateway]: pose 49.8 Hz, rtt avg 3.0 max 5.2 ms, queue wait max 12.7 ms, fail 0, skip 1
+[INFO] [1791621407.816760660] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791621408.190002913] [robot_gateway]: move_to_zone C 칸 2 PLACE → OK, 32.3 s
+[INFO] [1791621408.190407476] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621412.816586669] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621413.267966960] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791621415.078948227] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621415.079499390] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.4 mm, grip True, 1861 ms
+[INFO] [1791621417.816823174] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791621422.816293127] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.6 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791621427.817045732] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621432.816716815] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791621437.160510121] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:RECHECK error=- (controller STANDBY)
+[INFO] [1791621437.160863090] [robot_gateway]: move_to_zone RECHECK 칸 0 PLACE 시작
+[INFO] [1791621437.816724662] [robot_gateway]: pose 49.4 Hz, rtt avg 2.9 max 4.9 ms, queue wait max 22.2 ms, fail 0, skip 3
+[INFO] [1791621442.816609647] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 10.0 ms, fail 0, skip 0
+[INFO] [1791621447.816045693] [robot_gateway]: pose 49.4 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 28.1 ms, fail 0, skip 3
+[INFO] [1791621452.816961877] [robot_gateway]: pose 49.8 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 13.2 ms, fail 0, skip 1
+[INFO] [1791621454.605358327] [robot_gateway]: move_to_zone RECHECK 칸 0 PLACE → OK, 17.4 s
+[INFO] [1791621454.606034625] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621457.816548502] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.4 ms, queue wait max 1.6 ms, fail 0, skip 0
+[INFO] [1791621458.364144106] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791621460.465718886] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621460.465984291] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.7 mm, grip True, 2128 ms
+[INFO] [1791621462.816893857] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791621464.943878926] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:RECHECK error=- (controller STANDBY)
+[INFO] [1791621464.944276799] [robot_gateway]: move_to_zone RECHECK 칸 1 PLACE 시작
+[INFO] [1791621467.816848441] [robot_gateway]: pose 49.4 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 26.5 ms, fail 0, skip 3
+[INFO] [1791621472.816024347] [robot_gateway]: pose 49.8 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 16.3 ms, fail 0, skip 1
+[INFO] [1791621477.816516503] [robot_gateway]: pose 49.4 Hz, rtt avg 2.8 max 4.6 ms, queue wait max 26.7 ms, fail 0, skip 3
+[INFO] [1791621482.816744559] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791621483.467527927] [robot_gateway]: move_to_zone RECHECK 칸 1 PLACE → OK, 18.5 s
+[INFO] [1791621483.467961421] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621487.816959640] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.1 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791621492.816893132] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.7 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791621493.129432929] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791621494.758451569] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621494.758731550] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.4 mm, grip True, 1678 ms
+[INFO] [1791621497.817277568] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.6 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791621502.816568039] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621507.816612672] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791621512.816676737] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791621517.816746686] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.8 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791621522.816946188] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791621527.816716598] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.4 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791621528.856364890] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:RECHECK error=- (controller STANDBY)
+[INFO] [1791621528.858941101] [robot_gateway]: move_to_zone RECHECK 칸 0 PLACE 시작
+[INFO] [1791621532.816025342] [robot_gateway]: pose 49.4 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 25.4 ms, fail 0, skip 3
+[INFO] [1791621537.816857324] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 10.7 ms, fail 0, skip 0
+[INFO] [1791621542.816823845] [robot_gateway]: pose 49.2 Hz, rtt avg 2.9 max 4.9 ms, queue wait max 26.7 ms, fail 0, skip 4
+[INFO] [1791621546.285946810] [robot_gateway]: move_to_zone RECHECK 칸 0 PLACE → OK, 17.4 s
+[INFO] [1791621546.286402453] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621547.815973577] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.7 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791621549.529207316] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791621551.344839390] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621551.345118861] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.3 mm, grip True, 1866 ms
+[INFO] [1791621552.816504259] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.2 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621557.817231931] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791621559.408791614] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:HOLD error=- (controller STANDBY)
+[INFO] [1791621559.409333437] [robot_gateway]: move_to_zone HOLD 칸 0 PLACE 시작
+[INFO] [1791621559.664645158] [robot_gateway]: 수평 이동 높이 플랜지 z 426.6 (TCP 180) — safe_z 에서 안 닿음
+[INFO] [1791621562.816608106] [robot_gateway]: pose 48.2 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 96.0 ms, fail 0, skip 9
+[INFO] [1791621566.348465661] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621567.817012131] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 10.9 ms, fail 0, skip 0
+[INFO] [1791621568.197057143] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791621571.153747588] [robot_gateway]: 수평 이동 높이 플랜지 z 426.6 (TCP 180) — safe_z 에서 안 닿음
+[INFO] [1791621572.364505213] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621572.816784540] [robot_gateway]: pose 48.4 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 93.8 ms, fail 0, skip 8
+[INFO] [1791621573.499092068] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621574.200528580] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791621577.816758956] [robot_gateway]: pose 49.8 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 21.6 ms, fail 0, skip 1
+[INFO] [1791621580.973374596] [robot_gateway]: move_to_zone HOLD 칸 0 PLACE → OK, 21.6 s
+[INFO] [1791621580.973776311] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621582.816765098] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.6 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621584.709072825] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791621586.344536950] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621586.344819158] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 41.1 mm, grip True, 1686 ms
+[INFO] [1791621587.816013635] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621591.373775255] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:HOLD error=- (controller STANDBY)
+[INFO] [1791621591.374159794] [robot_gateway]: move_to_zone HOLD 칸 1 PLACE 시작
+[INFO] [1791621592.816026357] [robot_gateway]: pose 38.6 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 101.4 ms, fail 0, skip 57
+[INFO] [1791621593.870251889] [robot_gateway]: 수평 이동 높이 플랜지 z 426.6 (TCP 180) — safe_z 에서 안 닿음
+[INFO] [1791621593.870567338] [robot_gateway]: 트레이 안 이동: 칸 0 위 거쳐 TCP 70 높이로 옆으로
+[INFO] [1791621597.817253766] [robot_gateway]: pose 42.0 Hz, rtt avg 2.9 max 4.7 ms, queue wait max 103.5 ms, fail 0, skip 40
+[INFO] [1791621600.550763739] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621601.453031434] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621602.406482298] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791621602.816859642] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.8 ms, queue wait max 8.4 ms, fail 0, skip 0
+[INFO] [1791621603.648987643] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621604.524926802] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621607.816929922] [robot_gateway]: pose 44.4 Hz, rtt avg 2.8 max 4.2 ms, queue wait max 98.8 ms, fail 0, skip 28
+[INFO] [1791621609.601802453] [robot_gateway]: 수평 이동 높이 플랜지 z 426.6 (TCP 180) — safe_z 에서 안 닿음
+[INFO] [1791621609.602130554] [robot_gateway]: 트레이 안 이동: 칸 0 위 거쳐 TCP 70 높이로 옆으로
+[INFO] [1791621609.651276060] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621610.851452996] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621611.498880107] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791621612.714432381] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621612.817329406] [robot_gateway]: pose 35.8 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 101.8 ms, fail 0, skip 71
+[INFO] [1791621613.851568271] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621614.550256921] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791621617.816913224] [robot_gateway]: pose 49.8 Hz, rtt avg 2.8 max 4.8 ms, queue wait max 12.1 ms, fail 0, skip 1
+[INFO] [1791621621.302951404] [robot_gateway]: move_to_zone HOLD 칸 1 PLACE → OK, 29.9 s
+[INFO] [1791621621.303375674] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621622.817170651] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.8 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791621625.863297522] [robot_gateway]: RobotState BUSY connected=True action=GRIPPER error=- (controller STANDBY)
+[INFO] [1791621627.519046968] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621627.519343386] [robot_gateway]: gripper 요청 39.0 mm·14.0 N → OK, 폭 40.4 mm, grip True, 1685 ms
+[INFO] [1791621627.816300274] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.2 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791621632.817162710] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.3 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791621632.827142824] [robot_gateway]: RobotState BUSY connected=True action=MOVE_TO_ZONE:HOLD error=- (controller STANDBY)
+[INFO] [1791621632.827538354] [robot_gateway]: move_to_zone HOLD 칸 0 PLACE 시작
+[INFO] [1791621633.078805191] [robot_gateway]: 수평 이동 높이 플랜지 z 426.6 (TCP 180) — safe_z 에서 안 닿음
+[INFO] [1791621637.816982281] [robot_gateway]: pose 48.4 Hz, rtt avg 3.0 max 4.9 ms, queue wait max 92.6 ms, fail 0, skip 8
+[INFO] [1791621639.750859915] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621641.600920281] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791621642.816662848] [robot_gateway]: pose 49.8 Hz, rtt avg 3.0 max 5.0 ms, queue wait max 18.1 ms, fail 0, skip 1
+[INFO] [1791621644.571432756] [robot_gateway]: 수평 이동 높이 플랜지 z 426.6 (TCP 180) — safe_z 에서 안 닿음
+[INFO] [1791621645.799149442] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621646.902271394] [robot_gateway]: 두산 안내: 1/2/3205 Change singularity region status(Outside -> Inside), Singularity handling mode(1)
+[INFO] [1791621647.621216490] [robot_gateway]: 두산 안내: 1/2/3206 Change singularity region status(Inside -> Outside), Singularity handling mode(1)
+[INFO] [1791621647.816988629] [robot_gateway]: pose 48.2 Hz, rtt avg 3.0 max 4.7 ms, queue wait max 88.1 ms, fail 0, skip 9
+[INFO] [1791621652.816964143] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621654.393518786] [robot_gateway]: move_to_zone HOLD 칸 0 PLACE → OK, 21.6 s
+[INFO] [1791621654.393949471] [robot_gateway]: RobotState READY connected=True action=- error=- (controller STANDBY)
+[INFO] [1791621657.816965812] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791621662.816615376] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 1.5 ms, fail 0, skip 0
+[INFO] [1791621667.817190396] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621672.816816724] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.4 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791621677.816951260] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.4 ms, queue wait max 0.9 ms, fail 0, skip 0
+[INFO] [1791621682.816927540] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.2 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621687.817173402] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791621692.816664994] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.7 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791621697.816682681] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.9 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621702.816559118] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.5 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791621707.816727706] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791621712.817019256] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621717.816614871] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 4.7 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791621722.816579957] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621727.816917221] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791621732.817180025] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 6.3 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621737.816666258] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621742.816730422] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.2 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621747.816015681] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.0 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621752.815952850] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.3 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791621757.816923121] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791621762.816801008] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 6.3 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791621767.817007211] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.3 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791621772.816997228] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621777.816790067] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 7.2 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791621782.816608190] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.0 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791621787.816791948] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 8.4 ms, queue wait max 2.4 ms, fail 0, skip 0
+[INFO] [1791621792.816832094] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.5 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791621797.817152986] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 6.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621802.817108968] [robot_gateway]: pose 50.0 Hz, rtt avg 3.2 max 5.0 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791621807.816893434] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.4 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791621812.817164542] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.8 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791621817.816929998] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.3 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621822.816554123] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 6.2 ms, queue wait max 1.6 ms, fail 0, skip 0
+[INFO] [1791621827.816322803] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791621832.816622282] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.3 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791621837.816416002] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.2 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791621842.816710526] [robot_gateway]: pose 50.0 Hz, rtt avg 2.6 max 7.9 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791621847.817006637] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.1 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621852.816686137] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 7.9 ms, queue wait max 1.2 ms, fail 0, skip 0
+[INFO] [1791621857.817019260] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621862.816774298] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.3 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621867.816552948] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 5.0 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621872.816218117] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 10.4 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791621877.817306500] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.6 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791621882.816583258] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.3 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791621887.816887016] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621892.816764731] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621897.817152047] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.3 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791621902.816741000] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.3 ms, queue wait max 0.8 ms, fail 0, skip 0
+[INFO] [1791621907.816853089] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.1 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621912.817100338] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.4 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791621917.816916510] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.6 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791621922.816746845] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621927.816017437] [robot_gateway]: pose 50.0 Hz, rtt avg 3.1 max 5.4 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621932.816864178] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.7 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621937.816401411] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.7 ms, queue wait max 1.4 ms, fail 0, skip 0
+[INFO] [1791621942.816709108] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.5 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791621947.815995255] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.6 ms, queue wait max 0.6 ms, fail 0, skip 0
+[INFO] [1791621952.816923960] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.2 ms, queue wait max 0.7 ms, fail 0, skip 0
+[INFO] [1791621957.817308189] [robot_gateway]: pose 50.0 Hz, rtt avg 2.8 max 4.7 ms, queue wait max 1.1 ms, fail 0, skip 0
+[INFO] [1791621962.816581686] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.4 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621967.816973498] [robot_gateway]: pose 50.0 Hz, rtt avg 3.0 max 4.8 ms, queue wait max 1.0 ms, fail 0, skip 0
+[INFO] [1791621972.816752666] [robot_gateway]: pose 50.0 Hz, rtt avg 2.9 max 4.6 ms, queue wait max 1.3 ms, fail 0, skip 0
+[INFO] [1791621977.816685949] [robot_gateway]: pose 50.0 Hz, rtt avg 2.7 max 4.3 ms, queue wait max 0.6 ms, fail 0, skip 0
+[WARN] [1791621982.756335545] [robot_gateway]: pose 조회 실패: TIMEOUT 0.50s: /dsr01/dsr_controller2/motion/fkin

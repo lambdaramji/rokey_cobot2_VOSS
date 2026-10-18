@@ -1,0 +1,22 @@
+[INFO] [1791619752.399212941] [sort_manager]: voss_config /home/ms-03/voss_ws/config/voss_config.yaml version 1 sha256 db97243ec6ef, 구역 칸 {'A': 3, 'B': 3, 'C': 3, 'RECHECK': 2, 'HOLD': 2}, confidence_min 0.6, home_first True
+[INFO] [1791619756.928344947] [sort_manager]: MoveToZone OBSERVE 칸 0 이동
+[INFO] [1791619756.928652280] [sort_manager]: 세션 20261010T170916-eb6e 시작, 우선 전체
+[INFO] [1791619760.914739889] [sort_manager]: OBSERVE 도착, 관측 시작
+[INFO] [1791619770.917933921] [sort_manager]: 20261010T170916-eb6e-001 track 32 역삼동→A 칸 0 파지 시작
+[INFO] [1791619770.927069759] [sort_manager]: servo PREPARE
+[INFO] [1791619771.106835165] [sort_manager]: servo TRACK
+[INFO] [1791619774.304014785] [sort_manager]: servo DESCEND
+[INFO] [1791619776.905154884] [sort_manager]: servo GRASP
+[INFO] [1791619779.105522825] [sort_manager]: servo LIFT
+[INFO] [1791619781.837920262] [sort_manager]: servo VERIFY
+[INFO] [1791619782.006028670] [sort_manager]: MoveToZone A 칸 0 mode PLACE
+[INFO] [1791619782.006359461] [sort_manager]: 20261010T170916-eb6e-001 파지 완료(시도 1) → A 칸 0 적재
+[INFO] [1791619801.400699647] [sort_manager]: SortResult 20261010T170916-eb6e-001 PLACED A reason=- attempts=1
+[INFO] [1791619801.401200368] [sort_manager]: 20261010T170916-eb6e-001 A 칸 0 적재 완료 (OCR)
+[INFO] [1791619806.295261883] [sort_manager]: 20261010T170916-eb6e-002 track 33 대치동→B 칸 0 파지 시작
+[INFO] [1791619806.304248736] [sort_manager]: servo PREPARE
+[INFO] [1791619806.504729519] [sort_manager]: servo TRACK
+[INFO] [1791619809.404117843] [sort_manager]: servo DESCEND
+[INFO] [1791619810.239068691] [sort_manager]: SortResult 20261010T170916-eb6e-002 FAILED - reason=LOST attempts=0
+[WARN] [1791619810.239316817] [sort_manager]: 20261010T170916-eb6e-002 파지 실패 LOST(시도 0) → PAUSED
+[WARN] [1791619839.163020195] [sort_manager]: 명령 거부: PAUSED 에서는 resume

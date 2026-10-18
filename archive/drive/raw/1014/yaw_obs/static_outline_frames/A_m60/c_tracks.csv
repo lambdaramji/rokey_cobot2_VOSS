@@ -1,0 +1,2 @@
+track,first,frames,yaw_valid,x_start,x_end,vision_yaw,vision_yaw_ref,box_angle,box_edges,diff,note
+5,11:47:33,169,169,-96,-96,-60.26,-60.2,-60.2,51.4x37.0,0.0,외곽 크기 이상

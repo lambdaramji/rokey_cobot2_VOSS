@@ -508,6 +508,8 @@
 
 bag 합계 약 60 GB.
 
+> **10/18 정정(ADR-0017):** 실제 Drive 에는 bag 폴더 9개(`g1_s1`·`g0_01`·`g1_s1_aborted_*`·`track_*`·`pose_lag_js_01`)의 **`metadata.yaml` 만** 올라가 있었고 본체(약 60 GB)는 공용 PC 에만 있었다 — 공용 PC 반납으로 사라졌다. 남은 영상은 LOST 3건 클립 `voss_1010_g1_s1_clips.tar`(t26·t31·t32_t33, 1.6 GB, Release `raw_1010_voss_1010_g1_s1_clips.tar`)뿐이다. 나머지 파일은 `archive/drive/raw/1010/` 와 Release(`docs/setup/drive.md` 대응표).
+
 ## 현장 도구 (레포 밖 `~/voss_data/1010/`, 커밋 안 함)
 
 | 파일 | 하는 일 | 시험 |

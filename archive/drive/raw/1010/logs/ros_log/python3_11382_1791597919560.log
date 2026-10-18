@@ -1,0 +1,3 @@
+[INFO] [1791597919.629900119] [dsr01.spawner_joint_state_broadcaster]: waiting for service /dsr01/controller_manager/list_controllers to become available...
+[INFO] [1791597923.145759019] [dsr01.spawner_joint_state_broadcaster]: Loaded joint_state_broadcaster
+[INFO] [1791597923.175744161] [dsr01.spawner_joint_state_broadcaster]: Configured and activated joint_state_broadcaster

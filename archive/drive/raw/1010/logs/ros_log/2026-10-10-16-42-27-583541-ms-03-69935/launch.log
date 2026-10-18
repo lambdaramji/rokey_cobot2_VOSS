@@ -1,0 +1,5 @@
+1791618147.5842733 [INFO] [launch]: All log files can be found below /home/ms-03/.ros/log/2026-10-10-16-42-27-583541-ms-03-69935
+1791618147.5843813 [INFO] [launch]: Default logging verbosity is set to INFO
+1791618147.6390216 [INFO] [sort_manager-1]: process started with pid [69938]
+1791618894.4136772 [WARNING] [launch]: user interrupted with ctrl-c (SIGINT)
+1791618894.6578569 [INFO] [sort_manager-1]: process has finished cleanly [pid 69938]

@@ -1,0 +1,10 @@
+[INFO] [1791597919.577875967] [rviz2]: Stereo is NOT SUPPORTED
+[INFO] [1791597919.577960508] [rviz2]: OpenGl version: 4.6 (GLSL 4.6)
+[INFO] [1791597919.606076290] [rviz2]: Stereo is NOT SUPPORTED
+[INFO] [1791597919.699794663] [rviz2]: Subscribing to: /camera/depth/color/points
+
+[INFO] [1791597919.700034856] [rviz2]: Subscribing to: /camera/depth/color/points
+
+[INFO] [1791597919.746680214] [rviz2]: Stereo is NOT SUPPORTED
+[INFO] [1791597919.759610993] [rviz2]: Stereo is NOT SUPPORTED
+[INFO] [1791602390.826007970] [rclcpp]: signal_handler(SIGINT/SIGTERM)

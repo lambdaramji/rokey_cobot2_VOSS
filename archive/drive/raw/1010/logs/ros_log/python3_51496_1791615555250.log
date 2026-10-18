@@ -1,0 +1,3 @@
+[INFO] [1791615555.306019409] [sort_logger]: sort_logger started — spool=/var/lib/voss/spool/sort_log.jsonl
+[INFO] [1791615555.321642471] [sort_logger]: DB 연결 성공
+[INFO] [1791615555.321896550] [sort_logger]: /voss/log/status: - → OK

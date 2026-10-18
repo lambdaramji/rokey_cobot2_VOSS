@@ -1,7 +1,7 @@
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-exclude = ["build", "install", "log"]
+exclude = ["build", "install", "log", "archive"]  # archive/ = 현장 원본 기록(ADR-0017), 고치지 않는다
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP"]

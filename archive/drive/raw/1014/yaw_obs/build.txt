@@ -1,0 +1,10 @@
+yaw 관측 실험 (S2T18-yaw-observe-guide) — 공용 PC 빌드·확인 기록 2026-10-14 11:28
+빌드 커밋: ed80f41 merge: v15 yaw (f318241) into integ/1014-s4 4429526 — BoxTrack yaw_base·yaw_valid (S2-T16)
+  (integ/1014-s4 로컬, origin/integ/1014-s4 3108026 와 로컬 7 / 원격 10 커밋 차이 — v15 yaw f318241 로컬 병합)
+BoxTrack yaw 줄 수: 2  (2 = v15, yaw 포함)
+/camera/color/image_raw/compressed: 약 30.4~30.7 Hz
+/voss/robot/pose: 나옴 (base_link, TCP x -14.4 y -276.6 z 203.7 mm — 관측 자세)
+belt_servo·sort_manager: 없음
+voss_config sha: 8dfebc0854ac
+box_tracker: detector=seg, hand_eye 2026-10-08T11:21:40, homography 2026-10-07T14:49, pose_lag 15 ms, 30 Hz, 검출 평균 28.4 ms·p95 34 ms (10/13 같은 PC 2.8 ms — v15 뒤 증가), 카메라→발행 p95 82~85 ms
+GPU: nvidia-smi 실패(드라이버 통신 불가, 커널 7.0.0-38) — box_tracker 는 GPU 미사용
